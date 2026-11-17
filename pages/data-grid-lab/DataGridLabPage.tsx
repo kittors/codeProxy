@@ -12,23 +12,27 @@ type LabDemo = "request-logs" | "api-keys";
 
 export function DataGridLabPage() {
   const [demo, setDemo] = useState<LabDemo>("request-logs");
+  // 演示切换放进各演示的标题行，不单独占一行：矮窗口（1280×720）下多留一行给表格。
+  const switcher = (
+    <Segmented<LabDemo>
+      id="lab-demo-switch"
+      label="选择演示"
+      value={demo}
+      onChange={setDemo}
+      options={[
+        { value: "request-logs", label: "请求日志" },
+        { value: "api-keys", label: "API Key（多选）" },
+      ]}
+    />
+  );
   return (
-    <section data-page-fill="always" className="flex flex-1 flex-col gap-3">
+    <section data-page-fill="always" className="flex flex-1 flex-col">
       <h1 className="sr-only">新表格组件演示</h1>
-      <div className="flex items-center gap-2 text-xs text-ink-3">
-        <span>演示</span>
-        <Segmented<LabDemo>
-          id="lab-demo-switch"
-          label="选择演示"
-          value={demo}
-          onChange={setDemo}
-          options={[
-            { value: "request-logs", label: "请求日志" },
-            { value: "api-keys", label: "API Key（多选）" },
-          ]}
-        />
-      </div>
-      {demo === "request-logs" ? <RequestLogsDemo /> : <ApiKeySelectionDemo />}
+      {demo === "request-logs" ? (
+        <RequestLogsDemo switcher={switcher} />
+      ) : (
+        <ApiKeySelectionDemo switcher={switcher} />
+      )}
     </section>
   );
 }

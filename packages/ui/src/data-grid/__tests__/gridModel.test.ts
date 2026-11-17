@@ -130,7 +130,13 @@ describe("computeGridLayout", () => {
       501,
     );
     // 剩余 101：user 25、channel 25、model 50 + 零头 1
-    expect(layout.widths).toMatchObject({ user: 125, model: 151, channel: 125, cost: 50, status: 50 });
+    expect(layout.widths).toMatchObject({
+      user: 125,
+      model: 151,
+      channel: 125,
+      cost: 50,
+      status: 50,
+    });
     expect(layout.totalWidth).toBe(501);
   });
 

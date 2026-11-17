@@ -13,7 +13,7 @@ import {
   type GridSort,
 } from "@code-proxy/ui";
 import { KeyRound, Power, PowerOff, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { LAB_USERS, maskLabKey } from "./labData";
 
 /**
@@ -93,7 +93,7 @@ function QuotaBar({ value }: { value: number }) {
 
 const PAGE_SIZE = 10;
 
-export function ApiKeySelectionDemo() {
+export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
   const now = useMemo(() => Date.now(), []);
   const [keys, setKeys] = useState(() => buildKeys(now));
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -220,20 +220,19 @@ export function ApiKeySelectionDemo() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
-            <KeyRound size={18} className="text-ink-3" aria-hidden="true" />
-            API Key
-            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
-              多选示例 · 假数据
-            </span>
-          </h2>
-          <p className="text-xs text-ink-3">
-            表头复选框全选 / 半选本页，Shift
-            点击连选；选中后表头换成选择条，批量操作会真的改动下面的数据。
-          </p>
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="sr-only">API Key</h2>
+          {switcher}
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
+            多选示例 · 假数据
+          </span>
         </div>
+        <p className="flex items-center gap-1.5 text-xs text-ink-3">
+          <KeyRound size={13} className="shrink-0" aria-hidden="true" />
+          表头复选框全选 / 半选本页，Shift
+          点击连选；选中后表头换成选择条，批量操作会真的改动下面的数据。
+        </p>
       </header>
       <div className="flex min-h-0 flex-1 flex-col">
         <DataGrid

@@ -255,6 +255,30 @@ describe("DataGrid states", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
+  test("默认是四边封闭的圆角外框，嵌入小表可以关掉", () => {
+    const { container, rerender } = render(<Harness />);
+    const root = container.querySelector(".cp-grid");
+    expect(root).toHaveClass("cp-grid-frame", "cp-edge", "rounded-3xl", "overflow-hidden");
+    rerender(<Harness frame={false} />);
+    expect(container.querySelector(".cp-grid")).not.toHaveClass("cp-grid-frame");
+  });
+
+  test("空态可以在标题和操作之间写出补充内容（例如生效的筛选条件）", () => {
+    render(
+      <Harness
+        rows={[]}
+        empty={{
+          title: "No matches",
+          details: <span>Model: Alpha</span>,
+          action: <button type="button">Clear</button>,
+        }}
+      />,
+    );
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+    expect(screen.getByText("Model: Alpha")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+  });
+
   test("隐藏列不渲染", () => {
     render(<Harness hiddenColumnIds={new Set(["tokens"])} />);
     expect(screen.queryByRole("columnheader", { name: /Tokens/ })).not.toBeInTheDocument();

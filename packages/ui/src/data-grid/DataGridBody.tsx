@@ -299,7 +299,14 @@ export function DataGridBody<T>({
                   icon={empty?.icon}
                   title={empty?.title ?? t("data_grid.empty_title")}
                   description={empty?.description}
-                  action={empty?.action}
+                  action={
+                    empty?.details || empty?.action ? (
+                      <div className="flex max-w-xl flex-col items-center gap-3">
+                        {empty?.details}
+                        {empty?.action}
+                      </div>
+                    ) : undefined
+                  }
                 />
               )}
             </div>

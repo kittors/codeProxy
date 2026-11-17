@@ -118,6 +118,8 @@ export interface GridEmptyState {
   title: string;
   description?: string;
   action?: ReactNode;
+  /** 标题与说明下面的补充内容，例如「当前生效的筛选条件」，放在操作按钮之上。 */
+  details?: ReactNode;
 }
 
 export interface GridSelectionContext {
@@ -178,6 +180,11 @@ export interface DataGridProps<T> {
   maxHeight?: string;
   /** 渲染在横向滚动条下面的页脚，一般是 DataGridPagination。 */
   footer?: ReactNode;
+  /**
+   * 外框：默认是和面板卡片一样的四边封闭圆角盒子（24px 圆角、细边、柔和投影），表头、表体、
+   * 横向滚动条、页脚都在框里，被圆角裁住。嵌在卡片或弹窗里的小表传 false，不要卡中卡。
+   */
+  frame?: boolean;
   /** 变化时把表格滚回顶部（换页、换筛选时传页码与筛选的签名；自动刷新不要传，免得把用户拽回去）。 */
   resetScrollKey?: string | number;
   className?: string;

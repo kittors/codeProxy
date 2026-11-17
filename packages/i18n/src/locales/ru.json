@@ -55,6 +55,7 @@
     "go_to_page": "Перейти к",
     "clear_search": "Очистить поиск",
     "active_filters": "Активные фильтры",
+    "no_active_filters": "Фильтры не применены, показано всё",
     "remove_filter": "Убрать фильтр: {{filter}}",
     "clear_all_filters": "Сбросить все",
     "list_separator": ", ",

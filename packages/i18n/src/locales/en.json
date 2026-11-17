@@ -55,6 +55,7 @@
     "go_to_page": "Go to",
     "clear_search": "Clear search",
     "active_filters": "Active filters",
+    "no_active_filters": "No filters applied, showing everything",
     "remove_filter": "Remove filter: {{filter}}",
     "clear_all_filters": "Clear all",
     "list_separator": ", ",

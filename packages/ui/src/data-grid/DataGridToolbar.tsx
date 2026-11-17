@@ -133,8 +133,11 @@ export function GridSearchInput({
 }
 
 /**
- * 分面筛选按钮：没筛时是普通描边胶囊「模型 ▾」；筛了以后变成淡底高亮，
- * 写出选中的第一个值和 +N，不用点开就知道筛了什么。
+ * 分面筛选按钮：没筛时是普通描边胶囊「模型 ▾」；筛了以后变成淡底高亮，标签后面亮出选中个数。
+ *
+ * 宽度在筛与不筛之间完全不变：个数徽标的位置一直留着（没筛时透明），数字用等宽数字。
+ * 以前这里写出第一个选中值，按钮随值的长短伸缩，把后面的按钮挤得跳来跳去（用户 11-18 反馈）；
+ * 选中了什么交给下面那行芯片去写。
  */
 export function GridFacetFilter({
   columnId,
@@ -158,9 +161,6 @@ export function GridFacetFilter({
   const [draft, setDraft] = useState<string[]>([]);
   const open = Boolean(anchor);
   const active = isGridFilterActive(current);
-  const firstLabel = active
-    ? (options.find((option) => option.value === values[0])?.label ?? values[0])
-    : null;
 
   const close = () => setAnchor(null);
   const apply = () => {
@@ -190,7 +190,7 @@ export function GridFacetFilter({
           setAnchor(event.currentTarget);
         }}
         className={[
-          "inline-flex h-8 max-w-[16rem] items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-[background-color,box-shadow,color,scale] duration-150 ease-soft active:scale-[0.97]",
+          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full pl-3 pr-2.5 text-xs font-medium transition-[background-color,box-shadow,color,scale] duration-150 ease-soft active:scale-[0.97]",
           active
             ? "bg-accent-soft text-ink shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-focus)_35%,transparent)]"
             : "bg-surface text-ink-2 shadow-control hover:bg-surface-hover hover:text-ink hover:shadow-control-hover",
@@ -198,22 +198,27 @@ export function GridFacetFilter({
       >
         {icon ? <span className="flex shrink-0 items-center text-ink-3">{icon}</span> : null}
         <span className="shrink-0">{label}</span>
-        {active ? (
-          <>
-            <span className="h-3 w-px shrink-0 bg-line-strong" aria-hidden="true" />
-            <span className="min-w-0 truncate font-normal text-ink-2">{firstLabel}</span>
-            {values.length > 1 ? (
-              <span className="shrink-0 rounded-full bg-ink/[0.08] px-1.5 text-2xs tabular-nums text-ink-2 dark:bg-white/[0.1]">
-                +{values.length - 1}
-              </span>
-            ) : null}
-          </>
-        ) : null}
-        <ChevronDown
-          size={13}
-          aria-hidden="true"
-          className={`shrink-0 text-ink-3 transition-[rotate] duration-200 ease-pop ${open ? "rotate-180" : ""}`}
-        />
+        {/* 箭头与个数徽标共用一个固定宽度的位置：没筛时是箭头，筛了以后换成个数，按钮宽度不变。 */}
+        <span className="relative inline-flex h-4 w-[1.375rem] shrink-0 items-center justify-center">
+          <ChevronDown
+            size={13}
+            aria-hidden="true"
+            className={[
+              "text-ink-3 transition-[rotate,opacity,scale] duration-200 ease-pop",
+              open ? "rotate-180" : "",
+              active ? "scale-75 opacity-0" : "opacity-100",
+            ].join(" ")}
+          />
+          <span
+            aria-hidden={active ? undefined : true}
+            className={[
+              "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-pop",
+              active ? "bg-[var(--cp-focus)] text-white opacity-100" : "scale-75 opacity-0",
+            ].join(" ")}
+          >
+            {active ? (values.length > 99 ? "99+" : values.length) : null}
+          </span>
+        </span>
       </button>
       <GridPopover
         anchor={anchor}
@@ -242,18 +247,27 @@ export function GridFacetFilter({
   );
 }
 
-/** 已生效筛选的芯片；每个芯片单独移除，最后是「清除全部」。没有筛选时整行不占高度。 */
+/**
+ * 已生效筛选的芯片；每个芯片单独移除，最后是「清除全部」。
+ *
+ * 这一行高度固定、只占一行：没有筛选时显示一句淡色提示占位，芯片多了就在行内横向滚动，
+ * 不换行。以前没有筛选时整行收起、芯片多了换成两行，筛选一变下面的表格就跟着变矮变高
+ * （用户 11-18 反馈「表格高度变形」）。
+ */
 export function GridFilterChips<T>({
   columns,
   filters,
   onFiltersChange,
   extra,
+  placeholder,
 }: {
   columns: readonly DataGridColumn<T>[];
   filters: GridFilters | undefined;
   onFiltersChange: (filters: GridFilters) => void;
   /** 不属于列的筛选（例如搜索词）也想显示成芯片时传进来。 */
   extra?: readonly { id: string; label: string; onRemove: () => void }[];
+  /** 没有筛选时占位的提示文字。 */
+  placeholder?: string;
 }) {
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
@@ -271,58 +285,71 @@ export function GridFilterChips<T>({
   ];
 
   return (
-    <AnimatePresence initial={false}>
-      {chips.length > 0 ? (
-        <motion.div
-          key="chips"
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-          transition={{ duration: 0.2, ease: EASE_POP }}
-          className="-m-1 overflow-hidden p-1"
-        >
-          <ul
-            className="flex flex-wrap items-center gap-1.5"
-            aria-label={t("data_grid.active_filters")}
+    <div className="relative h-7 min-w-0">
+      <AnimatePresence initial={false}>
+        {chips.length === 0 ? (
+          <motion.p
+            key="placeholder"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 flex items-center px-1 text-xs text-ink-3"
           >
-            <AnimatePresence initial={false}>
-              {chips.map((chip) => (
-                <motion.li
-                  key={chip.id}
-                  layout={!reduceMotion}
-                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.18, ease: EASE_POP }}
-                  className="inline-flex h-7 max-w-[22rem] items-center gap-1 rounded-full bg-ink/[0.05] pl-2.5 pr-1 text-xs text-ink-2 dark:bg-white/[0.07]"
-                >
-                  <span className="min-w-0 truncate">{chip.label}</span>
-                  <button
-                    type="button"
-                    onClick={chip.onRemove}
-                    aria-label={t("data_grid.remove_filter", { filter: chip.label })}
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-ink/[0.08] hover:text-ink dark:hover:bg-white/[0.1]"
-                  >
-                    <X size={12} aria-hidden="true" />
-                  </button>
-                </motion.li>
-              ))}
-            </AnimatePresence>
-            <motion.li layout={!reduceMotion} key="clear-all">
+            {placeholder ?? t("data_grid.no_active_filters")}
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
+      <ul
+        className="flex h-7 min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label={t("data_grid.active_filters")}
+      >
+        <AnimatePresence initial={false}>
+          {chips.map((chip) => (
+            <motion.li
+              key={chip.id}
+              layout={reduceMotion ? false : "position"}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.18, ease: EASE_POP }}
+              className="inline-flex h-7 max-w-[22rem] shrink-0 items-center gap-1 rounded-full bg-ink/[0.05] pl-2.5 pr-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+            >
+              <span className="min-w-0 truncate">{chip.label}</span>
+              <button
+                type="button"
+                onClick={chip.onRemove}
+                aria-label={t("data_grid.remove_filter", { filter: chip.label })}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-ink/[0.08] hover:text-ink dark:hover:bg-white/[0.1]"
+              >
+                <X size={12} aria-hidden="true" />
+              </button>
+            </motion.li>
+          ))}
+          {chips.length > 0 ? (
+            <motion.li
+              key="clear-all"
+              layout={reduceMotion ? false : "position"}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="shrink-0"
+            >
               <button
                 type="button"
                 onClick={() => {
                   onFiltersChange({});
                   for (const chip of extra ?? []) chip.onRemove();
                 }}
-                className="h-7 rounded-full px-2 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
+                className="h-7 whitespace-nowrap rounded-full px-2 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
               >
                 {t("data_grid.clear_all_filters")}
               </button>
             </motion.li>
-          </ul>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+          ) : null}
+        </AnimatePresence>
+      </ul>
+    </div>
   );
 }

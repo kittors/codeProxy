@@ -71,12 +71,26 @@ export function Segmented<V extends string | number>({
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {
+/**
+ * 汇总里的一项。数值占一个固定的最小宽度（等宽数字），筛选后「1,354」变成「263」时
+ * 后面几项不会往左挪——之前整行跟着数字长短一起跳（用户 11-18 反馈）。
+ */
+function Stat({
+  label,
+  value,
+  hint,
+  width = "min-w-[5ch]",
+}: {
+  label: string;
+  value: ReactNode;
+  hint: string;
+  width?: string;
+}) {
   return (
     <HoverTooltip content={hint} placement="bottom">
       <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
         <span className="text-ink-3">{label}</span>
-        <span className="font-medium tabular-nums text-ink">{value}</span>
+        <span className={`inline-block font-medium tabular-nums text-ink ${width}`}>{value}</span>
       </span>
     </HoverTooltip>
   );
@@ -101,6 +115,7 @@ export function LabSummaryStrip({
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs" aria-live="polite">
       <Stat
         label="请求"
+        width="min-w-[6ch]"
         value={value((data) => formatInteger(data.total))}
         hint="当前时间范围与筛选条件下的请求数"
       />
@@ -118,11 +133,13 @@ export function LabSummaryStrip({
       <Stat label="缓存命中" value={value(cacheRate)} hint="缓存读取 ÷ 输入合计" />
       <Stat
         label="费用"
+        width="min-w-[7ch]"
         value={value((data) => formatUsd(data.cost))}
         hint="按模型目录价格估算的费用合计"
       />
       <Stat
         label="首字中位数"
+        width="min-w-[6ch]"
         value={value((data) => formatDurationMs(data.medianFirstTokenMs))}
         hint="一半请求在这个时间内收到第一个 token"
       />
@@ -142,10 +159,13 @@ export type StatusTab = "all" | LabStatus;
 export function StatusTabs({
   value,
   counts,
+  maxCounts,
   onChange,
 }: {
   value: StatusTab | null;
   counts: Record<StatusTab, number>;
+  /** 不加筛选时的条数（筛选只会让条数变少）：按它的位数给每个页签的计数留宽。 */
+  maxCounts: Record<StatusTab, number>;
   onChange: (value: StatusTab) => void;
 }) {
   const tab = (key: StatusTab, label: string) => ({
@@ -156,7 +176,14 @@ export function StatusTabs({
           <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[key]}`} aria-hidden="true" />
         ) : null}
         {label}
-        <span className="tabular-nums text-ink-3">{formatInteger(counts[key])}</span>
+        {/* 条数按「不筛选时的最大值」的位数占固定宽度（等宽数字）：筛选后位数变少，页签宽度也不变，
+            选中块不会被挤得错位；也不会给只有个位数的页签留一大段空白。 */}
+        <span
+          className="inline-block text-left tabular-nums text-ink-3"
+          style={{ minWidth: `${formatInteger(maxCounts[key]).length}ch` }}
+        >
+          {formatInteger(counts[key])}
+        </span>
       </>
     ),
   });

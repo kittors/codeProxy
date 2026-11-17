@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
+import { surface } from "../primitives/Surface";
 import { popoverEnterTransition, popoverExitTransition } from "../utils/motion";
 import "./DataGrid.css";
 import { DataGridBody } from "./DataGridBody";
@@ -76,6 +77,7 @@ export function DataGrid<T>({
   fill = false,
   maxHeight,
   footer,
+  frame = true,
   resetScrollKey,
   className,
 }: DataGridProps<T>) {
@@ -378,6 +380,11 @@ export function DataGrid<T>({
       ref={rootRef}
       className={[
         "cp-grid group/grid relative flex min-w-0 flex-col",
+        // 外框与面板卡片同一套：圆角 + 伪元素细边 + 投影；overflow-hidden 让表头底色、
+        // 选中行、冻结列阴影、滚动条都被圆角裁住，四个角不会露出直角。
+        frame
+          ? `${surface({ tone: "card", radius: "3xl" })} cp-grid-frame isolate overflow-hidden`
+          : "",
         fill ? "h-full min-h-0 flex-1" : "",
         className ?? "",
       ].join(" ")}
@@ -542,7 +549,15 @@ export function DataGrid<T>({
         </div>
       ) : null}
 
-      {footer ? <div className="shrink-0">{footer}</div> : null}
+      {footer ? (
+        <div
+          className={
+            frame ? "shrink-0 px-4 py-2 shadow-[inset_0_1px_0_var(--cp-line)]" : "shrink-0 pt-2.5"
+          }
+        >
+          {footer}
+        </div>
+      ) : null}
 
       <div role="status" aria-live="polite" className="sr-only">
         {announcement}

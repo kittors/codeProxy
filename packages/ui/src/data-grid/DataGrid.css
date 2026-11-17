@@ -34,6 +34,15 @@
   --grid-head-shadow: rgb(0 0 0 / 0.45);
 }
 
+/*
+ * 外框的细边（.cp-edge::after）要压在吸顶表头、冻结列、选择条之上：它们都有 z-index，
+ * 不抬高的话表头会把顶边和左右边的上半段盖掉，看起来就是「左右没有边、四角没封口」。
+ * 外框带 isolate，这里的层级只在表格内部比较，不会盖住页面上的浮层。
+ */
+.cp-grid-frame.cp-edge::after {
+  z-index: 40;
+}
+
 /* 原生滚动条藏起来，换成组件自己画的（GridScrollbar）。 */
 .cp-grid-viewport {
   scrollbar-width: none;

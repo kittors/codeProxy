@@ -55,6 +55,7 @@
     "go_to_page": "跳至",
     "clear_search": "清空搜索",
     "active_filters": "已生效的筛选",
+    "no_active_filters": "未筛选，显示全部记录",
     "remove_filter": "移除筛选：{{filter}}",
     "clear_all_filters": "清除全部",
     "list_separator": "、",
