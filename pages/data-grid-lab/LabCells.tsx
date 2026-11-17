@@ -14,7 +14,7 @@ import {
   formatUsd,
   isSameLocalDay,
 } from "@code-proxy/ui";
-import { labCacheRatio, labTokensPerSecond, maskLabKey, type LabLogRow } from "./labData";
+import { labCacheRatio, labThroughput, maskLabKey, type LabLogRow } from "./labData";
 
 /**
  * 演示页的单元格。规则（计划 104 第 5 节）：
@@ -62,11 +62,8 @@ export function UserCell({ row }: { row: LabLogRow }) {
       content={
         <GridTooltipRows
           title={row.user.name}
-          rows={[
-            ["Key", maskLabKey(row.user.key)],
-            ["客户端", row.client],
-            ["来源 IP", row.ip],
-          ]}
+          rows={[["Key", maskLabKey(row.user.key)]]}
+          footnote="客户端（User-Agent）和来源 IP 在展开详情里"
         />
       }
     >
@@ -310,14 +307,54 @@ export function LatencyCell({ row }: { row: LabLogRow }) {
   );
 }
 
-export function SpeedCell({ row }: { row: LabLogRow }) {
-  const speed = labTokensPerSecond(row);
-  if (speed === null) return <span className="text-ink-4">—</span>;
+/** tok/s 的写法：一百以上取整，十以上一位小数，再小两位小数。 */
+export function formatTokensPerSecondValue(value: number): string {
+  if (value >= 100) return formatInteger(value);
+  if (value >= 10) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
+const formatSeconds = (ms: number) => {
+  const seconds = ms / 1000;
+  return `${seconds >= 10 ? seconds.toFixed(1) : seconds.toFixed(2)} s`;
+};
+
+const THROUGHPUT_BASIS: Record<"generation" | "total" | "burst", string> = {
+  generation: "生成时间 = 总耗时 − 首字",
+  total: "非流式或没有首字时间，按总耗时算",
+  burst: "首字后几乎立刻结束（缓冲后一次性写出），按总耗时算",
+};
+
+/**
+ * 吞吐列：输出 token ÷ 生成时间。tooltip 把算式摊开写，读的人能自己验算；
+ * 没有输出或时间为 0 显示「—」。
+ */
+export function ThroughputCell({ row }: { row: LabLogRow }) {
+  const throughput = labThroughput(row);
+  if (!throughput) return <span className="text-ink-4">—</span>;
+  const value = formatTokensPerSecondValue(throughput.tokensPerSecond);
   return (
-    <span className="tabular-nums text-ink-2">
-      {formatInteger(speed)}
-      <span className="ml-0.5 text-2xs text-ink-3">tok/s</span>
-    </span>
+    <GridCellTooltip
+      content={
+        <GridTooltipRows
+          title={`吞吐 ${value} tok/s`}
+          rows={[
+            [
+              "算式",
+              `${formatInteger(throughput.outputTokens)} token ÷ ${formatSeconds(throughput.ms)} = ${value} tok/s`,
+            ],
+            ["总耗时", formatDurationMs(row.latencyMs)],
+            ["首字", row.firstTokenMs > 0 ? formatDurationMs(row.firstTokenMs) : "未记录"],
+          ]}
+          footnote={THROUGHPUT_BASIS[throughput.basis]}
+        />
+      }
+    >
+      <span className="whitespace-nowrap tabular-nums text-ink">
+        {value}
+        <span className="ml-0.5 text-2xs text-ink-3">tok/s</span>
+      </span>
+    </GridCellTooltip>
   );
 }
 

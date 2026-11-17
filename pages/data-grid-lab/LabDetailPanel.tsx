@@ -139,10 +139,13 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
           <Field label="Key">
             <span className="font-mono">{maskLabKey(row.user.key)}</span>
           </Field>
-          <Field label="客户端 · IP">
-            <span className="truncate">
-              {row.client} · <span className="font-mono">{row.ip}</span>
+          <Field label="User-Agent">
+            <span className="truncate font-mono" title={row.userAgent}>
+              {row.userAgent}
             </span>
+          </Field>
+          <Field label="来源 IP">
+            <span className="font-mono">{row.ip}</span>
           </Field>
         </Section>
 

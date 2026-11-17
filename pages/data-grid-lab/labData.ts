@@ -29,7 +29,12 @@ export interface LabLogRow {
   id: string;
   timestampMs: number;
   user: LabUser;
-  client: string;
+  /**
+   * 原始 User-Agent 与来源 IP。线上它们只在每条请求的「请求详情」里（request_log_content.detail_content
+   * 的 client.headers / client.ip），列表接口 /usage/logs 不返回。所以演示页只在展开详情里用，
+   * 列表、tooltip、搜索都不碰它们，也没有「Agent」列（要后端先加字段，见计划 104 第 5 节）。
+   */
+  userAgent: string;
   ip: string;
   model: string;
   upstreamModel: string;
@@ -151,14 +156,15 @@ const MODELS: readonly ModelSpec[] = [
   },
 ];
 
-const CLIENTS = [
-  "Claude Code",
-  "Codex CLI",
-  "OpenCode",
-  "Cherry Studio",
-  "Cursor",
-  "curl",
+/** 造数据用的调用方：决定输入长短（Agent 类客户端上下文长）和请求详情里的 User-Agent。 */
+const CALLERS = [
+  { agentic: true, userAgent: "claude-cli/2.1.32 (external, cli)" },
+  { agentic: true, userAgent: "codex_cli_rs/0.58.0 (Mac OS 15.1.0; arm64) iTerm.app/3.5.10" },
+  { agentic: true, userAgent: "opencode/1.0.25 ai-sdk/provider-utils/3.0.9" },
+  { agentic: false, userAgent: "CherryStudio/1.6.5 Electron/37.2.3" },
+  { agentic: false, userAgent: "Cursor/1.7.38 (darwin arm64)" },
 ] as const;
+const CURL_CALLER = { agentic: false, userAgent: "curl/8.7.1" } as const;
 
 const ERRORS: readonly { status: number; message: string }[] = [
   {
@@ -211,9 +217,9 @@ export function generateLabLogs(count: number, now: number, seed = 20261117): La
     const channelId = spec.channels[Math.floor(random() * spec.channels.length)];
     const channel = LAB_CHANNELS.find((item) => item.id === channelId) ?? LAB_CHANNELS[0];
     const user = LAB_USERS[Math.floor(random() * LAB_USERS.length)];
-    const client =
-      user.id === "u-pipeline" ? "curl" : CLIENTS[Math.floor(random() * (CLIENTS.length - 1))];
-    const agentic = client === "Claude Code" || client === "Codex CLI" || client === "OpenCode";
+    const caller =
+      user.id === "u-pipeline" ? CURL_CALLER : CALLERS[Math.floor(random() * CALLERS.length)];
+    const agentic = caller.agentic;
     const inputTokens = agentic
       ? logUniform(random(), 18_000, 420_000)
       : logUniform(random(), 300, 24_000);
@@ -248,13 +254,13 @@ export function generateLabLogs(count: number, now: number, seed = 20261117): La
       id: String(1_001_709_206 - index * 7 - Math.floor(random() * 5)),
       timestampMs: Math.round(timestamp),
       user,
-      client,
+      userAgent: caller.userAgent,
       ip: `198.51.100.${10 + Math.floor(random() * 200)}`,
       model: spec.model,
       upstreamModel: random() < 0.08 ? `${spec.upstream}-fallback` : spec.upstream,
       thinking,
       channel,
-      streaming: client !== "curl" || random() < 0.3,
+      streaming: caller !== CURL_CALLER || random() < 0.3,
       inputTokens,
       cacheReadTokens,
       cacheWriteTokens,
@@ -322,11 +328,43 @@ export function summarizeLabLogs(rows: readonly LabLogRow[]): LabSummary {
   return summary;
 }
 
-/** 生成速度（tok/s）：输出 token ÷（总耗时 − 首字）。 */
-export function labTokensPerSecond(row: LabLogRow): number | null {
-  const generation = row.latencyMs - row.firstTokenMs;
-  if (row.outputTokens <= 0 || generation <= 0) return null;
-  return row.outputTokens / (generation / 1000);
+export interface LabThroughput {
+  tokensPerSecond: number;
+  outputTokens: number;
+  /** 作为分母的时间（毫秒）。 */
+  ms: number;
+  /**
+   * generation：总耗时减首字（流式且记录了首字）；
+   * total：非流式或没有首字时间，按总耗时；
+   * burst：首字后几乎立刻结束（缓冲后一次性写出），减首字会得出几千 tok/s 的假尖峰，按总耗时。
+   */
+  basis: "generation" | "total" | "burst";
+}
+
+/**
+ * 吞吐（输出 tok/s），和请求日志现有的 computeOutputTokensPerSecond 同一个算法
+ * （features/request-log-viewer/requestLogMetrics.ts），只是多返回分母和口径给 tooltip 用。
+ * 后端监控中心的「生成速度」也是输出 token ÷（总耗时 − 首字），推理 token 不另加。
+ * 没有输出、或分母为 0 时返回 null，单元格显示「—」，不会出现 0 或 Infinity。
+ */
+export function labThroughput(row: LabLogRow): LabThroughput | null {
+  if (!(row.outputTokens > 0) || !(row.latencyMs > 0)) return null;
+  let ms = row.latencyMs;
+  let basis: LabThroughput["basis"] = "total";
+  if (row.streaming && row.firstTokenMs > 0 && row.firstTokenMs < row.latencyMs) {
+    const generation = row.latencyMs - row.firstTokenMs;
+    const burst = generation < 200 || (row.firstTokenMs / row.latencyMs >= 0.9 && generation < 500);
+    if (burst) {
+      basis = "burst";
+    } else {
+      ms = generation;
+      basis = "generation";
+    }
+  }
+  const tokensPerSecond = row.outputTokens / (ms / 1000);
+  return Number.isFinite(tokensPerSecond) && tokensPerSecond > 0
+    ? { tokensPerSecond, outputTokens: row.outputTokens, ms, basis }
+    : null;
 }
 
 export function labCacheRatio(row: LabLogRow): number {
