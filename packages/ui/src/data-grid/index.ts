@@ -14,6 +14,7 @@ export { GRID_ROW_ACTIONS_COLUMN, GridRowActions, gridRowActionsColumn } from ".
 export type { GridRowAction } from "./GridRowActions";
 export { GRID_WIDTH } from "./gridWidths";
 export { moveGridRow } from "./gridOrder";
+export { getPaginationItems } from "./gridPagination";
 export { describeGridFilter, listGridFilterChips } from "./gridFilterText";
 export {
   applyGridFilters,

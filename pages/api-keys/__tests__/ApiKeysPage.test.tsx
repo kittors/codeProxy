@@ -363,22 +363,6 @@ vi.mock("@features/log-content-viewer", () => ({
   ErrorDetailModal: () => null,
 }));
 
-vi.mock("@code-proxy/ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@code-proxy/ui")>()),
-  DataTable: ({ rows, columns }: { rows: any[]; columns: any[] }) => (
-    <div>
-      {rows.map((row, rowIndex) => (
-        <div key={row.key}>
-          {columns.map((column: any) => (
-            <div key={column.key}>
-              {column.render ? column.render(row, rowIndex) : row[column.key]}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
-}));
 
 async function openMoreActions(index = 0) {
   await userEvent.click(screen.getAllByRole("button", { name: "More actions" })[index]!);

@@ -3,7 +3,7 @@ import { Inbox } from "lucide-react";
 import { dialogToneClass } from "../overlays/DialogIcon";
 
 /**
- * Quiet empty / no-data surface used by DataTable and page-level cards.
+ * Quiet empty / no-data surface used by DataGrid and page-level cards.
  *
  * Reads as inline feedback inside an existing panel: no dashed card chrome. The icon
  * sits in a round tile coloured by the shared icon → hue registry (theme/hues) when the

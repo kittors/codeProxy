@@ -2,7 +2,7 @@ import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { getPaginationItems } from "../navigation/PaginationBar";
+import { getPaginationItems } from "./gridPagination";
 import { Select } from "../primitives/Select";
 import { formatInteger } from "./gridFormat";
 import { getPageCount } from "./gridModel";
