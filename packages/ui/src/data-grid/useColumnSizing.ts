@@ -36,6 +36,8 @@ interface SizingOptions<T> {
   leadingColumns: readonly GridLayoutColumn[];
   viewportWidth: number;
   scale: number;
+  /** 见 DataGridProps.fitColumns。 */
+  fitColumns?: boolean;
 }
 
 export interface ColumnSizing {
@@ -60,6 +62,7 @@ export function useColumnSizing<T>({
   leadingColumns,
   viewportWidth,
   scale,
+  fitColumns = false,
 }: SizingOptions<T>): ColumnSizing {
   const [overrides, setOverrides] = useState<Record<string, number>>(
     () => readGridPreferences(id).widths ?? {},
@@ -96,12 +99,32 @@ export function useColumnSizing<T>({
             width: designWidths[column.id],
             pin: column.pin,
             grow: column.grow,
+            minWidth: column.minWidth,
+            // 用户拖过的宽度、正在拖的那一列都不压：按用户自己定的宽度来，放不下就横向滚动。
+            shrink:
+              fitColumns &&
+              Boolean(column.grow) &&
+              overrides[column.id] === undefined &&
+              resizing?.columnId !== column.id,
           })),
         ],
         scale,
         viewportWidth,
       ),
-    [columns, designWidths, leadingColumns, scale, viewportWidth],
+    [columns, designWidths, fitColumns, leadingColumns, overrides, resizing, scale, viewportWidth],
+  );
+
+  // 拖宽、键盘调宽的起点：被 fitColumns 压窄的列从「当前显示的宽度」起算，否则一按下就会跳回默认宽度。
+  // grow 列多分到的宽度不算进起点（仍按设计宽度），和没有 fitColumns 时一致。
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const startingWidth = useCallback(
+    (column: DataGridColumn<T>) => {
+      const base = baseColumnWidth(column, overridesRef.current);
+      const shown = (layoutRef.current.widths[column.id] ?? 0) / (scale || 1);
+      return fitColumns && shown > 0 && shown < base ? Math.round(shown) : base;
+    },
+    [fitColumns, scale],
   );
 
   const persist = useCallback(
@@ -128,9 +151,9 @@ export function useColumnSizing<T>({
     (columnId: string, deltaDesignPx: number) => {
       const column = columnsById.get(columnId);
       if (!column) return;
-      setWidth(columnId, baseColumnWidth(column, overridesRef.current) + deltaDesignPx);
+      setWidth(columnId, startingWidth(column) + deltaDesignPx);
     },
-    [columnsById, setWidth],
+    [columnsById, setWidth, startingWidth],
   );
 
   const startResize = useCallback(
@@ -143,7 +166,7 @@ export function useColumnSizing<T>({
       const pointerId = event.pointerId;
       handle.setPointerCapture?.(pointerId);
       const startX = event.clientX;
-      const startWidth = baseColumnWidth(column, overridesRef.current);
+      const startWidth = startingWidth(column);
       let current = startWidth;
       let frame = 0;
       const previousCursor = document.body.style.cursor;
@@ -188,7 +211,7 @@ export function useColumnSizing<T>({
       handle.addEventListener("pointercancel", onCancel);
       window.addEventListener("keydown", onKey, true);
     },
-    [columnsById, persist, scale],
+    [columnsById, persist, scale, startingWidth],
   );
 
   return { layout, designWidths, resizing, startResize, resizeBy, setWidth };

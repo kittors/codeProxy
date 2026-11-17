@@ -18,7 +18,7 @@
   --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 89%, var(--cp-focus));
   --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 98%, #000);
   --grid-sorted-tint: rgb(0 0 0 / 0.014);
-  --grid-pin-shadow: rgb(0 0 0 / 0.09);
+  --grid-pin-shadow: rgb(15 23 42 / 0.13);
   --grid-head-shadow: rgb(0 0 0 / 0.07);
   --grid-row-line: var(--cp-line);
 }
@@ -30,7 +30,7 @@
   --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 82%, var(--cp-focus));
   --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 97.5%, #fff);
   --grid-sorted-tint: rgb(255 255 255 / 0.02);
-  --grid-pin-shadow: rgb(0 0 0 / 0.55);
+  --grid-pin-shadow: rgb(0 0 0 / 0.62);
   --grid-head-shadow: rgb(0 0 0 / 0.45);
 }
 
@@ -233,27 +233,43 @@ body[data-grid-dragging="true"] * {
   user-select: none;
 }
 
-/* ---------- 冻结列边缘阴影：离开起点才出现左侧阴影，没到终点才出现右侧阴影 ---------- */
+/*
+ * ---------- 冻结列边缘阴影：离开起点才出现左侧阴影，没到终点才出现右侧阴影 ----------
+ * 滚到冻结列底下的列（连表头文字）要读作「在下面」，不能是被拦腰切断、露出半个字（11-18 验收）。
+ * 所以边缘外侧 22px 叠两层：
+ * - 底层从冻结格自己的底色渐隐到透明（行用 --grid-cell-bg，跟着悬停、选中、行语气；表头用 --grid-head-bg），
+ *   压在下面的文字在贴边处被盖掉、往外慢慢露出来，不会有一道硬切口；
+ * - 上层是柔和的阴影，贴边最深。浅色下原来 0.09 的单层渐变几乎看不见，加深到 0.13。
+ */
 
 .cp-grid [data-pin-edge]::after {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 14px;
+  width: 22px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 180ms var(--ease-soft);
+  --grid-pin-fade: var(--grid-cell-bg, var(--grid-bg));
+}
+
+.cp-grid .cp-grid-head-cell[data-pin-edge]::after {
+  --grid-pin-fade: var(--grid-head-bg);
 }
 
 .cp-grid [data-pin-edge="start"]::after {
-  right: -14px;
-  background: linear-gradient(to right, var(--grid-pin-shadow), transparent);
+  right: -22px;
+  background:
+    linear-gradient(to right, var(--grid-pin-shadow), transparent 75%),
+    linear-gradient(to right, var(--grid-pin-fade) 20%, transparent);
 }
 
 .cp-grid [data-pin-edge="end"]::after {
-  left: -14px;
-  background: linear-gradient(to left, var(--grid-pin-shadow), transparent);
+  left: -22px;
+  background:
+    linear-gradient(to left, var(--grid-pin-shadow), transparent 75%),
+    linear-gradient(to left, var(--grid-pin-fade) 20%, transparent);
 }
 
 .cp-grid[data-x-scrolled="true"] [data-pin-edge="start"]::after,

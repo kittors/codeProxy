@@ -92,9 +92,9 @@ const expectShadowHugsTheFixedColumn = (geometry: Awaited<ReturnType<typeof read
   expect(Math.abs(geometry.header.right - geometry.viewportRight)).toBeLessThanOrEqual(1);
   expect(Math.abs(geometry.firstCell.left - geometry.header.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(geometry.firstCell.width - geometry.header.width)).toBeLessThanOrEqual(1);
-  // …the shadow sits just outside it (a 14px strip left of the cell), never over its first button…
-  expect(geometry.shadowLeft).toBe("-14px");
-  expect(geometry.shadowWidth).toBe("14px");
+  // …the shadow sits just outside it (a 22px strip left of the cell), never over its first button…
+  expect(geometry.shadowLeft).toBe("-22px");
+  expect(geometry.shadowWidth).toBe("22px");
   expect(geometry.firstButtonLeft).toBeGreaterThan(geometry.firstCell.left);
   // …and it belongs to the rows themselves, so it stops at the last row.
   expect(geometry.edgeCount).toBe(files.length + 1);

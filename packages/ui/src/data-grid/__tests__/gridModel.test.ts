@@ -161,6 +161,51 @@ describe("computeGridLayout", () => {
     expect(layout.totalWidth).toBe(540);
     expect(layout.widths.model).toBe(200);
   });
+
+  // fitColumns：放不下时先把 shrink 列按余量比例往 minWidth 压，压到底才横向滚动。
+  describe("shrink to fit", () => {
+    const fit = [
+      { id: "time", width: 100, pin: "start" as const },
+      { id: "user", width: 160, minWidth: 120, grow: 1, shrink: true },
+      { id: "model", width: 200, minWidth: 140, grow: 2, shrink: true },
+      { id: "cost", width: 80 },
+      { id: "status", width: 100, pin: "end" as const },
+    ];
+
+    test("差额按余量比例分摊，正好铺满框，不横向滚动", () => {
+      // 合计 640，框 590：差 50，余量 user 40、model 60，按 4:6 分
+      const layout = computeGridLayout(fit, 1, 590);
+      expect(layout.totalWidth).toBe(590);
+      expect(layout.widths).toMatchObject({ time: 100, user: 140, model: 170, cost: 80, status: 100 });
+    });
+
+    test("压到最小宽度还放不下才横向滚动，冻结列和不可压的列不动", () => {
+      const layout = computeGridLayout(fit, 1, 500);
+      expect(layout.widths).toMatchObject({ time: 100, user: 120, model: 140, cost: 80, status: 100 });
+      expect(layout.totalWidth).toBe(540);
+    });
+
+    test("按实际根字号换算最小宽度", () => {
+      // 0.9：设计合计 640 → 576；框 540，差 36；余量 user 36、model 54
+      const layout = computeGridLayout(fit, 0.9, 540);
+      expect(layout.totalWidth).toBe(540);
+      expect(layout.widths.user).toBeGreaterThanOrEqual(Math.round(120 * 0.9));
+      expect(layout.widths.model).toBeGreaterThanOrEqual(Math.round(140 * 0.9));
+    });
+
+    test("没打开 shrink 的列照旧不压（其它表的行为不变）", () => {
+      const layout = computeGridLayout(
+        fit.map((column) => ({ ...column, shrink: false })),
+        1,
+        590,
+      );
+      expect(layout.totalWidth).toBe(640);
+    });
+
+    test("视口还没量出来（0）时不压，避免首帧先压窄再弹回", () => {
+      expect(computeGridLayout(fit, 1, 0).widths.model).toBe(200);
+    });
+  });
 });
 
 describe("sortGridRows", () => {

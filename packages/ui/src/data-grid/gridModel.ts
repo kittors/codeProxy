@@ -77,6 +77,46 @@ export interface GridLayoutColumn {
   width: number;
   pin?: GridPin;
   grow?: boolean | number;
+  /** 设计像素；只在 shrink 时用作下限。 */
+  minWidth?: number;
+  /** 放不下时可以往 minWidth 压（DataGrid 的 fitColumns 打开、grow 列、用户没拖过宽度）。 */
+  shrink?: boolean;
+}
+
+/**
+ * 列宽之和超出视口时，从 shrink 列里按各自可压的余量比例扣掉差额，最多扣到 minWidth；返回扣掉的总像素。
+ * 余量按比例分摊而不是先压一列：几列一起略收窄，比某一列突然被压到最窄更不显眼。
+ */
+function shrinkToFit(
+  columns: readonly GridLayoutColumn[],
+  widths: Record<string, number>,
+  scale: number,
+  deficit: number,
+): number {
+  const shrinkable = columns.filter((column) => column.shrink && !column.pin);
+  const room = new Map<string, number>();
+  for (const column of shrinkable) {
+    const min = Math.max(1, Math.round((column.minWidth ?? column.width) * scale));
+    room.set(column.id, Math.max(0, widths[column.id] - min));
+  }
+  const totalRoom = [...room.values()].reduce((sum, value) => sum + value, 0);
+  if (totalRoom <= 0) return 0;
+  const target = Math.min(deficit, totalRoom);
+  let taken = 0;
+  for (const column of shrinkable) {
+    const cut = Math.floor((target * (room.get(column.id) ?? 0)) / totalRoom);
+    widths[column.id] -= cut;
+    room.set(column.id, (room.get(column.id) ?? 0) - cut);
+    taken += cut;
+  }
+  // 取整剩下的零头，从还有余量的列里逐列扣完。
+  for (const column of shrinkable) {
+    if (taken >= target) break;
+    const cut = Math.min(room.get(column.id) ?? 0, target - taken);
+    widths[column.id] -= cut;
+    taken += cut;
+  }
+  return taken;
 }
 
 const growWeight = (grow: boolean | number | undefined): number =>
@@ -101,6 +141,11 @@ export function computeGridLayout(
     const px = Math.max(1, Math.round(column.width * scale));
     widths[column.id] = px;
     totalWidth += px;
+  }
+
+  // 放不下：先把可压的列往最小宽度压（只有打开 fitColumns 的表才有 shrink 列），压到底还放不下才横向滚动。
+  if (viewportWidth > 0 && totalWidth > Math.floor(viewportWidth)) {
+    totalWidth -= shrinkToFit(columns, widths, scale, totalWidth - Math.floor(viewportWidth));
   }
 
   // 剩余宽度按权重分给 grow 列；取整的零头给权重最大的那列，总宽正好等于视口。

@@ -68,6 +68,7 @@ export function DataGrid<T>({
   loading = false,
   error = null,
   onRetry,
+  fitColumns = false,
   empty,
   density = "default",
   hiddenColumnIds,
@@ -151,6 +152,7 @@ export function DataGrid<T>({
     leadingColumns,
     viewportWidth: viewport.width,
     scale: viewport.scale,
+    fitColumns,
   });
   const { layout } = sizing;
   pinnedRef.current = { start: layout.startPinnedWidth, end: layout.endPinnedWidth };

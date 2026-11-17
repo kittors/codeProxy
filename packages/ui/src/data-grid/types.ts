@@ -151,6 +151,11 @@ export interface DataGridProps<T> {
   /** 出错时在表体里显示错误态（保留表头），配合 onRetry。值是给人看的错误说明。 */
   error?: string | null;
   onRetry?: () => void;
+  /**
+   * 列宽之和超出表格框时，先把 grow 列（用户没拖过宽度的）往各自的 minWidth 压，压到底还放不下才横向滚动。
+   * 默认关：多数表宁可横向滚动也不压窄内容列。请求日志这类「默认列在常见笔记本宽度下必须一屏放下」的表打开。
+   */
+  fitColumns?: boolean;
   empty?: GridEmptyState;
 
   density?: GridDensity;

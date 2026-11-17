@@ -31,8 +31,8 @@ const API_KEYS_URL = `/#/access/api-keys?endUserId=${END_USER_ID}`;
 /** 旧 DataTable 存这张表列宽的键：第一次打开时迁到新偏好（实际像素换成设计像素），再删掉。 */
 const LEGACY_WIDTHS_KEY = "codeProxy.dataTable.columnWidths.v3.owned-api-keys";
 const GRID_PREFS_KEY = "cp-grid:owned-api-keys:v1";
-/** 冻结列边缘阴影的宽度（DataGrid.css 里的 14px）。 */
-const PIN_SHADOW_WIDTH = 14;
+/** 冻结列边缘阴影的宽度（DataGrid.css 里的 22px）。 */
+const PIN_SHADOW_WIDTH = 22;
 
 type SetAuthedOptions = {
   /** 旧表格存下的这张表的列宽（实际像素）。 */

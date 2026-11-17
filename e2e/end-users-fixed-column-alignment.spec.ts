@@ -10,8 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
  * 固定列贴住视口右缘、阴影贴着固定列外侧、横向滚动条不压在行上。
  */
 
-/** 冻结列边缘阴影的宽度（DataGrid.css 里的 14px）。 */
-const PIN_SHADOW_WIDTH = 14;
+/** 冻结列边缘阴影的宽度（DataGrid.css 里的 22px）。 */
+const PIN_SHADOW_WIDTH = 22;
 
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
