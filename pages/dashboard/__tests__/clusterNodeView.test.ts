@@ -109,6 +109,31 @@ describe("clusterNodeView", () => {
     });
     expect(idle?.stealShare).toBeNull();
     expect(idle?.level).toBe("normal");
+
+    // n43 on 2026-11-17, a 4-core spare: it wanted 0.17 cores and waited for 0.12 of them. As a
+    // share that is 75%, but it is 3% of the machine and costs the service nothing.
+    const spare = nodeCpuView({
+      ...snapshot,
+      host: {
+        ...snapshot.host,
+        cpus: 4,
+        cpu: { window_seconds: 30, busy_cores: 0.042, steal_cores: 0.124, iowait_cores: 0, idle_cores: 3.834 },
+      },
+    });
+    expect(spare?.stealShare).toBeNull();
+    expect(spare?.level).toBe("normal");
+
+    // The same machine at work: 0.5 cores running and 0.3 waiting is a share worth a warning.
+    const working = nodeCpuView({
+      ...snapshot,
+      host: {
+        ...snapshot.host,
+        cpus: 4,
+        cpu: { window_seconds: 30, busy_cores: 0.5, steal_cores: 0.3, iowait_cores: 0, idle_cores: 3.2 },
+      },
+    });
+    expect(working?.stealShare).toBeCloseTo(0.375);
+    expect(working?.stealLevel).toBe("warn");
   });
 
   test("leaves out what the backend could not read", () => {

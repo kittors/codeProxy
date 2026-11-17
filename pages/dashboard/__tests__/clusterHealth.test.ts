@@ -107,6 +107,7 @@ describe("nodeIssues", () => {
   });
 
   test("warns when a disk fills within days at the current rate", () => {
+    // 62.5% used: past the 60% a fill forecast needs before it counts.
     const n = node({
       snapshot: snapshot({
         disks: [
@@ -114,9 +115,9 @@ describe("nodeIssues", () => {
             mount: "/",
             paths: [{ use: "root", path: "/" }],
             total_bytes: 32 * GB,
-            used_bytes: 15 * GB,
-            available_bytes: 17 * GB,
-            growth: { window_seconds: 3600, used_delta_bytes: 0.4 * GB },
+            used_bytes: 20 * GB,
+            available_bytes: 12 * GB,
+            growth: { window_seconds: 3600, used_delta_bytes: 0.28 * GB },
           },
         ],
       }),
