@@ -2,7 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
  * 仪表盘的「服务器节点」：新后端在 GET /config 的 capabilities 里声明 node-metrics，并在
- * GET /cluster 里给每个节点带资源快照（含磁盘），主节点的快照带数据库，hosts 带数据库主机；面板每台
+ * GET /cluster 里给每个节点带资源快照（含磁盘），leader 的快照带数据库，hosts 带数据库主机；面板每台
  * 节点一张紧凑卡片，数据库一张，宽屏一行放下。没声明的旧后端连 /cluster 都不请求；声明了却答 404 的
  * （请求落到没有这个接口的节点）不报错、停止轮询。接口全部 mock，不需要后端。
  */
@@ -365,7 +365,7 @@ test("每台节点一张紧凑卡片，数据库并排；要注意的情况写�
   await expect(page.getByText("3 处告急")).toBeVisible();
 
   const self = page.getByRole("group", { name: "n155" });
-  await expect(self.getByText("主节点")).toBeVisible();
+  await expect(self.getByText("Leader", { exact: true })).toBeVisible();
   await expect(self.getByText("当前节点")).toBeVisible();
   await expect(self.getByTestId("health-pill").getByText("steal 78%")).toBeVisible();
   await expect(self.getByText("CPU · 8 核")).toBeVisible();
@@ -396,7 +396,48 @@ test("每台节点一张紧凑卡片，数据库并排；要注意的情况写�
   }
 });
 
-test("宽屏一行放下三台节点和数据库，关键数值都不被截断", async ({ page }) => {
+/**
+ * 同一行的卡片：等高；数字条、胶囊行、页脚各自在同一条水平线上（卡片的五行用 subgrid 共享父网格的
+ * 行）。还没有快照的节点没有数字条和胶囊，只比它有的块。
+ */
+const expectRowsAligned = async (page: Page, width: number) => {
+  const layout = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>('[data-testid="cluster-grid"] > [role="group"]')].map((card) => {
+      const top = (selector: string) => card.querySelector<HTMLElement>(selector)?.getBoundingClientRect().top ?? null;
+      const box = card.getBoundingClientRect();
+      return {
+        name: card.getAttribute("aria-label"),
+        top: Math.round(box.top),
+        height: Math.round(box.height),
+        strip: top('[data-testid="stat-strip"]'),
+        chips: top('[data-testid="chip-row"]'),
+        footer: top('[data-testid="card-footer"]'),
+      };
+    }),
+  );
+  const bands = new Map<number, typeof layout>();
+  for (const card of layout) bands.set(card.top, [...(bands.get(card.top) ?? []), card]);
+  for (const band of bands.values()) {
+    for (const card of band) {
+      expect(Math.abs(card.height - band[0].height), `${card.name} height at ${width}px`).toBeLessThanOrEqual(1);
+      for (const key of ["strip", "chips", "footer"] as const) {
+        const other = band.find((candidate) => candidate[key] !== null);
+        if (card[key] === null || !other) continue;
+        expect(Math.abs(card[key]! - other[key]!), `${card.name} ${key} at ${width}px`).toBeLessThanOrEqual(1);
+      }
+    }
+  }
+  // 返回相对卡片顶部的位置：页面滚动时绝对坐标会变，卡片自身的排布不该变。
+  return layout.map((card) => ({
+    name: card.name,
+    height: card.height,
+    strip: card.strip === null ? null : Math.round(card.strip - card.top),
+    chips: card.chips === null ? null : Math.round(card.chips - card.top),
+    footer: card.footer === null ? null : Math.round(card.footer - card.top),
+  }));
+};
+
+test("宽屏一行放下三台节点和数据库，同一行卡片等高、各区块对齐，关键数值都不被截断", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await openDashboard(page, (route) => json(route, newBackendCluster));
   await expect(page.getByRole("group", { name: "数据库" })).toBeVisible();
@@ -414,12 +455,18 @@ test("宽屏一行放下三台节点和数据库，关键数值都不被截断",
     expect(boxes[i].x).toBeGreaterThanOrEqual(boxes[i - 1].x + boxes[i - 1].width);
   }
 
-  // 指标格里的数值、角标和脚注用了 truncate：内容一旦比格子宽就会被省略号吃掉。
-  // 1470 是三列最窄的时候（笔记本常见宽度），2026-11-17 回放线上响应时 WAL 格的槽名在这里被截断过。
-  for (const width of [1920, 1470, 1280]) {
+  // 1470 是三列最窄的时候（笔记本常见宽度），2026-11-17 回放线上响应时 WAL 格的槽名在这里被截断过；
+  // 1280 两列，768 以下一列。
+  for (const width of [1920, 1470, 1280, 700]) {
     await page.setViewportSize({ width, height: 1080 });
+    await page.waitForTimeout(100);
+    await expectRowsAligned(page, width);
     const clipped = await page.evaluate(() =>
-      [...document.querySelectorAll('[data-testid^="node-"] p, [data-testid^="node-"] span, [data-testid^="db-"] p, [data-testid^="db-"] span')]
+      [
+        ...document.querySelectorAll(
+          '[data-testid="cluster-grid"] [data-testid^="node-"] p, [data-testid="cluster-grid"] [data-testid^="node-"] span, [data-testid="cluster-grid"] [data-testid^="db-"] p, [data-testid="cluster-grid"] [data-testid^="db-"] span, [data-testid="stat-strip"] dd',
+        ),
+      ]
         .filter((el) => el instanceof HTMLElement && el.scrollWidth > el.clientWidth + 1)
         .map((el) => el.textContent),
     );
@@ -427,24 +474,33 @@ test("宽屏一行放下三台节点和数据库，关键数值都不被截断",
   }
 });
 
-test("展开一张卡的详情，同一行的其他卡不被拉高", async ({ page }) => {
+test("详情在右侧抽屉里看：卡片不变形，能在节点与数据库之间切换，Esc 关闭后焦点回到按钮", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await openDashboard(page, (route) => json(route, newBackendCluster));
   const self = page.getByRole("group", { name: "n155" });
-  const neighbour = page.getByRole("group", { name: "n149" });
   await expect(self).toBeVisible();
-  const before = await neighbour.boundingBox();
-  const selfBefore = await self.boundingBox();
+  const before = await expectRowsAligned(page, 1920);
 
-  await self.getByRole("button", { name: /详情/ }).click();
-  await expect(self.getByTestId("node-details")).toBeVisible();
-  await expect(self.getByText("需要注意")).toBeVisible();
-  await expect(self.getByText("clirelay2-8318.service")).toBeVisible();
-  await expect(self.getByText("请求体缓存")).toBeVisible();
+  const trigger = self.getByRole("button", { name: /详情/ });
+  await trigger.click();
+  const drawer = page.getByRole("dialog", { name: "n155" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole("tab", { name: "n155" })).toHaveAttribute("aria-selected", "true");
+  await expect(drawer.getByRole("heading", { name: "需要注意" })).toBeVisible();
+  await expect(drawer.getByText("clirelay2-8318.service")).toBeVisible();
+  await expect(drawer.getByText("请求体缓存")).toBeVisible();
+  // 卡片网格不因为看详情而变形。
+  expect(await expectRowsAligned(page, 1920)).toEqual(before);
 
-  await expect.poll(async () => (await self.boundingBox())!.height).toBeGreaterThan(selfBefore!.height + 100);
-  const after = await neighbour.boundingBox();
-  expect(Math.abs(after!.height - before!.height)).toBeLessThanOrEqual(1);
+  await drawer.getByRole("tab", { name: "数据库" }).click();
+  const database = page.getByRole("dialog", { name: "数据库" });
+  await expect(database).toBeVisible();
+  await expect(database.getByText("19 / 200（预留 3）")).toBeVisible();
+  await expect(database.getByText("clirelay_walarchive")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });
 
 test("旧后端没有在 /config 里声明 node-metrics：不请求 /cluster，也不显示节点视图", async ({
