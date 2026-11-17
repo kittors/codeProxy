@@ -347,7 +347,7 @@ export function CpuSplitBar({ cpu }: { cpu: NodeCpuView }) {
   );
 }
 
-/** 小标签：主节点、当前节点、主机名。中性灰，不和状态抢颜色。 */
+/** 小标签：Leader、当前节点、主机名。中性灰，不和状态抢颜色。 */
 export function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-px text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">

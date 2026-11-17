@@ -17,7 +17,7 @@ import {
 
 /*
  * 「服务器节点」：每台应用节点一张卡片，数据库一张，排在同一个网格里，宽屏一行放下。
- * 数据来自 GET /cluster：各节点随心跳上报的资源快照，主节点快照里的数据库段，以及 clirelay-hostagent
+ * 数据来自 GET /cluster：各节点随心跳上报的资源快照，leader 快照里的数据库段，以及 clirelay-hostagent
  * 上报的数据库主机。后端在 GET /config 的 capabilities 里声明了 node-metrics 才出现、才请求；旧版本整块
  * 不出现。磁盘、数据库、主机是后来加的字段，旧后端没有时对应的格子显示「—」，数据库卡片不出现。
  *

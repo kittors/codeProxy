@@ -8,7 +8,7 @@ import { apiClient } from "../client/client";
  * 声明了 node-metrics（ConfigCapabilities.nodeMetrics）才有快照，没声明就不请求这个接口。
  *
  * 快照里每一段都可能缺：非 Linux、cgroup v1 主机、读不到的文件，后端都留空而不是报错。磁盘（disks）、
- * 数据库（主节点快照里的 database）和主机（hosts）是后来加的，同样声明了 node-metrics 的旧后端没有，
+ * 数据库（leader 快照里的 database）和主机（hosts）是后来加的，同样声明了 node-metrics 的旧后端没有，
  * 面板按字段在不在来显示，不另设能力。
  */
 
@@ -117,7 +117,7 @@ export interface NodeDisk {
   growth?: { window_seconds: number; used_delta_bytes: number };
 }
 
-/** 数据库服务本身（PostgreSQL），只有主节点每 30 秒查一次，放在它的快照里。 */
+/** 数据库服务本身（PostgreSQL），只有 leader 每 30 秒查一次，放在它的快照里。 */
 export interface NodeDatabase {
   collected_at: string;
   /** 最近一轮查询失败："timeout" 或 "error"。这时下面的数是 last_ok_at 那一轮的，之前没成功过就是空的。 */
@@ -175,7 +175,7 @@ export interface NodeDatabase {
     flush_lag_bytes?: number;
     reply_age_seconds?: number;
   }>;
-  /** 最近约 5 分钟计数器的变化，主节点查过两轮才有。 */
+  /** 最近约 5 分钟计数器的变化，leader 查过两轮才有。 */
   window?: {
     seconds: number;
     commits: number;
@@ -204,7 +204,7 @@ export interface NodeSnapshot {
   db?: NodeRoundTrip;
   redis?: NodeRoundTrip;
   shared_redis?: NodeSharedRedis;
-  /** 只在主节点的快照里。 */
+  /** 只在 leader 的快照里。 */
   database?: NodeDatabase;
 }
 

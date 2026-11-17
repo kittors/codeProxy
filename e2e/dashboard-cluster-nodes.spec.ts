@@ -2,7 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 /**
  * 仪表盘的「服务器节点」：新后端在 GET /config 的 capabilities 里声明 node-metrics，并在
- * GET /cluster 里给每个节点带资源快照（含磁盘），主节点的快照带数据库，hosts 带数据库主机；面板每台
+ * GET /cluster 里给每个节点带资源快照（含磁盘），leader 的快照带数据库，hosts 带数据库主机；面板每台
  * 节点一张紧凑卡片，数据库一张，宽屏一行放下。没声明的旧后端连 /cluster 都不请求；声明了却答 404 的
  * （请求落到没有这个接口的节点）不报错、停止轮询。接口全部 mock，不需要后端。
  */
@@ -365,7 +365,7 @@ test("每台节点一张紧凑卡片，数据库并排；要注意的情况写�
   await expect(page.getByText("3 处告急")).toBeVisible();
 
   const self = page.getByRole("group", { name: "n155" });
-  await expect(self.getByText("主节点")).toBeVisible();
+  await expect(self.getByText("Leader", { exact: true })).toBeVisible();
   await expect(self.getByText("当前节点")).toBeVisible();
   await expect(self.getByTestId("health-pill").getByText("steal 78%")).toBeVisible();
   await expect(self.getByText("CPU · 8 核")).toBeVisible();
