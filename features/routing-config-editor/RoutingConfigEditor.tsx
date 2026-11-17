@@ -768,11 +768,11 @@ export function RoutingConfigEditor({
         id: "channelCount",
         header: t("channel_groups_page.table_channel_count"),
         align: "center",
-        width: GRID_WIDTH.toggle,
+        width: GRID_WIDTH.compact,
         cell: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+              <span className="inline-flex min-w-0 items-center truncate whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
