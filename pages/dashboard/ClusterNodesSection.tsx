@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card } from "@code-proxy/ui";
 import { useConfigCapabilities } from "@features/backend-capabilities";
@@ -7,14 +8,21 @@ import { nodeIssues, issuesLevel } from "./clusterHealth";
 import { databaseView } from "./clusterDatabaseView";
 import { ClusterNodeCard } from "./ClusterNodeCard";
 import { ClusterDatabaseCard } from "./ClusterDatabaseCard";
+import {
+  ClusterDetailsDrawer,
+  databaseTarget,
+  nodeTarget,
+  type ClusterDetailsTarget,
+} from "./ClusterDetailsDrawer";
 
 /*
- * 「服务器节点」：每台应用节点一张紧凑卡片，数据库一张，排在同一个网格里，宽屏一行放下。
+ * 「服务器节点」：每台应用节点一张卡片，数据库一张，排在同一个网格里，宽屏一行放下。
  * 数据来自 GET /cluster：各节点随心跳上报的资源快照，主节点快照里的数据库段，以及 clirelay-hostagent
  * 上报的数据库主机。后端在 GET /config 的 capabilities 里声明了 node-metrics 才出现、才请求；旧版本整块
  * 不出现。磁盘、数据库、主机是后来加的字段，旧后端没有时对应的格子显示「—」，数据库卡片不出现。
  *
- * 结构与上面的系统监控一致：分区标题 + 网格，网格里每张卡就是一层，卡里不再套淡底块。
+ * 对齐：每张卡片占网格的五行（标题、指标、数字条、胶囊、页脚），行用 subgrid 共享，同一行卡片等高、
+ * 各区块在同一条水平线上（见 ClusterCardParts）。详情在右侧抽屉里看，不在卡片里展开。
  */
 
 /**
@@ -30,12 +38,19 @@ export function ClusterNodesSection({ enabled }: { enabled: boolean }) {
 function ClusterNodesView({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation();
   const { status, receivedAt, stale } = useClusterNodes(enabled);
+  // 抽屉开关和选中对象分开存：关闭时内容还要陪着退场动画显示一会儿。
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsTarget, setDetailsTarget] = useState<ClusterDetailsTarget>("");
   if (!status) return null;
 
   const now = receivedAt || Date.now();
   const nodes = status.nodes ?? [];
   const online = nodes.filter((node) => node.active).length;
   const database = databaseView(status, now, receivedAt || now);
+  const openDetails = (target: ClusterDetailsTarget) => {
+    setDetailsTarget(target);
+    setDetailsOpen(true);
+  };
 
   // 标题旁的汇总：几张卡片有告急、几张需要留意。
   const cardLevels = [
@@ -81,17 +96,36 @@ function ClusterNodesView({ enabled }: { enabled: boolean }) {
           </p>
         ) : null}
         {/*
-         * 每张卡至少 24rem 宽：2×2 的指标格在这个宽度下数值不会被截断。auto-fit 让卡片按区块宽度
-         * 自动排列：1700px 左右的主区一行四张（三台节点 + 数据库），笔记本上一行三张。items-start：
-         * 展开一张卡的详情时，同一行别的卡不被拉高。
+         * 每张卡至少 24rem 宽：2×2 的指标格和四格数字条在这个宽度下不截断。auto-fit 让卡片按区块宽度
+         * 自动排：宽屏一行放下三台节点和数据库，窄了两列、一列。卡片占五行、行取 subgrid，所以这里的
+         * 行间距就是卡片里各区块之间的间距。
          */}
-        <div className="grid items-start gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
+        <div
+          data-testid="cluster-grid"
+          className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]"
+        >
           {nodes.map((node) => (
-            <ClusterNodeCard key={node.node_id} node={node} now={now} />
+            <ClusterNodeCard
+              key={node.node_id}
+              node={node}
+              now={now}
+              onOpenDetails={() => openDetails(nodeTarget(node.node_id))}
+            />
           ))}
-          {database ? <ClusterDatabaseCard view={database} now={now} /> : null}
+          {database ? (
+            <ClusterDatabaseCard view={database} now={now} onOpenDetails={() => openDetails(databaseTarget)} />
+          ) : null}
         </div>
       </div>
+      <ClusterDetailsDrawer
+        open={detailsOpen}
+        target={detailsTarget}
+        onTargetChange={setDetailsTarget}
+        onClose={() => setDetailsOpen(false)}
+        nodes={nodes}
+        database={database}
+        now={now}
+      />
     </Card>
   );
 }

@@ -264,11 +264,14 @@ describe("ClusterNodesSection", () => {
     expect(slot.getByText("Throttled 12% · memory 1.5 GB / 3.0 GB")).toBeInTheDocument();
     expect(card.getByTestId("node-slot")).toHaveAttribute("data-level", "warn");
 
-    expect(card.getByText("Load 6.50 · 6.10 · 5.80")).toBeInTheDocument();
-    expect(card.getByText("In flight: 120")).toBeInTheDocument();
-    expect(card.getByText("840 req/min")).toBeInTheDocument();
-    expect(card.getByText("In 1.00 MB/s")).toBeInTheDocument();
-    expect(card.getByText("Out 102.4 KB/s")).toBeInTheDocument();
+    // The stat strip: label above value, the same four cells on every node card.
+    const strip = within(card.getByTestId("stat-strip"));
+    expect(strip.getByText("Load")).toBeInTheDocument();
+    expect(strip.getByText("6.50").closest("div")).toHaveAttribute("title", "Load over 1 / 5 / 15 min: 6.50 / 6.10 / 5.80");
+    expect(strip.getByText("In flight")).toBeInTheDocument();
+    expect(strip.getByText("120")).toBeInTheDocument();
+    expect(strip.getByText("840")).toBeInTheDocument();
+    expect(strip.getByText("1.0M / 102K").closest("div")).toHaveAttribute("title", "In 1.00 MB/s, out 102.4 KB/s");
     expect(card.getByText("Egress OK")).toBeInTheDocument();
     expect(card.getByText("DB 8.2 ms")).toBeInTheDocument();
     expect(card.getByText("Shared Redis 7.9 ms")).toBeInTheDocument();
@@ -287,21 +290,25 @@ describe("ClusterNodesSection", () => {
     expect(offline.queryByRole("button", { name: /Details/ })).toBeNull();
   });
 
-  test("opens a node's details in place", async () => {
+  test("opens the details in a drawer, switches to the database there, and gives focus back on Esc", async () => {
     mocks.getStatus.mockResolvedValue(clusterStatus());
     render(<ClusterNodesSection enabled />);
     const card = within(await screen.findByRole("group", { name: "n155" }));
 
-    const toggle = card.getByRole("button", { name: /Details/ });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(card.queryByTestId("node-details")).toBeNull();
-    fireEvent.click(toggle);
-    expect(card.getByRole("button", { name: /Less/ })).toHaveAttribute("aria-expanded", "true");
+    const trigger = card.getByRole("button", { name: "Details of n155" });
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    trigger.focus();
+    fireEvent.click(trigger);
 
-    const details = within(card.getByTestId("node-details"));
-    expect(details.getByText("Needs attention")).toBeInTheDocument();
-    expect(details.getByText("Throttled 12%")).toBeInTheDocument();
-    const disk = within(details.getByTestId("disk-row"));
+    const dialog = within(await screen.findByRole("dialog", { name: "n155" }));
+    expect(dialog.getByText("dev-1234567 · 198.51.100.20")).toBeInTheDocument();
+    expect(dialog.getByRole("tab", { name: "n155" })).toHaveAttribute("aria-selected", "true");
+    expect(dialog.getByRole("tab", { name: "n149" })).toHaveAttribute("aria-selected", "false");
+    expect(dialog.getByRole("tab", { name: "Database" })).toBeInTheDocument();
+    expect(dialog.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", dialog.getByRole("tab", { name: "n155" }).id);
+    expect(dialog.getByText("Needs attention")).toBeInTheDocument();
+    expect(dialog.getByText("Throttled 12%")).toBeInTheDocument();
+    const disk = within(dialog.getByTestId("disk-row"));
     expect(disk.getByText("/")).toBeInTheDocument();
     expect(disk.getByText("xfs")).toBeInTheDocument();
     expect(disk.getByText("Root · Program · Logs")).toBeInTheDocument();
@@ -309,13 +316,24 @@ describe("ClusterNodesSection", () => {
     expect(disk.getByText("Inodes 0.6%")).toBeInTheDocument();
     // 120 MB an hour with 16 GB free: about six days, which is information, not a warning.
     expect(disk.getByText("+120.0 MB over 1h 0m, full in ~6d")).toBeInTheDocument();
-    expect(details.getByTestId("disk-row")).toHaveAttribute("data-level", "normal");
-    expect(details.getByText("clirelay2-8318.service")).toBeInTheDocument();
-    expect(details.getByText("4 / 4 reachable")).toBeInTheDocument();
-    expect(details.getByText("812")).toBeInTheDocument();
+    expect(dialog.getByTestId("disk-row")).toHaveAttribute("data-level", "normal");
+    expect(dialog.getByText("clirelay2-8318.service")).toBeInTheDocument();
+    expect(dialog.getByText("4 / 4 reachable")).toBeInTheDocument();
+    expect(dialog.getByText("812")).toBeInTheDocument();
+    // The card itself does not grow: nothing of the details is rendered in it.
+    expect(card.queryByText("clirelay2-8318.service")).toBeNull();
 
-    fireEvent.click(card.getByRole("button", { name: /Less/ }));
-    expect(card.queryByTestId("node-details")).toBeNull();
+    fireEvent.click(dialog.getByRole("tab", { name: "Database" }));
+    const database = within(await screen.findByRole("dialog", { name: "Database" }));
+    expect(database.getByRole("tab", { name: "Database" })).toHaveAttribute("aria-selected", "true");
+    expect(database.getByText("19 / 200 (3 reserved)")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(trigger).toHaveFocus();
   });
 
   test("warns when a disk is filling, on the card and in the badge", async () => {
@@ -354,7 +372,7 @@ describe("ClusterNodesSection", () => {
     const card = within(await screen.findByRole("group", { name: "Database" }));
 
     expect(card.getByText("db-149")).toBeInTheDocument();
-    expect(card.getByText(/^PostgreSQL 15\.19 · 536\.0 MB database · Up 15h 56m$/)).toBeInTheDocument();
+    expect(card.getByText("PostgreSQL 15.19 · queried by n155")).toBeInTheDocument();
     expect(within(card.getByTestId("health-pill")).getByText("Healthy")).toBeInTheDocument();
 
     const connections = within(card.getByTestId("db-connections"));
@@ -370,16 +388,27 @@ describe("ClusterNodesSection", () => {
     expect(wal.getByText("Slot holds 814.5 KB of 4.0 GB")).toHaveAttribute("title", "clirelay_walarchive");
     const cache = within(card.getByTestId("db-throughput"));
     expect(cache.getByText("99.8%")).toBeInTheDocument();
-    expect(cache.getByText("12.0 tx/s")).toBeInTheDocument();
+    expect(cache.getByText("Rollbacks 0.1% · deadlocks 0")).toBeInTheDocument();
 
-    expect(card.getByText("pg_receivewal · streaming")).toBeInTheDocument();
-    expect(card.getByText("Longest tx 0s")).toBeInTheDocument();
-    expect(card.getByText("Lock waits: 0")).toBeInTheDocument();
-    expect(card.getByText("XID age 90K")).toBeInTheDocument();
-    expect(card.getByText("Queried by n155 10s ago")).toBeInTheDocument();
+    // The same four-cell strip as on the node cards.
+    const strip = within(card.getByTestId("stat-strip"));
+    expect(strip.getByText("DB size")).toBeInTheDocument();
+    expect(strip.getByText("536.0 MB")).toBeInTheDocument();
+    expect(strip.getByText("12.0")).toBeInTheDocument();
+    expect(strip.getByText("90K").closest("div")).toHaveAttribute("title", expect.stringContaining("89,696"));
+    expect(strip.getByText("0.80")).toBeInTheDocument();
 
-    fireEvent.click(card.getByRole("button", { name: /Details/ }));
-    const details = within(card.getByTestId("database-details"));
+    const chips = within(card.getByTestId("chip-row"));
+    expect(chips.getByText("pg_receivewal · streaming")).toBeInTheDocument();
+    expect(chips.getByText("Longest tx 0s")).toBeInTheDocument();
+    expect(chips.getByText("Lock waits: 0")).toBeInTheDocument();
+    // The footer: uptime, then how fresh the leader's query is.
+    expect(
+      card.getByText((_, element) => element?.tagName === "P" && element.textContent === "Up 15h 56m · queried 10s ago"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(card.getByRole("button", { name: "Details of Database" }));
+    const details = within(await screen.findByRole("dialog", { name: "Database" }));
     expect(details.getByText("19 / 200 (3 reserved)")).toBeInTheDocument();
     expect(details.getByTestId("slot-row")).toHaveAttribute("data-level", "normal");
     expect(details.getByText("Active · reserved")).toBeInTheDocument();
