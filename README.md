@@ -50,6 +50,7 @@ The panel is a single-page React application. CliRelay serves it at **`/manage`*
 | | |
 | :-- | :-- |
 | 📈 **Monitor center** | A health score with a per-check diagnosis, per-minute live traffic, six golden-signal tiles with period-over-period deltas, P50–P99 latency and time to first token, failure analysis, rankings, a portal user → model → channel traffic flow and an activity heatmap. |
+| 🖥️ **Servers at a glance** | One compact card per server node: CPU with the hypervisor's steal shown apart, memory, the fullest disk with its time to full, the slot's quota and throttling, traffic, egress and the database / Redis round trips. Next to them sits a card for the shared PostgreSQL: connections against the limit, WAL and replication slots, the archive connection, long and idle transactions, lock waits, cache hit ratio, transaction ID age and the database host's own CPU and disks. Anything off colours its card and is named in the card's badge; the details open in place. |
 | 🔑 **Guided account setup** | One "Add AI account" dialog for browser sign-in, device codes and credential import, with the real steps for each provider and checks before anything is sent; bulk import of held credentials. |
 | 💳 **Keys, quotas and spend** | Portal accounts that own several client keys, reusable permission profiles, daily / period / lifetime quotas, rate limits and one-click period resets. |
 | 🧭 **Models and routing** | A model plaza and catalog with capabilities and pricing, channel groups with scheduling and health, and a reusable outbound proxy pool. |
@@ -101,7 +102,7 @@ flowchart LR
 
 - A tagged release builds the panel and attaches **`panel-dist.zip`** (`manage.html` plus `assets/`).
 - CliRelay checks the latest release of the configured repository (`remote-management.panel-github-repository`, default `kittors/codeProxy`) about every three hours, downloads it and serves it at `/manage`. You can also point CliRelay at a local build directory.
-- **A panel release reaches every self-hosted backend, including older ones.** Features that need a newer backend detect it and degrade instead of failing — the monitor center falls back to a daily view built from `/usage/chart-data`, sign-in steps are inferred from the issued URL, and credential import asks for a backend update. Keep that rule for new features: if the panel depends on a new backend field, have the backend advertise it and hide the feature until it does.
+- **A panel release reaches every self-hosted backend, including older ones.** Features that need a newer backend detect it and degrade instead of failing — the monitor center falls back to a daily view built from `/usage/chart-data`, sign-in steps are inferred from the issued URL, credential import asks for a backend update, and the server node view only appears where `GET /config` declares `node-metrics`, drawing disks, the database card and the database host only where the backend sends them. Keep that rule for new features: if the panel depends on a new backend field, have the backend advertise it and hide the feature until it does.
 
 ## Develop locally
 
