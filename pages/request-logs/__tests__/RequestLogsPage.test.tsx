@@ -647,10 +647,18 @@ describe("RequestLogsPage", () => {
       );
     });
 
-    test("the configuration's declaration offers the facet before the first page is back", async () => {
+    // 支持与否只看日志接口自己的 capabilities（GET /config 不声明它）：第一页回来之前不出 Agent 筛选，
+    // 即使配置里写了什么也一样。
+    test("offers the Agent facet only once the logs response declares it", async () => {
       mocks.getConfig.mockResolvedValue({ capabilities: { "request-log-clients": true } });
-      mocks.getUsageLogs.mockReturnValue(new Promise(() => {}));
+      const first = deferred<UsageLogsResponse>();
+      mocks.getUsageLogs.mockReturnValueOnce(first.promise);
       renderRequestLogsPage();
+      const grid = await findLogGrid();
+      expect(within(grid).getByRole("columnheader", { name: "Agent" })).toBeInTheDocument();
+      expect(within(screen.getByRole("search")).queryByRole("button", { name: /^Agent/ })).toBeNull();
+
+      first.resolve(logsAnswer([logItem()], { capabilities: { requestLogClients: true } }));
       await waitFor(() => expect(facetButton("Agent")).toBeInTheDocument());
     });
   });

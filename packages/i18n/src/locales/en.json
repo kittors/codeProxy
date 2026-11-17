@@ -2930,6 +2930,7 @@
     "basic_title": "Basic Fingerprint",
     "basic_desc": "Leave fields empty for automatic learning. Fill a value only when you intentionally want to override learned/default identity.",
     "user_agent": "User-Agent",
+    "user_agent_missing": "No User-Agent recorded",
     "user_agent_hint": "The Codex client identity visible to upstream.",
     "auto_learn_placeholder": "Auto learn from real client requests",
     "version": "Version",

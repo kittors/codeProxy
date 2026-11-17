@@ -218,7 +218,7 @@ describe("requestLogsShared", () => {
     expect(screen.getByText("Unknown")).toBeInTheDocument();
     const custom = { ...row, clientName: "okhttp", clientVersion: "", userAgent: "okhttp/4.12.0" };
     render(createElement("div", null, agent.cell(custom, { rowIndex: 0, selected: false, expanded: false })));
-    expect(screen.getByText("okhttp")).toBeInTheDocument();
+    expect(screen.getByText("Okhttp")).toBeInTheDocument();
   });
 
   test("builds a key-primary identity column for account usage and portal logs", () => {

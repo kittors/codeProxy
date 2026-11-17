@@ -212,13 +212,16 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
       </span>
     </span>
   );
-  if (!row.userAgent) return content;
   return (
     <GridCellTooltip
       content={
         <span className="block max-w-[22rem]">
           <span className="mb-1 block text-xs font-semibold">{t("request_logs.user_agent")}</span>
-          <span className="block break-all font-mono text-2xs text-canvas/80">{row.userAgent}</span>
+          {row.userAgent ? (
+            <span className="block break-all font-mono text-2xs text-canvas/80">{row.userAgent}</span>
+          ) : (
+            <span className="block text-2xs text-canvas/70">{t("request_logs.user_agent_missing")}</span>
+          )}
         </span>
       }
     >

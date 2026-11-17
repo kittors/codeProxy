@@ -166,7 +166,7 @@ export function RequestLogDetailPanel({
             {row.userAgent ? (
               <CopyValue value={row.userAgent} label={t("request_logs.user_agent")} />
             ) : (
-              muted(DASH)
+              muted(t("request_logs.user_agent_missing"))
             )}
           </Field>
         </Section>

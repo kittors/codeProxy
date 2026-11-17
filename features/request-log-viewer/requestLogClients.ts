@@ -1,11 +1,14 @@
 /**
  * 请求日志的 Agent（调用方客户端）。
  *
- * 后端（request-log-clients）给每行三个字段：client_name 是归一化的客户端 ID，认得的客户端是固定 ID
- * （claude-code、codex-desktop…，见 CliRelay internal/clientident），认不得但带了 User-Agent 的是 UA
- * 第一个产品名的小写（okhttp、python-requests），没带 UA 或旧数据是空串；client_version 是版本；
- * user_agent 是原始 UA（最多 256 字符）。显示名与图标只在前端维护：后端新认出一个客户端，
- * 这里没登记时也照样显示它的 ID，不会显示成「未知」。
+ * 后端（CliRelay #1311 起，dev-6322d74 上线；GET /usage/logs 的 capabilities["request-log-clients"]
+ * 声明，门户接口看 filters.client_names 这个键在不在）给每行三个字段：
+ * - client_name：认得的客户端是固定 ID（下面登记的这些，发版后不会改名；见 CliRelay internal/clientident）；
+ *   认不得但带了 User-Agent 的是 UA 第一个产品名，小写、只留字母数字点和连字符（node、curl、
+ *   go-http-client、python-requests…）；旧数据和没带 UA 的请求是空串；
+ * - client_version：版本（SDK 写成「Python 1.109.1」「JS 0.65.0」；cline 一族和浏览器没有）；
+ * - user_agent：原始 UA，最多 256 字符。
+ * 显示名与图标只在前端维护：没登记的 ID 原样显示、首字母大写，不会显示成「未知」。
  */
 
 /** 筛选里代表「没有客户端名」的取值，和后端 ClientNameUnknown 一致；client_name 本身永远不会是它。 */
@@ -39,16 +42,17 @@ const KNOWN_CLIENTS: Record<string, RequestLogClientDisplay> = {
   "roo-code": { label: "Roo Code", glyph: "terminal" },
   "kilo-code": { label: "Kilo Code", glyph: "terminal" },
   "cherry-studio": { label: "Cherry Studio", glyph: "package" },
-  cursor: { label: "Cursor", glyph: "terminal" },
-  curl: { label: "curl", glyph: "terminal" },
   browser: { label: "Browser", labelKey: "request_logs.client_browser", glyph: "browser" },
 };
+
+/** 没登记的 ID（UA 的第一个产品名）：原样显示，只把首字母大写（node → Node、go-http-client → Go-http-client）。 */
+const capitalize = (id: string) => (id ? id[0].toUpperCase() + id.slice(1) : id);
 
 /** 已登记客户端的显示方式；未登记的 ID 原样显示、用通用图标。空串返回 null（显示「未知」）。 */
 export function describeRequestLogClient(name: string): RequestLogClientDisplay | null {
   const id = name.trim().toLowerCase();
   if (!id || id === UNKNOWN_REQUEST_LOG_CLIENT) return null;
-  return KNOWN_CLIENTS[id] ?? { label: id, glyph: "package" };
+  return KNOWN_CLIENTS[id] ?? { label: capitalize(id), glyph: "package" };
 }
 
 /** 这批数据来自带调用方字段的后端吗：后端保证三个键每行都有（值可以是空串），旧后端一个都没有。 */

@@ -18,7 +18,6 @@ import {
   useToast,
   type GridFilters,
 } from "@code-proxy/ui";
-import { useConfigCapabilities } from "@features/backend-capabilities";
 import { ErrorDetailModal, LogContentModal } from "@features/log-content-viewer";
 import {
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
@@ -86,7 +85,6 @@ export function RequestLogsPage() {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [masked, setMasked] = useSensitiveDataMasking();
-  const configCapabilities = useConfigCapabilities();
 
   const [content, setContent] = useState<{
     open: boolean;
@@ -153,16 +151,10 @@ export function RequestLogsPage() {
   const requestSeqRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
 
-  // Agent 列：日志接口自己声明或行上带了字段就是支持；第一页回来前先看 GET /config 的声明。
-  // 两样都还不知道时列先占位（列顺序在首次挂载时定下，晚到的列会被排到最后），确认不支持才去掉。
+  // Agent 列：日志接口的 capabilities 声明了 request-log-clients（或行上带了这几个字段）就是支持。
+  // 第一页回来前还不知道，列先占位（列顺序在首次挂载时定下，晚到的列会被排到最后），确认是旧后端才去掉。
   const clients: RequestLogClientsSupport =
-    clientsFromLogs === true
-      ? "supported"
-      : clientsFromLogs === false
-        ? "unsupported"
-        : configCapabilities.status === "ready" && configCapabilities.capabilities.requestLogClients
-          ? "supported"
-          : "pending";
+    clientsFromLogs === true ? "supported" : clientsFromLogs === false ? "unsupported" : "pending";
 
   const rows = useMemo<RequestLogsRow[]>(() => rawItems.map((item) => toRequestLogsRow(item)), [rawItems]);
 

@@ -38,7 +38,6 @@ describe("useConfigCapabilities", () => {
       poolCapacity: false,
       privacyMasking: false,
       nodeMetrics: false,
-      requestLogClients: false,
     });
   });
 

@@ -2926,6 +2926,7 @@
     "basic_title": "基础指纹",
     "basic_desc": "留空表示自动学习。只有明确需要覆盖 learned/default 身份时才填写。",
     "user_agent": "User-Agent",
+    "user_agent_missing": "未记录 User-Agent",
     "user_agent_hint": "上游看到的 Codex 客户端标识。",
     "auto_learn_placeholder": "从真实客户端请求自动学习",
     "version": "Version",
