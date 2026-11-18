@@ -328,44 +328,55 @@ body[data-grid-dragging="true"] * {
 }
 
 /*
- * 持续刷新的表里离开的行：先原地淡出（160ms），再把行高收到 0（200ms），下面的行跟着自然上移。
- * 不先拿掉再用位移把下面的行从下方滑上来：那样动画开头最后一行会画到表格底下，可滚动高度短暂
- * 变大，滚动条闪一下。行高与每格内容高由 useRowMotion 量好写进 --leave-h / --leave-inner-h。
- * 总时长与 ROW_LEAVE_MS 一致。
+ * 持续刷新的表里行怎么进出（data-leaving / data-entering="live"），时间由 useRowMotion 排好，
+ * 写在每行的 --motion-delay 里，时长与那里的 ROW_FADE_MS、ROW_FOLD_AFTER_MS、ROW_FOLD_MS 一致：
+ * - 离开的行先原地淡出（160ms），120ms 时已几乎看不见（淡出起步快），就开始把行高收到 0（280ms），
+ *   下面的行跟着自然上移，不留一段空白停在那里。不先拿掉再用位移
+ *   把下面的行从下方滑上来：那样动画开头最后一行会画到表格底下，可滚动高度短暂变大，滚动条闪一下。
+ * - 新进来的行先以 0 高度插入，再展开到自身高度，展开到一半时内容淡入。一出一进时两行此消彼长、
+ *   同一段时间同一条曲线，表格总高度不变，卡片下面的内容一动不动；只多了行时，下面的内容平滑下移。
+ * - 一次来了或走了好几行时轮流展开、收起，表格每帧只变几像素，不会一下撑开或缩掉一大截。
+ * 展开收起用对称的缓入缓出（正弦），推着别的行走时起步和落定都轻，最快的一帧也只有平均速度的 1.6 倍。
+ * 行高与每格内容高由 useRowMotion 量好写进 --leave-h / --leave-inner-h、--enter-h / --enter-inner-h。
+ * 展开只在开始前保持 0 高度（backwards），结束后回到自然高度，不把量到的高度一直钉在行上。
  */
+.cp-grid-body {
+  --grid-fold-ease: cubic-bezier(0.37, 0, 0.63, 1);
+}
+
 .cp-grid-body > .cp-grid-row[data-leaving="true"] {
   animation:
     cp-grid-row-fade-out 160ms var(--ease-soft) forwards,
-    cp-grid-row-collapse 200ms var(--ease-soft) 160ms forwards;
+    cp-grid-row-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) forwards;
   pointer-events: none;
 }
 
 .cp-grid-body > .cp-grid-row[data-leaving="true"] > td {
-  animation: cp-grid-cell-collapse 200ms var(--ease-soft) 160ms forwards;
+  animation: cp-grid-cell-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) forwards;
 }
 
 .cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner] {
-  animation: cp-grid-inner-collapse 200ms var(--ease-soft) 160ms both;
+  animation: cp-grid-inner-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) both;
 }
 
-/*
- * 持续刷新的表里新进来的行（data-entering="live"）：先以 0 高度插入，和离开的行收起同一段时间
- * （160ms 后的 200ms）展开到自身高度，内容再淡入。一出一进时两行此消彼长，表格总高度不变，
- * 卡片下面的内容一动不动；只多了行时，下面的内容平滑下移，而不是被一下子推开。
- * 自身高度由 useRowMotion 量好写进 --enter-h / --enter-inner-h。
- */
 .cp-grid-body > .cp-grid-row[data-entering="live"] {
   animation:
-    cp-grid-row-grow 200ms var(--ease-soft) 160ms both,
-    cp-grid-row-fade-in 240ms var(--ease-soft) 260ms both;
+    cp-grid-row-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards,
+    cp-grid-row-fade-in 240ms var(--ease-soft) calc(var(--motion-delay, 0ms) + 140ms) backwards;
 }
 
 .cp-grid-body > .cp-grid-row[data-entering="live"] > td {
-  animation: cp-grid-cell-grow 200ms var(--ease-soft) 160ms both;
+  animation: cp-grid-cell-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards;
 }
 
+/*
+ * 展开中的格子内容贴着底边：格子平时垂直居中，高度不够时字会从中间被切开、上下两头往外长，
+ * 看得到半截字形。贴底后内容跟着下面的行一起往下走，像从上一行下面滑出来；展开完高度刚好，
+ * 贴底和居中是同一个位置，不会跳。
+ */
 .cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner] {
-  animation: cp-grid-inner-grow 200ms var(--ease-soft) 160ms both;
+  align-items: flex-end;
+  animation: cp-grid-inner-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards;
 }
 
 @keyframes cp-grid-row-grow {

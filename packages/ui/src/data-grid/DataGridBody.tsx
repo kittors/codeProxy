@@ -177,7 +177,13 @@ export interface DataGridBodyProps<T> {
   onFocusRow: (key: string) => void;
   onRowKeyDown: (event: KeyboardEvent<HTMLTableRowElement>, key: string, index: number) => void;
   /** 哪些行在这次更新里新进来、哪些在淡出（useRowMotion）。表体不再按行集合整体重挂。 */
-  motion: { entering: ReadonlySet<string>; stagger: boolean; leaving: ReadonlySet<string>; unfold: boolean };
+  motion: {
+    entering: ReadonlySet<string>;
+    stagger: boolean;
+    leaving: ReadonlySet<string>;
+    unfold: boolean;
+    delays: ReadonlyMap<string, number>;
+  };
   dimmed: boolean;
   onRowClick?: (row: T) => void;
   isRowActive?: (row: T) => boolean;
@@ -402,7 +408,8 @@ export function DataGridBody<T>({
     else onRowClick?.(row);
   };
 
-  // 依次浮入只数这次新进来的行，第 n 个新行晚 n × 14ms。
+  // 依次浮入只数这次新进来的行，第 n 个新行晚 n × 14ms。持续刷新的表里各行何时展开、收起由
+  // useRowMotion 排好（--motion-delay）。
   let enterIndex = 0;
   return (
     <tbody
@@ -443,7 +450,10 @@ export function DataGridBody<T>({
                 expandable || onRowClick ? "cursor-pointer" : "",
                 rowClassName?.(row) ?? "",
               ].join(" ")}
-              style={{ ["--row-index" as string]: entering && motion.stagger ? enterIndex - 1 : 0 }}
+              style={{
+                ["--row-index" as string]: entering && motion.stagger ? enterIndex - 1 : 0,
+                ["--motion-delay" as string]: motion.delays.has(key) ? `${motion.delays.get(key)}ms` : undefined,
+              }}
             >
               {leadingCells(key, selected, expanded, false, rowIndex, rowLabel?.(row))}
               {columns.map((column, index) => {
