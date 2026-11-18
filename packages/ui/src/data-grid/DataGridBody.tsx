@@ -177,7 +177,7 @@ export interface DataGridBodyProps<T> {
   onFocusRow: (key: string) => void;
   onRowKeyDown: (event: KeyboardEvent<HTMLTableRowElement>, key: string, index: number) => void;
   /** 哪些行在这次更新里新进来、哪些在淡出（useRowMotion）。表体不再按行集合整体重挂。 */
-  motion: { entering: ReadonlySet<string>; stagger: boolean; leaving: ReadonlySet<string> };
+  motion: { entering: ReadonlySet<string>; stagger: boolean; leaving: ReadonlySet<string>; unfold: boolean };
   dimmed: boolean;
   onRowClick?: (row: T) => void;
   isRowActive?: (row: T) => boolean;
@@ -422,7 +422,7 @@ export function DataGridBody<T>({
           <Fragment key={key}>
             <tr
               data-row-key={key}
-              data-entering={entering ? "true" : undefined}
+              data-entering={entering ? (motion.unfold ? "live" : "true") : undefined}
               data-leaving={leaving ? "true" : undefined}
               inert={leaving || undefined}
               aria-selected={selectable ? selected : isRowActive ? active : undefined}

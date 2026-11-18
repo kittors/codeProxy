@@ -348,6 +348,58 @@ body[data-grid-dragging="true"] * {
   animation: cp-grid-inner-collapse 200ms var(--ease-soft) 160ms both;
 }
 
+/*
+ * 持续刷新的表里新进来的行（data-entering="live"）：先以 0 高度插入，和离开的行收起同一段时间
+ * （160ms 后的 200ms）展开到自身高度，内容再淡入。一出一进时两行此消彼长，表格总高度不变，
+ * 卡片下面的内容一动不动；只多了行时，下面的内容平滑下移，而不是被一下子推开。
+ * 自身高度由 useRowMotion 量好写进 --enter-h / --enter-inner-h。
+ */
+.cp-grid-body > .cp-grid-row[data-entering="live"] {
+  animation:
+    cp-grid-row-grow 200ms var(--ease-soft) 160ms both,
+    cp-grid-row-fade-in 240ms var(--ease-soft) 260ms both;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] > td {
+  animation: cp-grid-cell-grow 200ms var(--ease-soft) 160ms both;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner] {
+  animation: cp-grid-inner-grow 200ms var(--ease-soft) 160ms both;
+}
+
+@keyframes cp-grid-row-grow {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--enter-h);
+  }
+}
+
+@keyframes cp-grid-cell-grow {
+  from {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes cp-grid-inner-grow {
+  from {
+    max-height: 0;
+  }
+  to {
+    max-height: var(--enter-inner-h, 4rem);
+  }
+}
+
+@keyframes cp-grid-row-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes cp-grid-row-fade-out {
   to {
     opacity: 0;
@@ -392,6 +444,9 @@ body[data-grid-dragging="true"] * {
   .cp-grid-body > .cp-grid-row[data-leaving="true"],
   .cp-grid-body > .cp-grid-row[data-leaving="true"] > td,
   .cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner],
+  .cp-grid-body > .cp-grid-row[data-entering="live"],
+  .cp-grid-body > .cp-grid-row[data-entering="live"] > td,
+  .cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner],
   .cp-grid-progress::before {
     animation: none;
   }

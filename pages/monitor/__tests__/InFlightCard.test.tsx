@@ -118,7 +118,8 @@ describe("InFlightCard", () => {
     // The rows that were there are the same elements, not a fresh table replaying its entrance.
     expect(after[1]).toBe(before[0]);
     expect(after[2]).toBe(before[1]);
-    expect(after[0]).toHaveAttribute("data-entering", "true");
+    // The new request unfolds on top instead of the whole table replaying its entrance.
+    expect(after[0]).toHaveAttribute("data-entering", "live");
     expect(after[1]).not.toHaveAttribute("data-entering");
     expect(after[2]).not.toHaveAttribute("data-entering");
   });

@@ -26,6 +26,12 @@ const AFTER: Snapshot = [
   { id: "r-new", startedAgoMs: 800, stage: "upstream", model: "gpt-6.1-sol", path: "/v1/chat/completions", account: "lanlanjiaxin@proton.me" },
 ];
 
+// Then one more starts and none finishes: the older rows have to make room.
+const MORE: Snapshot = [
+  ...AFTER,
+  { id: "r-newer", startedAgoMs: 600, stage: "preparing", model: "gpt-6.1-sol", path: "/v1/responses", account: "rojasteresita717@gmail.com" },
+];
+
 function inFlightBody(snapshot: Snapshot) {
   const now = Date.now();
   return {
@@ -83,7 +89,7 @@ async function openMonitor(page: Page, current: () => Snapshot) {
   await page.goto("/#/runtime/monitor");
 }
 
-type Frame = { t: number; overflow: number; rows: { key: string; opacity: number; top: number; height: number }[] };
+type Frame = { t: number; overflow: number; card: number; rows: { key: string; opacity: number; top: number; height: number }[] };
 
 /** Samples every animation frame of the in-flight table until stopped. */
 async function startSampling(page: Page) {
@@ -99,6 +105,7 @@ async function startSampling(page: Page) {
       w.__frames.push({
         t: performance.now(),
         overflow: scroller.scrollHeight - scroller.clientHeight,
+        card: (table.closest("section") as HTMLElement).getBoundingClientRect().height,
         rows: [...table.querySelectorAll<HTMLElement>("tbody > tr[data-row-key]")].map((row) => {
           const box = row.getBoundingClientRect();
           return { key: row.dataset.rowKey ?? "", opacity: Number(getComputedStyle(row).opacity), top: box.top, height: box.height };
@@ -161,7 +168,6 @@ for (const width of [1470, 1280]) {
     await expect.poll(() => rowKeys(page), { timeout: 8_000 }).toEqual(["r-new", "r-mid", "r-old"]);
     await page.waitForTimeout(700);
     const frames = await stopSampling(page);
-    if (cdp) await cdp.send("Page.stopScreencast");
 
     expect(frames.length).toBeGreaterThan(30);
     const series = (key: string) => frames.flatMap((frame) => frame.rows.filter((row) => row.key === key));
@@ -182,5 +188,31 @@ for (const width of [1470, 1280]) {
     expect(Math.min(...leaving.map((row) => row.height))).toBeLessThan(8);
     // A few rows fit the card: the animation never makes the table scroll.
     expect(Math.max(...frames.map((frame) => frame.overflow))).toBeLessThanOrEqual(1);
+    // One request out, one in: the new row unfolds as the old one folds, so the card, and the page
+    // under it, keeps its height in every frame instead of growing a row and shrinking back.
+    const heights = frames.map((frame) => frame.card);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(2);
+
+    // One more starts, none finishes: the new one unfolds on top and pushes the older ones down,
+    // a few pixels a frame, never in one jump, and they never fade.
+    await startSampling(page);
+    snapshot = MORE;
+    await expect.poll(() => rowKeys(page), { timeout: 8_000 }).toEqual(["r-newer", "r-new", "r-mid", "r-old"]);
+    await page.waitForTimeout(700);
+    const pushed = await stopSampling(page);
+    const rowHeight = series("r-mid")[0].height;
+    for (const key of ["r-new", "r-mid", "r-old"]) {
+      const rows = pushed.flatMap((frame) => frame.rows.filter((row) => row.key === key));
+      expect(Math.min(...rows.map((row) => row.opacity)), `${key} opacity`).toBeGreaterThan(0.99);
+      const travel = rows.at(-1)!.top - rows[0].top;
+      expect(travel, `${key} moved down a row`).toBeGreaterThan(rowHeight * 0.8);
+      const steps = rows.slice(1).map((row, i) => row.top - rows[i].top);
+      expect(Math.min(...steps), `${key} only moves down`).toBeGreaterThanOrEqual(-0.5);
+      expect(Math.max(...steps), `${key} largest step in one frame`).toBeLessThan(rowHeight * 0.4);
+    }
+    const grown = pushed.map((frame) => frame.card);
+    const growth = grown.slice(1).map((height, i) => height - grown[i]);
+    expect(Math.max(...growth), "card grows a little each frame").toBeLessThan(rowHeight * 0.4);
+    if (cdp) await cdp.send("Page.stopScreencast");
   });
 }

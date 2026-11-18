@@ -60,6 +60,12 @@ describe("DataGrid row motion", () => {
     expect(rowEl("b")).not.toHaveAttribute("data-entering");
   });
 
+  test("a live table's first load still enters row by row", () => {
+    render(<Grid live rows={[row("a"), row("b")]} />);
+    expect(rowEl("b")).toHaveAttribute("data-entering", "true");
+    expect(rowEl("b")?.style.getPropertyValue("--row-index")).toBe("1");
+  });
+
   test("a whole new set (another page) enters row by row again", () => {
     const { rerender } = render(<Grid rows={[row("a"), row("b")]} />);
     rerender(<Grid rows={[row("d"), row("e")]} />);
@@ -84,7 +90,9 @@ describe("DataGrid row motion", () => {
     expect(leaving).toHaveAttribute("data-leaving", "true");
     expect(leaving).toHaveAttribute("inert");
     expect(leaving?.style.getPropertyValue("--leave-h")).not.toBe("");
-    expect(rowEl("x")).toHaveAttribute("data-entering", "true");
+    // x unfolds from no height while b folds, so the table keeps its height.
+    expect(rowEl("x")).toHaveAttribute("data-entering", "live");
+    expect(rowEl("x")?.style.getPropertyValue("--enter-h")).not.toBe("");
 
     act(() => {
       vi.advanceTimersByTime(ROW_LEAVE_MS);

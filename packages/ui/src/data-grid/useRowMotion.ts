@@ -19,6 +19,11 @@ export interface RowMotion<T> {
   stagger: boolean;
   /** Rows that left a live table and are fading out. */
   leaving: ReadonlySet<string>;
+  /**
+   * A live update: entering rows unfold from no height while leaving rows fold, so one request
+   * replacing another keeps the table, and everything under it, still (DataGrid.css).
+   */
+  unfold: boolean;
 }
 
 interface Leaving<T> {
@@ -110,7 +115,13 @@ export function useRowMotion<T>({
 
   useRowSlide(bodyRef, drawn, rowKey, reduceMotion);
 
-  return { rows: drawn, entering: transition.entering, stagger: transition.stagger, leaving: leavingKeys };
+  return {
+    rows: drawn,
+    entering: transition.entering,
+    stagger: transition.stagger,
+    leaving: leavingKeys,
+    unfold: live && !transition.stagger && !reduceMotion,
+  };
 }
 
 /**
@@ -155,10 +166,14 @@ function useRowSlide<T>(
     const next = new Map(elements.map((element) => [element.dataset.rowKey ?? "", element.offsetTop]));
     const previous = tops.current;
     tops.current = next;
+    // Positions above are taken with unfolding rows still at no height: the rows under a new row do
+    // not move at this commit, they follow it down as it unfolds, with no transform to overflow.
     for (const element of elements) {
       if (element.dataset.leaving === "true") measureLeavingRow(element);
       // A key that came back before it finished leaving drops the stale measure.
       else if (element.style.getPropertyValue("--leave-h")) element.style.removeProperty("--leave-h");
+      if (element.dataset.entering === "live") measureUnfoldingRow(element);
+      else if (element.style.getPropertyValue("--enter-h")) element.style.removeProperty("--enter-h");
     }
     if (reduceMotion || previous.size === 0) return;
     // Rows that were removed outright leave a gap the rows below jump into. Sliding them up from
@@ -166,7 +181,7 @@ function useRowSlide<T>(
     // rows fit would flash a scrollbar. A live table folds a leaving row instead (see above).
     const shrank = elements.length < previous.size;
     for (const element of elements) {
-      if (element.dataset.entering === "true" || typeof element.animate !== "function") continue;
+      if (element.dataset.entering || typeof element.animate !== "function") continue;
       const before = previous.get(element.dataset.rowKey ?? "");
       if (before === undefined) continue;
       const delta = before - element.offsetTop;
@@ -190,4 +205,20 @@ function measureLeavingRow(row: HTMLElement) {
   for (const inner of row.querySelectorAll<HTMLElement>("[data-cell-inner]")) {
     inner.style.setProperty("--leave-inner-h", `${inner.offsetHeight}px`);
   }
+}
+
+/**
+ * A row entering a live table starts folded (height 0, DataGrid.css) and unfolds to its own height,
+ * which the keyframe needs as a number. Folded, the row cannot report it, so its animations are
+ * switched off for the measurement and back on right after. Nothing is painted in between, and the
+ * animations restart at their first frame, which is where they were.
+ */
+function measureUnfoldingRow(row: HTMLElement) {
+  if (row.style.getPropertyValue("--enter-h")) return;
+  const inners = [...row.querySelectorAll<HTMLElement>("[data-cell-inner]")];
+  const parts = [row, ...row.querySelectorAll<HTMLElement>(":scope > td"), ...inners];
+  for (const part of parts) part.style.animation = "none";
+  row.style.setProperty("--enter-h", `${row.offsetHeight}px`);
+  for (const inner of inners) inner.style.setProperty("--enter-inner-h", `${inner.offsetHeight}px`);
+  for (const part of parts) part.style.animation = "";
 }
