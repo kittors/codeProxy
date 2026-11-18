@@ -5071,7 +5071,12 @@
         "member_duplicate": "Member {{index}} repeats an earlier member.",
         "member_weight_range": "Member {{index}}: the weight must be a whole number from 0 to 1000."
       }
-    }
+    },
+    "resync_history_label": "Also recompute the costs of the last 7 days at the new price",
+    "resync_history_hint": "Unchecked, only requests logged without a price (cost 0) get a cost; requests already costed at the old price keep it. Check it to correct a wrong price in past bills. Request logs are kept for 7 days; older requests cannot be recomputed.",
+    "pricing_resync_started": "Price saved. The costs of requests from the last 7 days will be updated within about 2 minutes",
+    "pricing_resync_done": "Updated the cost of {{count}} logged requests, a change of {{amount}} in total",
+    "pricing_resync_failed": "Updating the costs of logged requests failed: {{error}}"
   },
   "providers_page": {
     "openai_title": "OpenAI Compatible Providers",

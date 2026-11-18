@@ -27,7 +27,8 @@ vi.mock("@code-proxy/api-client", () => ({
   apiKeyEntriesApi: {
     list: () => mocks.apiKeyEntriesList(),
   },
-  modelsApi: {},
+  // Old backends answer 404 for the pricing resync jobs: the page then says nothing more.
+  modelsApi: { getPricingResyncJobs: async () => null },
   modelTestApi: {
     // Mirrors the real endpoints: the modal asks which probe shapes the model
     // supports, then runs one with management authority and no API key.
@@ -964,6 +965,39 @@ describe("ModelsPage", () => {
           price_per_call: 0.08,
         },
       });
+    });
+  });
+
+  test("asks whether to recompute logged costs only when the price changes, and sends the choice", async () => {
+    renderPage();
+
+    await screen.findByText("qwen3.5-plus");
+    await userEvent.click(screen.getByRole("button", { name: /edit qwen3.5-plus/i }));
+    const dialog = await screen.findByRole("dialog");
+    const recompute = () => within(dialog).queryByRole("checkbox", { name: /recompute the costs of the last 7 days/i });
+    expect(recompute()).not.toBeInTheDocument();
+
+    const input = within(dialog).getByLabelText(/input token price/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    expect(recompute()).toBeInTheDocument();
+    expect(recompute()).not.toBeChecked();
+
+    // Back to the old price: nothing to recompute.
+    await userEvent.clear(input);
+    await userEvent.type(input, "1");
+    expect(recompute()).not.toBeInTheDocument();
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    await userEvent.click(recompute()!);
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-configs/qwen3.5-plus",
+        expect.objectContaining({ resync_history: "reprice_7d" }),
+      );
     });
   });
 

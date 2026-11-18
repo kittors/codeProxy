@@ -399,11 +399,13 @@ export function modelConfigItemPath(modelId: string, scope: ModelScope): string 
 export async function saveModelConfig(form: ModelFormState, scope: ModelScope) {
   const payload = buildModelPayload(form);
   if (!payload.id) throw new Error("Model ID is required");
+  // 勾了「按新价重算最近 7 天」才带上；不带时后端只补当时没有价格的请求。
+  const body = form.resyncHistory ? { ...payload, resync_history: "reprice_7d" } : payload;
 
   if (form.originalId) {
-    await apiClient.put(modelConfigItemPath(form.originalId, scope), payload);
+    await apiClient.put(modelConfigItemPath(form.originalId, scope), body);
   } else {
-    await apiClient.post(modelConfigCollectionPath(scope), payload);
+    await apiClient.post(modelConfigCollectionPath(scope), body);
   }
   invalidateConfiguredModelAvailability();
 

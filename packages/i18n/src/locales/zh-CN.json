@@ -5576,7 +5576,12 @@
         "member_duplicate": "第 {{index}} 个成员和前面的成员重复。",
         "member_weight_range": "第 {{index}} 个成员：权重必须是 0 到 1000 的整数。"
       }
-    }
+    },
+    "resync_history_label": "同时按新价重算最近 7 天已记录的费用",
+    "resync_history_hint": "不勾选时，只给当时没有价格、费用记为 0 的请求补上费用，已按旧价算过的保持不变。改错了价格、要纠正历史账单时再勾选。请求日志只保留 7 天，更早的无法重算。",
+    "pricing_resync_started": "价格已保存，最近 7 天历史请求的费用会在约 2 分钟内同步",
+    "pricing_resync_done": "已同步 {{count}} 条历史请求的费用，合计变化 {{amount}}",
+    "pricing_resync_failed": "历史请求的费用同步失败：{{error}}"
   },
   "providers_page": {
     "openai_title": "OpenAI 兼容提供商",

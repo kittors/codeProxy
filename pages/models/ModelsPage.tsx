@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { ConfirmModal, TextInput } from "@code-proxy/ui";
 import type { SearchableSelectOption } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
@@ -20,6 +19,7 @@ import { OwnerFormModal } from "./components/OwnerFormModal";
 import { OwnerSidebarItem } from "./components/OwnerSidebarItem";
 import { useModelColumns } from "./hooks/useModelColumns";
 import { useModelTestRunner } from "./hooks/useModelTestRunner";
+import { announceSavedModel } from "./pricingResyncFeedback";
 import {
   invalidateConfiguredModelAvailability,
   loadConfiguredModelAvailability,
@@ -488,7 +488,7 @@ export function ModelsPage() {
         hasTotalCost: totalCostLoadedRef.current,
       });
       setForm(null);
-      notify({ type: "success", message: t("models_page.config_saved") });
+      announceSavedModel({ form, before: existing, notify, t });
     } catch (err: unknown) {
       notify({
         type: "error",
