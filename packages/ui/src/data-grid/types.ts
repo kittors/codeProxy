@@ -234,5 +234,10 @@ export interface DataGridProps<T> {
   frame?: boolean;
   /** 变化时把表格滚回顶部（换页、换筛选时传页码与筛选的签名；自动刷新不要传，免得把用户拽回去）。 */
   resetScrollKey?: string | number;
+  /**
+   * 行怎么动（见 useRowMotion）：新出现的行浮入，留下的行从原位置滑到新位置。"live" 给持续刷新的表
+   * （在途请求、自动刷新的请求日志）：离开的行先在原处淡出，下面的行再补上来。
+   */
+  rowMotion?: "page" | "live";
   className?: string;
 }

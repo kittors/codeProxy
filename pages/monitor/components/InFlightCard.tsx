@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleCheck, Hourglass } from "lucide-react";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@code-proxy/api-client";
 import { Card, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { formatMonitorDuration } from "../model/monitorFormat";
+import { useLiveNow } from "../hooks/useLiveNow";
 import { usePageVisible } from "../hooks/usePageVisible";
 import { MonitorCardTitle, MonitorInlineNotice } from "./MonitorCardTitle";
 
@@ -20,7 +21,8 @@ export const IN_FLIGHT_SLOW_STAGE_MS = 15_000;
 
 const KNOWN_STAGES: ReadonlySet<string> = new Set(MONITOR_IN_FLIGHT_STAGES);
 
-// 阶段小标签：状态色淡底，深浅色由同一组类名覆盖（与请求详情的小标签同一套）。
+// 阶段小标签：状态色淡底加同色圆点，深浅色由同一组类名覆盖（与请求详情的小标签同一套）。
+// 圆点是静止的：这张表每 5 秒刷新，任何闪烁、呼吸效果都会让整张表看起来在跳。
 const STAGE_TONE: Record<string, string> = {
   preparing: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
   queued: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
@@ -47,8 +49,43 @@ function accountTitle(account: MonitorInFlightAccount): string {
 }
 
 /**
+ * 请求打到的是哪类接口：路径的最后一段就够认（chat/completions、responses、messages、
+ * :streamGenerateContent）。完整路径带着渠道分组前缀，又长又杂，放进悬停提示。
+ */
+export function endpointOf(path: string): string {
+  const clean = path.split("?")[0].replace(/\/+$/, "");
+  if (!clean) return "";
+  const action = clean.lastIndexOf(":");
+  if (action > clean.lastIndexOf("/")) return clean.slice(action + 1);
+  if (clean.endsWith("/chat/completions")) return "chat/completions";
+  if (clean.endsWith("/images/generations")) return "images/generations";
+  return clean.slice(clean.lastIndexOf("/") + 1);
+}
+
+/** 开始得越晚越靠上：新请求出现在顶端，把旧的往下推。 */
+function newestFirst(requests: readonly MonitorInFlightRequest[], receivedAt: number): MonitorInFlightRequest[] {
+  const startedAt = (request: MonitorInFlightRequest) => {
+    const parsed = Date.parse(request.started_at);
+    return Number.isNaN(parsed) ? receivedAt - request.elapsed_ms : parsed;
+  };
+  return [...requests].sort(
+    (a, b) => startedAt(b) - startedAt(a) || b.request_id.localeCompare(a.request_id),
+  );
+}
+
+/** 距上次拉取过了多久由共享时钟算（useLiveNow），只有耗时文字每秒更新，表格本身不重渲染。 */
+const InFlightClock = createContext<{ receivedAt: number; running: boolean }>({ receivedAt: 0, running: false });
+
+function Running({ baseMs, children }: { baseMs: number; children: (ms: number) => ReactNode }) {
+  const { receivedAt, running } = useContext(InFlightClock);
+  const now = useLiveNow(running);
+  return <>{children(baseMs + (receivedAt > 0 ? Math.max(0, now - receivedAt) : 0))}</>;
+}
+
+/**
  * 正在进行的请求（只含本节点）：处在哪个阶段、在这一阶段多久了、在哪个账号上、哪个 Key 发来的。
- * 列表每 5 秒刷新，两次之间的耗时每秒往上走；页面在后台时都停下。
+ * 列表每 5 秒刷新，最新的在最上面；新请求从顶端浮入、旧的往下让，结束的原地淡出后收起。两次刷新
+ * 之间耗时每秒往上走，页面在后台时都停下。
  */
 export function InFlightCard({
   inFlight,
@@ -61,20 +98,12 @@ export function InFlightCard({
 }) {
   const { t } = useTranslation();
   const visible = usePageVisible();
-  const [now, setNow] = useState(() => Date.now());
-  const requests = inFlight?.requests ?? [];
-  const ticking = visible && requests.length > 0;
-
-  useEffect(() => {
-    if (!ticking) return undefined;
-    setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, [ticking, receivedAt]);
-
-  const since = receivedAt > 0 ? Math.max(0, now - receivedAt) : 0;
+  const requests = inFlight?.requests;
+  const rows = useMemo(() => newestFirst(requests ?? [], receivedAt), [requests, receivedAt]);
+  const running = visible && rows.length > 0;
+  const clock = useMemo(() => ({ receivedAt, running }), [receivedAt, running]);
   const total = inFlight?.total ?? 0;
-  const columns = useInFlightColumns(since);
+  const columns = useInFlightColumns();
 
   return (
     <Card
@@ -84,8 +113,8 @@ export function InFlightCard({
           label={t("monitor_center.in_flight.title")}
           note={
             inFlight
-              ? total > requests.length
-                ? t("monitor_center.in_flight.note_listed", { shown: requests.length, total })
+              ? total > rows.length
+                ? t("monitor_center.in_flight.note_listed", { shown: rows.length, total })
                 : t("monitor_center.in_flight.note", { count: total })
               : undefined
           }
@@ -100,7 +129,7 @@ export function InFlightCard({
           title={t("monitor_center.in_flight.load_failed")}
           className="py-6"
         />
-      ) : requests.length === 0 ? (
+      ) : rows.length === 0 ? (
         <MonitorInlineNotice
           icon={CircleCheck}
           title={t("monitor_center.in_flight.empty")}
@@ -109,39 +138,42 @@ export function InFlightCard({
         />
       ) : (
         // 卡片里的小表：不再套外框，按行收高、最高 24rem 后表内滚动；放不下时横向在表格里滚。
-        <DataGrid<MonitorInFlightRequest>
-          frame={false}
-          label={t("monitor_center.in_flight.title")}
-          columns={columns}
-          rows={requests}
-          rowKey={(request) => request.request_id || `row-${requests.indexOf(request)}`}
-          maxHeight="24rem"
-        />
+        <InFlightClock.Provider value={clock}>
+          <DataGrid<MonitorInFlightRequest>
+            frame={false}
+            label={t("monitor_center.in_flight.title")}
+            columns={columns}
+            rows={rows}
+            rowKey={(request) => request.request_id || `${request.started_at}-${request.path}`}
+            maxHeight="24rem"
+            rowMotion="live"
+          />
+        </InFlightClock.Provider>
       )}
     </Card>
   );
 }
 
 /**
- * 在途请求的列。耗时每秒往上走（since 是距上次拉取过了多久），所以列跟着 since 重建。
+ * 在途请求的列。不随时间重建：耗时由各自的 Running 每秒更新，列和行保持不变，表格不会每秒重排。
  * 单元格里的截断文字自带原生 title（完整渠道名 + 账号 id、完整路径），不再叠表格的截断提示。
  */
-function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightRequest>[] {
+function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
   const { t } = useTranslation();
   return useMemo(
     () => [
       {
         id: "started",
         header: t("monitor_center.in_flight.col_started"),
-        width: 128,
+        width: 120,
         overflowTooltip: false,
         cell: (request) => (
           <span className="flex flex-col whitespace-nowrap" title={request.request_id || undefined}>
             <span className="tabular-nums text-ink">{clockOf(request.started_at)}</span>
             <span className="text-xs tabular-nums text-ink-3">
-              {t("monitor_center.in_flight.elapsed", {
-                duration: formatMonitorDuration(request.elapsed_ms + since),
-              })}
+              <Running baseMs={request.elapsed_ms}>
+                {(ms) => t("monitor_center.in_flight.elapsed", { duration: formatMonitorDuration(ms) })}
+              </Running>
             </span>
           </span>
         ),
@@ -149,26 +181,32 @@ function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightReques
       {
         id: "stage",
         header: t("monitor_center.in_flight.col_stage"),
-        width: 160,
+        width: 156,
         overflowTooltip: false,
         cell: (request) => {
-          const inStage = request.stage_elapsed_ms + since;
           const known = KNOWN_STAGES.has(request.stage);
-          const slow = known && request.stage !== "streaming" && inStage >= IN_FLIGHT_SLOW_STAGE_MS;
           return (
             <span className="flex flex-col items-start whitespace-nowrap">
               <span
-                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_TONE[request.stage] ?? NEUTRAL_TONE}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_TONE[request.stage] ?? NEUTRAL_TONE}`}
               >
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-current opacity-80" />
                 {known ? t(`monitor_center.in_flight.stage.${request.stage}`) : request.stage || "—"}
               </span>
-              <span
-                data-slow={slow ? "true" : undefined}
-                className={`mt-0.5 text-xs tabular-nums ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
-                title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
-              >
-                {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
-              </span>
+              <Running baseMs={request.stage_elapsed_ms}>
+                {(inStage) => {
+                  const slow = known && request.stage !== "streaming" && inStage >= IN_FLIGHT_SLOW_STAGE_MS;
+                  return (
+                    <span
+                      data-slow={slow ? "true" : undefined}
+                      className={`mt-1 text-xs tabular-nums transition-colors duration-300 ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
+                      title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
+                    >
+                      {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
+                    </span>
+                  );
+                }}
+              </Running>
             </span>
           );
         },
@@ -179,19 +217,27 @@ function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightReques
         width: 220,
         grow: 1.2,
         overflowTooltip: false,
-        cell: (request) => (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-ink" title={request.model || undefined}>
-              {request.model || "—"}
-              {request.stream ? (
-                <span className="text-ink-3"> · {t("monitor_center.in_flight.stream")}</span>
-              ) : null}
+        cell: (request) => {
+          const route = [request.method, request.path].filter(Boolean).join(" ");
+          const endpoint = endpointOf(request.path);
+          return (
+            <span className="flex min-w-0 flex-col">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-ink" title={request.model || undefined}>
+                  {request.model || "—"}
+                </span>
+                {request.stream ? (
+                  <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 text-2xs leading-5 text-ink-2 dark:bg-white/[0.07]">
+                    {t("monitor_center.in_flight.stream")}
+                  </span>
+                ) : null}
+              </span>
+              <span className="mt-0.5 truncate text-xs text-ink-3" title={route || undefined}>
+                {endpoint || route || "—"}
+              </span>
             </span>
-            <span className="truncate font-mono text-xs text-ink-3" title={request.path || undefined}>
-              {[request.method, request.path].filter(Boolean).join(" ") || "—"}
-            </span>
-          </span>
-        ),
+          );
+        },
       },
       {
         id: "account",
@@ -204,23 +250,29 @@ function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightReques
           if (!account) {
             return <span className="text-xs text-ink-3">{t("monitor_center.in_flight.no_account")}</span>;
           }
+          // 第一次尝试是常态，不写；重试了才写「第 n 次尝试」并标琥珀色。
+          const retried = request.attempt > 1;
+          const details = [
+            account.group ? t("monitor_center.in_flight.group", { group: account.group }) : "",
+            account.model && account.model !== request.model ? account.model : "",
+          ].filter(Boolean);
           return (
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-ink" title={accountTitle(account)}>
                 {account.label || account.auth_id}
                 {account.provider ? <span className="text-ink-3"> · {account.provider}</span> : null}
               </span>
-              <span className="truncate text-xs text-ink-3">
-                {[
-                  request.attempt > 0
-                    ? t("monitor_center.in_flight.attempt", { attempt: request.attempt })
-                    : "",
-                  account.group ? t("monitor_center.in_flight.group", { group: account.group }) : "",
-                  account.model && account.model !== request.model ? account.model : "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
+              {retried || details.length > 0 ? (
+                <span className="mt-0.5 truncate text-xs text-ink-3">
+                  {retried ? (
+                    <span className="font-medium text-amber-700 dark:text-amber-300">
+                      {t("monitor_center.in_flight.attempt", { attempt: request.attempt })}
+                    </span>
+                  ) : null}
+                  {retried && details.length > 0 ? " · " : null}
+                  {details.join(" · ")}
+                </span>
+              ) : null}
             </span>
           );
         },
@@ -237,6 +289,6 @@ function useInFlightColumns(since: number): DataGridColumn<MonitorInFlightReques
         ),
       },
     ],
-    [since, t],
+    [t],
   );
 }
