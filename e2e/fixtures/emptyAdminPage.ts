@@ -56,7 +56,8 @@ const principal = {
   user: { display_name: "Admin", username: "admin", role_codes: ["platform_super_admin"] },
 };
 
-export const openEmptyAdminPage = async (page: Page, route: string) => {
+/** 只装好登录态和「空但结构完整」的接口 mock，不打开页面；需要自己控制首屏导航的用例用它。 */
+export const mockEmptyAdminApi = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.setItem(
       "code-proxy-admin-auth",
@@ -158,7 +159,10 @@ export const openEmptyAdminPage = async (page: Page, route: string) => {
       config: {},
     });
   });
+};
 
+export const openEmptyAdminPage = async (page: Page, route: string) => {
+  await mockEmptyAdminApi(page);
   await page.goto(`/#${route}`);
   await page.waitForFunction(() => {
     const main = document.getElementById("main-content");

@@ -13,7 +13,6 @@ describe("AppRouter", () => {
     const source = readAppModule("app/AppRouter.tsx");
     const modelsRoute = readRepoModule("pages/models/route.tsx");
     const accountSecurityRoute = readRepoModule("pages/account-security/route.tsx");
-    const identityRoute = readRepoModule("pages/identity-fingerprint/route.tsx");
     const ccSwitchRoute = readRepoModule("pages/ccswitch-import-settings/route.tsx");
     const apiKeyPermissionsRoute = readRepoModule("pages/api-key-permissions/route.tsx");
     const contentModerationRoute = readRepoModule("pages/content-moderation/route.tsx");
@@ -36,9 +35,9 @@ describe("AppRouter", () => {
       '{ from: "/system/account-security", to: "/access/ai-accounts" }',
     );
 
-    expect(identityRoute).toMatch(/path:\s*"\/identity-fingerprint"/);
-    expect(identityRoute).toContain(
-      'redirects: [{ from: "/manage/identity-fingerprint", to: "/access/ai-accounts" }]',
+    // 身份指纹并进了 AI 账号页，旧地址只剩重定向（不再是一个渲染 <Navigate> 的页面路由）。
+    expect(accountSecurityRoute).toContain(
+      '{ from: "/identity-fingerprint", to: "/access/ai-accounts" }',
     );
 
     expect(ccSwitchRoute).toContain("CcSwitchImportSettingsPage");
