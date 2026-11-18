@@ -152,6 +152,18 @@ const rectOf = (page: Page, selector: string) =>
     return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height };
   });
 
+/**
+ * 等页面包装层（DashboardLayout 的 Reveal）的入场动画走完：它在入场时上下平移几像素，
+ * 动画中途量到的是被平移过的几何。页面代码加载完才挂进外壳，骨架和入场动画是同一拍出现的。
+ */
+const waitForPageEntered = (page: Page) =>
+  page.waitForFunction(() => {
+    const reveal = document.getElementById("main-content")?.firstElementChild;
+    if (!reveal) return false;
+    const style = getComputedStyle(reveal);
+    return style.opacity === "1" && style.transform === "none";
+  });
+
 /** 外壳的滚动容器（<main> 的父级）还能往下滚多少。 */
 const outerOverflow = (page: Page) =>
   page.evaluate(() => {
@@ -200,6 +212,7 @@ test.describe("整页列表：表格占满剩余高度，框不随行数变", ()
     });
     await page.goto("/#/access/end-users");
     await expect(page.locator(SKELETON_ROWS).first()).toBeAttached();
+    await waitForPageEntered(page);
     const loadingFrame = await rectOf(page, FRAME);
     const loadingPager = await rectOf(page, PAGER);
     expect(await page.locator(SKELETON_ROWS).count()).toBeGreaterThan(5);

@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FileQuestion } from "lucide-react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, createPath, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
@@ -10,46 +10,13 @@ import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { pageRoutes, type PageRoute } from "@pages/registry";
+import { resolveLegacyLocation } from "@pages/routeResolution";
 import { ForbiddenPage } from "@pages/forbidden/ForbiddenPage";
 import { EmbedPage } from "@pages/embed/EmbedPage";
 
 // Keep fallback empty so route transitions stay shell-only; chunk failures are
 // recovered by ChunkLoadErrorBoundary / hard reload instead of a second loader.
 const RouteFallback = () => null;
-
-/** Preserve deep-link suffixes when remapping legacy flat routes to nested secondary routes. */
-function PrefixRedirect({ fromPrefix, toPrefix }: { fromPrefix: string; toPrefix: string }) {
-  const location = useLocation();
-  const rest = location.pathname.startsWith(fromPrefix)
-    ? location.pathname.slice(fromPrefix.length)
-    : "";
-  return <Navigate to={`${toPrefix}${rest}${location.search}${location.hash}`} replace />;
-}
-
-/** Legacy first-level page paths remapped under group prefixes. */
-const LEGACY_PREFIX_REDIRECTS: ReadonlyArray<{ fromPrefix: string; toPrefix: string }> = [
-  { fromPrefix: "/ai-providers", toPrefix: "/access/ai-providers" },
-  { fromPrefix: "/monitor/request-logs", toPrefix: "/runtime/request-logs" },
-  { fromPrefix: "/monitor", toPrefix: "/runtime/monitor" },
-  { fromPrefix: "/logs", toPrefix: "/runtime/logs" },
-  { fromPrefix: "/api-keys", toPrefix: "/access/api-keys" },
-  { fromPrefix: "/ccswitch-import-settings", toPrefix: "/access/ccswitch-import-settings" },
-  { fromPrefix: "/image-generation", toPrefix: "/models/image-generation" },
-  { fromPrefix: "/channel-groups", toPrefix: "/models/channel-groups" },
-  { fromPrefix: "/proxies", toPrefix: "/models/proxies" },
-  { fromPrefix: "/tenants", toPrefix: "/governance/tenants" },
-  { fromPrefix: "/users", toPrefix: "/governance/users" },
-  { fromPrefix: "/roles", toPrefix: "/governance/roles" },
-  { fromPrefix: "/audit-logs", toPrefix: "/governance/audit-logs" },
-  { fromPrefix: "/account-security", toPrefix: "/access/ai-accounts" },
-  { fromPrefix: "/system/account-security", toPrefix: "/access/ai-accounts" },
-  { fromPrefix: "/api-key-permissions", toPrefix: "/access/api-key-permissions" },
-  { fromPrefix: "/system/api-key-permissions", toPrefix: "/access/api-key-permissions" },
-  { fromPrefix: "/menu-management", toPrefix: "/system/menu-management" },
-  { fromPrefix: "/config", toPrefix: "/system/config" },
-  // Do not prefix-redirect "/system" or "/models": new secondary routes already live under those bases
-  // (/system/config, /models/catalog). Exact legacy remaps stay on each page route's redirects.
-];
 
 function InitialRouteReady({ children }: { children: React.ReactElement }) {
   useEffect(() => {
@@ -133,6 +100,8 @@ function StaleRoutePage() {
 /** Must render Routes itself so embed <Route>s are direct children of <Routes>. */
 function AuthenticatedRoutes() {
   const { state, can } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const routes = pageRoutes;
   const publicRoutes = routes.filter((r) => !r.auth);
   const authStandaloneRoutes = routes.filter((r) => r.auth && r.layout === "standalone");
@@ -144,6 +113,29 @@ function AuthenticatedRoutes() {
       ) ?? [],
     [state.principal?.menus],
   );
+  const embedPaths = useMemo(() => embedMenus.map((menu) => menu.path), [embedMenus]);
+
+  // 旧地址（/auth-files、/config、/ 等）先换算成现地址，路由表直接按现地址匹配：首屏就渲染目标页，
+  // 站内跳到旧地址也和普通切页一样。地址栏在提交后再换掉。
+  //
+  // 以前每条旧地址是布局里的一个 <Navigate> 路由，会先当成一页挂上去：页面切换动画给这个空白页
+  // 走一遍入场和退场；/auth-files 这类还包在 readyRoute 里，首屏一挂上就撤掉加载层，加载层淡出后
+  // 只剩空外壳，再等目标页的代码——那一拍外壳被 Suspense 换成空回退，整屏白约 0.3 秒（11-18）。
+  //
+  // 必须一直给 <Routes> 传 location：传与不传渲染出来的根节点不同，地址栏换成现地址的那一下
+  // 会把整个布局和页面重新挂载一遍。
+  const legacyTarget = useMemo(
+    () => resolveLegacyLocation(location, routes, embedPaths),
+    [location, routes, embedPaths],
+  );
+  const routeLocation = useMemo(
+    () => (legacyTarget ? { ...location, ...legacyTarget } : location),
+    [location, legacyTarget],
+  );
+  const legacyHref = legacyTarget ? createPath(legacyTarget) : null;
+  useEffect(() => {
+    if (legacyHref) navigate(legacyHref, { replace: true });
+  }, [legacyHref, location.key, navigate]);
 
   // Online update is gated on the same permission its endpoints require
   // (system.status.read, per the backend's route permission table). Subscribing
@@ -156,7 +148,8 @@ function AuthenticatedRoutes() {
     >
       <ChunkLoadErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
-          <Routes>
+          <Routes location={routeLocation}>
+            {/* 公开页的旧地址：目标在 AppRouter 顶层，不经这里的布局，照旧用 <Navigate>。 */}
             {publicRoutes.flatMap((route) =>
               (route.redirects ?? []).map((rd) => (
                 <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
@@ -179,19 +172,7 @@ function AuthenticatedRoutes() {
                     element={<AuthorizedPage route={route} />}
                   />
                 ))}
-                {authDashboardRoutes.flatMap((route) =>
-                  (route.redirects ?? []).map((rd) => (
-                    <Route key={rd.from} path={rd.from} element={<Navigate to={rd.to} replace />} />
-                  )),
-                )}
-                {/* Prefix redirects cover deep links under legacy flat paths (e.g. /ai-providers/openai). */}
-                {LEGACY_PREFIX_REDIRECTS.map((rd) => (
-                  <Route
-                    key={`legacy:${rd.fromPrefix}`}
-                    path={`${rd.fromPrefix}/*`}
-                    element={<PrefixRedirect fromPrefix={rd.fromPrefix} toPrefix={rd.toPrefix} />}
-                  />
-                ))}
+                {/* 旧地址（页面的 redirects、前缀旧地址、根地址）已在上面换算成现地址，这里不再挂路由。 */}
                 {embedMenus.map((menu) => (
                   <Route
                     key={`embed:${menu.code}`}
@@ -208,7 +189,6 @@ function AuthenticatedRoutes() {
                       element={<AuthorizedPage route={route} />}
                     />
                   ))}
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="*" element={readyRoute(<StaleRoutePage />)} />
               </Route>
             </Route>

@@ -1,6 +1,7 @@
 import { useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Reveal } from "@code-proxy/ui";
+import { pendingPageCode } from "@pages/registry";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { AppShell } from "./AppShell";
 
@@ -11,6 +12,17 @@ export function DashboardLayout() {
   // Remount page content when the effective tenant changes so list/detail
   // data reloads under the new tenant header instead of keeping stale state.
   const tenantKey = auth?.state.principal?.effective_tenant?.id ?? "default";
+
+  // 切到代码还没加载的页面时，先在这里挂起，等代码到了再切。
+  //
+  // AnimatePresence mode="wait" 等旧页面退场完才挂载新页面，那次渲染是动画回调里的普通更新，
+  // 不在导航的 transition 里。新页面那时才去加载代码、挂起的话，React 只能让最近的 Suspense
+  // 显示回退——那个边界在 AppRouter 里、包着整个外壳，回退是 null，外壳整个消失，屏幕白到代码
+  // 加载完为止（站内链接、浏览器前进后退、旧地址跳转都会，只有侧边栏先预加载再跳所以没事）。
+  // 在这里挂起时还在 React Router 提交 location 的 startTransition 里，React 会保留旧页面；
+  // 首屏没有旧页面可留，回退在 HTML 加载层下面，看不到。
+  const pendingCode = pendingPageCode(location.pathname);
+  if (pendingCode) throw pendingCode;
 
   return (
     <AppShell onLogout={() => auth?.actions?.logout?.()}>
