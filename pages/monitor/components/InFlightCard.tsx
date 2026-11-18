@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { CircleCheck, Hourglass } from "lucide-react";
 import {
@@ -34,6 +35,20 @@ const STAGE_TONE: Record<string, string> = {
 const NEUTRAL_TONE = STAGE_TONE.preparing;
 
 const pad = (value: number) => String(value).padStart(2, "0");
+
+/**
+ * 空和有请求之间切换（夜里流量低时每几秒就来回一次）：提示和表格交叉淡入淡出，同时一个收起、一个
+ * 展开，卡片高度平滑过渡，不再一下跳成另一个样子。曲线和时长与表格行展开收起相同（DataGrid.css 的
+ * --grid-fold-ease、useRowMotion 的 ROW_FOLD_MS）。减少动效时直接切换。
+ */
+const SWAP_TRANSITION = { duration: 0.28, ease: [0.37, 0, 0.63, 1] as const };
+const SWAP_MOTION = {
+  initial: { opacity: 0, height: 0, overflow: "hidden" },
+  animate: { opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } },
+  exit: { opacity: 0, height: 0, overflow: "hidden" },
+  transition: SWAP_TRANSITION,
+};
+const SWAP_INSTANT = { initial: false, transition: { duration: 0 } } as const;
 
 /** 开始时刻按浏览器本地时间显示到秒：在途请求都是刚刚开始的，不用写日期。 */
 function clockOf(iso: string): string {
@@ -98,12 +113,14 @@ export function InFlightCard({
 }) {
   const { t } = useTranslation();
   const visible = usePageVisible();
+  const reduceMotion = useReducedMotion();
   const requests = inFlight?.requests;
   const rows = useMemo(() => newestFirst(requests ?? [], receivedAt), [requests, receivedAt]);
   const running = visible && rows.length > 0;
   const clock = useMemo(() => ({ receivedAt, running }), [receivedAt, running]);
   const total = inFlight?.total ?? 0;
   const columns = useInFlightColumns();
+  const view = error && !inFlight ? "error" : rows.length === 0 ? "empty" : "table";
 
   return (
     <Card
@@ -121,35 +138,38 @@ export function InFlightCard({
         />
       }
       loading={!inFlight && !error}
-      bodyClassName="flex flex-col gap-2"
     >
-      {error && !inFlight ? (
-        <MonitorInlineNotice
-          icon={Hourglass}
-          title={t("monitor_center.in_flight.load_failed")}
-          className="py-6"
-        />
-      ) : rows.length === 0 ? (
-        <MonitorInlineNotice
-          icon={CircleCheck}
-          title={t("monitor_center.in_flight.empty")}
-          description={t("monitor_center.in_flight.empty_hint")}
-          className="py-6"
-        />
-      ) : (
-        // 卡片里的小表：不再套外框，按行收高、最高 24rem 后表内滚动；放不下时横向在表格里滚。
-        <InFlightClock.Provider value={clock}>
-          <DataGrid<MonitorInFlightRequest>
-            frame={false}
-            label={t("monitor_center.in_flight.title")}
-            columns={columns}
-            rows={rows}
-            rowKey={(request) => request.request_id || `${request.started_at}-${request.path}`}
-            maxHeight="24rem"
-            rowMotion="live"
-          />
-        </InFlightClock.Provider>
-      )}
+      <AnimatePresence initial={false}>
+        <motion.div key={view} {...(reduceMotion ? SWAP_INSTANT : SWAP_MOTION)}>
+          {view === "error" ? (
+            <MonitorInlineNotice
+              icon={Hourglass}
+              title={t("monitor_center.in_flight.load_failed")}
+              className="py-6"
+            />
+          ) : view === "empty" ? (
+            <MonitorInlineNotice
+              icon={CircleCheck}
+              title={t("monitor_center.in_flight.empty")}
+              description={t("monitor_center.in_flight.empty_hint")}
+              className="py-6"
+            />
+          ) : (
+            // 卡片里的小表：不再套外框，按行收高、最高 24rem 后表内滚动；放不下时横向在表格里滚。
+            <InFlightClock.Provider value={clock}>
+              <DataGrid<MonitorInFlightRequest>
+                frame={false}
+                label={t("monitor_center.in_flight.title")}
+                columns={columns}
+                rows={rows}
+                rowKey={(request) => request.request_id || `${request.started_at}-${request.path}`}
+                maxHeight="24rem"
+                rowMotion="live"
+              />
+            </InFlightClock.Provider>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </Card>
   );
 }

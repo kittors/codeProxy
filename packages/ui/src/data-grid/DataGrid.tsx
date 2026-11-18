@@ -44,6 +44,7 @@ import { cssEscape, useColumnReorder } from "./useColumnReorder";
 import { useColumnSizing } from "./useColumnSizing";
 import { useGridViewport } from "./useGridViewport";
 import { useRowReorder } from "./useRowReorder";
+import { RowSlide } from "./RowSlide";
 import { useRowMotion } from "./useRowMotion";
 import type { DataGridColumn, DataGridProps, GridFilterValue, GridSort } from "./types";
 
@@ -170,7 +171,7 @@ export function DataGrid<T>({
 
   const keys = useMemo(() => displayRows.map((row) => rowKey(row)), [displayRows, rowKey]);
   const orderSignature = keys.join("\u0001");
-  const rowMoves = useRowMotion({ rows: displayRows, keys, rowKey, bodyRef, live: rowMotion === "live", reduceMotion: Boolean(reduceMotion) });
+  const rowMoves = useRowMotion({ rows: displayRows, keys, bodyRef, live: rowMotion === "live", reduceMotion: Boolean(reduceMotion) });
 
   const selectionState = getGridSelectionState(keys, selectedKeys);
   const selectedCount = selectionCount ?? selectedKeys?.size ?? 0;
@@ -567,6 +568,7 @@ export function DataGrid<T>({
               draggingColumnId={columnDrag?.columnId ?? null}
               rowGrip={Boolean(rowReorder)}
             />
+            <RowSlide bodyRef={bodyRef} order={rowMoves.order} reduceMotion={Boolean(reduceMotion)} />
             <DataGridBody
               bodyRef={bodyRef}
               columns={visibleColumns}
