@@ -2,7 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
 import { normalizeMonitorInFlight, type MonitorInFlight } from "@code-proxy/api-client";
-import { IN_FLIGHT_SLOW_STAGE_MS, InFlightCard } from "../components/InFlightCard";
+import { IN_FLIGHT_SLOW_STAGE_MS, InFlightCard, endpointOf } from "../components/InFlightCard";
 
 const RECEIVED_AT = Date.parse("2026-11-01T05:30:00+08:00");
 
@@ -68,7 +68,7 @@ describe("InFlightCard", () => {
     vi.useRealTimers();
   });
 
-  test("lists each request with its stage, time, account and key", () => {
+  test("lists each request, newest first, with its stage, time, account and key", () => {
     renderCard(inFlight([streaming, firstToken, preparing]));
     expect(screen.getByRole("heading", { name: /^Requests in flight/ })).toHaveTextContent(
       "3 requests on this node",
@@ -76,29 +76,60 @@ describe("InFlightCard", () => {
     const rows = screen.getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
 
-    expect(rows[0]).toHaveTextContent("Streaming");
-    expect(rows[0]).toHaveTextContent("1m 00s so far");
-    expect(rows[0]).toHaveTextContent("55.0s in this stage");
-    expect(rows[0]).toHaveTextContent("claude-sonnet-5-5 · stream");
-    expect(rows[0]).toHaveTextContent("POST /v1/messages");
-    expect(rows[0]).toHaveTextContent("Team A · claude");
-    expect(rows[0]).toHaveTextContent("Attempt 1 · Group default");
-    expect(rows[0]).toHaveTextContent("CI");
-    // A long channel name is cut off in the cell; hovering shows it in full with the account id.
-    expect(within(rows[0]).getByText("Team A")).toHaveAttribute("title", "Team A\nclaude-a.json");
-    // A long stream is not stuck: streaming never counts as slow.
-    expect(rows[0].querySelector('[data-slow="true"]')).toBeNull();
+    // The request that started last is on top; the older ones are pushed down.
+    expect(rows[0]).toHaveTextContent("Preparing");
+    expect(rows[0]).toHaveTextContent("Not placed on an account yet");
+    expect(rows[0]).toHaveTextContent("400ms so far");
 
-    // No channel name: the account id stands in; the upstream model shows when an alias changed it.
+    // No channel name: the account id stands in; the upstream model shows when an alias changed it,
+    // and a retry is called out.
     expect(rows[1]).toHaveTextContent("Waiting for first token");
     expect(rows[1]).toHaveTextContent("codex-b.json · codex");
     expect(within(rows[1]).getByText("codex-b.json")).toHaveAttribute("title", "codex-b.json");
     expect(rows[1]).toHaveTextContent("Attempt 2 · gpt-5-codex");
     expect(within(rows[1]).getByTitle("key-9")).toHaveTextContent("key-9");
 
-    expect(rows[2]).toHaveTextContent("Preparing");
-    expect(rows[2]).toHaveTextContent("Not placed on an account yet");
-    expect(rows[2]).toHaveTextContent("400ms so far");
+    expect(rows[2]).toHaveTextContent("Streaming");
+    expect(rows[2]).toHaveTextContent("1m 00s so far");
+    expect(rows[2]).toHaveTextContent("55.0s in this stage");
+    expect(within(rows[2]).getByText("claude-sonnet-5-5")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("stream")).toBeInTheDocument();
+    // The endpoint is named by its last part; the full route, with its group prefix, is on hover.
+    expect(within(rows[2]).getByText("messages")).toHaveAttribute("title", "POST /v1/messages");
+    expect(rows[2]).toHaveTextContent("Team A · claude");
+    // A first attempt is the normal case and is not written out.
+    expect(rows[2]).toHaveTextContent("Group default");
+    expect(rows[2]).not.toHaveTextContent("Attempt 1");
+    expect(rows[2]).toHaveTextContent("CI");
+    // A long channel name is cut off in the cell; hovering shows it in full with the account id.
+    expect(within(rows[2]).getByText("Team A")).toHaveAttribute("title", "Team A\nclaude-a.json");
+    // A long stream is not stuck: streaming never counts as slow.
+    expect(rows[2].querySelector('[data-slow="true"]')).toBeNull();
+  });
+
+  test("a refresh keeps the rows that stay and only brings in the new one", () => {
+    const { rerender } = renderCard(inFlight([streaming, firstToken]));
+    const before = screen.getAllByRole("row").slice(1);
+    rerender(
+      <InFlightCard inFlight={inFlight([streaming, firstToken, preparing])} receivedAt={RECEIVED_AT + 5_000} error={false} />,
+    );
+    const after = screen.getAllByRole("row").slice(1);
+    expect(after).toHaveLength(3);
+    // The rows that were there are the same elements, not a fresh table replaying its entrance.
+    expect(after[1]).toBe(before[0]);
+    expect(after[2]).toBe(before[1]);
+    // The new request unfolds on top instead of the whole table replaying its entrance.
+    expect(after[0]).toHaveAttribute("data-entering", "live");
+    expect(after[1]).not.toHaveAttribute("data-entering");
+    expect(after[2]).not.toHaveAttribute("data-entering");
+  });
+
+  test("names the endpoint by the last part of its path", () => {
+    expect(endpointOf("/deepseekv4flash-chatgpt/cs_3e13ca9880fc/v1/chat/completions")).toBe("chat/completions");
+    expect(endpointOf("/group/cs_1/v1/responses")).toBe("responses");
+    expect(endpointOf("/v1beta/models/gemini-3-pro:streamGenerateContent?alt=sse")).toBe("streamGenerateContent");
+    expect(endpointOf("/v1/images/generations")).toBe("images/generations");
+    expect(endpointOf("")).toBe("");
   });
 
   test("times keep running between two fetches and a stage stuck past 15s is marked", () => {

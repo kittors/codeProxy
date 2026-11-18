@@ -44,7 +44,7 @@ import { cssEscape, useColumnReorder } from "./useColumnReorder";
 import { useColumnSizing } from "./useColumnSizing";
 import { useGridViewport } from "./useGridViewport";
 import { useRowReorder } from "./useRowReorder";
-import { useRowReorderMotion } from "./useRowReorderMotion";
+import { useRowMotion } from "./useRowMotion";
 import type { DataGridColumn, DataGridProps, GridFilterValue, GridSort } from "./types";
 
 /** 嵌入小表空态 / 错误态的高度（像素）。 */
@@ -100,6 +100,7 @@ export function DataGrid<T>({
   footer,
   frame = true,
   resetScrollKey,
+  rowMotion = "page",
   className,
 }: DataGridProps<T>) {
   const { t, i18n } = useTranslation();
@@ -169,8 +170,7 @@ export function DataGrid<T>({
 
   const keys = useMemo(() => displayRows.map((row) => rowKey(row)), [displayRows, rowKey]);
   const orderSignature = keys.join("\u0001");
-  const animationKey = useMemo(() => [...keys].sort().join("\u0001"), [keys]);
-  const captureRowPositions = useRowReorderMotion(bodyRef, orderSignature);
+  const rowMoves = useRowMotion({ rows: displayRows, keys, rowKey, bodyRef, live: rowMotion === "live", reduceMotion: Boolean(reduceMotion) });
 
   const selectionState = getGridSelectionState(keys, selectedKeys);
   const selectedCount = selectionCount ?? selectedKeys?.size ?? 0;
@@ -217,10 +217,7 @@ export function DataGrid<T>({
     areaRef,
     headerHeightRef,
     onMove: rowReorder
-      ? (fromIndex, toIndex) => {
-          captureRowPositions();
-          rowReorder.onMove(fromIndex, toIndex);
-        }
+      ? (fromIndex, toIndex) => rowReorder.onMove(fromIndex, toIndex)
       : undefined,
     onMoved: (key, toIndex, viaKeyboard) => {
       movedRow.current = { key, viaKeyboard };
@@ -263,12 +260,11 @@ export function DataGrid<T>({
   const changeSort = useCallback(
     (next: GridSort | null) => {
       if (sortControlled && !onSortChange) return;
-      captureRowPositions();
       if (!sortControlled) setInnerSort(next);
       onSortChange?.(next);
       announceSort(next);
     },
-    [announceSort, captureRowPositions, onSortChange, sortControlled],
+    [announceSort, onSortChange, sortControlled],
   );
 
   const onSortClick = useCallback(
@@ -576,7 +572,7 @@ export function DataGrid<T>({
               columns={visibleColumns}
               layout={layout}
               density={density}
-              rows={displayRows}
+              rows={rowMoves.rows}
               rowKey={rowKey}
               selectable={selectable}
               selectedKeys={selectedKeys}
@@ -596,7 +592,7 @@ export function DataGrid<T>({
               focusedKey={effectiveFocusedKey}
               onFocusRow={setFocusedKey}
               onRowKeyDown={onRowKeyDown}
-              animationKey={animationKey}
+              motion={rowMoves}
               dimmed={loading && rows.length > 0}
               onRowClick={onRowClick}
               isRowActive={isRowActive}

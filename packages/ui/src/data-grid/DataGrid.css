@@ -303,13 +303,15 @@ body[data-grid-dragging="true"] * {
 }
 
 /*
- * ---------- 换页、换筛选后行依次浮入 ----------
+ * ---------- 新进来的行浮入，离开的行淡出（useRowMotion） ----------
+ * 只有新出现的行播入场：整组换掉（首次加载、换页、换筛选）时依次浮入，持续刷新里新来的行一起浮入，
+ * 留下的行由 FLIP 从旧位置滑到新位置，不再整表重播（在途请求每次刷新都闪就是这么来的）。
  * 从上方 4px 落到位，不从下方升起：向下的位移会把表体的可滚动高度在动画期间撑高几像素，
  * 行放得下的表也会短暂「能滚」——滚轮能滚动几像素再弹回、纵向滚动条可能闪一下。
  * 向上的位移落在表头底下（表头吸顶、盖在行上面），不产生可滚动区域。
  */
 
-.cp-grid-body[data-animate="true"] > .cp-grid-row {
+.cp-grid-body > .cp-grid-row[data-entering="true"] {
   animation: cp-grid-row-in 260ms var(--ease-pop) both;
   animation-delay: calc(min(var(--row-index, 0), 14) * 14ms);
 }
@@ -325,6 +327,111 @@ body[data-grid-dragging="true"] * {
   }
 }
 
+/*
+ * 持续刷新的表里离开的行：先原地淡出（160ms），再把行高收到 0（200ms），下面的行跟着自然上移。
+ * 不先拿掉再用位移把下面的行从下方滑上来：那样动画开头最后一行会画到表格底下，可滚动高度短暂
+ * 变大，滚动条闪一下。行高与每格内容高由 useRowMotion 量好写进 --leave-h / --leave-inner-h。
+ * 总时长与 ROW_LEAVE_MS 一致。
+ */
+.cp-grid-body > .cp-grid-row[data-leaving="true"] {
+  animation:
+    cp-grid-row-fade-out 160ms var(--ease-soft) forwards,
+    cp-grid-row-collapse 200ms var(--ease-soft) 160ms forwards;
+  pointer-events: none;
+}
+
+.cp-grid-body > .cp-grid-row[data-leaving="true"] > td {
+  animation: cp-grid-cell-collapse 200ms var(--ease-soft) 160ms forwards;
+}
+
+.cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner] {
+  animation: cp-grid-inner-collapse 200ms var(--ease-soft) 160ms both;
+}
+
+/*
+ * 持续刷新的表里新进来的行（data-entering="live"）：先以 0 高度插入，和离开的行收起同一段时间
+ * （160ms 后的 200ms）展开到自身高度，内容再淡入。一出一进时两行此消彼长，表格总高度不变，
+ * 卡片下面的内容一动不动；只多了行时，下面的内容平滑下移，而不是被一下子推开。
+ * 自身高度由 useRowMotion 量好写进 --enter-h / --enter-inner-h。
+ */
+.cp-grid-body > .cp-grid-row[data-entering="live"] {
+  animation:
+    cp-grid-row-grow 200ms var(--ease-soft) 160ms both,
+    cp-grid-row-fade-in 240ms var(--ease-soft) 260ms both;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] > td {
+  animation: cp-grid-cell-grow 200ms var(--ease-soft) 160ms both;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner] {
+  animation: cp-grid-inner-grow 200ms var(--ease-soft) 160ms both;
+}
+
+@keyframes cp-grid-row-grow {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--enter-h);
+  }
+}
+
+@keyframes cp-grid-cell-grow {
+  from {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes cp-grid-inner-grow {
+  from {
+    max-height: 0;
+  }
+  to {
+    max-height: var(--enter-inner-h, 4rem);
+  }
+}
+
+@keyframes cp-grid-row-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes cp-grid-row-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes cp-grid-row-collapse {
+  from {
+    height: var(--leave-h);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes cp-grid-cell-collapse {
+  to {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes cp-grid-inner-collapse {
+  from {
+    max-height: var(--leave-inner-h, 4rem);
+  }
+  to {
+    max-height: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cp-grid-cell,
   .cp-grid-head-cell,
@@ -333,7 +440,13 @@ body[data-grid-dragging="true"] * {
     transition: none;
   }
 
-  .cp-grid-body[data-animate="true"] > .cp-grid-row,
+  .cp-grid-body > .cp-grid-row[data-entering="true"],
+  .cp-grid-body > .cp-grid-row[data-leaving="true"],
+  .cp-grid-body > .cp-grid-row[data-leaving="true"] > td,
+  .cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner],
+  .cp-grid-body > .cp-grid-row[data-entering="live"],
+  .cp-grid-body > .cp-grid-row[data-entering="live"] > td,
+  .cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner],
   .cp-grid-progress::before {
     animation: none;
   }

@@ -176,8 +176,8 @@ export interface DataGridBodyProps<T> {
   focusedKey: string | null;
   onFocusRow: (key: string) => void;
   onRowKeyDown: (event: KeyboardEvent<HTMLTableRowElement>, key: string, index: number) => void;
-  /** 行集合的签名：变了就整体重挂，触发「依次浮入」。 */
-  animationKey: string;
+  /** 哪些行在这次更新里新进来、哪些在淡出（useRowMotion）。表体不再按行集合整体重挂。 */
+  motion: { entering: ReadonlySet<string>; stagger: boolean; leaving: ReadonlySet<string>; unfold: boolean };
   dimmed: boolean;
   onRowClick?: (row: T) => void;
   isRowActive?: (row: T) => boolean;
@@ -214,7 +214,7 @@ export function DataGridBody<T>({
   focusedKey,
   onFocusRow,
   onRowKeyDown,
-  animationKey,
+  motion,
   dimmed,
   onRowClick,
   isRowActive,
@@ -402,16 +402,19 @@ export function DataGridBody<T>({
     else onRowClick?.(row);
   };
 
+  // 依次浮入只数这次新进来的行，第 n 个新行晚 n × 14ms。
+  let enterIndex = 0;
   return (
     <tbody
       ref={bodyRef}
-      key={animationKey}
       className="cp-grid-body transition-opacity duration-150 ease-soft"
-      data-animate="true"
       style={{ opacity: dimmed ? 0.55 : 1 }}
     >
       {rows.map((row, rowIndex) => {
         const key = rowKey(row);
+        const entering = motion.entering.has(key);
+        const leaving = motion.leaving.has(key);
+        if (entering) enterIndex += 1;
         const selected = selectedKeys?.has(key) ?? false;
         const expanded = expandedKeys?.has(key) ?? false;
         const active = isRowActive?.(row) ?? false;
@@ -419,6 +422,9 @@ export function DataGridBody<T>({
           <Fragment key={key}>
             <tr
               data-row-key={key}
+              data-entering={entering ? (motion.unfold ? "live" : "true") : undefined}
+              data-leaving={leaving ? "true" : undefined}
+              inert={leaving || undefined}
               aria-selected={selectable ? selected : isRowActive ? active : undefined}
               aria-expanded={expandable ? expanded : undefined}
               data-expanded={expanded ? "true" : undefined}
@@ -437,7 +443,7 @@ export function DataGridBody<T>({
                 expandable || onRowClick ? "cursor-pointer" : "",
                 rowClassName?.(row) ?? "",
               ].join(" ")}
-              style={{ ["--row-index" as string]: rowIndex }}
+              style={{ ["--row-index" as string]: entering && motion.stagger ? enterIndex - 1 : 0 }}
             >
               {leadingCells(key, selected, expanded, false, rowIndex, rowLabel?.(row))}
               {columns.map((column, index) => {
