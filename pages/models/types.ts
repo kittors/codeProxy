@@ -54,6 +54,11 @@ export interface ModelFormState {
   outputPrice: string;
   cachedPrice: string;
   pricePerCall: string;
+  /**
+   * 改价时是否把最近 7 天已记录的请求全部按新价重算。不勾时后端只给当时没有价格、费用为 0 的
+   * 请求补上费用，已按旧价算过的不动。
+   */
+  resyncHistory?: boolean;
 }
 
 export interface OwnerFormState {

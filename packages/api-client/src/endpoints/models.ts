@@ -1,5 +1,6 @@
 import { apiCallApi, getApiCallErrorMessage } from "./api-call";
 import { apiClient } from "../client/client";
+import { isApiClientError } from "../client/errors";
 
 const DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com";
 const DEFAULT_ANTHROPIC_VERSION = "2023-06-01";
@@ -272,7 +273,67 @@ const normalizeAuthGroupModelOwnerMappings = (
   return items.sort((a, b) => a.auth_group.localeCompare(b.auth_group));
 };
 
+/**
+ * 改价后，后端把最近 7 天已记录请求的费用按新价补算或重算（CliRelay 的 pricing resync 任务）。
+ * fill 只补当时没有价格、费用为 0 的请求；reprice 把所有请求按新价重算。
+ */
+export interface PricingResyncJob {
+  id: number;
+  mode: "fill" | "reprice";
+  origin: string;
+  status: "pending" | "running" | "done" | "failed";
+  modelIds: string[];
+  scanned: number;
+  changed: number;
+  skipped: number;
+  costDelta: number;
+  lastError: string;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string;
+}
+
+// The job's cost delta is negative when a reprice lowered prices, so not the
+// non-negative asNumber above.
+const resyncNumber = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+const resyncString = (value: unknown) => (typeof value === "string" ? value : "");
+
+function normalizePricingResyncJob(raw: unknown): PricingResyncJob | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  const status = resyncString(item.status);
+  if (!["pending", "running", "done", "failed"].includes(status)) return null;
+  return {
+    id: resyncNumber(item.id),
+    mode: item.mode === "reprice" ? "reprice" : "fill",
+    origin: resyncString(item.origin),
+    status: status as PricingResyncJob["status"],
+    modelIds: Array.isArray(item.model_ids) ? item.model_ids.filter((id): id is string => typeof id === "string") : [],
+    scanned: resyncNumber(item.scanned),
+    changed: resyncNumber(item.changed),
+    skipped: resyncNumber(item.skipped),
+    costDelta: resyncNumber(item.cost_delta),
+    lastError: resyncString(item.last_error),
+    createdAt: resyncString(item.created_at),
+    updatedAt: resyncString(item.updated_at),
+    finishedAt: resyncString(item.finished_at),
+  };
+}
+
 export const modelsApi = {
+  /**
+   * 当前租户最近的费用同步任务，新的在前。旧后端没有这个接口（404）时返回 null，调用方不显示进度。
+   */
+  async getPricingResyncJobs(limit = 5): Promise<PricingResyncJob[] | null> {
+    try {
+      const data = await apiClient.get<{ jobs?: unknown[] }>(`/pricing-resync-jobs?limit=${limit}`);
+      return (data?.jobs ?? []).map(normalizePricingResyncJob).filter((job): job is PricingResyncJob => job !== null);
+    } catch (error) {
+      if (isApiClientError(error) && error.status === 404) return null;
+      throw error;
+    }
+  },
+
   // The catalog probe lives in ./model-test: it is shaped per modality and has
   // its own task polling, which does not belong in the catalog CRUD surface.
   buildClaudeModelsEndpoint,

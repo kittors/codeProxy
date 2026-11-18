@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
+  CheckboxField,
   floatingPanelSurface,
   FormField,
   FormSection,
@@ -22,6 +23,12 @@ import { formatPrice, normalizeOwnerValue } from "../modelsUtils";
 import type { ModelFormState, ModelItem, ModelPageTab, ModelPricingMode } from "../types";
 
 const FORM_ID = "model-config-form";
+
+/** 价格的比较键：计费方式和各项单价（按数值比，"2" 与 "2.0" 相同）。 */
+function pricingSignature(form: ModelFormState): string {
+  const num = (value: string) => (value.trim() === "" ? 0 : Number(value));
+  return [form.mode, num(form.inputPrice), num(form.outputPrice), num(form.cachedPrice), num(form.pricePerCall)].join("|");
+}
 
 /** 价格：非负数，最多 6 位小数（与列表里的价格格式一致）。 */
 const PRICE = rules.pattern(/^\d+(\.\d{1,6})?$/, "price");
@@ -76,9 +83,19 @@ export function ModelFormModal({
   });
   const { reset } = validation;
   const open = form !== null;
+  // 打开时的价格：只有改了价格才问要不要重算历史费用。
+  const openedPricing = useRef("");
   useEffect(() => {
     if (open) reset();
+    openedPricing.current = form ? pricingSignature(form) : "";
+    // 只在打开时记一次；之后的输入不改它。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, reset]);
+  const pricingEdited = Boolean(form?.originalId) && form !== null && pricingSignature(form) !== openedPricing.current;
+  // 价格改回原样时，勾选也一并撤掉：没有新价可重算。
+  useEffect(() => {
+    if (!pricingEdited && form?.resyncHistory) onUpdateForm({ resyncHistory: false });
+  }, [pricingEdited, form?.resyncHistory, onUpdateForm]);
 
   const submit = () => {
     if (!validation.validate()) {
@@ -314,6 +331,15 @@ export function ModelFormModal({
                 )}
               </div>
             )}
+            {pricingEdited ? (
+              <CheckboxField
+                className="mt-3"
+                checked={Boolean(form.resyncHistory)}
+                onCheckedChange={(checked) => onUpdateForm({ resyncHistory: checked })}
+                label={t("models_page.resync_history_label")}
+                description={t("models_page.resync_history_hint")}
+              />
+            ) : null}
           </FormSection>
         </form>
       ) : null}
