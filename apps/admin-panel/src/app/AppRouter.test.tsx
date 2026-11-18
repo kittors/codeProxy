@@ -1,7 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Outlet } from "react-router-dom";
-import { describe, expect, test, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Outlet, useLocation } from "react-router-dom";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ReactNode } from "react";
+
+/** 布局每次渲染时看到的地址：旧地址不该被当成一页挂进布局。 */
+const layoutSeen = vi.hoisted(() => ({ pathnames: [] as string[] }));
 
 const principal = {
   menus: [
@@ -97,11 +100,14 @@ vi.mock("@app/guards/ProtectedRoute", () => ({
 }));
 
 vi.mock("@app/layout/DashboardLayout", () => ({
-  DashboardLayout: () => (
-    <div data-testid="dashboard-layout">
-      <Outlet />
-    </div>
-  ),
+  DashboardLayout: () => {
+    layoutSeen.pathnames.push(useLocation().pathname);
+    return (
+      <div data-testid="dashboard-layout">
+        <Outlet />
+      </div>
+    );
+  },
 }));
 
 vi.mock("@app/update/AutoUpdatePrompt", () => ({
@@ -130,11 +136,25 @@ vi.mock("@pages/registry", async () => {
         auth: true,
         layout: "dashboard",
         nav: { labelKey: "nav.dashboard" },
+        redirects: [{ from: "/", to: "/dashboard" }],
         requiredPermission: "dashboard.read",
+      },
+      {
+        path: "/access/ai-accounts",
+        element: React.createElement("div", { "data-testid": "ai-accounts-page" }, "ai accounts"),
+        auth: true,
+        layout: "dashboard",
+        nav: null,
+        redirects: [{ from: "/auth-files", to: "/access/ai-accounts", keepSearch: true }],
       },
     ],
   };
 });
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+}
 
 vi.mock("@pages/embed/EmbedPage", () => ({
   EmbedPage: () => <div data-testid="embed-page">embed</div>,
@@ -143,6 +163,40 @@ vi.mock("@pages/embed/EmbedPage", () => ({
 import { AppRouter } from "./AppRouter";
 
 describe("AppRouter", () => {
+  beforeEach(() => {
+    layoutSeen.pathnames = [];
+  });
+
+  test("renders a legacy address as its target page right away, then fixes the address", async () => {
+    render(
+      <MemoryRouter initialEntries={["/auth-files?tab=alias"]}>
+        <AppRouter />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("ai-accounts-page")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/access/ai-accounts?tab=alias"),
+    );
+    // 以前旧地址是布局里的一个 <Navigate> 页面：先挂一个空白页、走一遍切页动画，再跳目标页。
+    expect(layoutSeen.pathnames.length).toBeGreaterThan(0);
+    expect(layoutSeen.pathnames).not.toContain("/auth-files");
+  });
+
+  test("opens the dashboard at the panel root without mounting a redirect page", async () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppRouter />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("dashboard-page")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/dashboard"));
+    expect(layoutSeen.pathnames).not.toContain("/");
+  });
+
   test("renders dashboard without invalid Route children error", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     render(
