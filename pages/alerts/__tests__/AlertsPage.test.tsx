@@ -396,7 +396,7 @@ describe("AlertsPage", () => {
       expect(mocks.listEvents).not.toHaveBeenCalled();
 
       await user.click(screen.getByRole("tab", { name: "Recent alerts" }));
-      const row = await screen.findByTestId("alert-event-row");
+      const row = await screen.findByRole("row", { name: /Codex account is 92% used/ });
       expect(mocks.listEvents).toHaveBeenCalledTimes(1);
       expect(within(row).getByText("Codex account is 92% used")).toBeInTheDocument();
       expect(within(row).getByText("connection timed out")).toBeInTheDocument();

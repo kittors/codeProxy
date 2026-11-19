@@ -363,22 +363,6 @@ vi.mock("@features/log-content-viewer", () => ({
   ErrorDetailModal: () => null,
 }));
 
-vi.mock("@code-proxy/ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@code-proxy/ui")>()),
-  DataTable: ({ rows, columns }: { rows: any[]; columns: any[] }) => (
-    <div>
-      {rows.map((row, rowIndex) => (
-        <div key={row.key}>
-          {columns.map((column: any) => (
-            <div key={column.key}>
-              {column.render ? column.render(row, rowIndex) : row[column.key]}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  ),
-}));
 
 async function openMoreActions(index = 0) {
   await userEvent.click(screen.getAllByRole("button", { name: "More actions" })[index]!);
@@ -638,6 +622,47 @@ describe("ApiKeysPage", () => {
     expect(mocks.apiKeyEntriesResetPeriodSpending).not.toHaveBeenCalled();
   });
 
+  // 门户账号下的 Key 表读取失败时在表格里给「重试」；这一支提前返回，重试成功后必须清掉出错态。
+  test("an owner-scoped retry after a failed load shows the keys instead of the error", async () => {
+    state.entries = [
+      {
+        id: "owned-retry-key",
+        key: "sk-owned-retry",
+        name: "Retry Owned Key",
+        end_user_id: "end-user-1",
+        disabled: false,
+        is_default: true,
+        "created-at": "2026-07-21T00:00:00Z",
+      },
+    ];
+    // 挂载时可能读不止一次，所以用开关控制「失败中」，而不是只让第一次失败。
+    const listKeys = mocks.endUserListKeys.getMockImplementation();
+    let failing = true;
+    mocks.endUserListKeys.mockImplementation(async (userId: string) => {
+      if (failing) throw new Error("owner keys unavailable");
+      return listKeys!(userId);
+    });
+    try {
+      render(
+        <MemoryRouter initialEntries={["/access/api-keys?endUserId=end-user-1"]}>
+          <ThemeProvider>
+            <ToastProvider>
+              <ApiKeysPage />
+            </ToastProvider>
+          </ThemeProvider>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText("Couldn't load the data")).toBeInTheDocument();
+      failing = false;
+      await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+      expect(await screen.findByText("Retry Owned Key")).toBeInTheDocument();
+      expect(screen.queryByText("Couldn't load the data")).not.toBeInTheDocument();
+    } finally {
+      if (listKeys) mocks.endUserListKeys.mockImplementation(listKeys);
+    }
+  });
+
   test("uses owner-scoped rename and explicit rotation for an end-user key", async () => {
     state.entries = [
       {
@@ -886,11 +911,16 @@ describe("ApiKeysPage", () => {
     expect(await screen.findByText("Existing Key")).toBeInTheDocument();
     expect(screen.getByText("Second Key")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Existing Key" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Second Key" }));
+    // 勾选列是表格自己的：每行一个「Select row」，勾选后表头换成选择条，批量删除在选择条上。
+    const [first, second] = screen.getAllByRole("checkbox", { name: "Select row" });
+    await userEvent.click(first);
+    await userEvent.click(second);
 
-    expect(screen.queryByText("2 API keys selected")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /clear selection/i })).not.toBeInTheDocument();
+    // 「2 selected」也会出现在读屏播报区里：只看选择条上的那一处。
+    const selectionBar = document.querySelector<HTMLElement>("[data-grid-selection-bar]");
+    expect(selectionBar).not.toBeNull();
+    expect(within(selectionBar as HTMLElement).getByText("2 selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /clear selection/i })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /batch delete/i }));
     await userEvent.click(screen.getByRole("button", { name: /confirm delete/i }));

@@ -4,10 +4,10 @@ import { ListChecks, Search } from "lucide-react";
 import { wordPolicyApi, type WordPortalUser, type WordPortalView } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
+  GRID_WIDTH,
   Callout,
-  DataTable,
-  PaginationBar,
+  DataGrid,
+  DataGridPagination,
   Select,
   SettingGroup,
   SettingRow,
@@ -15,7 +15,7 @@ import {
   TextInput,
   ToggleSwitch,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 
 const PAGE_SIZE = 20;
@@ -116,16 +116,16 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
   const current = Math.min(page, totalPages);
   const pageUsers = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const columns = useMemo<DataTableColumn<WordPortalUser>[]>(() => {
+  const columns = useMemo<DataGridColumn<WordPortalUser>[]>(() => {
     const defaultLabel = view?.default_allowed
       ? t("content_moderation.words.portal_follow_allowed")
       : t("content_moderation.words.portal_follow_denied");
     return [
       {
-        key: "user",
-        label: t("content_moderation.words.portal_col_user"),
-        width: COLUMN_WIDTH.name,
-        render: (user) => (
+        id: "user",
+        header: t("content_moderation.words.portal_col_user"),
+        width: GRID_WIDTH.name,
+        cell: (user) => (
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{user.display_name || user.username}</p>
             <p className="truncate text-xs text-ink-3">{user.username}</p>
@@ -133,10 +133,10 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         ),
       },
       {
-        key: "access",
-        label: t("content_moderation.words.portal_col_access"),
-        width: "w-[220px] min-w-[220px]",
-        render: (user) => (
+        id: "access",
+        header: t("content_moderation.words.portal_col_access"),
+        width: 220,
+        cell: (user) => (
           <Select
             value={choiceOf(user)}
             disabled={!canWrite || busy !== null}
@@ -151,10 +151,10 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         ),
       },
       {
-        key: "words",
-        label: t("content_moderation.words.portal_col_words"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (user) =>
+        id: "words",
+        header: t("content_moderation.words.portal_col_words"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (user) =>
           user.policy ? (
             <div className="text-xs">
               <p className="text-ink-2">{t("content_moderation.words.word_count", { count: user.policy.rule_count })}</p>
@@ -171,14 +171,13 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
           ),
       },
       {
-        key: "open",
-        label: t("content_moderation.actions"),
-        width: COLUMN_WIDTH.name,
+        id: "open",
+        header: t("content_moderation.actions"),
+        width: GRID_WIDTH.name,
         // 右栏放不下全部列时（1280 宽左右）固定在右侧，「代为设置」不会被横向滚动藏起来。
-        lockOrder: "end",
-        headerClassName: "md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-        cellClassName: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop",
-        render: (user) => (
+        pin: "end",
+        className: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop",
+        cell: (user) => (
           <Button variant="secondary" size="sm" onClick={() => onOpenUser(user)}>
             <ListChecks size={14} />
             {user.policy ? t("content_moderation.words.portal_view_words") : t("content_moderation.words.portal_set_words")}
@@ -262,41 +261,46 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
           </div>
         </div>
 
-        <DataTable<WordPortalUser>
+        <DataGrid<WordPortalUser>
           fill
-          tableId="word-policy-portal-users"
+          id="word-policy-portal-users"
+          label={t("content_moderation.words.portal_users_title")}
           rows={pageUsers}
           columns={columns}
           rowKey={(user) => user.id}
-          virtualize={false}
-          columnResizable={false}
-          columnReorderable={false}
-          minWidth="min-w-[680px]"
-          caption={t("content_moderation.words.portal_users_title")}
-          emptyText={
+          resizable={false}
+          columnReorder={false}
+          empty={
             view.users.length === 0
-              ? t("content_moderation.words.portal_users_empty")
-              : t("content_moderation.words.portal_users_no_match")
+              ? { title: t("content_moderation.words.portal_users_empty") }
+              : {
+                  title: t("content_moderation.words.portal_users_no_match"),
+                  action: (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setQuery("");
+                        setFilter("all");
+                        setPage(1);
+                      }}
+                    >
+                      {t("common.clear_filters")}
+                    </Button>
+                  ),
+                }
           }
-          showAllLoadedMessage={false}
+          resetScrollKey={`${current}|${filter}|${query}`}
+          // 分页一直在：筛选让条数跨过一页时，表格框的高度不会因为分页出现、消失而跳动。
+          footer={
+            <DataGridPagination
+              page={current}
+              pageSize={PAGE_SIZE}
+              total={filtered.length}
+              onPageChange={setPage}
+            />
+          }
         />
 
-        {filtered.length > PAGE_SIZE ? (
-          <PaginationBar
-            currentPage={current}
-            totalPages={totalPages}
-            totalCount={filtered.length}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
-            labels={{
-              firstPage: t("content_moderation.first_page"),
-              previousPage: t("content_moderation.previous_page"),
-              nextPage: t("content_moderation.next_page"),
-              lastPage: t("content_moderation.last_page"),
-              pageInfo: ({ start, end, total }) => t("content_moderation.page_info", { start, end, total }),
-            }}
-          />
-        ) : null}
       </section>
     </div>
   );

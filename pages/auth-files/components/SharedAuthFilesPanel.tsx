@@ -14,13 +14,13 @@ import {
 import {
   Callout,
   Card,
-  COLUMN_WIDTH,
-  DataTable,
+  DataGrid,
+  GRID_WIDTH,
   ProviderTag,
   Tabs,
   TabsList,
   TabsTrigger,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 
@@ -89,7 +89,7 @@ export function SharedAuthFilesPanel({
     [files],
   );
 
-  const columns = useMemo<DataTableColumn<AuthFileItem>[]>(() => {
+  const columns = useMemo<DataGridColumn<AuthFileItem>[]>(() => {
     const mask = (value: string) => (masked ? maskSensitiveIdentity(value) : value);
     const renderStatus = (file: AuthFileItem) => {
       if (file.disabled === true) {
@@ -125,10 +125,11 @@ export function SharedAuthFilesPanel({
 
     return [
       {
-        key: "account",
-        label: t("auth_files.shared_col_account"),
-        width: COLUMN_WIDTH.nameStacked,
-        render: (file) => {
+        id: "account",
+        header: t("auth_files.shared_col_account"),
+        width: GRID_WIDTH.nameStacked,
+        grow: true,
+        cell: (file) => {
           const typeKey = resolveFileType(file);
           const title = resolveAuthFileDisplayName(file) || file.name;
           const email = typeof file.email === "string" ? file.email.trim() : "";
@@ -148,10 +149,10 @@ export function SharedAuthFilesPanel({
         },
       },
       {
-        key: "type",
-        label: t("auth_files.col_type"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (file) => {
+        id: "type",
+        header: t("auth_files.col_type"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (file) => {
           const typeKey = resolveFileType(file);
           // 共享摘要里没有令牌，Codex 以外的套餐只能读后端给的 plan_type。
           const rawPlan =
@@ -170,23 +171,23 @@ export function SharedAuthFilesPanel({
         },
       },
       {
-        key: "status",
-        label: t("auth_files.shared_col_status"),
-        width: COLUMN_WIDTH.composite,
-        render: renderStatus,
+        id: "status",
+        header: t("auth_files.shared_col_status"),
+        width: GRID_WIDTH.composite,
+        cell: renderStatus,
       },
       {
-        key: "subscription",
-        label: t("auth_files.col_subscription"),
-        width: COLUMN_WIDTH.metric,
-        render: (file) =>
+        id: "subscription",
+        header: t("auth_files.col_subscription"),
+        width: GRID_WIDTH.metric,
+        cell: (file) =>
           renderSubscriptionBadge(file) ?? <span className="text-xs text-ink-3">--</span>,
       },
       {
-        key: "concurrency",
-        label: t("auth_files.shared_col_concurrency"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (file) => {
+        id: "concurrency",
+        header: t("auth_files.shared_col_concurrency"),
+        width: GRID_WIDTH.numericWide,
+        cell: (file) => {
           const limit = Number(file.concurrency_limit);
           return (
             <span className="text-xs tabular-nums text-ink-2">
@@ -198,10 +199,10 @@ export function SharedAuthFilesPanel({
         },
       },
       {
-        key: "tags",
-        label: t("auth_files.shared_col_tags"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (file) => {
+        id: "tags",
+        header: t("auth_files.shared_col_tags"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (file) => {
           const tags = resolveAuthFileDisplayTags(file);
           if (tags.length === 0) return <span className="text-xs text-ink-3">--</span>;
           return (
@@ -235,19 +236,18 @@ export function SharedAuthFilesPanel({
           <li>{t("auth_files.shared_view_point_usage")}</li>
         </ul>
       </Callout>
-      <DataTable<AuthFileItem>
-        tableId="auth-files-shared"
-        rows={rows}
-        columns={columns}
-        rowKey={(file) => file.name}
-        rowHeight={64}
-        // 窄屏随页面流动，表格最多占七成屏高；桌面宽度由分区钉住，按剩余高度封顶。
-        maxHeight="max-h-[70vh] md:max-h-full"
-        minWidth="min-w-[1180px]"
-        caption={t("auth_files.shared_table_caption")}
-        emptyText={t("auth_files.shared_empty")}
-        showAllLoadedMessage={false}
-      />
+      {/* 桌面宽度由分区钉住，表格铺满剩余高度；窄屏随页面流动、按行收高。 */}
+      <div className="flex flex-col md:min-h-0 md:flex-1">
+        <DataGrid<AuthFileItem>
+          id="auth-files-shared"
+          label={t("auth_files.shared_table_caption")}
+          fill
+          rows={rows}
+          columns={columns}
+          rowKey={(file) => file.name}
+          empty={{ title: t("auth_files.shared_empty") }}
+        />
+      </div>
     </Card>
   );
 }

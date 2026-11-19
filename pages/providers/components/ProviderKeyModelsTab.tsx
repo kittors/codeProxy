@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
-import { Button, COLUMN_WIDTH } from "@code-proxy/ui";
+import { Button, GRID_WIDTH } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
-import { DataTable, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { SearchableSelect } from "@code-proxy/ui";
 import { type ProviderKeyDraft } from "../providers-helpers";
@@ -152,15 +152,17 @@ export function ProviderKeyModelsTab({
     [setKeyDraft],
   );
 
-  const modelAccessColumns = useMemo<DataTableColumn<ModelAccessRow>[]>(
+  const modelAccessColumns = useMemo<DataGridColumn<ModelAccessRow>[]>(
     () => [
       {
-        key: "model",
-        label: t("providers.real_model_id"),
-        minWidthPx: 280,
+        id: "model",
+        header: t("providers.real_model_id"),
+        width: 280,
+        minWidth: 280,
+        grow: true,
         overflowTooltip: (model) =>
           model.owned_by ? `${model.id}\n${model.owned_by}` : model.id,
-        render: (model) => (
+        cell: (model) => (
           <span className="min-w-0">
             <span className="block truncate font-mono text-xs font-semibold text-ink">
               {model.id}
@@ -174,10 +176,12 @@ export function ProviderKeyModelsTab({
         ),
       },
       {
-        key: "alias",
-        label: t("providers.model_alias"),
-        minWidthPx: 220,
-        render: (model) => {
+        id: "alias",
+        header: t("providers.model_alias"),
+        width: 220,
+        minWidth: 220,
+        overflowTooltip: false,
+        cell: (model) => {
           const entry = modelEntryByName.get(model.id.toLowerCase());
           return (
             <TextInput
@@ -192,24 +196,22 @@ export function ProviderKeyModelsTab({
         },
       },
       {
-        key: "enabled",
-        label: t("providers.model_enabled"),
-        width: COLUMN_WIDTH.numericWide,
-        minWidthPx: 144,
-        headerClassName: "text-center",
-        cellClassName: "text-center",
-        headerRender: () => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={allOpenCodeModelsAllowed}
-              indeterminate={someOpenCodeModelsAllowed}
-              onCheckedChange={setAllFetchedOpenCodeModelsAllowed}
-              disabled={openCodeModels.length === 0}
-              aria-label={t("providers.model_enabled")}
-            />
-          </div>
+        // 勾选的是「允许哪些模型」这份设置，不是批量操作的临时选择：表头文字后面跟一个全选框。
+        id: "enabled",
+        header: t("providers.model_enabled"),
+        align: "center",
+        width: GRID_WIDTH.numericWide,
+        overflowTooltip: false,
+        headerAccessory: (
+          <Checkbox
+            checked={allOpenCodeModelsAllowed}
+            indeterminate={someOpenCodeModelsAllowed}
+            onCheckedChange={setAllFetchedOpenCodeModelsAllowed}
+            disabled={openCodeModels.length === 0}
+            aria-label={t("providers.model_enabled")}
+          />
         ),
-        render: (model) => {
+        cell: (model) => {
           const normalized = model.id.toLowerCase();
           const checked =
             !excludeAll &&
@@ -293,20 +295,29 @@ export function ProviderKeyModelsTab({
           ) : null}
 
           <div className="mt-3">
-            <DataTable<ModelAccessRow>
-              tableId={`provider-model-access-${editKeyType}`}
+            {/* 表单里的小表：不套外框，按行收高、最高 20rem 后表内滚动。搜索没有命中时给「清空搜索」。 */}
+            <DataGrid<ModelAccessRow>
+              id={`provider-model-access-${editKeyType}`}
+              frame={false}
               rows={filteredOpenCodeModels}
               columns={modelAccessColumns}
               rowKey={(model) => model.id}
               loading={openCodeModelsLoading && openCodeModels.length === 0}
-              rowHeight={52}
-              caption={modelAccessTitle}
-              emptyText={t("providers.no_discovered_models")}
-              minWidth="min-w-[720px]"
-              maxHeight="max-h-80"
-              showAllLoadedMessage={false}
-              columnReorderable={false}
-              persistColumnOrder={false}
+              label={modelAccessTitle}
+              empty={
+                openCodeModels.length > 0 && openCodeModelQuery.trim()
+                  ? {
+                      title: t("providers.no_matching_models"),
+                      action: (
+                        <Button size="sm" variant="secondary" onClick={() => setOpenCodeModelQuery("")}>
+                          {t("data_grid.clear_search")}
+                        </Button>
+                      ),
+                    }
+                  : { title: t("providers.no_discovered_models") }
+              }
+              maxHeight="20rem"
+              columnReorder={false}
             />
           </div>
         </FieldGroup>

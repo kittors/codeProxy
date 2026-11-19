@@ -8,13 +8,13 @@ import {
 import { Download } from "lucide-react";
 import {
   Button,
-  COLUMN_WIDTH,
-  DataTable,
-  PaginationBar,
+  GRID_WIDTH,
+  DataGrid,
+  DataGridPagination,
   Select,
   TextInput,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
@@ -43,6 +43,7 @@ export function AttemptsTab({
   const { notify } = useToast();
   const [items, setItems] = useState<AuthAttempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -74,16 +75,15 @@ export function AttemptsTab({
         setTotal(response.total ?? 0);
         setPage(response.page || nextPage);
         setPageSize(response.size || size);
+        setLoadError(null);
       } catch (error) {
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("ip_access.load_failed"),
-        });
+        // 读不到时表格显示出错态和「重试」，不是一张看起来「没有记录」的空表。
+        setLoadError(error instanceof Error ? error.message : "");
       } finally {
         setLoading(false);
       }
     },
-    [ip, notify, outcome, surface, t, username, window_],
+    [ip, outcome, surface, username, window_],
   );
 
   useEffect(() => {
@@ -93,6 +93,18 @@ export function AttemptsTab({
   }, [ip, outcome, surface, username, window_, refreshToken]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const filterLabels = [
+    ip ? `IP：${ip}` : "",
+    username ? `${t("ip_access.col_username")}：${username}` : "",
+    surface ? `${t("ip_access.col_surface")}：${t(`ip_access.surface_${surface}`)}` : "",
+    outcome ? `${t("ip_access.col_outcome")}：${t(`ip_access.outcome_${outcome}`)}` : "",
+  ].filter(Boolean);
+  const clearFilters = () => {
+    setIp("");
+    setUsername("");
+    setSurface("");
+    setOutcome("");
+  };
 
   // The export mirrors the active filters: exporting something other than what
   // is on screen is the kind of surprise that makes an export untrustworthy.
@@ -116,20 +128,20 @@ export function AttemptsTab({
     }
   }, [ip, notify, outcome, surface, t, username, window_]);
 
-  const columns = useMemo<DataTableColumn<AuthAttempt>[]>(
+  const columns = useMemo<DataGridColumn<AuthAttempt>[]>(
     () => [
       {
-        key: "time",
-        label: t("ip_access.col_time"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (item) => new Date(item.occurred_at).toLocaleString(i18n.language),
+        id: "time",
+        header: t("ip_access.col_time"),
+        width: GRID_WIDTH.timestamp,
+        cell: (item) => new Date(item.occurred_at).toLocaleString(i18n.language),
       },
       {
-        key: "ip",
-        label: t("ip_access.col_source"),
-        width: COLUMN_WIDTH.name,
+        id: "ip",
+        header: t("ip_access.col_source"),
+        width: GRID_WIDTH.name,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="font-mono text-sm">
             {item.ip || "—"}
             {item.trusted ? "" : ` (${t("ip_access.untrusted_short")})`}
@@ -137,10 +149,10 @@ export function AttemptsTab({
         ),
       },
       {
-        key: "outcome",
-        label: t("ip_access.col_outcome"),
-        width: COLUMN_WIDTH.compact,
-        render: (item) => (
+        id: "outcome",
+        header: t("ip_access.col_outcome"),
+        width: GRID_WIDTH.compact,
+        cell: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
               OUTCOME_TONE[item.outcome] ?? "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
@@ -151,33 +163,33 @@ export function AttemptsTab({
         ),
       },
       {
-        key: "surface",
-        label: t("ip_access.col_surface"),
-        width: COLUMN_WIDTH.compact,
-        render: (item) => t(`ip_access.surface_${item.surface}`, { defaultValue: item.surface }),
+        id: "surface",
+        header: t("ip_access.col_surface"),
+        width: GRID_WIDTH.compact,
+        cell: (item) => t(`ip_access.surface_${item.surface}`, { defaultValue: item.surface }),
       },
       {
-        key: "username",
-        label: t("ip_access.col_username"),
-        width: COLUMN_WIDTH.name,
+        id: "username",
+        header: t("ip_access.col_username"),
+        width: GRID_WIDTH.name,
         overflowTooltip: true,
-        render: (item) => item.username || "—",
+        cell: (item) => item.username || "—",
       },
       {
-        key: "reason",
-        label: t("ip_access.col_reason"),
-        width: COLUMN_WIDTH.composite,
+        id: "reason",
+        header: t("ip_access.col_reason"),
+        width: GRID_WIDTH.composite,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="text-sm text-ink-2">{item.reason || "—"}</span>
         ),
       },
       {
-        key: "ua",
-        label: t("ip_access.col_user_agent"),
-        width: COLUMN_WIDTH.composite,
+        id: "ua",
+        header: t("ip_access.col_user_agent"),
+        width: GRID_WIDTH.composite,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="text-xs text-ink-3">{item.user_agent || "—"}</span>
         ),
       },
@@ -259,41 +271,57 @@ export function AttemptsTab({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <DataTable<AuthAttempt>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DataGrid<AuthAttempt>
           fill
-          tableId="ip-access-attempts"
+          id="ip-access-attempts"
+          label={t("ip_access.tab_attempts")}
           rows={items}
           columns={columns}
           rowKey={(item) => String(item.id)}
           loading={loading}
-          virtualize={false}
-          minWidth="min-w-[1100px]"
-          emptyText={t("ip_access.no_attempts")}
-          showAllLoadedMessage={false}
+          error={loadError === null ? null : loadError || t("ip_access.load_failed")}
+          onRetry={() => void load(page, pageSize)}
+          empty={
+            filterLabels.length > 0
+              ? {
+                  title: t("ip_access.no_attempts"),
+                  details: (
+                    <ul className="flex flex-wrap justify-center gap-1.5">
+                      {filterLabels.map((label) => (
+                        <li
+                          key={label}
+                          className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+                        >
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  ),
+                  action: (
+                    <Button size="sm" onClick={clearFilters}>
+                      {t("common.clear_filters")}
+                    </Button>
+                  ),
+                }
+              : { title: t("ip_access.no_attempts") }
+          }
+          resetScrollKey={`${page}|${pageSize}|${ip}|${username}|${surface}|${outcome}|${window_}`}
+          footer={
+            <DataGridPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              pending={loading && items.length === 0 && total === 0}
+              onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
+              onPageSizeChange={(size) => void load(1, size)}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+            />
+          }
         />
       </div>
 
-      <PaginationBar
-        currentPage={page}
-        totalPages={totalPages}
-        totalCount={total}
-        pageSize={pageSize}
-        onPageChange={(next) => void load(Math.max(1, Math.min(next, totalPages)), pageSize)}
-        onPageSizeChange={(size) => void load(1, size)}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-        // 分页条和表格之间靠留白分开，不画分隔线（同请求日志页）。
-        className="pt-3"
-        labels={{
-          firstPage: t("request_logs.first_page"),
-          previousPage: t("request_logs.prev_page"),
-          nextPage: t("request_logs.next_page"),
-          lastPage: t("request_logs.last_page"),
-          rowsPerPage: t("request_logs.rows_per_page"),
-          pageInfo: ({ start, end, total: count }) =>
-            t("request_logs.page_info", { start, end, total: count }),
-        }}
-      />
+
     </>
   );
 }

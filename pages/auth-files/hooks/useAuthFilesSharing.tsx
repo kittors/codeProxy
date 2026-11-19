@@ -23,7 +23,7 @@ import {
   maskSensitiveIdentity,
   resolveAuthFileDisplayName,
 } from "@code-proxy/domain";
-import { Button, COLUMN_WIDTH, useToast, type DataTableColumn } from "@code-proxy/ui";
+import { Button, GRID_WIDTH, useToast, type DataGridColumn } from "@code-proxy/ui";
 import {
   ResourceSharingModal,
   SharingNoticeBadge,
@@ -61,7 +61,7 @@ export function useAuthFilesSharing({
   setFiles: Dispatch<SetStateAction<AuthFileItem[]>>;
   capability: ResourceSharingCapability;
   sharedFiles: AuthFileItem[];
-  fileColumns: DataTableColumn<AuthFileItem>[];
+  fileColumns: DataGridColumn<AuthFileItem>[];
   masked: boolean;
 }) {
   const { t } = useTranslation();
@@ -197,12 +197,12 @@ export function useAuthFilesSharing({
   );
   const tableColumns = useMemo(() => {
     if (!showSharingColumn) return fileColumns;
-    const column: DataTableColumn<AuthFileItem> = {
-      key: "sharing",
-      label: t("resource_sharing.column"),
+    const column: DataGridColumn<AuthFileItem> = {
+      id: "sharing",
+      header: t("resource_sharing.column"),
       // 共享状态 + 副本提示 + 共享按钮，一行放得下。
-      width: COLUMN_WIDTH.composite,
-      render: (file) => {
+      width: GRID_WIDTH.composite,
+      cell: (file) => {
         const badges = renderSharingBadges(file);
         const canShare = manageable && !isRuntimeOnlyAuthFile(file);
         if (!badges && !canShare) return <span className="text-xs text-ink-3">--</span>;
@@ -227,7 +227,7 @@ export function useAuthFilesSharing({
       },
     };
     const next = [...fileColumns];
-    const nameIndex = next.findIndex((item) => item.key === "name");
+    const nameIndex = next.findIndex((item) => item.id === "name");
     next.splice(nameIndex >= 0 ? nameIndex + 1 : next.length, 0, column);
     return next;
   }, [

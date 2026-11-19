@@ -1,13 +1,24 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import i18n from "@code-proxy/i18n";
-import { RequestLogsPage } from "../RequestLogsPage";
+import {
+  deferred,
+  findLogGrid,
+  logItem,
+  logsAnswer,
+  renderRequestLogsPage,
+  summaryValue,
+} from "./requestLogsTestKit";
+
+// Loading on the request log page: the first load is the table's own skeleton and the summary and
+// pager say "—" instead of 0; a refresh with rows on screen is a thin progress bar over the same
+// frame; a failed load is the table's error state with a retry, not a toast.
 
 const mocks = vi.hoisted(() => ({
   getUsageLogs: vi.fn(),
   getRequestLogBodyStorage: vi.fn(async () => false),
+  getConfig: vi.fn(async () => ({})),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -17,98 +28,103 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
     configApi: {
       ...actual.configApi,
       getRequestLogBodyStorage: mocks.getRequestLogBodyStorage,
+      getConfig: mocks.getConfig,
     },
-    usageApi: {
-      ...actual.usageApi,
-      getUsageLogs: mocks.getUsageLogs,
-    },
+    usageApi: { ...actual.usageApi, getUsageLogs: mocks.getUsageLogs },
   };
 });
 
-const logsResponse = {
-  items: [
+const oneRow = () =>
+  logsAnswer(
+    [
+      logItem({
+        id: 1000841997,
+        timestamp: "2026-09-03T08:56:21Z",
+        channel_name: "relay-channel@example.com",
+        input_tokens: 1200,
+        output_tokens: 68,
+        total_tokens: 1268,
+        model: "gpt-5.1-codex",
+        api_key_name: "QA",
+      }),
+    ],
     {
-      id: 1000841997,
-      timestamp: "2026-09-03T08:56:21Z",
-      time: "2026-09-03T08:56:21Z",
-      channel_name: "relay-channel@example.com",
-      failed: false,
-      input_tokens: 1200,
-      output_tokens: 68,
-      cached_tokens: 0,
-      total_tokens: 1268,
-      cost: 0.0123,
-      model: "gpt-5.1-codex",
-      api_key: "sk-test1234567890",
-      api_key_name: "QA",
-      has_content: false,
+      stats: { total: 1, success_rate: 100, total_tokens: 1268, total_cost: 0.0123, cache_rate: 0 },
     },
-  ],
-  total: 1,
-  total_count: 1,
-  stats: { total: 1, success_rate: 100, total_tokens: 1268, total_cost: 0.0123, cache_rate: 0 },
-  filters: { api_keys: [], models: [], channels: [], statuses: ["success"] },
-};
-
-const renderPage = () =>
-  render(
-    <ThemeProvider>
-      <ToastProvider>
-        <RequestLogsPage />
-      </ToastProvider>
-    </ThemeProvider>,
   );
 
 const blurOverlay = () => document.querySelector(".backdrop-blur-sm");
-const loadingAnnouncements = () =>
-  screen.queryAllByRole("status").filter((node) => /加载中/.test(node.textContent ?? ""));
+const skeletonRows = () => document.querySelectorAll("tbody[aria-hidden='true'] tr");
+const pager = () => within(screen.getByRole("navigation", { name: "Pagination" }));
 
 describe("RequestLogsPage loading states", () => {
   beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  afterEach(() => {
     window.localStorage.clear();
-    await i18n.changeLanguage("zh-CN");
     mocks.getUsageLogs.mockReset();
   });
 
-  test("first load: only the table's skeleton, and the stats bar and pager say — instead of 0", async () => {
-    let resolveLogs: (value: typeof logsResponse) => void = () => {};
-    mocks.getUsageLogs.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveLogs = resolve;
-        }),
-    );
-    renderPage();
+  test("first load: only the table's skeleton, and the summary and pager say — instead of 0", async () => {
+    const first = deferred<ReturnType<typeof oneRow>>();
+    mocks.getUsageLogs.mockReturnValue(first.promise);
+    renderRequestLogsPage();
 
-    await waitFor(() =>
-      expect(document.querySelectorAll("tbody tr[aria-hidden='true']").length).toBeGreaterThan(0),
-    );
-    // No page overlay on top of the skeleton (it used to blur it), and "loading" is said once.
+    await waitFor(() => expect(skeletonRows().length).toBeGreaterThan(0));
+    // No page overlay on top of the skeleton (it used to blur it), and the grid says it is busy.
     expect(blurOverlay()).toBeNull();
-    expect(loadingAnnouncements()).toHaveLength(1);
-    // "0 条记录 / 成功率 0.0% / 第 0-0 条" looked like there was no data at all.
-    expect(screen.getByText("— 条记录")).toBeInTheDocument();
-    expect(screen.queryByText("0.0%")).not.toBeInTheDocument();
-    expect(screen.queryByText(/第 0-0 条/)).not.toBeInTheDocument();
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "true");
+    // "0 requests / 0.0% / 0–0 of 0" looked like there was no data at all.
+    expect(summaryValue("Requests")).toBe("—");
+    expect(summaryValue("Success Rate")).toBe("—");
+    expect(pager().getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText("No records")).toBeNull();
 
-    resolveLogs(logsResponse);
-    expect(await screen.findByText("1 条记录")).toBeInTheDocument();
-    expect(screen.getByText("100.0%")).toBeInTheDocument();
-    expect(screen.getByText("第 1-1 条，共 1 条")).toBeInTheDocument();
+    first.resolve(oneRow());
+    const grid = await findLogGrid();
+    expect(await within(grid).findByText("gpt-5.1-codex")).toBeInTheDocument();
+    expect(summaryValue("Requests")).toBe("1");
+    expect(summaryValue("Success Rate")).toBe("100.0%");
+    expect(pager().getByText("1–1 of 1")).toBeInTheDocument();
+    expect(grid).not.toHaveAttribute("aria-busy");
   });
 
-  test("refreshing with rows on screen covers them with the overlay and keeps the stats", async () => {
+  test("refreshing with rows on screen shows a progress bar in the same frame and keeps the stats", async () => {
     const user = userEvent.setup();
-    mocks.getUsageLogs.mockResolvedValueOnce(logsResponse);
-    renderPage();
-    expect(await screen.findByText("1 条记录")).toBeInTheDocument();
-    expect(blurOverlay()).toBeNull();
+    mocks.getUsageLogs.mockResolvedValueOnce(oneRow());
+    renderRequestLogsPage();
+    const grid = await findLogGrid();
+    expect(await within(grid).findByText("gpt-5.1-codex")).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).toBeNull();
 
     mocks.getUsageLogs.mockImplementation(() => new Promise(() => {}));
-    await user.click(screen.getByRole("button", { name: "刷新" }));
+    await user.click(screen.getByRole("button", { name: "Refresh" }));
 
-    await waitFor(() => expect(blurOverlay()).not.toBeNull());
-    expect(screen.getByText("1 条记录")).toBeInTheDocument();
-    expect(screen.getByText("100.0%")).toBeInTheDocument();
+    expect(await screen.findByRole("progressbar", { name: "Loading" })).toBeInTheDocument();
+    // The rows stay (dimmed), there is no blurred overlay, and the summary keeps its numbers.
+    expect(within(grid).getByText("gpt-5.1-codex")).toBeInTheDocument();
+    expect(blurOverlay()).toBeNull();
+    expect(summaryValue("Requests")).toBe("1");
+    expect(summaryValue("Success Rate")).toBe("100.0%");
+  });
+
+  test("a failed load is the table's error state with a retry, not a toast", async () => {
+    const user = userEvent.setup();
+    mocks.getUsageLogs.mockRejectedValueOnce(new Error("upstream timed out"));
+    renderRequestLogsPage();
+
+    const alert = await within(await findLogGrid()).findByRole("alert");
+    expect(alert).toHaveTextContent("Couldn't load the data");
+    expect(alert).toHaveTextContent("upstream timed out");
+    // The message lives in the table only, not also in a toast that disappears.
+    expect(screen.getAllByText(/upstream timed out/)).toHaveLength(1);
+
+    mocks.getUsageLogs.mockResolvedValueOnce(oneRow());
+    await user.click(within(alert).getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(mocks.getUsageLogs).toHaveBeenCalledTimes(2));
+    expect(await within(await findLogGrid()).findByText("gpt-5.1-codex")).toBeInTheDocument();
+    expect(within(await findLogGrid()).queryByRole("alert")).toBeNull();
   });
 });

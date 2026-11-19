@@ -1,4 +1,7 @@
 import type { ReactElement } from "react";
+import { parsePath } from "react-router-dom";
+import { pendingPageLoad } from "./preloadablePage";
+import { matchPageRoute, resolveLegacyLocation, type RouteRedirect } from "./routeResolution";
 import { loginRoute } from "./login/route";
 import { dashboardRoute } from "./dashboard/route";
 import { monitorRoute } from "./monitor/route";
@@ -6,7 +9,6 @@ import { requestLogsRoute } from "./request-logs/route";
 import { contentModerationRoute } from "./content-moderation/route";
 import { providersRoute } from "./providers/route";
 import { accountSecurityRoute } from "./account-security/route";
-import { authFilesRoute } from "./auth-files/route";
 import { apiKeysRoute } from "./api-keys/route";
 import { endUsersRoute } from "./end-users/route";
 import { apiKeyPermissionsRoute } from "./api-key-permissions/route";
@@ -17,7 +19,6 @@ import { configRoute } from "./config/route";
 import { logsRoute } from "./logs/route";
 import { systemRoute } from "./system/route";
 import { proxiesRoute } from "./proxies/route";
-import { identityFingerprintRoute } from "./identity-fingerprint/route";
 import { imageGenerationRoute } from "./image-generation/route";
 import { videoGenerationRoute } from "./video-generation/route";
 import { ccswitchImportSettingsRoute } from "./ccswitch-import-settings/route";
@@ -32,6 +33,7 @@ import { ipAccessRoute } from "./ip-access/route";
 import { menuManagementRoute } from "./menu-management/route";
 import { alertsRoute } from "./alerts/route";
 import { privacyMaskingRoute } from "./privacy-masking/route";
+import { dataGridLabRoute } from "./data-grid-lab/route";
 
 export interface PageRoute {
   path: string;
@@ -39,7 +41,8 @@ export interface PageRoute {
   auth: boolean;
   layout: string;
   nav: { labelKey: string } | null;
-  redirects?: Array<{ from: string; to: string }>;
+  /** 指向本页的旧地址。登录后的页面由 resolveLegacyLocation 在匹配路由前换算，不再挂成 <Navigate> 页面。 */
+  redirects?: RouteRedirect[];
   hasWildcard?: boolean;
   preload?: () => Promise<unknown>;
   requiredPermission?: string;
@@ -66,7 +69,6 @@ export const pageRoutes: PageRoute[] = [
   contentModerationRoute,
   providersRoute,
   accountSecurityRoute,
-  authFilesRoute,
   apiKeysRoute,
   endUsersRoute,
   apiKeyPermissionsRoute,
@@ -77,32 +79,24 @@ export const pageRoutes: PageRoute[] = [
   logsRoute,
   systemRoute,
   proxiesRoute,
-  identityFingerprintRoute,
   imageGenerationRoute,
   videoGenerationRoute,
   ccswitchImportSettingsRoute,
   apiKeyLookupRoute,
   apiKeyUsageRoute,
+  // 开发环境专用的表格演示页（计划 104），生产构建里是 null。
+  ...(dataGridLabRoute ? [dataGridLabRoute] : []),
 ];
 
-const normalizePathname = (to: string) => to.split(/[?#]/, 1)[0] || "/";
-
-const matchesPath = (pathname: string, routePath: string) =>
-  pathname === routePath || pathname.startsWith(`${routePath}/`);
-
+/** 预加载 `to` 最终落到的页面（旧地址先换算成现地址）。 */
 export function preloadPageRoute(to: string): Promise<unknown> {
-  const pathname = normalizePathname(to);
-  let matchedRoute: PageRoute | null = null;
-  let matchedLength = -1;
+  const parsed = parsePath(to);
+  const location = { pathname: parsed.pathname || "/", search: parsed.search || "", hash: "" };
+  const target = resolveLegacyLocation(location, pageRoutes) ?? location;
+  return matchPageRoute(target.pathname, pageRoutes)?.preload?.() ?? Promise.resolve();
+}
 
-  for (const route of pageRoutes) {
-    const paths = [route.path, ...(route.redirects ?? []).map((redirect) => redirect.from)];
-    for (const path of paths) {
-      if (!matchesPath(pathname, path) || path.length <= matchedLength) continue;
-      matchedRoute = route;
-      matchedLength = path.length;
-    }
-  }
-
-  return matchedRoute?.preload?.() ?? Promise.resolve();
+/** 渲染 `pathname` 的页面代码还在加载时返回加载结束就兑现的 promise，否则 null（用法见 DashboardLayout）。 */
+export function pendingPageCode(pathname: string): Promise<void> | null {
+  return pendingPageLoad(matchPageRoute(pathname, pageRoutes)?.preload);
 }

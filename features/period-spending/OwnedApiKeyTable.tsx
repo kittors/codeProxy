@@ -6,13 +6,12 @@ import {
   type EndUserAPIKey,
 } from "@code-proxy/api-client";
 import {
-  COLUMN_WIDTH,
-  DataTable,
-  EmptyState,
+  DataGrid,
+  GRID_ROW_ACTIONS_COLUMN,
+  GRID_WIDTH,
+  GridRowActions,
   OverflowTooltip,
-  TABLE_ROW_ACTIONS_COLUMN,
-  TableRowActions,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PeriodSpendingCell, formatQuotaUsdAmount } from "./PeriodSpendingCell";
 
@@ -37,7 +36,7 @@ export interface OwnedApiKeyColumnOptions {
    */
   renderQuota?: (key: EndUserAPIKey) => ReactNode;
   /** 额度列之后追加的列（例如 Key 的按模型规则）。 */
-  extraColumns?: DataTableColumn<EndUserAPIKey>[];
+  extraColumns?: DataGridColumn<EndUserAPIKey>[];
   /** 复制时再按需取明文：列表里没有明文也不禁用复制。 */
   copyOnDemand?: boolean;
   /** 能否重置额度；缺省只看美元四周期。 */
@@ -69,16 +68,16 @@ const buildOwnedApiKeyColumns = ({
   busyKeyId?: string | null;
   busy?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
-} & OwnedApiKeyColumnOptions): DataTableColumn<EndUserAPIKey>[] => [
+} & OwnedApiKeyColumnOptions): DataGridColumn<EndUserAPIKey>[] => [
   {
-    key: "name",
-    label: t("api_keys_page.col_name"),
-    width: compact ? COLUMN_WIDTH.name : COLUMN_WIDTH.numericWide,
-    cellClassName: "font-medium",
+    id: "name",
+    header: t("api_keys_page.col_name"),
+    // 名称是用户自己起的，还可能带 default 徽章；按数值列的宽度给，「Default」就被截成「Defa…」。
+    width: GRID_WIDTH.name,
     // 紧凑布局的名称格是两行（名称、掩码密钥），整格的溢出提示只会重复第一行。
     overflowTooltip: compact ? false : undefined,
-    render: (row) => (
-      <div className="min-w-0">
+    cell: (row) => (
+      <div className="min-w-0 font-medium">
         <div className="flex min-w-0 items-center gap-1.5">
           <OverflowTooltip content={row.name || row.id} className="block min-w-0">
             <span className="block truncate text-ink">
@@ -107,23 +106,24 @@ const buildOwnedApiKeyColumns = ({
     ),
   },
   {
-    key: "key",
-    label: t("api_keys_page.col_key"),
-    width: "w-[220px] min-w-[220px]",
+    id: "key",
+    header: t("api_keys_page.col_key"),
+    width: 220,
+    minWidth: 220,
     // Masked secret is already shown in-cell; overflow tooltip only leaks noise.
     overflowTooltip: false,
-    render: (row) => (
+    cell: (row) => (
       <code className={`block truncate rounded-md px-2 py-1 font-mono text-xs ${NEUTRAL_TAG}`}>
         {row.key_masked || row.key || row.id}
       </code>
     ),
   },
   {
-    key: "status",
-    label: t("api_keys_page.col_status"),
-    width: COLUMN_WIDTH.badge,
-    cellClassName: "text-center",
-    render: (row) => (
+    id: "status",
+    header: t("api_keys_page.col_status"),
+    align: "center",
+    width: GRID_WIDTH.badge,
+    cell: (row) => (
       <span
         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${row.disabled ? "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}
       >
@@ -132,34 +132,45 @@ const buildOwnedApiKeyColumns = ({
     ),
   },
   {
-    key: "quota",
-    label: quotaLabel ?? t("quota.period_spending_column"),
-    width: "w-[360px] min-w-[260px]",
+    id: "quota",
+    header: quotaLabel ?? t("quota.period_spending_column"),
+    // 额度格最宽，弹窗里吃掉剩下的宽度。
+    width: 360,
+    minWidth: 260,
+    grow: true,
     // Keys have no lifetime cap of their own — it lives on the account and is
     // enforced across all of the account's keys — so this column stays periodic.
-    render: (row) => (renderQuota ? renderQuota(row) : <PeriodSpendingCell t={t} items={row["period-spending"]} />),
+    cell: (row) => (renderQuota ? renderQuota(row) : <PeriodSpendingCell t={t} items={row["period-spending"]} />),
   },
   ...extraColumns,
   {
-    key: "dailySpending",
-    label: t("quota.daily_spending_column"),
-    width: COLUMN_WIDTH.compact,
-    cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
-    render: (row) => formatQuotaUsdAmount(row["daily-spending-used"]),
+    id: "dailySpending",
+    header: t("quota.daily_spending_column"),
+    align: "end",
+    width: GRID_WIDTH.compact,
+    cell: (row) => (
+      <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+        {formatQuotaUsdAmount(row["daily-spending-used"])}
+      </span>
+    ),
   },
   {
-    key: "lifetimeSpending",
-    label: t("quota.lifetime_spending_column"),
-    width: COLUMN_WIDTH.compact,
-    cellClassName: "whitespace-nowrap tabular-nums text-ink-2",
-    render: (row) => formatQuotaUsdAmount(row["lifetime-spending-used"]),
+    id: "lifetimeSpending",
+    header: t("quota.lifetime_spending_column"),
+    align: "end",
+    width: GRID_WIDTH.compact,
+    cell: (row) => (
+      <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+        {formatQuotaUsdAmount(row["lifetime-spending-used"])}
+      </span>
+    ),
   },
   {
-    key: "resetCount",
-    label: t("quota.total_resets"),
-    width: COLUMN_WIDTH.timestamp,
-    cellClassName: "text-center",
-    render: (row) => {
+    id: "resetCount",
+    header: t("quota.total_resets"),
+    align: "end",
+    width: GRID_WIDTH.numericWide,
+    cell: (row) => {
       const count = row["daily-spending-reset-count"] ?? 0;
       return actions.onViewResetHistory && count > 0 ? (
         <button
@@ -176,21 +187,21 @@ const buildOwnedApiKeyColumns = ({
     },
   },
   {
-    key: "created",
-    label: t("api_keys_page.col_created"),
-    width: COLUMN_WIDTH.numericWide,
-    cellClassName: "whitespace-nowrap text-xs text-ink-3",
-    render: (row) => (row.created_at ? new Date(row.created_at).toLocaleString() : "-"),
+    id: "created",
+    header: t("api_keys_page.col_created"),
+    width: GRID_WIDTH.timestamp,
+    cell: (row) => (
+      <span className="truncate whitespace-nowrap text-xs text-ink-3">
+        {row.created_at ? new Date(row.created_at).toLocaleString() : "-"}
+      </span>
+    ),
   },
   {
-    key: "actions",
-    label: t("api_keys_page.col_actions"),
-    ...TABLE_ROW_ACTIONS_COLUMN,
-    lockOrder: "end",
-    headerClassName: "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800",
-    // 冻结列盖住横向滚过去的单元格，底色跟随表格所在的底（内容区 / 卡片 / 弹窗，见 --cp-backdrop）。
-    cellClassName: "md:sticky md:z-30 md:bg-backdrop",
-    render: (row) => {
+    id: "actions",
+    header: t("api_keys_page.col_actions"),
+    // 冻结在右侧：横向滚动时操作一直在眼前（底色跟随所在的底，见 DataGrid 的 --grid-cell-bg）。
+    ...GRID_ROW_ACTIONS_COLUMN,
+    cell: (row) => {
       const busy = busyAll || busyKeyId === row.id;
       const hasResettablePeriod = canResetQuota
         ? canResetQuota(row)
@@ -199,7 +210,7 @@ const buildOwnedApiKeyColumns = ({
           );
       const deletable = canDelete(row);
       return (
-        <TableRowActions
+        <GridRowActions
           moreLabel={t("common.more_actions")}
           // 行内只放前三个：编辑（子额度与按模型规则都在里面）最常用排第一；轮换会让旧密钥立即失效，
           // 留在更多菜单里，避免误点。
@@ -285,13 +296,20 @@ const buildOwnedApiKeyColumns = ({
 /** 紧凑布局不单列的几列（密钥与停用状态并进了名称格）。 */
 const COMPACT_OMITTED_COLUMNS = new Set(["key", "status", "dailySpending", "resetCount", "created"]);
 
+/** 停用的 Key 整行内容变淡；只淡内容不淡底色，冻结的操作列盖住滚过去的格子时仍是不透明的。 */
+const DISABLED_ROW = "[&>td>[data-cell-inner]]:opacity-55";
+
 export const createOwnedApiKeyColumns = (
   options: Parameters<typeof buildOwnedApiKeyColumns>[0],
-): DataTableColumn<EndUserAPIKey>[] => {
+): DataGridColumn<EndUserAPIKey>[] => {
   const columns = buildOwnedApiKeyColumns(options);
-  return options.compact ? columns.filter((column) => !COMPACT_OMITTED_COLUMNS.has(column.key)) : columns;
+  return options.compact ? columns.filter((column) => !COMPACT_OMITTED_COLUMNS.has(column.id)) : columns;
 };
 
+/**
+ * 某个账号名下的 Key 列表（门户「管理 Key」、用户详情里的 Key 弹窗）。都嵌在卡片或弹窗里，
+ * 所以不套外框；加载、空、有数据都是同一张表，首次加载是骨架而不是一块单独的「加载中」。
+ */
 export function OwnedApiKeysTable({
   t,
   keys,
@@ -300,11 +318,12 @@ export function OwnedApiKeysTable({
   busy = false,
   loading = false,
   canDelete,
-  height,
-  minHeight,
+  fill = false,
   maxHeight,
-  tableId = "owned-api-keys",
-  minWidth = "min-w-[1580px]",
+  id = "owned-api-keys",
+  error,
+  onRetry,
+  frame = false,
   ...columnOptions
 }: {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -314,51 +333,37 @@ export function OwnedApiKeysTable({
   busy?: boolean;
   loading?: boolean;
   canDelete?: (key: EndUserAPIKey) => boolean;
-  /** 不传就用 DataTable 的默认：按行数收高，最多占到所在区域的高度。 */
-  height?: string;
-  minHeight?: string;
+  /** 父容器给了确定高度（flex-1 min-h-0 的槽位）时铺满它；不传就按行数收高。 */
+  fill?: boolean;
+  /** 按行收高时的封顶高度（CSS 长度）。 */
   maxHeight?: string;
-  /** 列宽按表格 id 记忆；列不同的两处用法用不同的 id。 */
-  tableId?: string;
-  minWidth?: string;
+  /** 列宽、列顺序按表格 id 记忆；列不同的两处用法用不同的 id。 */
+  id?: string;
+  /** 读取失败：表格里显示出错态，有 onRetry 时给「重试」（整页的 Key 管理用）。 */
+  error?: string | null;
+  onRetry?: () => void;
+  /** 整页的 Key 管理和其它整页列表一样带外框；卡片、弹窗里嵌入时不带。 */
+  frame?: boolean;
 } & OwnedApiKeyColumnOptions) {
-  // Avoid flashing the empty state while the owner-scoped list is still loading.
-  if (loading && keys.length === 0) {
-    return (
-      <div
-        className="flex min-h-[240px] flex-1 items-center justify-center text-sm text-ink-3"
-        role="status"
-        aria-live="polite"
-      >
-        {t("common.loading_ellipsis")}
-      </div>
-    );
-  }
-  if (!loading && keys.length === 0) {
-    return (
-      <EmptyState
-        title={t("api_keys_page.no_keys")}
-        description={t("api_keys_page.no_keys_desc")}
-        icon={<KeyRound size={32} className="text-ink-3" />}
-      />
-    );
-  }
   return (
-    <DataTable
-      tableId={tableId}
-      rows={keys}
-      columns={createOwnedApiKeyColumns({ t, actions, busyKeyId, busy, canDelete, ...columnOptions })}
-      rowKey={(row) => row.id}
-      rowHeight={52}
-      height={height}
-      loading={loading}
-      minHeight={minHeight}
+    <DataGrid
+      id={id}
+      frame={frame}
+      fill={fill}
       maxHeight={maxHeight}
-      minWidth={minWidth}
-      caption={t("api_keys_page.table_caption")}
-      emptyText={t("api_keys_page.no_api_keys")}
-      showAllLoadedMessage={false}
-      rowClassName={(row) => (row.disabled ? "opacity-55" : "")}
+      label={t("api_keys_page.table_caption")}
+      columns={createOwnedApiKeyColumns({ t, actions, busyKeyId, busy, canDelete, ...columnOptions })}
+      rows={keys}
+      rowKey={(row) => row.id}
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      empty={{
+        title: t("api_keys_page.no_keys"),
+        description: t("api_keys_page.no_keys_desc"),
+        icon: <KeyRound size={20} strokeWidth={1.5} aria-hidden="true" />,
+      }}
+      rowClassName={(row) => (row.disabled ? DISABLED_ROW : undefined)}
     />
   );
 }

@@ -72,6 +72,15 @@ export {
 } from "./endpoints/end-users";
 export * from "./endpoints/access-policy";
 export type * from "./endpoints/end-users";
+export {
+  accessFreezesApi,
+  normalizeAccessFreeze,
+  normalizeAccessFreezeSettings,
+  normalizeAccessFreezeStrike,
+  normalizePortalAccessFreeze,
+  portalAccessFreezesApi,
+} from "./endpoints/access-freezes";
+export type * from "./endpoints/access-freezes";
 
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
@@ -172,6 +181,8 @@ export type * from "./endpoints/privacy-masking-portal";
 export type * from "./endpoints/alerts";
 export { poolCapacityApi } from "./endpoints/poolCapacity";
 export type * from "./endpoints/poolCapacity";
+export { clusterApi } from "./endpoints/cluster";
+export type * from "./endpoints/cluster";
 export { updateApi } from "./endpoints/update";
 export type * from "./endpoints/update";
 export { imageGenerationApi } from "./endpoints/image-generation";

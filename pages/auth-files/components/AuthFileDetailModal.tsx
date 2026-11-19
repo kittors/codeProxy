@@ -22,10 +22,10 @@ import { VendorIcon } from "@code-proxy/assets";
 import {
   Button,
   Checkbox,
-  COLUMN_WIDTH,
   confirmDialog,
-  DataTable,
+  DataGrid,
   DateTimePicker,
+  GRID_WIDTH,
   EmptyState,
   Modal,
   ScrollFade,
@@ -36,7 +36,7 @@ import {
   TabsTrigger,
   TextInput,
   ToggleSwitch,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePanel";
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
@@ -555,54 +555,47 @@ export function AuthFileDetailModal({
     </div>
   );
 
-  const identityFieldColumns: DataTableColumn<IdentityFingerprintFieldRow>[] = [
+  const identityFieldColumns: DataGridColumn<IdentityFingerprintFieldRow>[] = [
     {
-      key: "section",
-      label: t("auth_files.identity_fingerprint_table_section"),
-      width: COLUMN_WIDTH.badgeStacked,
-      resizable: false,
-      reorderable: false,
+      id: "section",
+      header: t("auth_files.identity_fingerprint_table_section"),
+      width: GRID_WIDTH.badgeStacked,
       overflowTooltip: (row) => identityFieldSectionLabel(row.section),
-      render: (row) => (
+      cell: (row) => (
         <span className="block truncate text-xs font-semibold text-ink-2">
           {identityFieldSectionLabel(row.section)}
         </span>
       ),
     },
     {
-      key: "field",
-      label: t("auth_files.identity_fingerprint_table_field"),
-      width: "w-60",
-      resizable: false,
-      reorderable: false,
+      id: "field",
+      header: t("auth_files.identity_fingerprint_table_field"),
+      width: 240,
       overflowTooltip: (row) => row.field,
-      render: (row) => (
+      cell: (row) => (
         <code className="block truncate font-mono text-xs font-semibold text-ink">
           {row.field}
         </code>
       ),
     },
     {
-      key: "value",
-      label: t("auth_files.identity_fingerprint_table_value"),
-      width: "w-[32rem]",
-      resizable: false,
-      reorderable: false,
+      id: "value",
+      header: t("auth_files.identity_fingerprint_table_value"),
+      width: 512,
+      grow: true,
       overflowTooltip: (row) => row.value,
-      render: (row) => (
+      cell: (row) => (
         <span className="block truncate font-mono text-xs text-ink-2">
           {row.value}
         </span>
       ),
     },
     {
-      key: "source",
-      label: t("auth_files.identity_fingerprint_table_source"),
-      width: COLUMN_WIDTH.toggle,
-      resizable: false,
-      reorderable: false,
+      id: "source",
+      header: t("auth_files.identity_fingerprint_table_source"),
+      width: GRID_WIDTH.toggle,
       overflowTooltip: (row) => formatIdentitySource(row.source),
-      render: (row) => renderIdentitySourceBadge(row.source),
+      cell: (row) => renderIdentitySourceBadge(row.source),
     },
   ];
 
@@ -921,44 +914,22 @@ export function AuthFileDetailModal({
                     })}
                   </span>
                 </div>
-                {isIdentityDesktopLayout ? (
-                  <div
-                    className="flex min-h-0 flex-col overflow-hidden"
-                    data-testid="auth-file-identity-table-desktop"
-                  >
-                    <DataTable<IdentityFingerprintFieldRow>
-                      rows={identityFieldRows}
-                      columns={identityFieldColumns}
-                      rowKey={(row) => row.id}
-                      rowHeight={48}
-                      minWidth="min-w-[920px]"
-                      caption={t("auth_files.identity_fingerprint_title")}
-                      emptyText={t("auth_files.identity_fingerprint_no_fields")}
-                      showAllLoadedMessage={false}
-                      columnReorderable={false}
-                      persistColumnOrder={false}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="min-w-0 overflow-x-auto overscroll-x-contain rounded-xl"
-                    data-testid="auth-file-identity-table-mobile"
-                  >
-                    <DataTable<IdentityFingerprintFieldRow>
-                      rows={identityFieldRows}
-                      columns={identityFieldColumns}
-                      rowKey={(row) => row.id}
-                      rowHeight={48}
-                      minWidth="min-w-[920px]"
-                      caption={t("auth_files.identity_fingerprint_title")}
-                      emptyText={t("auth_files.identity_fingerprint_no_fields")}
-                      showAllLoadedMessage={false}
-                      naturalFlow
-                      columnReorderable={false}
-                      persistColumnOrder={false}
-                    />
-                  </div>
-                )}
+                {/* 宽屏：表格铺满右栏、自己滚动；窄屏：按行收高、跟着详情一起滚，横向在表格里滚。 */}
+                <div
+                  className={isIdentityDesktopLayout ? "flex min-h-0 flex-1 flex-col" : "min-w-0"}
+                  data-testid={`auth-file-identity-table-${isIdentityDesktopLayout ? "desktop" : "mobile"}`}
+                >
+                  <DataGrid<IdentityFingerprintFieldRow>
+                    frame={false}
+                    fill={isIdentityDesktopLayout}
+                    rows={identityFieldRows}
+                    columns={identityFieldColumns}
+                    rowKey={(row) => row.id}
+                    label={t("auth_files.identity_fingerprint_title")}
+                    empty={{ title: t("auth_files.identity_fingerprint_no_fields") }}
+                    resizable={false}
+                  />
+                </div>
               </>
             ) : null}
           </section>

@@ -3,12 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
-import { ConfirmModal } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { ConfirmModal, TextInput } from "@code-proxy/ui";
 import type { SearchableSelectOption } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
-import { DataTable } from "@code-proxy/ui";
+import { DataGrid, type GridEmptyState } from "@code-proxy/ui";
 import { apiClient } from "@code-proxy/api-client";
 import { getActiveCacheTenantId } from "@code-proxy/domain";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
@@ -20,6 +19,7 @@ import { OwnerFormModal } from "./components/OwnerFormModal";
 import { OwnerSidebarItem } from "./components/OwnerSidebarItem";
 import { useModelColumns } from "./hooks/useModelColumns";
 import { useModelTestRunner } from "./hooks/useModelTestRunner";
+import { announceSavedModel } from "./pricingResyncFeedback";
 import {
   invalidateConfiguredModelAvailability,
   loadConfiguredModelAvailability,
@@ -74,6 +74,7 @@ export function ModelsPage() {
   const [models, setModels] = useState<ModelItem[]>(() => initialActiveSnapshot?.models ?? []);
   // Only block the table with skeleton when we have nothing to paint yet.
   const [loading, setLoading] = useState(() => !initialActiveSnapshot);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [totalCost, setTotalCost] = useState(() => initialActiveSnapshot?.totalCost ?? 0);
@@ -185,6 +186,7 @@ export function ModelsPage() {
           scope === "active" ? loadConfiguredModelAvailability() : Promise.resolve(null),
         ]);
         if (!isActive()) return;
+        setLoadError(null);
 
         if (scope === "active") {
           lastAvailabilityRef.current = availability;
@@ -253,10 +255,8 @@ export function ModelsPage() {
         }
       } catch (err: unknown) {
         if (!isActive()) return;
-        notify({
-          type: "error",
-          message: err instanceof Error ? err.message : t("models_page.load_failed"),
-        });
+        // 读不到就在表格里写明原因、给「重试」；已有的行留着（软刷新失败不清空）。
+        setLoadError(err instanceof Error ? err.message : t("models_page.load_failed"));
       } finally {
         if (isActive()) {
           setLoading(false);
@@ -264,7 +264,7 @@ export function ModelsPage() {
         }
       }
     },
-    [modelScope, notify, t],
+    [modelScope, t],
   );
 
   // When the tab changes, paint that scope's snapshot immediately (if any),
@@ -315,16 +315,11 @@ export function ModelsPage() {
     });
   }, [activeTab, models, ownerFilter, searchFilter]);
 
-  const filteredModelIds = useMemo(() => filteredModels.map((model) => model.id), [filteredModels]);
-
   const selectedModels = useMemo(
     () => models.filter((model) => selectedModelIds.has(model.id)),
     [models, selectedModelIds],
   );
   const selectedModelCount = selectedModels.length;
-  const allVisibleModelsSelected =
-    filteredModelIds.length > 0 && filteredModelIds.every((id) => selectedModelIds.has(id));
-  const someVisibleModelsSelected = filteredModelIds.some((id) => selectedModelIds.has(id));
 
   useEffect(() => {
     setSelectedModelIds((current) => {
@@ -493,7 +488,7 @@ export function ModelsPage() {
         hasTotalCost: totalCostLoadedRef.current,
       });
       setForm(null);
-      notify({ type: "success", message: t("models_page.config_saved") });
+      announceSavedModel({ form, before: existing, notify, t });
     } catch (err: unknown) {
       notify({
         type: "error",
@@ -578,35 +573,6 @@ export function ModelsPage() {
       setDeleting(false);
     }
   }, [deleteTarget, modelScope, notify, t]);
-
-  const toggleModelSelection = useCallback((modelId: string, checked: boolean) => {
-    setSelectedModelIds((current) => {
-      const next = new Set(current);
-      if (checked) {
-        next.add(modelId);
-      } else {
-        next.delete(modelId);
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleVisibleModelSelection = useCallback(
-    (checked: boolean) => {
-      setSelectedModelIds((current) => {
-        const next = new Set(current);
-        for (const modelId of filteredModelIds) {
-          if (checked) {
-            next.add(modelId);
-          } else {
-            next.delete(modelId);
-          }
-        }
-        return next;
-      });
-    },
-    [filteredModelIds],
-  );
 
   const handleBulkDelete = useCallback(async () => {
     if (!bulkDeleteTargetIds || bulkDeleteTargetIds.length === 0) return;
@@ -777,35 +743,77 @@ export function ModelsPage() {
 
   const modelColumns = useModelColumns({
     canDeleteModels,
-    allVisibleModelsSelected,
-    someVisibleModelsSelected,
-    visibleModelCount: filteredModelIds.length,
-    selectedModelIds,
-    onSelectModel: toggleModelSelection,
-    onSelectVisibleModels: toggleVisibleModelSelection,
     onEditModel: openEditModel,
     onDeleteModel: setDeleteTarget,
     onToggleEnabled: (model) => void handleToggleEnabled(model),
     onTestModel: modelTest.open,
     togglingModelId,
   });
-  const selectionToolbar =
-    canDeleteModels && selectedModelCount > 0 ? (
-      <>
-        <span className="inline-flex h-8 items-center rounded-full bg-ink/[0.05] px-3 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
-          {t("models_page.selected_models_count", { count: selectedModelCount })}
-        </span>
+  // 三种空状态：没有模型 / 当前搜索或归属下没有（写出条件、给「清除筛选」）/ 读取失败（error）。
+  const ownerLabel = libraryOwners.find((owner) => owner.value === ownerFilter)?.label ?? ownerFilter;
+  const activeFilterLabels = [
+    ...(searchFilter.trim() ? [t("common.grid_search_chip", { query: searchFilter.trim() })] : []),
+    ...(activeTab === "library" && ownerFilter ? [`${t("models_page.col_owner")}：${ownerLabel}`] : []),
+  ];
+  const modelsEmpty: GridEmptyState =
+    activeFilterLabels.length > 0 && models.length > 0
+      ? {
+          title: t("models_page.no_results"),
+          description: t("common.grid_filters_in_effect"),
+          details: (
+            <ul className="flex flex-wrap justify-center gap-1.5">
+              {activeFilterLabels.map((label) => (
+                <li
+                  key={label}
+                  className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+          ),
+          action: (
+            <Button
+              size="sm"
+              onClick={() => {
+                setSearchFilter("");
+                setOwnerFilter("");
+              }}
+            >
+              {t("common.grid_clear_filters")}
+            </Button>
+          ),
+        }
+      : { title: t("models_page.no_model_data") };
+  const modelGrid = (id: string) => (
+    <DataGrid<ModelItem>
+      id={id}
+      label={t("models_page.table_caption")}
+      fill
+      frame={false}
+      rows={filteredModels}
+      columns={modelColumns}
+      rowKey={(row) => row.id}
+      loading={loading}
+      error={loadError}
+      onRetry={() => void loadModels({ force: true })}
+      empty={modelsEmpty}
+      selectable={canDeleteModels}
+      selectedKeys={selectedModelIds}
+      onSelectedKeysChange={setSelectedModelIds}
+      selectionActions={() => (
         <Button
           variant="secondary-danger"
-          size="sm"
+          size="xs"
           onClick={() => setBulkDeleteTargetIds(selectedModels.map((model) => model.id))}
           disabled={deleting}
         >
-          <Trash2 size={14} />
+          <Trash2 size={12} />
           {t("models_page.delete_selected_models", { count: selectedModelCount })}
         </Button>
-      </>
-    ) : null;
+      )}
+    />
+  );
 
   return (
     <section data-page-fill="md" className="flex flex-1 flex-col gap-4 md:min-h-0 md:overflow-hidden">
@@ -897,7 +905,6 @@ export function ModelsPage() {
               bodyClassName="relative flex min-h-0 flex-1 flex-col"
               actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  {selectionToolbar}
                   <TextInput
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
@@ -1045,18 +1052,7 @@ export function ModelsPage() {
                 </div>
               ) : null}
 
-              <DataTable<ModelItem>
-                fill
-                tableId="models-library"
-                rows={filteredModels}
-                columns={modelColumns}
-                rowKey={(row) => row.id}
-                loading={loading}
-                rowHeight={52}
-                caption={t("models_page.table_caption")}
-                emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-                minWidth="min-w-[1440px]"
-              />
+              {modelGrid("models-library")}
             </Card>
           </div>
         </div>
@@ -1068,7 +1064,6 @@ export function ModelsPage() {
           bodyClassName="relative flex min-h-0 flex-1 flex-col"
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {selectionToolbar}
               <TextInput
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
@@ -1098,18 +1093,7 @@ export function ModelsPage() {
             </div>
           }
         >
-          <DataTable<ModelItem>
-            fill
-            tableId="model-configs"
-            rows={filteredModels}
-            columns={modelColumns}
-            rowKey={(row) => row.id}
-            loading={loading}
-            rowHeight={52}
-            caption={t("models_page.table_caption")}
-            emptyText={searchFilter ? t("models_page.no_results") : t("models_page.no_model_data")}
-            minWidth="min-w-[1440px]"
-          />
+          {modelGrid("model-configs")}
         </Card>
       )}
 

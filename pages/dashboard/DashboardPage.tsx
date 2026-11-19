@@ -21,6 +21,7 @@ import {
 } from "@code-proxy/api-client/endpoints/usage";
 import { useAuth } from "@app/providers/AuthProvider";
 import { SystemMonitorSection } from "./SystemMonitorSection";
+import { ClusterNodesSection } from "./ClusterNodesSection";
 import { useSystemStats } from "./useSystemStats";
 import { cacheRatePercent, readCacheRate } from "@code-proxy/domain";
 import { AnimatedNumber } from "@code-proxy/ui";
@@ -328,6 +329,9 @@ export function DashboardPage() {
           apiKeyCount={summary?.counts?.api_keys ?? 0}
         />
       ) : null}
+
+      {/* 每台服务器的资源快照；GET /cluster 与系统监控同属 system.status.read。旧后端不显示。 */}
+      {canViewSystemMonitor ? <ClusterNodesSection enabled={pageVisible} /> : null}
 
       <ThroughputTrendChart
         title={t("dashboard.throughput_title")}

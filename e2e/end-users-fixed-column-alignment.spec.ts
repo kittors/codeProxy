@@ -1,24 +1,23 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * 固定列的白色轨道和边缘阴影是按算出来的列宽绝对定位的，必须和固定列在 DOM 上的
- * 真实边缘重合。
+ * 固定列必须和它在 DOM 上的真实边缘重合，表头和单元格在同一条竖线上开始遮挡。
  *
- * 面板整体缩放靠的是根字号（`--ui-scale`，再叠加用户自己调过的浏览器默认字号），
- * Tailwind 的 rem 刻度跟着变。按 16px 硬算过一版：轨道比真实列宽多出一截，压到
- * 左邻列上，而表头是 sticky（盖在轨道之上）、数据行是 static（被轨道盖住）——
- * 同一列的表头和单元格于是在差开的两个位置被截断，阴影也落在离固定列边缘还有
- * 一截的地方。所以这里逐档根字号验证几何，而不是只测默认那一档。
+ * 面板整体缩放靠的是根字号（`--ui-scale`，再叠加用户自己调过的浏览器默认字号），列宽跟着变。
+ * 旧表格另画一层按算出来的列宽绝对定位的「冻结轨道」，按 16px 硬算过一版：轨道比真实列宽多出
+ * 一截，同一列的表头和单元格在差开的两个位置被截断。DataGrid 的冻结列就是 sticky 单元格、阴影是
+ * 冻结格边上的伪元素，没有轨道；这里逐档根字号验证的是同一组不变量：表头与单元格同一条边、
+ * 固定列贴住视口右缘、阴影贴着固定列外侧、横向滚动条不压在行上。
  */
 
-const STICKY_EDGE_SHADOW_WIDTH = 28;
-/** 横向滚动条占掉的底部高度，轨道要给它让位。 */
-const HORIZONTAL_SCROLLBAR_INSET = 14;
+/** 冻结列边缘阴影的宽度（DataGrid.css 里的 22px）。 */
+const PIN_SHADOW_WIDTH = 22;
 
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.removeItem("codeProxy.dataTable.columnOrder.v1.end-users");
     localStorage.removeItem("codeProxy.dataTable.columnWidths.v3.end-users");
+    localStorage.removeItem("cp-grid:end-users:v1");
     localStorage.setItem(
       "code-proxy-admin-auth",
       JSON.stringify({
@@ -31,8 +30,10 @@ const setAuthed = async (page: Page) => {
   });
 };
 
+/** 旧表格存下的列宽（实际像素）：第一次打开时迁成 DataGrid 的设计像素。 */
 const setStoredColumnWidths = async (page: Page, widths: Record<string, number>) => {
   await page.addInitScript((stored: Record<string, number>) => {
+    localStorage.removeItem("cp-grid:end-users:v1");
     localStorage.setItem("codeProxy.dataTable.columnWidths.v3.end-users", JSON.stringify(stored));
   }, widths);
 };
@@ -87,99 +88,89 @@ type FixedColumnGeometry = {
   scrollLeft: number;
   maxScrollLeft: number;
   rootFontSizePx: number;
-  containerRight: number;
-  containerBottom: number;
+  viewportRight: number;
+  viewportBottom: number;
+  laneTop: number | null;
   actionsCellLeft: number;
   actionsCellRight: number;
-  actionsCellWidth: number;
   actionsHeaderLeft: number;
   actionsHeaderRight: number;
-  endRailLeft: number;
-  endRailRight: number;
-  endRailBottom: number;
-  endBoundaryLeft: number;
-  endBoundaryRight: number;
-  endBoundaryWidth: number;
+  cellEdge: string | null;
+  headerEdge: string | null;
+  shadowLeft: string;
+  shadowWidth: string;
 };
 
 /** 把表格横向滚到给定位置后读一组几何值。 */
 const readGeometryAtScroll = async (page: Page, ratios: number[]) =>
   page.evaluate(async (scrollRatios: number[]) => {
-    const scrollContent = document.querySelector<HTMLElement>("[data-vt-scroll-content]");
-    const container = scrollContent?.parentElement;
-    if (!scrollContent || !container) throw new Error("Missing end-users table viewport");
+    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    if (!viewport) throw new Error("Missing end-users table viewport");
 
-    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
     const states = [];
 
     for (const ratio of scrollRatios) {
-      container.scrollLeft = Math.round(maxScrollLeft * ratio);
+      viewport.scrollLeft = Math.round(maxScrollLeft * ratio);
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
 
-      const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
-      const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
-      const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
-      const endBoundary = document.querySelector<HTMLElement>("[data-vt-sticky-end-boundary]");
-      if (!actionsCell || !actionsHeader || !endRail || !endBoundary) {
-        throw new Error("Missing fixed-column geometry");
-      }
+      const actionsCell = document.querySelector<HTMLElement>('td[data-col="actions"]');
+      const actionsHeader = document.querySelector<HTMLElement>('th[data-col="actions"]');
+      if (!actionsCell || !actionsHeader) throw new Error("Missing fixed-column geometry");
 
       const actionsCellRect = actionsCell.getBoundingClientRect();
       const actionsHeaderRect = actionsHeader.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-      const endRailRect = endRail.getBoundingClientRect();
-      const endBoundaryRect = endBoundary.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
+      const lane = document.querySelector<HTMLElement>("[data-grid-x-lane]");
+      const shadow = getComputedStyle(actionsCell, "::after");
 
       states.push({
-        scrollLeft: container.scrollLeft,
+        scrollLeft: viewport.scrollLeft,
         maxScrollLeft,
         rootFontSizePx: Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
-        containerRight: containerRect.right,
-        containerBottom: containerRect.bottom,
+        viewportRight: viewportRect.left + viewport.clientWidth,
+        viewportBottom: viewportRect.bottom,
+        laneTop: lane ? lane.getBoundingClientRect().top : null,
         actionsCellLeft: actionsCellRect.left,
         actionsCellRight: actionsCellRect.right,
-        actionsCellWidth: actionsCellRect.width,
         actionsHeaderLeft: actionsHeaderRect.left,
         actionsHeaderRight: actionsHeaderRect.right,
-        endRailLeft: endRailRect.left,
-        endRailRight: endRailRect.right,
-        endRailBottom: endRailRect.bottom,
-        endBoundaryLeft: endBoundaryRect.left,
-        endBoundaryRight: endBoundaryRect.right,
-        endBoundaryWidth: endBoundaryRect.width,
+        cellEdge: actionsCell.dataset.pinEdge ?? null,
+        headerEdge: actionsHeader.dataset.pinEdge ?? null,
+        shadowLeft: shadow.left,
+        shadowWidth: shadow.width,
       });
     }
 
     return states;
   }, ratios);
 
-const expectRailHugsFixedColumn = (state: FixedColumnGeometry) => {
-  // 轨道左缘就是固定列左缘：早一点就会盖住左邻列，晚一点会漏出下层内容。
-  expect(state.endRailLeft).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
-  expect(state.endRailLeft).toBeLessThanOrEqual(state.actionsCellLeft + 1);
-  expect(state.endRailRight).toBeGreaterThanOrEqual(state.containerRight - 1);
-  expect(state.endRailRight).toBeLessThanOrEqual(state.containerRight + 1);
+const expectFixedColumnHugsItsEdges = (state: FixedColumnGeometry) => {
+  // 固定列贴住视口右缘：早一点就漏出下层内容，晚一点会被裁掉。
+  expect(state.actionsCellRight).toBeGreaterThanOrEqual(state.viewportRight - 1);
+  expect(state.actionsCellRight).toBeLessThanOrEqual(state.viewportRight + 1);
+  expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.viewportRight - 1);
+  expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.viewportRight + 1);
 
   // 表头和单元格必须在同一条竖线上开始遮挡，否则同一列会在两个位置被截断。
   expect(state.actionsHeaderLeft).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
   expect(state.actionsHeaderLeft).toBeLessThanOrEqual(state.actionsCellLeft + 1);
 
-  // 阴影贴着固定列外侧，中间不留白缝。
-  expect(state.endBoundaryRight).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
-  expect(state.endBoundaryRight).toBeLessThanOrEqual(state.actionsCellLeft + 1);
-  expect(state.endBoundaryWidth).toBeGreaterThanOrEqual(STICKY_EDGE_SHADOW_WIDTH - 1);
-  expect(state.endBoundaryWidth).toBeLessThanOrEqual(STICKY_EDGE_SHADOW_WIDTH + 1);
+  // 阴影是固定列自己边上的一条（每个冻结格的伪元素），贴着固定列外侧，中间不留白缝。
+  expect(state.cellEdge).toBe("end");
+  expect(state.headerEdge).toBe("end");
+  expect(state.shadowLeft).toBe(`-${PIN_SHADOW_WIDTH}px`);
+  expect(state.shadowWidth).toBe(`${PIN_SHADOW_WIDTH}px`);
 
-  // 轨道给横向滚动条让位，不盖到容器底边。
-  expect(state.endRailBottom).toBeLessThanOrEqual(
-    state.containerBottom - HORIZONTAL_SCROLLBAR_INSET + 1,
-  );
+  // 横向滚动条单独占一条通道，在视口下面，不盖到最后一行和固定列上。
+  expect(state.laneTop).not.toBeNull();
+  expect(state.laneTop ?? 0).toBeGreaterThanOrEqual(state.viewportBottom - 1);
 };
 
 const openEndUsers = async (page: Page) => {
   await page.goto("/#/access/end-users");
-  await page.locator('td[data-vt-column-key="actions"]').first().waitFor({ state: "visible" });
+  await page.locator('td[data-col="actions"]').first().waitFor({ state: "visible" });
 };
 
 for (const { label, scale, expectedRootFontSizePx } of [
@@ -187,7 +178,7 @@ for (const { label, scale, expectedRootFontSizePx } of [
   { label: "an unscaled 1.0 UI", scale: 1, expectedRootFontSizePx: 16 },
   { label: "an enlarged 1.25 UI scale", scale: 1.25, expectedRootFontSizePx: 20 },
 ]) {
-  test(`End Users: the fixed action rail hugs its column under ${label}`, async ({ page }) => {
+  test(`End Users: the fixed action column hugs its edges under ${label}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setAuthed(page);
     await setRootFontScale(page, scale);
@@ -202,12 +193,14 @@ for (const { label, scale, expectedRootFontSizePx } of [
     expect(states[0]?.rootFontSizePx).toBeCloseTo(expectedRootFontSizePx, 1);
 
     for (const state of states) {
-      expectRailHugsFixedColumn(state);
+      expectFixedColumnHugsItsEdges(state);
     }
   });
 }
 
-test("End Users: the fixed action rail follows a resized neighbour", async ({ page }) => {
+test("End Users: the fixed action column stays put next to a resized neighbour", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setAuthed(page);
   await setStoredColumnWidths(page, { account: 320, quota: 360 });
@@ -217,12 +210,23 @@ test("End Users: the fixed action rail follows a resized neighbour", async ({ pa
 
   const states = await readGeometryAtScroll(page, [0, 1]);
 
+  // 迁移过来的列宽生效了（旧键已删、新偏好里有它们），固定列照样贴边。
+  const stored = await page.evaluate(() => ({
+    legacy: localStorage.getItem("codeProxy.dataTable.columnWidths.v3.end-users"),
+    prefs: JSON.parse(localStorage.getItem("cp-grid:end-users:v1") ?? "{}") as {
+      widths?: Record<string, number>;
+    },
+  }));
+  expect(stored.legacy).toBeNull();
+  expect(stored.prefs.widths?.account).toBeGreaterThan(0);
+  expect(stored.prefs.widths?.quota).toBeGreaterThan(0);
+
   for (const state of states) {
-    expectRailHugsFixedColumn(state);
+    expectFixedColumnHugsItsEdges(state);
   }
 });
 
-test("End Users: the column left of the fixed rail is only covered by the fixed column", async ({
+test("End Users: the column left of the fixed column is only covered by the fixed column", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -231,29 +235,27 @@ test("End Users: the column left of the fixed rail is only covered by the fixed 
 
   await openEndUsers(page);
 
-  // 轨道盖住的第一个像素必须已经属于固定列。修复前轨道比固定列宽出一截，
+  // 固定列盖住的第一个像素必须已经属于固定列。旧表格的轨道比固定列宽出一截，
   // 这里打到的是左邻列——正是线上看到的「总配额」被切掉一半。
   const hits = await page.evaluate(() => {
-    const actionsCell = document.querySelector<HTMLElement>('td[data-vt-column-key="actions"]');
-    const actionsHeader = document.querySelector<HTMLElement>('th[data-vt-column-key="actions"]');
-    const endRail = document.querySelector<HTMLElement>("[data-vt-sticky-end-rail]");
-    if (!actionsCell || !actionsHeader || !endRail)
-      throw new Error("Missing fixed-column geometry");
+    const actionsCell = document.querySelector<HTMLElement>('td[data-col="actions"]');
+    const actionsHeader = document.querySelector<HTMLElement>('th[data-col="actions"]');
+    if (!actionsCell || !actionsHeader) throw new Error("Missing fixed-column geometry");
 
     const cellRect = actionsCell.getBoundingClientRect();
     const headerRect = actionsHeader.getBoundingClientRect();
-    const railRect = endRail.getBoundingClientRect();
-    const probeX = railRect.left + 2;
+    const probeX = cellRect.left + 2;
     const columnAt = (x: number, y: number) =>
-      document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-vt-column-key]")?.dataset
-        .vtColumnKey ?? null;
+      document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-col]")?.dataset.col ?? null;
 
     return {
-      headerColumnAtRailEdge: columnAt(probeX, headerRect.top + headerRect.height / 2),
-      cellColumnAtRailEdge: columnAt(probeX, cellRect.top + cellRect.height / 2),
+      headerColumnAtEdge: columnAt(probeX, headerRect.top + headerRect.height / 2),
+      cellColumnAtEdge: columnAt(probeX, cellRect.top + cellRect.height / 2),
+      leftNeighbourAtEdge: columnAt(cellRect.left - 2, cellRect.top + cellRect.height / 2),
     };
   });
 
-  expect(hits.headerColumnAtRailEdge).toBe("actions");
-  expect(hits.cellColumnAtRailEdge).toBe("actions");
+  expect(hits.headerColumnAtEdge).toBe("actions");
+  expect(hits.cellColumnAtEdge).toBe("actions");
+  expect(hits.leftNeighbourAtEdge).not.toBe("actions");
 });

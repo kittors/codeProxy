@@ -10,15 +10,16 @@ import { useToast, type SearchableSelectOption } from "@code-proxy/ui";
 import { ModelTag } from "@features/model-tags";
 import {
   buildRequestLogKeyOptionsFromFacet,
-  buildRequestLogsColumns,
+  buildRequestLogGridColumns,
+  itemsCarryClientFields,
   RequestLogFilterCount,
   ChannelIdentityLabel,
   DEFAULT_REQUEST_LOG_PAGE_SIZE,
   EMPTY_REQUEST_LOG_KEY_FACET,
   readRequestLogKeyFacet,
   sortRequestLogKeyOptionsByCount,
-  requestLogsHaveCacheBreakdown,
   toRequestLogsRow,
+  type RequestLogClientsSupport,
   type RequestLogKeyFacet,
   type RequestLogsRow,
   type TimeRange,
@@ -51,6 +52,8 @@ export function useApiKeyUsageView() {
   const [usageCurrentPage, setUsageCurrentPage] = useState(1);
   const [usagePageSize, setUsagePageSize] = useState(DEFAULT_REQUEST_LOG_PAGE_SIZE);
   const [usageLastUpdatedAt, setUsageLastUpdatedAt] = useState<number | null>(null);
+  // Agent 列：第一页回来前占位；回来后按日志接口的声明（或行上有没有这几个字段）定下来。
+  const [usageClients, setUsageClients] = useState<RequestLogClientsSupport>("pending");
   const [usageFilterOptions, setUsageFilterOptions] = useState<{
     keyFacet: RequestLogKeyFacet;
     channels: string[];
@@ -102,13 +105,17 @@ export function useApiKeyUsageView() {
     () => (usageRawItems ?? []).map((item) => toRequestLogsRow(item)),
     [usageRawItems],
   );
-  const usageCacheBreakdown = useMemo(() => requestLogsHaveCacheBreakdown(usageRows), [usageRows]);
   const usageLogColumns = useMemo(
     () =>
-      buildRequestLogsColumns(t, handleUsageContentClick, handleUsageErrorClick, {
-        cacheBreakdown: usageCacheBreakdown,
+      buildRequestLogGridColumns(t, {
+        identity: "user",
+        clients: usageClients,
+        now: usageLastUpdatedAt ?? Date.now(),
+        onOpenContent: (row, side) =>
+          handleUsageContentClick(Number(row.id), side, row.displayModel || row.model),
+        onOpenError: (row) => handleUsageErrorClick(Number(row.id), row.displayModel || row.model),
       }),
-    [t, handleUsageContentClick, handleUsageErrorClick, usageCacheBreakdown],
+    [t, handleUsageContentClick, handleUsageErrorClick, usageClients, usageLastUpdatedAt],
   );
 
   const usageTotalPages = Math.max(1, Math.ceil(usageTotalCount / usagePageSize));
@@ -158,6 +165,11 @@ export function useApiKeyUsageView() {
         if (seq !== usageFetchSeqRef.current) return;
         const items = result.items ?? [];
         setUsageRawItems(items);
+        setUsageClients(
+          result.capabilities?.requestLogClients === true || itemsCarryClientFields(items)
+            ? "supported"
+            : "unsupported",
+        );
         setUsageTotalCount(result.total ?? 0);
         setUsageSummary({
           inputTokens: items.reduce((sum, item) => sum + item.input_tokens, 0),
@@ -227,6 +239,7 @@ export function useApiKeyUsageView() {
     setUsageCurrentPage(1);
     setUsagePageSize(DEFAULT_REQUEST_LOG_PAGE_SIZE);
     setUsageLastUpdatedAt(null);
+    setUsageClients("pending");
     setUsageFilterOptions({
       keyFacet: EMPTY_REQUEST_LOG_KEY_FACET,
       channels: [],

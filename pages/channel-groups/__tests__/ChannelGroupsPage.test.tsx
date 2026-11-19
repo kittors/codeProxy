@@ -98,6 +98,7 @@ vi.mock("@code-proxy/api-client", () => ({
     alerts: false,
     poolCapacity: false,
     privacyMasking: false,
+    nodeMetrics: false,
   }),
   authFilesApi: {
     list: () => apiMocks.get("/auth-files"),

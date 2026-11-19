@@ -4,14 +4,14 @@ import { KeyRound, Shield, Trash2 } from "lucide-react";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
-  DataTable,
+  GRID_WIDTH,
+  DataGrid,
   SecretRevealModal,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   ToggleSwitch,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
@@ -37,6 +37,7 @@ export function UsersPage() {
   const [users, setUsers] = useState<UserIdentity[]>([]);
   const [roles, setRoles] = useState<RoleIdentity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [resetUser, setResetUser] = useState<UserIdentity | null>(null);
   const [rolesUser, setRolesUser] = useState<UserIdentity | null>(null);
@@ -60,6 +61,10 @@ export function UsersPage() {
       } else {
         setRoles([]);
       }
+      setLoadError(null);
+    } catch (error) {
+      // 读不到列表时表格显示出错态和「重试」，而不是一张看起来「没有数据」的空表。
+      setLoadError(error instanceof Error ? error.message : "");
     } finally {
       setLoading(false);
     }
@@ -159,13 +164,13 @@ export function UsersPage() {
     return t("identity_admin.roles_locked_tenant_admin");
   };
 
-  const columns = useMemo<DataTableColumn<UserIdentity>[]>(
+  const columns = useMemo<DataGridColumn<UserIdentity>[]>(
     () => [
       {
-        key: "user",
-        label: t("identity_admin.user"),
-        width: COLUMN_WIDTH.name,
-        render: (user) => (
+        id: "user",
+        header: t("identity_admin.user"),
+        width: GRID_WIDTH.name,
+        cell: (user) => (
           <div className="min-w-0">
             <div className="truncate font-medium text-ink">{userName(user)}</div>
             <div className="truncate text-xs text-ink-3">{user.username}</div>
@@ -173,10 +178,10 @@ export function UsersPage() {
         ),
       },
       {
-        key: "status",
-        label: t("identity_admin.status"),
-        width: COLUMN_WIDTH.toggle,
-        render: (user) => {
+        id: "status",
+        header: t("identity_admin.status"),
+        width: GRID_WIDTH.toggle,
+        cell: (user) => {
           const protectedUser = isProtected(user);
           const checked = user.status === "active";
           const label =
@@ -214,10 +219,10 @@ export function UsersPage() {
         },
       },
       {
-        key: "roles",
-        label: t("identity_admin.roles"),
-        width: COLUMN_WIDTH.nameStacked,
-        render: (user) => {
+        id: "roles",
+        header: t("identity_admin.roles"),
+        width: GRID_WIDTH.nameStacked,
+        cell: (user) => {
           const labels = (user.role_ids ?? []).map(
             (roleId, index) => roleNames.get(roleId) ?? user.role_codes?.[index] ?? roleId,
           );
@@ -239,24 +244,24 @@ export function UsersPage() {
         },
       },
       {
-        key: "last_login",
-        label: t("identity_admin.last_login"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (user) =>
+        id: "last_login",
+        header: t("identity_admin.last_login"),
+        width: GRID_WIDTH.timestamp,
+        cell: (user) =>
           user.last_login_at
             ? new Date(user.last_login_at).toLocaleString(i18n.language)
             : t("identity_admin.never"),
       },
       {
-        key: "actions",
-        label: t("identity_admin.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (user) => {
+        id: "actions",
+        header: t("identity_admin.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (user) => {
           const protectedUser = isProtected(user);
           const rolesDisabled = cannotAssignRoles(user);
           const deleteDisabled = cannotDelete(user);
           return (
-            <TableRowActions
+            <GridRowActions
               actions={[
                 {
                   key: "roles",
@@ -386,19 +391,18 @@ export function UsersPage() {
         </div>
 
         {/* 表格 fill 铺满页面剩余高度、再多就内部滚动：加载、空、行少、行多都是同一个框，分页条和横向滚动条不随行数移动；不设最小高度保底——页面高度被窗口钉死，保底只会在矮窗口下把表格挤出页面（见请求日志页）。 */}
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DataTable<UserIdentity>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DataGrid<UserIdentity>
             fill
-            tableId="identity-users"
+            id="identity-users"
+            label={t("identity_admin.users_title")}
             rows={users}
             columns={columns}
             rowKey={(user) => user.id}
             loading={loading}
-            virtualize={false}
-            rowHeight={60}
-            minWidth="min-w-[900px]"
-            emptyText={t("identity_admin.no_users")}
-            showAllLoadedMessage={false}
+            error={loadError === null ? null : loadError || t("identity_admin.operation_failed")}
+            onRetry={() => void load()}
+            empty={{ title: t("identity_admin.no_users") }}
           />
         </div>
       </div>

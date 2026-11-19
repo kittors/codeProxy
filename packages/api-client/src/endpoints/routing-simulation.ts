@@ -67,7 +67,8 @@ export interface RoutingSimulationModelPolicy {
 
 /**
  * 账号不参与的原因（后端只增不改）：disabled 停用；tenant 不属于该租户；pinned 请求指定了别的账号；
- * channel / allowed-groups 不在 Key 允许的渠道或分组里；route-group 不在当前尝试的分组；
+ * channel / allowed-groups 不在 Key 允许的渠道或分组里；frozen 发起请求的一方（门户账号或 Key）对
+ * 这个账号所属的上游已被冻结（上游以内容安全为由拒绝过它的请求）；route-group 不在当前尝试的分组；
  * tried 已经试过；model 不提供该模型，或分组的模型清单不允许。
  */
 export type RoutingSimulationExclusion =
@@ -76,6 +77,7 @@ export type RoutingSimulationExclusion =
   | "pinned"
   | "channel"
   | "allowed-groups"
+  | "frozen"
   | "route-group"
   | "tried"
   | "model";

@@ -159,6 +159,9 @@ async function openPanel(page: Page, hash: string) {
             streaming: true,
             latency_ms: 18_400,
             first_token_ms: 850,
+            // 接口每行都带输入 / 输出：存了正文时这两个数字才是打开内容的按钮。
+            input_tokens: 30,
+            output_tokens: 16,
             total_tokens: 46,
             has_content: true,
           },
@@ -201,7 +204,8 @@ for (const width of [1280, 1470]) {
     await page.setViewportSize({ width, height: 720 });
     await openPanel(page, "/#/monitor/request-logs");
 
-    await page.getByTitle("点击查看输出").click();
+    // 新请求日志表格：存了正文时输出 token 是按钮，读屏名是「点击查看输出 · 数量」。
+    await page.getByRole("button", { name: /^点击查看输出/ }).first().click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("tab", { name: "请求详情" }).click();
 
@@ -229,9 +233,11 @@ for (const width of [1280, 1470]) {
     const card = page
       .getByRole("heading", { name: /^在途请求/ })
       .locator("xpath=ancestor::section[1]");
-    await expect(card.getByTestId("in-flight-row")).toHaveCount(3);
+    await expect(card.locator("tr[data-row-key]")).toHaveCount(3);
     await expect(card.getByText("流式中")).toBeVisible();
-    await expect(card.getByTestId("in-flight-row").nth(1)).toHaveAttribute("data-slow", "true");
+    await expect(
+      card.locator("tr[data-row-key]").nth(1).locator('[data-slow="true"]'),
+    ).toHaveCount(1);
     await card.scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`in-flight-${width}.png`) });
 

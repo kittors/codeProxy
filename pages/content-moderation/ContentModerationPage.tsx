@@ -22,22 +22,21 @@ import {
 import {
   Button,
   buttonClassName,
-  COLUMN_WIDTH,
+  GRID_WIDTH,
   Callout,
   Card,
   ConfirmModal,
-  DataTable,
-  EmptyState,
+  DataGrid,
   SettingGroup,
   SkeletonLines,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
   Tabs,
   TabsList,
   TabsTrigger,
   ToggleSwitch,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { useConfigCapabilities } from "@features/backend-capabilities";
@@ -72,6 +71,7 @@ export function ContentModerationPage() {
     NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
   );
   const [loading, setLoading] = useState(true);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [modeUpdatingId, setModeUpdatingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -112,12 +112,10 @@ export function ContentModerationPage() {
       const list = await contentModerationApi.listProfiles();
       setProfiles(list.items);
       setCapabilities(list.capabilities);
+      setProfilesError(null);
     } catch (error) {
-      notify({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : t("content_moderation.profiles_load_failed"),
-      });
+      // 读不到时表格显示出错态和「重试」，不是一张看起来「还没有审核配置」的空表。
+      setProfilesError(error instanceof Error ? error.message : "");
     } finally {
       setLoading(false);
       // 读失败也算读过：按旧后端的能力显示，至少审核配置那一页能用。
@@ -224,20 +222,20 @@ export function ContentModerationPage() {
     [loadProfiles, notify, t],
   );
 
-  const columns = useMemo<DataTableColumn<ContentModerationProfileView>[]>(
+  const columns = useMemo<DataGridColumn<ContentModerationProfileView>[]>(
     () => [
       {
-        key: "name",
-        label: t("content_moderation.profile_name"),
-        width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "font-medium text-ink",
-        render: (profile) => profile.name,
+        id: "name",
+        header: t("content_moderation.profile_name"),
+        width: GRID_WIDTH.badgeGroup,
+        className: "font-medium text-ink",
+        cell: (profile) => profile.name,
       },
       {
-        key: "mode",
-        label: t("content_moderation.enabled"),
-        width: COLUMN_WIDTH.toggle,
-        render: (profile) => {
+        id: "mode",
+        header: t("content_moderation.enabled"),
+        width: GRID_WIDTH.toggle,
+        cell: (profile) => {
           const enabled = profile.mode === "pre_block";
           return (
             <div className="flex items-center gap-2.5">
@@ -257,27 +255,27 @@ export function ContentModerationPage() {
         },
       },
       {
-        key: "method",
-        label: t("content_moderation.moderation_method"),
-        width: COLUMN_WIDTH.badgeGroup,
-        cellClassName: "text-ink-2",
-        render: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
+        id: "method",
+        header: t("content_moderation.moderation_method"),
+        width: GRID_WIDTH.badgeGroup,
+        className: "text-ink-2",
+        cell: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
       {
-        key: "backend",
-        label: t("content_moderation.backend"),
-        width: COLUMN_WIDTH.badgeGroup,
-        render: (profile) => (
+        id: "backend",
+        header: t("content_moderation.backend"),
+        width: GRID_WIDTH.badgeGroup,
+        cell: (profile) => (
           <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
             {t(`content_moderation.backend_${profile.backend}`)}
           </span>
         ),
       },
       {
-        key: "endpoint",
-        label: t("content_moderation.endpoint_model"),
-        width: "w-[240px] min-w-[240px]",
-        render: (profile) => (
+        id: "endpoint",
+        header: t("content_moderation.endpoint_model"),
+        width: 240,
+        cell: (profile) => (
           <div className="min-w-0 text-xs">
             <p className="truncate font-mono text-ink-2">
               {profile.base_url}
@@ -287,10 +285,10 @@ export function ContentModerationPage() {
         ),
       },
       {
-        key: "apiKey",
-        label: t("content_moderation.api_key"),
-        width: COLUMN_WIDTH.name,
-        render: (profile) =>
+        id: "apiKey",
+        header: t("content_moderation.api_key"),
+        width: GRID_WIDTH.name,
+        cell: (profile) =>
           profile.api_key_configured ? (
             <span className="font-mono text-xs text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {profile.api_key_masked ?? "****"}
@@ -300,10 +298,10 @@ export function ContentModerationPage() {
           ),
       },
       {
-        key: "bindings",
-        label: t("content_moderation.bindings"),
-        width: COLUMN_WIDTH.badgeStacked,
-        render: (profile) => (
+        id: "bindings",
+        header: t("content_moderation.bindings"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (profile) => (
           <div className="text-xs text-ink-2">
             <p>{t("content_moderation.binding_total", { count: bindingCount(profile) })}</p>
             <p className="mt-1 text-ink-3">
@@ -317,10 +315,10 @@ export function ContentModerationPage() {
         ),
       },
       {
-        key: "updated",
-        label: t("content_moderation.updated_at"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (profile) => (
+        id: "updated",
+        header: t("content_moderation.updated_at"),
+        width: GRID_WIDTH.timestamp,
+        cell: (profile) => (
           <span className="text-xs tabular-nums text-ink-2">
             {new Intl.DateTimeFormat(undefined, {
               dateStyle: "medium",
@@ -330,11 +328,11 @@ export function ContentModerationPage() {
         ),
       },
       {
-        key: "actions",
-        label: t("content_moderation.actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (profile) => (
-          <TableRowActions
+        id: "actions",
+        header: t("content_moderation.actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (profile) => (
+          <GridRowActions
             moreLabel={t("content_moderation.more_actions")}
             // 常用的放前面平铺（编辑、绑定渠道、测试），查看状态和删除收进「更多」，四个位置放得下、不溢出列宽。
             actions={[
@@ -408,29 +406,27 @@ export function ContentModerationPage() {
           ) : null}
         </div>
       }
-      loading={loading}
     >
-      {profiles.length === 0 ? (
-        <EmptyState
-          title={t("content_moderation.empty_title")}
-          description={t("content_moderation.empty_description")}
-          icon={<ShieldCheck size={32} />}
-        />
-      ) : (
-        <DataTable<ContentModerationProfileView>
-          fill
-          tableId="content-moderation-profiles"
-          rows={profiles}
-          columns={columns}
-          rowKey={(profile) => profile.id}
-          loading={loading}
-          virtualize={false}
-          minWidth="min-w-[1280px]"
-          caption={t("content_moderation.table_caption")}
-          emptyText={t("content_moderation.empty_title")}
-          showAllLoadedMessage={false}
-        />
-      )}
+      <DataGrid<ContentModerationProfileView>
+        fill
+        id="content-moderation-profiles"
+        label={t("content_moderation.table_caption")}
+        rows={profiles}
+        columns={columns}
+        rowKey={(profile) => profile.id}
+        loading={loading}
+        error={
+          profilesError === null
+            ? null
+            : profilesError || t("content_moderation.profiles_load_failed")
+        }
+        onRetry={() => void loadProfiles()}
+        empty={{
+          icon: <ShieldCheck aria-hidden="true" />,
+          title: t("content_moderation.empty_title"),
+          description: t("content_moderation.empty_description"),
+        }}
+      />
     </Card>
   );
 

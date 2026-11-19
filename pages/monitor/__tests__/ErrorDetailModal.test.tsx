@@ -293,6 +293,58 @@ describe("ErrorDetailModal", () => {
       expect(screen.queryByText("完整响应")).not.toBeInTheDocument();
     });
 
+    test("an upstream's content refusal is not called an invalid request, and is not retried on another account", async () => {
+      await i18n.changeLanguage("zh-CN");
+      // What the gateway stores for a Codex cyber_policy refusal: the upstream's own 400, with the
+      // cause the scheduler named it by.
+      renderFor(
+        61006,
+        '{"error":{"message":"This content was flagged for possible cybersecurity risk.","type":"invalid_request","code":"cyber_policy"}}',
+        {
+          diagnostic: {
+            upstream: { status: 400 },
+            response: { status: 400, error_code: "cyber_policy" },
+            route_trace: {
+              steps: [
+                {
+                  kind: "attempt",
+                  at: at(0),
+                  attempt: 1,
+                  auth_id: "a",
+                  auth_label: "acc-a",
+                  outcome: "failed",
+                  status: 400,
+                  cause: "upstream_content_refusal",
+                },
+              ],
+            },
+          },
+        },
+      );
+
+      expect(await screen.findByText("上游以内容安全为由拒绝了请求")).toBeInTheDocument();
+      expect(screen.queryByText("上游拒绝了这个请求")).not.toBeInTheDocument();
+      const next = await screen.findByRole("region", { name: "接下来会怎样" });
+      expect(next).toHaveTextContent("没有换号重试：上游拒绝的是请求本身。");
+      expect(next).toHaveTextContent("到「门户账号」页查看或解冻。");
+      expect(screen.getByText("上游 API 错误响应")).toBeInTheDocument();
+    });
+
+    test("a request stopped by a freeze is the gateway's own 403, not an upstream asking for payment", async () => {
+      await i18n.changeLanguage("zh-CN");
+      renderFor(
+        61007,
+        '{"error":{"message":"Access to Codex is frozen for this account since 2026-11-13 10:00 +08:00. 本账号的 Codex 使用权限已于 2026-11-13 10:00 +08:00 冻结。","type":"permission_error","code":"provider_access_frozen"}}',
+        { diagnostic: { response: { status: 403, error_code: "provider_access_frozen" } } },
+      );
+
+      expect(await screen.findByText("这个账号对该上游的使用权限已冻结")).toBeInTheDocument();
+      expect(screen.queryByText("上游要求付费或没有权限")).not.toBeInTheDocument();
+      const next = await screen.findByRole("region", { name: "接下来会怎样" });
+      expect(next).toHaveTextContent("请求没有发往上游。冻结原因与解冻在「门户账号」页。");
+      expect(screen.getByText("网关的错误响应")).toBeInTheDocument();
+    });
+
     test("speaks the panel's language", async () => {
       await i18n.changeLanguage("en");
       renderFor(61004, '{"error":{"message":"Loop detected"}}', {

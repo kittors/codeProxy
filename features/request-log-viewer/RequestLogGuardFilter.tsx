@@ -12,16 +12,19 @@ export function RequestLogGuardFilter({
   value,
   kinds,
   onChange,
+  className = "w-full min-[480px]:w-auto sm:w-[180px]",
 }: {
   value: GuardFilterValue;
   /** The kinds the last response found under the other filters (filters.guard_kinds). */
   kinds: readonly string[];
   onChange: (value: GuardFilterValue) => void;
+  /** Width of the control; the request log filter bar lets it size to its label like its facets. */
+  className?: string;
 }) {
   const { t } = useTranslation();
   const label = t("request_logs.guard_filter_label");
   return (
-    <div className="w-full min-[480px]:w-auto sm:w-[180px]">
+    <div className={className}>
       <Select
         size="sm"
         value={value}

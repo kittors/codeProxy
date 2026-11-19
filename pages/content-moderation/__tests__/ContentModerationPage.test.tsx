@@ -188,18 +188,19 @@ describe("ContentModerationPage", () => {
     expect(screen.getByTitle("Matched but this category is not enabled")).toHaveTextContent("PII");
   });
 
-  test("renders the card empty state when no profiles exist", async () => {
+  test("shows the empty state inside the profile table's frame when no profiles exist", async () => {
     mocks.listProfiles.mockResolvedValue(listResponse([]));
     renderPage();
 
     expect(await screen.findByRole("heading", { name: "Content Moderation" })).toBeInTheDocument();
-    expect(screen.getByText("No moderation profiles")).toBeInTheDocument();
+    expect(await screen.findByText("No moderation profiles")).toBeInTheDocument();
     expect(
       screen.getByText("Create a profile first, then bind only the channels that should use it."),
     ).toBeInTheDocument();
+    // 空态画在表格自己的框里（同一个框，数据回来时不跳），不再是表格外面另一块卡片。
     expect(
-      screen.queryByRole("table", { name: "Content moderation profile table" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("table", { name: "Content moderation profile table" }),
+    ).toContainElement(screen.getByText("No moderation profiles"));
   });
 
   test("opens the tenant-scoped moderation metrics modal from the actions column", async () => {

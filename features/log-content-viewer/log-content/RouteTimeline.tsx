@@ -30,6 +30,7 @@ type TFunction = ReturnType<typeof useTranslation>["t"];
 const TRACE_CAUSES = new Set([
   "request_invalid",
   "content_policy",
+  "upstream_content_refusal",
   "first_token_timeout",
   "stream_incomplete",
   "network_error",

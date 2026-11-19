@@ -1,18 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { Loader2, RefreshCw, ScrollText } from "lucide-react";
+import { RefreshCw, ScrollText } from "lucide-react";
+import { useMemo } from "react";
 import {
   Button,
-  DataTable,
   Modal,
   SearchableSelect,
+  useGridPreferences,
+  type DataGridColumn,
   type SearchableSelectOption,
 } from "@code-proxy/ui";
 import {
-  RequestLogsPaginationBar,
+  REQUEST_LOG_GRID_IDS,
+  RequestLogGrid,
   RequestLogsTimeRangeSelector,
   RequestLogUsageMetricValue,
   type RequestLogsRow,
-  type RequestLogsTableColumn,
   type TimeRange,
 } from "@features/request-log-viewer";
 import type { ApiKeyUsageSummary } from "../types";
@@ -47,7 +49,6 @@ export function ApiKeyUsageModal({
   usageLogColumns,
   usageRows,
   usageCurrentPage,
-  usageTotalPages,
   setUsagePageSize,
 }: {
   open: boolean;
@@ -74,16 +75,35 @@ export function ApiKeyUsageModal({
   usageStatusFilter: StatusFilter;
   setUsageStatusFilter: (value: StatusFilter) => void;
   usageStatusOptions: SearchableSelectOption[];
-  usageLogColumns: RequestLogsTableColumn<RequestLogsRow>[];
+  usageLogColumns: DataGridColumn<RequestLogsRow>[];
   usageRows: RequestLogsRow[];
   usageCurrentPage: number;
-  usageTotalPages: number;
   setUsagePageSize: (size: number) => void;
 }) {
   const { t } = useTranslation();
   const metricLabel = "text-2xs text-ink-3";
   const metricValue = "mt-0.5 font-mono text-base font-semibold tabular-nums text-ink";
   const summaryCard = "rounded-2xl bg-subtle px-4 py-3";
+  const defaultHidden = useMemo(
+    () => usageLogColumns.filter((column) => column.defaultHidden).map((column) => column.id),
+    [usageLogColumns],
+  );
+  const prefs = useGridPreferences(REQUEST_LOG_GRID_IDS.keyUsage, { hidden: defaultHidden });
+  // 弹窗自己的四个筛选不在列上：「无匹配」空状态把它们写成条件，「清除筛选」一并重置。
+  const optionText = (options: SearchableSelectOption[], value: string) => {
+    const option = options.find((item) => item.value === value);
+    return typeof option?.label === "string" ? option.label : (option?.searchText ?? value);
+  };
+  const activeFilterLabels = [
+    usageKeyQuery ? `Key：${optionText(usageKeyOptions, usageKeyQuery)}` : "",
+    usageChannelQuery
+      ? `${t("request_logs.col_channel")}：${optionText(usageChannelOptions, usageChannelQuery)}`
+      : "",
+    usageModelQuery ? `${t("request_logs.col_model")}：${usageModelQuery}` : "",
+    usageStatusFilter
+      ? `${t("request_logs.col_status")}：${optionText(usageStatusOptions, usageStatusFilter)}`
+      : "",
+  ].filter(Boolean);
 
   return (
     <Modal
@@ -225,46 +245,39 @@ export function ApiKeyUsageModal({
           </section>
         </div>
 
-        {/* 表格按行数收高、最多占到弹窗剩余高度，分页条紧跟在最后一行下面。 */}
-        <div className="relative flex min-h-0 flex-col overflow-hidden pt-3">
-          <DataTable
-            tableId="api-key-usage-logs"
-            rows={usageRows}
+        {/* 表格铺满弹窗剩余高度：加载、空、行少行多同一个框，分页固定在框底。
+            弹窗本身就是面板，表格不再套一层卡片外框。 */}
+        <div className="flex min-h-0 flex-1 flex-col pt-1">
+          <RequestLogGrid
+            id={REQUEST_LOG_GRID_IDS.keyUsage}
+            label={t("api_keys_page.usage_table_caption")}
+            frame={false}
             columns={usageLogColumns}
-            rowKey={(row) => row.id}
+            rows={usageRows}
             loading={usageLoading}
-            virtualize={false}
-            minWidth="min-w-[1320px]"
-            caption={t("api_keys_page.usage_table_caption")}
-            emptyText={t("api_keys_page.no_usage_records")}
-            showAllLoadedMessage={false}
+            filters={{}}
+            extraFilterLabels={activeFilterLabels}
+            onClearFilters={() => {
+              setUsageKeyQuery("");
+              setUsageChannelQuery("");
+              setUsageModelQuery("");
+              setUsageStatusFilter("");
+            }}
+            prefs={prefs}
+            masked={false}
+            page={usageCurrentPage}
+            pageSize={usagePageSize}
+            total={usageTotalCount}
+            pending={usageLoading && usageRows.length === 0 && usageTotalCount === 0}
+            onPageChange={(page) => void fetchUsageLogs(page, usagePageSize)}
+            onPageSizeChange={(size) => {
+              setUsagePageSize(size);
+              void fetchUsageLogs(1, size);
+            }}
+            resetScrollKey={`${usageCurrentPage}|${usagePageSize}|${activeFilterLabels.join("|")}|${usageTimeRange}`}
+            noDataTitle={t("api_keys_page.no_usage_records")}
           />
-          {/* 没有数据时表格自己画骨架行；已有数据再刷新时，盖一层淡色遮罩说明正在更新。 */}
-          {usageLoading && usageRows.length > 0 ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-elevated/60">
-              <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-3 py-1.5 text-sm font-medium text-ink-2 shadow-pop">
-                <Loader2
-                  size={14}
-                  className="motion-reduce:animate-none motion-safe:animate-spin"
-                  aria-hidden="true"
-                />
-                <span role="status">{t("common.loading_ellipsis")}</span>
-              </div>
-            </div>
-          ) : null}
         </div>
-
-        <RequestLogsPaginationBar
-          currentPage={usageCurrentPage}
-          totalPages={usageTotalPages}
-          totalCount={usageTotalCount}
-          pageSize={usagePageSize}
-          onPageChange={(page) => void fetchUsageLogs(page, usagePageSize)}
-          onPageSizeChange={(size) => {
-            setUsagePageSize(size);
-            void fetchUsageLogs(1, size);
-          }}
-        />
       </div>
     </Modal>
   );

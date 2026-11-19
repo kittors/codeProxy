@@ -1,6 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { Info } from "lucide-react";
-import { HoverTooltip } from "@code-proxy/ui";
 import {
   formatMonitorCompact,
   formatMonitorCount,
@@ -12,28 +10,6 @@ import {
   type ModelMetricView,
 } from "../model/modelPerformance";
 import type { RankingColumn } from "./MonitorRankingTable";
-
-/**
- * 表头文字后跟一个说明图标：悬停或键盘聚焦都会弹出口径说明，读屏读的是图标的 aria-label。
- * 单元格里的数字说明用原生 title（和成功率那列一样），不给五十行表格加上百个 Tab 停靠点。
- */
-function HeaderHint({ label, hint }: { label: string; hint: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      {label}
-      <HoverTooltip content={hint} placement="top" className="shrink-0">
-        <span
-          tabIndex={0}
-          role="img"
-          aria-label={hint}
-          className="inline-flex cursor-help rounded-full text-ink-4 transition-colors hover:text-ink-2 focus-visible:text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-        >
-          <Info size={12} aria-hidden="true" />
-        </span>
-      </HoverTooltip>
-    </span>
-  );
-}
 
 /** 上行是 P50（或退回时的均值），下行是 P90（或「均值」二字）。 */
 function MetricCell({
@@ -102,14 +78,11 @@ export function useModelPerformanceColumns() {
 
   const firstToken: RankingColumn = {
     key: "first_token",
-    header: (
-      <HeaderHint
-        label={t("monitor_center.ranking.first_token")}
-        hint={t("monitor_center.ranking.first_token_hint")}
-      />
-    ),
+    header: t("monitor_center.ranking.first_token"),
+    headerHint: t("monitor_center.ranking.first_token_hint"),
     align: "right",
-    className: "hidden w-24 xl:table-cell",
+    width: 96,
+    minBreakpoint: "xl",
     render: (row) => {
       const view = modelFirstTokenView(row);
       return (
@@ -130,14 +103,11 @@ export function useModelPerformanceColumns() {
 
   const speed: RankingColumn = {
     key: "speed",
-    header: (
-      <HeaderHint
-        label={t("monitor_center.ranking.speed")}
-        hint={t("monitor_center.ranking.speed_hint")}
-      />
-    ),
+    header: t("monitor_center.ranking.speed"),
+    headerHint: t("monitor_center.ranking.speed_hint"),
     align: "right",
-    className: "hidden w-24 xl:table-cell",
+    width: 96,
+    minBreakpoint: "xl",
     render: (row) => {
       const view = modelSpeedView(row);
       return (
@@ -159,14 +129,11 @@ export function useModelPerformanceColumns() {
   // 可选列，只在最宽的屏幕上出现：首字时间里有多少是在处理长上下文。
   const firstTokenPer1k: RankingColumn = {
     key: "first_token_per_1k",
-    header: (
-      <HeaderHint
-        label={t("monitor_center.ranking.first_token_per_1k")}
-        hint={t("monitor_center.ranking.first_token_per_1k_hint")}
-      />
-    ),
+    header: t("monitor_center.ranking.first_token_per_1k"),
+    headerHint: t("monitor_center.ranking.first_token_per_1k_hint"),
     align: "right",
-    className: "hidden w-24 2xl:table-cell",
+    width: 96,
+    minBreakpoint: "2xl",
     render: (row) => {
       const value = row.performance?.first_token_ms_per_1k_input ?? null;
       return value === null ? (

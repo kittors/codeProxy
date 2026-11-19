@@ -256,6 +256,30 @@ describe("route timeline in the request details", () => {
     );
   });
 
+  test("an upstream's content refusal reads as such, and is not tried on another account", async () => {
+    await i18n.changeLanguage("en");
+    renderDetails({
+      steps: [
+        {
+          ...failedOnA,
+          status: 400,
+          cause: "upstream_content_refusal",
+          blocked: "",
+          error: "This content was flagged for possible cybersecurity risk.",
+        },
+      ],
+    });
+    const section = screen.getByTestId("request-detail-section-route");
+    expect(within(section).getByTestId("route-trace-summary")).toHaveTextContent(
+      [
+        "Attempt 1 on Team A failed: Refused by the upstream for content safety (400).",
+        "It was not tried on another account: the upstream refused the request itself.",
+      ].join(" "),
+    );
+    // The cause code is never shown as the raw identifier.
+    expect(section).not.toHaveTextContent("upstream_content_refusal");
+  });
+
   test("Russian plurals and the pinned badge", async () => {
     await i18n.changeLanguage("ru");
     renderDetails({

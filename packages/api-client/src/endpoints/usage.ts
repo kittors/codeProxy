@@ -1,6 +1,7 @@
 import { pickCacheRateFields, type CacheRateFields } from "@code-proxy/domain/usage/cacheRate";
 import { apiClient } from "../client/client";
 import type { UsageData, ChartDataResponse, EntityStatsResponse } from "../dto/types";
+import { readUsageLogsCapabilities, type UsageLogsCapabilities } from "./usageLogsCapabilities";
 
 export interface UsageExportPayload {
   version?: number;
@@ -390,6 +391,9 @@ export const usageApi = {
        * that.
        */
       guard_kinds?: string[];
+      /** Agent filter (request-log-clients); "__unknown__" selects requests without a client. */
+      client_names?: string[];
+      client_names_empty?: boolean;
       api_keys_empty?: boolean;
       /** Explicit empty selection of api_key_ids: match no key at all. */
       api_key_ids_empty?: boolean;
@@ -414,11 +418,13 @@ export const usageApi = {
     appendUniqueParams(qs, "channel", params.channels);
     appendUniqueParams(qs, "status", params.statuses);
     appendUniqueParams(qs, "guard_kind", params.guard_kinds);
+    appendUniqueParams(qs, "client_name", params.client_names);
     if (params.api_keys_empty) qs.set("api_keys_empty", "1");
     if (params.api_key_ids_empty) qs.set("api_key_ids_empty", "1");
     if (params.models_empty) qs.set("models_empty", "1");
     if (params.channels_empty) qs.set("channels_empty", "1");
     if (params.statuses_empty) qs.set("statuses_empty", "1");
+    if (params.client_names_empty) qs.set("client_names_empty", "1");
     // Backward compatibility: fallback to single-value params if no multi-value
     if (!params.api_keys?.length && params.api_key) qs.set("api_key", params.api_key);
     if (!params.models?.length && params.model) qs.set("model", params.model);
@@ -458,6 +464,12 @@ export const usageApi = {
         guard_kinds: Array.isArray(filters?.guard_kinds)
           ? filters.guard_kinds.filter((kind): kind is string => typeof kind === "string")
           : [],
+        client_names: Array.isArray(filters?.client_names)
+          ? filters.client_names.filter((name): name is string => typeof name === "string")
+          : [],
+        client_name_counts: isNumberRecord(filters?.client_name_counts)
+          ? filters.client_name_counts
+          : {},
       },
       stats: {
         total: resp?.stats?.total ?? 0,
@@ -660,34 +672,18 @@ export interface UsageLogItem {
    * a value this panel does not know is shown like the known ones.
    */
   guard_kind?: string;
+  /**
+   * The caller (request-log-clients): a normalized client id ("claude-code", or the first
+   * product token of an unknown User-Agent), its version and the raw User-Agent (≤256 chars).
+   * "" on old rows and requests without a User-Agent; absent on backends without the fields.
+   */
+  client_name?: string;
+  client_version?: string;
+  user_agent?: string;
 }
 
-/** What /usage/logs says about itself. */
-export interface UsageLogsCapabilities {
-  /**
-   * The key filter is id-based ("api-key-id-filters"): the key facet is
-   * filters.api_key_ids / api_key_id_names / api_key_id_counts, the api_key_id
-   * query parameters select from it, and no field of the response holds a client
-   * secret. A backend without it is older and still speaks the secret-keyed facet
-   * (filters.api_keys / api_key_names / api_key_counts).
-   */
-  apiKeyIdFilters: boolean;
-  /**
-   * The backend has loop protection ("loop-guard"): rows carry guard_kind, the
-   * guard_kind query parameters filter by it and filters.guard_kinds is its facet.
-   */
-  loopGuard: boolean;
-}
-
-/** Only an explicit true counts: a backend that predates a capability sends no object. */
-export const readUsageLogsCapabilities = (value: unknown): UsageLogsCapabilities => {
-  const declared = (name: string) =>
-    value !== null && typeof value === "object" && (value as Record<string, unknown>)[name] === true;
-  return {
-    apiKeyIdFilters: declared("api-key-id-filters"),
-    loopGuard: declared("loop-guard"),
-  };
-};
+export { readUsageLogsCapabilities } from "./usageLogsCapabilities";
+export type { UsageLogsCapabilities } from "./usageLogsCapabilities";
 
 export interface UsageLogsResponse {
   items: UsageLogItem[];
@@ -715,6 +711,9 @@ export interface UsageLogsResponse {
     statuses: string[];
     /** The loop protection kinds present in the selection; empty without the loop-guard capability. */
     guard_kinds: string[];
+    /** Agent facet; "__unknown__" stands for requests without a client name. */
+    client_names: string[];
+    client_name_counts: Record<string, number>;
   };
   stats: {
     total: number;
@@ -736,6 +735,8 @@ type UsageLogsFilterPayload = {
   channel_options?: unknown;
   statuses?: unknown;
   guard_kinds?: unknown;
+  client_names?: unknown;
+  client_name_counts?: unknown;
 };
 
 type UsageLogsPayload = {

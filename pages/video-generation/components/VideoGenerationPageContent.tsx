@@ -6,11 +6,12 @@ import {
   Callout,
   Card,
   CodeBlock,
-  DataTable,
+  DataGrid,
+  GRID_WIDTH,
   Tabs,
   TabsList,
   TabsTrigger,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import {
   VIDEO_ENDPOINT_DOCS,
@@ -161,28 +162,33 @@ function SpecTable({
   rows: SpecRow[];
 }) {
   const { t } = useTranslation();
-  const columns = useMemo<DataTableColumn<SpecRow>[]>(
+  const columns = useMemo<DataGridColumn<SpecRow>[]>(
     () => [
       {
-        key: "name",
-        label: t("video_generation.table_param"),
-        render: (row) => <span className="font-mono text-xs">{row.name}</span>,
+        id: "name",
+        header: t("video_generation.table_param"),
+        width: GRID_WIDTH.badgeStacked,
+        cell: (row) => <span className="min-w-0 break-all font-mono text-xs">{row.name}</span>,
       },
       {
-        key: "type",
-        label: t("video_generation.table_type"),
-        render: (row) => <span className="font-mono text-xs">{row.type}</span>,
+        id: "type",
+        header: t("video_generation.table_type"),
+        width: GRID_WIDTH.badge,
+        cell: (row) => <span className="truncate font-mono text-xs">{row.type}</span>,
       },
       {
-        key: "required",
-        label: t("video_generation.table_required"),
-        render: (row) => (row.required ? t("common.yes") : t("common.no")),
+        id: "required",
+        header: t("video_generation.table_required"),
+        width: GRID_WIDTH.badge,
+        cell: (row) => (row.required ? t("common.yes") : t("common.no")),
       },
       {
-        key: "description",
-        label: t("video_generation.table_description"),
-        render: (row) => (
-          <span className="text-xs">
+        id: "description",
+        header: t("video_generation.table_description"),
+        width: 240,
+        grow: true,
+        cell: (row) => (
+          <span className="text-xs leading-5">
             {t(`video_generation.${row.descriptionKey}`)}
             {row.defaultValue ? ` (${t("video_generation.table_default")}: ${row.defaultValue})` : ""}
           </span>
@@ -195,7 +201,14 @@ function SpecTable({
   return (
     <section className="mt-6 space-y-2">
       <h3 className="text-sm font-semibold text-ink">{title}</h3>
-      <DataTable tableId={tableId} columns={columns} rows={rows} rowKey={(row) => row.name} />
+      <DataGrid
+        id={tableId}
+        frame={false}
+        label={title}
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.name}
+      />
     </section>
   );
 }

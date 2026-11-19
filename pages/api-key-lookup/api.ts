@@ -101,6 +101,9 @@ export async function fetchPublicLogs(params: {
   modelsEmpty?: boolean;
   channelsEmpty?: boolean;
   statusesEmpty?: boolean;
+  /** Agent 筛选；"__unknown__" 选没有客户端名的请求。旧后端不认，没有 client_names 筛选项时别传。 */
+  clientNames?: string[];
+  clientNamesEmpty?: boolean;
   portalAccount?: boolean;
   signal?: AbortSignal;
 }): Promise<PublicLogsResponse> {
@@ -120,6 +123,8 @@ export async function fetchPublicLogs(params: {
       models_empty: params.modelsEmpty,
       channels_empty: params.channelsEmpty,
       statuses_empty: params.statusesEmpty,
+      client_names: params.clientNames,
+      client_names_empty: params.clientNamesEmpty,
     },
     signal: params.signal,
   });

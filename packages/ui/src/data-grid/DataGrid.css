@@ -1,0 +1,464 @@
+/*
+ * DataGrid 的结构样式：冻结列、吸顶表头、行状态底色、滚动阴影、进场动效。
+ *
+ * 这些规则都依赖「表格自己的滚动状态」（data-x-scrolled / data-y-scrolled 等写在根节点上的属性），
+ * 滚动时只改属性、不触发 React 渲染；写成工具类要给每个单元格挂一长串 group-data-* 变体，不如集中在这里。
+ *
+ * 文件随组件加载、不在 Tailwind 的 @layer 里，未分层规则会压过工具类。所以这里只写调用方
+ * 不会再用工具类改的东西（定位、底色变量、伪元素），尺寸与排版留给组件上的类。
+ *
+ * 冻结格必须是不透明的：行底色全部走 --grid-cell-bg，由「当前所在底色」--cp-backdrop
+ * 混出悬停、选中色（同 index.css 的 bg-backdrop-hover），放在内容区、卡片、弹窗里都对得上。
+ */
+.cp-grid {
+  --grid-bg: var(--cp-backdrop);
+  --grid-head-bg: color-mix(in srgb, var(--cp-backdrop) 96.5%, #000);
+  --grid-row-hover: color-mix(in srgb, var(--cp-backdrop) 96.5%, #000);
+  --grid-row-selected: color-mix(in srgb, var(--cp-backdrop) 92%, var(--cp-focus));
+  --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 89%, var(--cp-focus));
+  --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 98%, #000);
+  --grid-sorted-tint: rgb(0 0 0 / 0.014);
+  --grid-pin-shadow: rgb(15 23 42 / 0.13);
+  --grid-head-shadow: rgb(0 0 0 / 0.07);
+  --grid-row-line: var(--cp-line);
+}
+
+.dark .cp-grid {
+  --grid-head-bg: color-mix(in srgb, var(--cp-backdrop) 95%, #fff);
+  --grid-row-hover: color-mix(in srgb, var(--cp-backdrop) 95.5%, #fff);
+  --grid-row-selected: color-mix(in srgb, var(--cp-backdrop) 86%, var(--cp-focus));
+  --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 82%, var(--cp-focus));
+  --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 97.5%, #fff);
+  --grid-sorted-tint: rgb(255 255 255 / 0.02);
+  --grid-pin-shadow: rgb(0 0 0 / 0.62);
+  --grid-head-shadow: rgb(0 0 0 / 0.45);
+}
+
+/*
+ * 外框的细边（.cp-edge::after）要压在吸顶表头、冻结列、选择条之上：它们都有 z-index，
+ * 不抬高的话表头会把顶边和左右边的上半段盖掉，看起来就是「左右没有边、四角没封口」。
+ * 外框带 isolate，这里的层级只在表格内部比较，不会盖住页面上的浮层。
+ */
+.cp-grid-frame.cp-edge::after {
+  z-index: 40;
+}
+
+/* 原生滚动条藏起来，换成组件自己画的（GridScrollbar）。 */
+.cp-grid-viewport {
+  scrollbar-width: none;
+  /* 横向滑到头再滑会触发浏览器「后退」手势，表格里横向滚动非常频繁，必须拦住。 */
+  overscroll-behavior-x: none;
+}
+
+.cp-grid-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * 整页表格在 macOS 触控板上滚过头会回弹，吸顶表头和冻结列跟着被拉走（见计划 104 引用的记忆）。
+ * 只在精确指针设备上关掉；手机平板保留系统回弹。嵌入小表不关，滚到底的滚轮要能接着滚外层弹窗。
+ * 也只在表体真的能纵向滚时关（data-y-overflow，useGridViewport 写入）：窄窗口下页面不钉高、
+ * 表格随内容长高，表体没有纵向滚动，这时设成 none 会让落在表上的滚轮滚不动页面。
+ */
+@media (pointer: fine) {
+  .cp-grid[data-fill="true"][data-y-overflow="true"] .cp-grid-viewport {
+    overscroll-behavior-y: none;
+  }
+
+  /* 触控板横向滑到表格边缘时不要触发浏览器「后退」。 */
+  .cp-grid-viewport {
+    overscroll-behavior-x: none;
+  }
+}
+
+.cp-grid-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* ---------- 表头 ---------- */
+
+.cp-grid-head-cell {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--grid-head-bg);
+  box-shadow: inset 0 -1px 0 var(--cp-line-strong);
+  transition: box-shadow 160ms var(--ease-soft);
+}
+
+.cp-grid-head-cell[data-pin] {
+  z-index: 5;
+}
+
+/* 内容滚到表头下面时，表头底边多一道柔和的投影，读起来是「浮在内容上」。 */
+.cp-grid[data-y-scrolled="true"] .cp-grid-head-cell {
+  box-shadow:
+    inset 0 -1px 0 var(--cp-line-strong),
+    0 6px 10px -8px var(--grid-head-shadow);
+}
+
+/* 表头列之间的分隔线平时不画，悬停表头时才浮现，提示「这里可以拖」。 */
+.cp-grid-head-row .cp-grid-resize-line {
+  opacity: 0;
+  transition: opacity 160ms var(--ease-soft);
+}
+
+.cp-grid-head-row:hover .cp-grid-resize-line,
+.cp-grid-resize-handle:focus-visible .cp-grid-resize-line,
+.cp-grid-resize-handle[data-active="true"] .cp-grid-resize-line {
+  opacity: 1;
+}
+
+/* ---------- 行与单元格 ---------- */
+
+.cp-grid-row {
+  --grid-cell-bg: var(--grid-bg);
+}
+
+.cp-grid-row:hover {
+  --grid-cell-bg: var(--grid-row-hover);
+}
+
+.cp-grid-row[data-expanded="true"] {
+  --grid-cell-bg: var(--grid-row-expanded);
+}
+
+.cp-grid-row[aria-selected="true"] {
+  --grid-cell-bg: var(--grid-row-selected);
+}
+
+.cp-grid-row[aria-selected="true"]:hover {
+  --grid-cell-bg: var(--grid-row-selected-hover);
+}
+
+.cp-grid-cell {
+  background-color: var(--grid-cell-bg);
+  box-shadow: inset 0 -1px 0 var(--grid-row-line);
+  transition: background-color 120ms var(--ease-soft);
+}
+
+.cp-grid-row:last-child > .cp-grid-cell {
+  box-shadow: none;
+}
+
+/* 当前排序的那一列整列淡淡加深一档，读数时视线不会跑到隔壁列。 */
+.cp-grid-cell[data-sorted="true"] {
+  background-image: linear-gradient(var(--grid-sorted-tint), var(--grid-sorted-tint));
+}
+
+.cp-grid-cell[data-pin] {
+  position: sticky;
+  z-index: 2;
+}
+
+/* 选中行最左侧一道强调色竖条，从中间向两端长出来。 */
+.cp-grid-row > .cp-grid-cell:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background-color: var(--cp-focus);
+  transform: scaleY(0);
+  transition: transform 180ms var(--ease-pop);
+  pointer-events: none;
+}
+
+.cp-grid-row > .cp-grid-cell:first-child:not([data-pin]) {
+  position: relative;
+}
+
+.cp-grid-row[aria-selected="true"] > .cp-grid-cell:first-child::before,
+.cp-grid-row[data-active="true"] > .cp-grid-cell:first-child::before {
+  transform: scaleY(1);
+}
+
+/* 单选列表里「当前这一项」（isRowActive）：底色同多选的选中行。 */
+.cp-grid-row[data-active="true"] {
+  --grid-cell-bg: var(--grid-row-selected);
+}
+
+.cp-grid-row[data-active="true"]:hover {
+  --grid-cell-bg: var(--grid-row-selected-hover);
+}
+
+/* 行的语气（rowTone）：底色在单元格上，所以改的是行上的底色变量；悬停时再深一档。 */
+.cp-grid-row[data-tone="danger"] {
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 94%, var(--color-rose-500));
+}
+
+.cp-grid-row[data-tone="danger"]:hover {
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 90%, var(--color-rose-500));
+}
+
+.cp-grid-row[data-tone="warning"] {
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 93%, var(--color-amber-500));
+}
+
+.cp-grid-row[data-tone="warning"]:hover {
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 89%, var(--color-amber-500));
+}
+
+.cp-grid-row[data-tone="muted"] > .cp-grid-cell > [data-cell-inner] {
+  opacity: 0.55;
+}
+
+/* 行的焦点环往里收：贴着表格左右边缘的行，外扩的焦点环会被外框裁掉一边。 */
+.cp-grid-row:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ---------- 拖动换列、换行 ---------- */
+
+/* 正在被搬走的列 / 行：内容变淡，框和底色不变，读起来是「它在别处」。 */
+.cp-grid-head-cell[data-dragging="true"] > div,
+.cp-grid-cell[data-dragging="true"] > [data-cell-inner],
+.cp-grid-row[data-dragging="true"] > .cp-grid-cell > * {
+  opacity: 0.35;
+  transition: opacity 120ms var(--ease-soft);
+}
+
+/* 表头上沿的拖动把手贴着表格顶边：焦点环往里收，不被外框裁掉。 */
+.cp-grid [data-grid-col-grip]:focus-visible {
+  outline-offset: -2px;
+}
+
+body[data-grid-dragging="true"],
+body[data-grid-dragging="true"] * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/*
+ * ---------- 冻结列边缘阴影：离开起点才出现左侧阴影，没到终点才出现右侧阴影 ----------
+ * 滚到冻结列底下的列（连表头文字）要读作「在下面」，不能是被拦腰切断、露出半个字（11-18 验收）。
+ * 所以边缘外侧 22px 叠两层：
+ * - 底层从冻结格自己的底色渐隐到透明（行用 --grid-cell-bg，跟着悬停、选中、行语气；表头用 --grid-head-bg），
+ *   压在下面的文字在贴边处被盖掉、往外慢慢露出来，不会有一道硬切口；
+ * - 上层是柔和的阴影，贴边最深。浅色下原来 0.09 的单层渐变几乎看不见，加深到 0.13。
+ */
+
+.cp-grid [data-pin-edge]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-soft);
+  --grid-pin-fade: var(--grid-cell-bg, var(--grid-bg));
+}
+
+.cp-grid .cp-grid-head-cell[data-pin-edge]::after {
+  --grid-pin-fade: var(--grid-head-bg);
+}
+
+.cp-grid [data-pin-edge="start"]::after {
+  right: -22px;
+  background:
+    linear-gradient(to right, var(--grid-pin-shadow), transparent 75%),
+    linear-gradient(to right, var(--grid-pin-fade) 20%, transparent);
+}
+
+.cp-grid [data-pin-edge="end"]::after {
+  left: -22px;
+  background:
+    linear-gradient(to left, var(--grid-pin-shadow), transparent 75%),
+    linear-gradient(to left, var(--grid-pin-fade) 20%, transparent);
+}
+
+.cp-grid[data-x-scrolled="true"] [data-pin-edge="start"]::after,
+.cp-grid[data-x-overflow="true"][data-x-at-end="false"] [data-pin-edge="end"]::after {
+  opacity: 1;
+}
+
+/* ---------- 加载：表头下沿一条来回走的细进度条 ---------- */
+
+.cp-grid-progress {
+  overflow: hidden;
+}
+
+.cp-grid-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, var(--cp-focus), transparent);
+  animation: cp-grid-progress 1.1s var(--ease-soft) infinite;
+}
+
+@keyframes cp-grid-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+/*
+ * ---------- 新进来的行浮入，离开的行淡出（useRowMotion） ----------
+ * 只有新出现的行播入场：整组换掉（首次加载、换页、换筛选）时依次浮入，持续刷新里新来的行一起浮入，
+ * 留下的行由 FLIP 从旧位置滑到新位置，不再整表重播（在途请求每次刷新都闪就是这么来的）。
+ * 从上方 4px 落到位，不从下方升起：向下的位移会把表体的可滚动高度在动画期间撑高几像素，
+ * 行放得下的表也会短暂「能滚」——滚轮能滚动几像素再弹回、纵向滚动条可能闪一下。
+ * 向上的位移落在表头底下（表头吸顶、盖在行上面），不产生可滚动区域。
+ */
+
+.cp-grid-body > .cp-grid-row[data-entering="true"] {
+  animation: cp-grid-row-in 260ms var(--ease-pop) both;
+  animation-delay: calc(min(var(--row-index, 0), 14) * 14ms);
+}
+
+@keyframes cp-grid-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * 持续刷新的表里行怎么进出（data-leaving / data-entering="live"），时间由 useRowMotion 排好，
+ * 写在每行的 --motion-delay 里，时长与那里的 ROW_FADE_MS、ROW_FOLD_AFTER_MS、ROW_FOLD_MS 一致：
+ * - 离开的行先原地淡出（160ms），120ms 时已几乎看不见（淡出起步快），就开始把行高收到 0（280ms），
+ *   下面的行跟着自然上移，不留一段空白停在那里。不先拿掉再用位移
+ *   把下面的行从下方滑上来：那样动画开头最后一行会画到表格底下，可滚动高度短暂变大，滚动条闪一下。
+ * - 新进来的行先以 0 高度插入，再展开到自身高度，展开到一半时内容淡入。一出一进时两行此消彼长、
+ *   同一段时间同一条曲线，表格总高度不变，卡片下面的内容一动不动；只多了行时，下面的内容平滑下移。
+ * - 一次来了或走了好几行时轮流展开、收起，表格每帧只变几像素，不会一下撑开或缩掉一大截。
+ * 展开收起用对称的缓入缓出（正弦），推着别的行走时起步和落定都轻，最快的一帧也只有平均速度的 1.6 倍。
+ * 行高与每格内容高由 useRowMotion 量好写进 --leave-h / --leave-inner-h、--enter-h / --enter-inner-h。
+ * 展开只在开始前保持 0 高度（backwards），结束后回到自然高度，不把量到的高度一直钉在行上。
+ */
+.cp-grid-body {
+  --grid-fold-ease: cubic-bezier(0.37, 0, 0.63, 1);
+}
+
+.cp-grid-body > .cp-grid-row[data-leaving="true"] {
+  animation:
+    cp-grid-row-fade-out 160ms var(--ease-soft) forwards,
+    cp-grid-row-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) forwards;
+  pointer-events: none;
+}
+
+.cp-grid-body > .cp-grid-row[data-leaving="true"] > td {
+  animation: cp-grid-cell-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) forwards;
+}
+
+.cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner] {
+  animation: cp-grid-inner-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) both;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] {
+  animation:
+    cp-grid-row-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards,
+    cp-grid-row-fade-in 240ms var(--ease-soft) calc(var(--motion-delay, 0ms) + 140ms) backwards;
+}
+
+.cp-grid-body > .cp-grid-row[data-entering="live"] > td {
+  animation: cp-grid-cell-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards;
+}
+
+/*
+ * 展开中的格子内容贴着底边：格子平时垂直居中，高度不够时字会从中间被切开、上下两头往外长，
+ * 看得到半截字形。贴底后内容跟着下面的行一起往下走，像从上一行下面滑出来；展开完高度刚好，
+ * 贴底和居中是同一个位置，不会跳。
+ */
+.cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner] {
+  align-items: flex-end;
+  animation: cp-grid-inner-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards;
+}
+
+@keyframes cp-grid-row-grow {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--enter-h);
+  }
+}
+
+@keyframes cp-grid-cell-grow {
+  from {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes cp-grid-inner-grow {
+  from {
+    max-height: 0;
+  }
+  to {
+    max-height: var(--enter-inner-h, 4rem);
+  }
+}
+
+@keyframes cp-grid-row-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes cp-grid-row-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes cp-grid-row-collapse {
+  from {
+    height: var(--leave-h);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes cp-grid-cell-collapse {
+  to {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+}
+
+@keyframes cp-grid-inner-collapse {
+  from {
+    max-height: var(--leave-inner-h, 4rem);
+  }
+  to {
+    max-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-grid-cell,
+  .cp-grid-head-cell,
+  .cp-grid [data-pin-edge]::after,
+  .cp-grid-row > .cp-grid-cell:first-child::before {
+    transition: none;
+  }
+
+  .cp-grid-body > .cp-grid-row[data-entering="true"],
+  .cp-grid-body > .cp-grid-row[data-leaving="true"],
+  .cp-grid-body > .cp-grid-row[data-leaving="true"] > td,
+  .cp-grid-body > .cp-grid-row[data-leaving="true"] [data-cell-inner],
+  .cp-grid-body > .cp-grid-row[data-entering="live"],
+  .cp-grid-body > .cp-grid-row[data-entering="live"] > td,
+  .cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner],
+  .cp-grid-progress::before {
+    animation: none;
+  }
+}

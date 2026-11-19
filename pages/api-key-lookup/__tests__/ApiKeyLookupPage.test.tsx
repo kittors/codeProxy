@@ -158,6 +158,7 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       getSettings: vi.fn(),
       preview: vi.fn(),
     },
+    portalAccessFreezesApi: { list: vi.fn() },
   };
 });
 
@@ -446,6 +447,56 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.getByRole("button", { name: /^(refresh|刷新)$/i }).closest(".hidden")).not.toBeNull();
   });
 
+  // 被上游冻结的账号在门户里看到说明：后端在 capabilities 里声明了才去请求，旧后端没有这个接口
+  test.each([
+    ["a backend that serves access freezes", true],
+    ["an older backend", false],
+  ] as const)("frozen upstreams card on %s", async (_name, supported) => {
+    const { portalApi, portalAccessFreezesApi, NO_ACCESS_POLICY_CAPABILITIES } = await import("@code-proxy/api-client");
+    vi.mocked(portalApi.loadSession).mockReturnValue({
+      apiBase: "http://relay.test",
+      accessToken: "cpt_account",
+      refreshToken: "cpr_account",
+      remember: false,
+      expiresAt: Date.now() + 60_000,
+    });
+    vi.mocked(portalApi.me).mockResolvedValue({
+      user: { id: "u-account", tenant_id: "t-account", username: "alice", display_name: "Alice", status: "active", must_change_password: false, created_at: "", updated_at: "", version: 1 },
+      capabilities: { ...NO_ACCESS_POLICY_CAPABILITIES, accessFreezes: supported },
+    } as never);
+    vi.mocked(portalApi.listKeys).mockResolvedValue({ items: [] } as never);
+    vi.mocked(portalAccessFreezesApi.list).mockResolvedValue([
+      {
+        provider: "codex",
+        provider_name: "Codex",
+        reason_code: "cyber_policy",
+        model: "gpt-6.1-sol",
+        frozen_at: "2026-11-13T02:00:00Z",
+        notice: "Access to Codex is frozen for this account. 本账号的 Codex 使用权限已冻结。",
+      },
+    ]);
+
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <ApiKeyLookupPage />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    await screen.findByRole("tab", { name: /manage api keys|管理 api key/i });
+    if (!supported) {
+      expect(screen.queryByTestId("portal-access-freezes")).not.toBeInTheDocument();
+      expect(portalAccessFreezesApi.list).not.toHaveBeenCalled();
+      return;
+    }
+    const card = await screen.findByTestId("portal-access-freezes");
+    expect(card).toHaveTextContent("Codex");
+    expect(card).toHaveTextContent("本账号的 Codex 使用权限已冻结。");
+    // 说明在结果栏（标签）上面，所有标签页都看得到
+    const toolbar = screen.getByTestId("apikey-lookup-toolbar-sticky");
+    expect(card.compareDocumentPosition(toolbar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   test("hides channel controls and keeps input/output cells non-interactive on public logs", async () => {
     window.history.replaceState({}, "", "/manage/apikey-lookup?api_key=sk-restored-key");
     mocks.fetchPublicLogs.mockResolvedValueOnce({
@@ -513,7 +564,8 @@ describe("ApiKeyLookupPage", () => {
     expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "12,345" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "6,789" })).not.toBeInTheDocument();
-    expect(screen.getByText("12,345")).toBeInTheDocument();
+    // 格子里写短（12.3K），精确值在悬停提示里。
+    expect(screen.getByText("12.3K")).toBeInTheDocument();
     expect(screen.getByText("6,789")).toBeInTheDocument();
   });
 
@@ -598,12 +650,12 @@ describe("ApiKeyLookupPage", () => {
         expect.objectContaining({ apiKey: "sk-restored-key", page: 1 }),
       );
     });
-    expect(screen.getAllByText(/response metrics/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("columnheader", { name: "Duration" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Throughput" })).toBeInTheDocument();
     expect(screen.queryByText("Codex 主渠道")).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /key name|Key 名称/i })).toBeInTheDocument();
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.getByText("Laptop")).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /^duration$/i })).not.toBeInTheDocument();
 
     const logsQuota = await screen.findByTestId("apikey-lookup-logs-quota");
     expect(logsQuota).toHaveTextContent(/daily requests/i);
@@ -674,36 +726,30 @@ describe("ApiKeyLookupPage", () => {
 
     await userEvent.click(await screen.findByRole("tab", { name: /request logs/i }));
 
-    expect(await screen.findByRole("combobox", { name: /filter by key/i })).toHaveTextContent(
-      /all keys/i,
-    );
-    expect(await screen.findByRole("combobox", { name: /filter by model/i })).toHaveTextContent(
-      /all models/i,
-    );
-    expect(screen.queryByRole("combobox", { name: /filter by channel/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /filter by status/i })).toHaveTextContent(
-      /all status/i,
-    );
+    // 筛选区：状态页签 + 分面按钮（Key 名称、模型）；公开查询不暴露渠道。
+    const search = await screen.findByRole("search");
+    const keyFacet = await within(search).findByRole("button", { name: /^key name/i });
+    expect(within(search).getByRole("button", { name: /^model/i })).toBeInTheDocument();
+    expect(within(search).queryByRole("button", { name: /^channel/i })).not.toBeInTheDocument();
+    expect(within(search).getByRole("tab", { name: "All" })).toHaveAttribute("aria-selected", "true");
 
-    await userEvent.click(screen.getByRole("combobox", { name: /filter by key/i }));
-    const keyOptions = await screen.findAllByRole("option");
-    expect(keyOptions[0]).toHaveAccessibleName(/Automation,?\s*37 calls/i);
-    expect(keyOptions[1]).toHaveAccessibleName(/Laptop,?\s*12 calls/i);
-    expect(keyOptions[0]).toHaveAttribute("aria-selected", "false");
-    expect(keyOptions[1]).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByRole("listbox", { name: /filter by key/i })).not.toHaveTextContent(
-      "sk-restored-key",
-    );
+    await userEvent.click(keyFacet);
+    const dialog = await screen.findByRole("dialog");
+    const keyOptions = within(dialog).getAllByRole("checkbox");
+    // 按调用次数从多到少排，后面带次数；选项里不出现 Key 明文。
+    expect(keyOptions[0]).toHaveAccessibleName(/Automation/);
+    expect(keyOptions[1]).toHaveAccessibleName(/Laptop/);
+    expect(dialog).toHaveTextContent("37");
+    expect(dialog).not.toHaveTextContent("sk-restored-key");
 
-    await userEvent.click(screen.getByRole("option", { name: /Laptop/i }));
-    await userEvent.click(screen.getByRole("button", { name: /apply filters/i }));
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Laptop/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
 
     await waitFor(() => {
       expect(mocks.fetchPublicLogs).toHaveBeenLastCalledWith(
         expect.objectContaining({
           apiKey: "sk-restored-key",
           apiKeyIds: ["key-laptop"],
-          apiKeyIdsEmpty: false,
         }),
       );
     });
@@ -862,7 +908,7 @@ describe("ApiKeyLookupPage", () => {
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
     expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector(".h-auto.min-h-0.max-h-full")).not.toBeNull();
+    expect(tableViewport.querySelector('.cp-grid[data-fill="false"]')).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);

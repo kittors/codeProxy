@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RotateCcw, Search, ShieldCheck, X } from "lucide-react";
+import { RotateCcw, Search } from "lucide-react";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import { Button, Select, TextInput } from "@code-proxy/ui";
 
@@ -20,9 +20,6 @@ export function EndUserToolbar({
   onSourceChange,
   profiles,
   showSourceFilter,
-  selectedCount,
-  onBindSelected,
-  onClearSelection,
   onClearFilters,
 }: {
   search: string;
@@ -33,38 +30,10 @@ export function EndUserToolbar({
   onSourceChange: (value: EndUserSourceFilter) => void;
   profiles: ApiKeyPermissionProfile[];
   showSourceFilter: boolean;
-  selectedCount: number;
-  /** 不传时不显示批量绑定（后端不支持或没有写权限）。 */
-  onBindSelected?: () => void;
-  onClearSelection: () => void;
   onClearFilters: () => void;
 }) {
   const { t } = useTranslation();
   const hasFilters = search.trim().length > 0 || status !== "all" || source !== "all";
-
-  if (selectedCount > 0 && onBindSelected) {
-    return (
-      <div
-        role="region"
-        aria-label={t("access_policy.batch_bar_label")}
-        className="mb-3 flex min-h-9 flex-shrink-0 flex-wrap items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5"
-      >
-        <span className="text-sm font-medium text-ink">
-          {t("access_policy.selected_accounts", { count: selectedCount })}
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="primary" onClick={onBindSelected}>
-            <ShieldCheck size={14} />
-            {t("access_policy.batch_bind_action")}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onClearSelection}>
-            <X size={14} />
-            {t("access_policy.clear_selection")}
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mb-3 flex flex-shrink-0 flex-col gap-2 sm:flex-row sm:items-center">

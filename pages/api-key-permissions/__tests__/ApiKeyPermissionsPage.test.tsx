@@ -20,6 +20,7 @@ const FULL: AccessPolicyCapabilities = {
   batchProfileBinding: true,
   createWithProfile: true,
   ownedKeyAdmin: true,
+  accessFreezes: false,
 };
 
 const NONE: AccessPolicyCapabilities = {
@@ -28,6 +29,7 @@ const NONE: AccessPolicyCapabilities = {
   batchProfileBinding: false,
   createWithProfile: false,
   ownedKeyAdmin: false,
+  accessFreezes: false,
 };
 
 const state = vi.hoisted(() => ({

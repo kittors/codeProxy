@@ -12,7 +12,15 @@ const parseLatencyTextToSeconds = (text: string): number | null => {
   return match[2] === "ms" ? value / 1000 : value;
 };
 
-export const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
+/**
+ * 吞吐的分母：生成用了多久、按哪种口径算的。和后端 internal/usage/generation_speed.go 同口径：
+ * 流式且有首字时间时是「总耗时 − 首字」（generation）；生成段极短（< 200ms），或首字占了九成以上、
+ * 剩下不到 500ms 时，是缓冲后一次性写出的（burst），按总耗时算，免得算出 8000+ tok/s 的假尖峰；
+ * 非流式或没有首字时间按总耗时（total）。没有输出或耗时为 0 时返回 null。
+ */
+export const describeThroughput = (
+  row: RequestLogsRow,
+): { basis: "generation" | "burst" | "total"; ms: number } | null => {
   if (!Number.isFinite(row.outputTokens) || row.outputTokens <= 0) return null;
 
   // Prefer exact milliseconds when available, fall back to parsing latencyText
@@ -30,27 +38,20 @@ export const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null
         ? (parseLatencyTextToSeconds(row.firstTokenText) ?? 0) * 1000
         : 0;
 
-  let generationSeconds: number;
-
   if (row.streaming && firstMs > 0 && firstMs < totalMs) {
     const streamGenerationMs = totalMs - firstMs;
-    // When stream generation duration is extremely short (< 200ms) or first token accounts
-    // for >= 90% of duration while remaining time is under 500ms (burst stream or buffered chunks),
-    // calculating TPS based purely on delta-window results in misleading artificial spikes (e.g. 8000+ t/s).
-    // In such burst/buffered cases, model generation occurred over the full total duration.
     if (streamGenerationMs < 200 || (firstMs / totalMs >= 0.9 && streamGenerationMs < 500)) {
-      generationSeconds = totalMs / 1000;
-    } else {
-      generationSeconds = streamGenerationMs / 1000;
+      return { basis: "burst", ms: totalMs };
     }
-  } else {
-    // Non-streaming or streaming without valid first-token metric uses total latency
-    generationSeconds = totalMs / 1000;
+    return { basis: "generation", ms: streamGenerationMs };
   }
+  return { basis: "total", ms: totalMs };
+};
 
-  if (generationSeconds <= 0) return null;
-
-  const tps = row.outputTokens / generationSeconds;
+export const computeOutputTokensPerSecond = (row: RequestLogsRow): number | null => {
+  const basis = describeThroughput(row);
+  if (!basis || basis.ms <= 0) return null;
+  const tps = row.outputTokens / (basis.ms / 1000);
   return Number.isFinite(tps) && tps > 0 ? tps : null;
 };
 
@@ -59,25 +60,4 @@ export const formatTokensPerSecond = (value: number | null): string => {
   if (value >= 100) return `${Math.round(value)} t/s`;
   if (value >= 10) return `${value.toFixed(1)} t/s`;
   return `${value.toFixed(2)} t/s`;
-};
-
-export const hasRequestLogMetricText = (value: string): boolean => {
-  const trimmed = String(value || "").trim();
-  return trimmed !== "" && trimmed !== "--";
-};
-
-export const resolveLatencyToneClasses = (latencyText: string): string => {
-  const seconds = parseLatencyTextToSeconds(latencyText);
-  if (seconds === null) {
-    return "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]";
-  }
-
-  // 10 秒内是常态：中性淡底；慢了才变琥珀、红色。只有淡底、不描边。
-  if (seconds < 10) {
-    return "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
-  }
-  if (seconds < 30) {
-    return "bg-amber-500/12 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200";
-  }
-  return "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200";
 };

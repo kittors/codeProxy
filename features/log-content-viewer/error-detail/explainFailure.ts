@@ -5,9 +5,9 @@ import type { FailureFacts } from "./failureFacts";
 /**
  * 一次失败属于哪一类：错误弹窗据此写「发生了什么」的标题和一句「接下来怎么办」。
  *
- * 先认中转自己拒绝的（客户端取消、循环保护、Key 额度、鉴权、路径分组、内容审核等，这些请求没有
- * 发往上游或由中转结束），再看路由轨迹里这次失败的尝试（原因码与账号冷却原因同一套，CliRelay
- * `sdk/cliproxy/auth/cooldown_reason.go`、`sdk/cliproxy/routetrace`），最后才退回到状态码。
+ * 先认中转自己拒绝的（客户端取消、循环保护、Key 额度、鉴权、路径分组、内容审核、上游访问冻结等，
+ * 这些请求没有发往上游或由中转结束），再看路由轨迹里这次失败的尝试（原因码与账号冷却原因同一套，
+ * CliRelay `sdk/cliproxy/auth/cooldown_reason.go`、`sdk/cliproxy/routetrace`），最后才退回到状态码。
  * 认不出来时为 null：弹窗只显示错误原文，不硬套一个类别。
  */
 export type FailureCategory =
@@ -19,6 +19,7 @@ export type FailureCategory =
   | "tenant_unavailable"
   | "route"
   | "content_moderation"
+  | "access_frozen"
   | "virtual_model"
   | "context_length"
   | "no_account"
@@ -27,6 +28,7 @@ export type FailureCategory =
   | "upstream_auth"
   | "upstream_billing"
   | "upstream_model"
+  | "upstream_content_refusal"
   | "upstream_server"
   | "upstream_request"
   | "upstream_timeout"
@@ -126,6 +128,10 @@ function attemptCategory(step: Pick<RouteTraceStep, "cause" | "status">): Failur
     // 网关自己的内容审核和敏感词拦截（CliRelay `request_moderator.go`、`request_guard.go`）。
     case "content_policy":
       return "content_moderation";
+    // 上游的安全检查以内容为由拒绝（CliRelay `upstream_content_refusal.go`）。别和上面的内容审核
+    // 混了：那是网关自己拦的，这个是上游拒的，状态码还是 400，不写出来会被当成普通的无效请求。
+    case "upstream_content_refusal":
+      return "upstream_content_refusal";
     case "first_token_timeout":
       return "upstream_timeout";
     case "stream_incomplete":
@@ -153,6 +159,14 @@ export function explainFailure(facts: FailureFacts): FailureExplanation | null {
       loopGuardKind: facts.loopGuardKind === "tool_loop" ? "tool_loop" : "reply_loop",
       loopGuardSource: facts.loopGuardSource === "tenant" ? "tenant" : "api_key",
     };
+  }
+  // 上游访问冻结：网关在发往上游之前，按发起请求一方的身份拒绝（CliRelay
+  // `sdk/api/handlers/access_frozen_error.go`），状态码是 403，响应码 provider_access_frozen。它不是
+  // 上游的 403（会被读成「要付费或没权限」），也不是 Key 的鉴权失败，所以认准这个码，排在按状态码和
+  // 来源判断的前面。只在这条日志没有上游调用时才认：请求前几次尝试失败、最后才发现剩下的上游都被冻结
+  // 时，前几条日志说的仍是它们自己的失败。
+  if (facts.code === "provider_access_frozen" && facts.upstreamStatus === 0) {
+    return { category: "access_frozen" };
   }
   // 网关在调度之前就拒绝的：没有路由轨迹。上游的错误码可能恰好同名，所以额度错误码只在请求根本
   // 没到上游时才认。
@@ -199,6 +213,9 @@ export function explainFailure(facts: FailureFacts): FailureExplanation | null {
   }
   if (facts.code === "virtual_model_unavailable") return { category: "virtual_model" };
   if (facts.code === "context_length_exceeded") return { category: "context_length" };
+  // 轨迹缺失（请求详情没存或读不了）时，上游拒绝的那次只剩失败正文：网关认拒绝用的就是这个码
+  // （CliRelay `upstreamContentRefusalCodes`），状态码是普通的 400，不认的话会被当成无效请求。
+  if (facts.code === "cyber_policy") return { category: "upstream_content_refusal" };
   if (NO_ACCOUNT_CODES.has(facts.code)) return { category: "no_account" };
   if (facts.status === 499) return { category: "client_canceled" };
   const category = statusCategory(facts.upstreamStatus || facts.status);
@@ -214,6 +231,7 @@ const GATEWAY_CATEGORIES: ReadonlySet<FailureCategory> = new Set([
   "tenant_unavailable",
   "route",
   "content_moderation",
+  "access_frozen",
   "virtual_model",
   "no_account",
 ]);

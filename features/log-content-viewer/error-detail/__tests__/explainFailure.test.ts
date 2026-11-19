@@ -105,10 +105,58 @@ describe("explainFailure", () => {
     expect(failedWith({ status: 502, cause: "upstream_error" })).toBe("upstream_server");
     expect(failedWith({ status: 400, cause: "request_invalid" })).toBe("upstream_request");
     expect(failedWith({ status: 403, cause: "content_policy" })).toBe("content_moderation");
+    expect(failedWith({ status: 400, cause: "upstream_content_refusal" })).toBe(
+      "upstream_content_refusal",
+    );
     expect(failedWith({ cause: "first_token_timeout" })).toBe("upstream_timeout");
     expect(failedWith({ cause: "network_error" })).toBe("network");
     // A cause it does not know falls back to the status.
     expect(failedWith({ status: 503, cause: "something_new" })).toBe("upstream_server");
+  });
+
+  test("an upstream's content refusal is not an invalid request, and says what happens to the sender", () => {
+    // The upstream answered 400, as it does for a malformed request; only the cause tells them apart.
+    const refused = failedThen({ status: 400, cause: "upstream_content_refusal" });
+    expect(explainFailure(facts({ status: 400, upstreamStatus: 400, trace: refused }))).toEqual({
+      category: "upstream_content_refusal",
+    });
+    // Without a trace (the request details were not stored), the failure body still names the code
+    // the gateway acts on; a bare 400 would have been read as an invalid request.
+    expect(category({ code: "cyber_policy", status: 400, upstreamStatus: 400 })).toBe(
+      "upstream_content_refusal",
+    );
+    expect(category({ code: "invalid_request_error", status: 400, upstreamStatus: 400 })).toBe(
+      "upstream_request",
+    );
+    // A trace that says what really happened to this attempt wins over the body's code.
+    expect(
+      category({
+        code: "cyber_policy",
+        status: 429,
+        upstreamStatus: 429,
+        trace: failedThen({ status: 429, cause: "rate_limited" }, movedOn),
+      }),
+    ).toBe("upstream_rate_limit");
+  });
+
+  test("a freeze refusal is the gateway's own 403, not the upstream's billing or a key's auth failure", () => {
+    expect(category({ code: "provider_access_frozen", status: 403 })).toBe("access_frozen");
+    // Whatever the source it was written under, the code is what names it.
+    for (const source of ["local_auth", "local_route", "local_quota"]) {
+      expect(category({ source, code: "provider_access_frozen", status: 403 })).toBe("access_frozen");
+    }
+    // No attempt reached the upstream, so a 403 with no code stays what it always was.
+    expect(category({ status: 403, upstreamStatus: 403 })).toBe("upstream_billing");
+    // A log of an earlier attempt, whose request was only later stopped by the freeze, is about
+    // that attempt's own failure.
+    expect(
+      category({
+        code: "provider_access_frozen",
+        status: 403,
+        upstreamStatus: 429,
+        trace: failedThen({ status: 429, cause: "rate_limited" }, movedOn),
+      }),
+    ).toBe("upstream_rate_limit");
   });
 
   test("a later attempt the client left does not hide this attempt's failure", () => {
@@ -201,6 +249,19 @@ describe("failureExplanationKeys", () => {
     // What to do about it is not in the trace.
     expect(keys({ category: "upstream_request" }, true).hint).toBe("error_detail.hint.upstream_request");
   });
+
+  test("names the freeze and the refusal behind it, with the hint of where to act on it", () => {
+    for (const traced of [false, true]) {
+      expect(keys({ category: "upstream_content_refusal" }, traced)).toEqual({
+        label: "error_detail.category.upstream_content_refusal",
+        hint: "error_detail.hint.upstream_content_refusal",
+      });
+      expect(keys({ category: "access_frozen" }, traced)).toEqual({
+        label: "error_detail.category.access_frozen",
+        hint: "error_detail.hint.access_frozen",
+      });
+    }
+  });
 });
 
 describe("answeredByGateway", () => {
@@ -209,6 +270,17 @@ describe("answeredByGateway", () => {
     expect(answeredByGateway(facts(), { category: "no_account" })).toBe(true);
     expect(answeredByGateway(facts({ upstreamStatus: 429 }), { category: "no_account" })).toBe(false);
     expect(answeredByGateway(facts(), { category: "upstream_server" })).toBe(false);
+  });
+
+  test("the freeze block is the gateway's answer; the upstream's content refusal is the upstream's", () => {
+    expect(answeredByGateway(facts({ code: "provider_access_frozen" }), { category: "access_frozen" })).toBe(
+      true,
+    );
+    expect(
+      answeredByGateway(facts({ upstreamStatus: 400, code: "cyber_policy" }), {
+        category: "upstream_content_refusal",
+      }),
+    ).toBe(false);
   });
 });
 

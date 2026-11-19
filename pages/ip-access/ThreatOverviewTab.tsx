@@ -3,14 +3,13 @@ import { useTranslation } from "react-i18next";
 import { Ban, ListFilter, ShieldCheck } from "lucide-react";
 import { ipAccessApi, type AuthAttemptWindow, type AuthSourceSummary } from "@code-proxy/api-client";
 import {
-  COLUMN_WIDTH,
-  DataTable,
+  GRID_WIDTH,
+  DataGrid,
   Select,
-  TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-  TableRowActions,
-  useToast,
-  type TableRowAction,
-  type DataTableColumn,
+  GRID_ROW_ACTIONS_COLUMN,
+  GridRowActions,
+  type GridRowAction,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 
@@ -30,9 +29,9 @@ export function ThreatOverviewTab({
   refreshToken,
 }: ThreatOverviewTabProps) {
   const { t, i18n } = useTranslation();
-  const { notify } = useToast();
   const [items, setItems] = useState<AuthSourceSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [window_, setWindow] = useState<AuthAttemptWindow>("24h");
 
   const load = useCallback(
@@ -41,30 +40,29 @@ export function ThreatOverviewTab({
       try {
         const response = await ipAccessApi.summary({ window: next });
         setItems(response.items ?? []);
+        setLoadError(null);
       } catch (error) {
-        notify({
-          type: "error",
-          message: error instanceof Error ? error.message : t("ip_access.load_failed"),
-        });
+        // 读不到时表格显示出错态和「重试」，不是一张看起来「没有威胁」的空表。
+        setLoadError(error instanceof Error ? error.message : "");
       } finally {
         setLoading(false);
       }
     },
-    [notify, t],
+    [],
   );
 
   useEffect(() => {
     void load(window_);
   }, [load, window_, refreshToken]);
 
-  const columns = useMemo<DataTableColumn<AuthSourceSummary>[]>(
+  const columns = useMemo<DataGridColumn<AuthSourceSummary>[]>(
     () => [
       {
-        key: "source",
-        label: t("ip_access.col_source"),
-        width: COLUMN_WIDTH.name,
+        id: "source",
+        header: t("ip_access.col_source"),
+        width: GRID_WIDTH.name,
         overflowTooltip: true,
-        render: (item) => (
+        cell: (item) => (
           <span className="font-mono text-sm text-ink">
             {item.sample_ip || item.ip_prefix}
             {item.trusted ? "" : ` (${t("ip_access.untrusted_short")})`}
@@ -72,28 +70,28 @@ export function ThreatOverviewTab({
         ),
       },
       {
-        key: "failures",
-        label: t("ip_access.col_failures"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (item) => (
+        id: "failures",
+        header: t("ip_access.col_failures"),
+        width: GRID_WIDTH.numericWide,
+        cell: (item) => (
           <span className="tabular-nums font-medium text-rose-600 dark:text-rose-300">
             {item.failures}
           </span>
         ),
       },
       {
-        key: "attempts",
-        label: t("ip_access.col_attempts"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (item) => <span className="tabular-nums">{item.attempts}</span>,
+        id: "attempts",
+        header: t("ip_access.col_attempts"),
+        width: GRID_WIDTH.numericWide,
+        cell: (item) => <span className="tabular-nums">{item.attempts}</span>,
       },
       {
-        key: "successes",
-        label: t("ip_access.col_successes"),
-        width: COLUMN_WIDTH.numericWide,
+        id: "successes",
+        header: t("ip_access.col_successes"),
+        width: GRID_WIDTH.numericWide,
         // Failures followed by a success is the strongest signal on this page, so
         // it gets its own column instead of being folded into the attempt count.
-        render: (item) =>
+        cell: (item) =>
           item.successes > 0 ? (
             <span className="tabular-nums font-medium text-amber-600 dark:text-amber-300">
               {item.successes}
@@ -103,29 +101,29 @@ export function ThreatOverviewTab({
           ),
       },
       {
-        key: "usernames",
-        label: t("ip_access.col_usernames"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (item) => <span className="tabular-nums">{item.distinct_usernames}</span>,
+        id: "usernames",
+        header: t("ip_access.col_usernames"),
+        width: GRID_WIDTH.numericWide,
+        cell: (item) => <span className="tabular-nums">{item.distinct_usernames}</span>,
       },
       {
-        key: "last_seen",
-        label: t("ip_access.col_last_seen"),
-        width: COLUMN_WIDTH.timestamp,
-        render: (item) => new Date(item.last_seen).toLocaleString(i18n.language),
+        id: "last_seen",
+        header: t("ip_access.col_last_seen"),
+        width: GRID_WIDTH.timestamp,
+        cell: (item) => new Date(item.last_seen).toLocaleString(i18n.language),
       },
       {
-        key: "state",
-        label: t("ip_access.col_state"),
-        width: COLUMN_WIDTH.compact,
-        render: (item) => <SourceState summary={item} />,
+        id: "state",
+        header: t("ip_access.col_state"),
+        width: GRID_WIDTH.compact,
+        cell: (item) => <SourceState summary={item} />,
       },
       {
-        key: "actions",
-        label: t("ip_access.col_actions"),
-        ...TABLE_ROW_ACTIONS_STICKY_END_COLUMN,
-        render: (item) => {
-          const inspect: TableRowAction = {
+        id: "actions",
+        header: t("ip_access.col_actions"),
+        ...GRID_ROW_ACTIONS_COLUMN,
+        cell: (item) => {
+          const inspect: GridRowAction = {
             key: "inspect",
             label: t("ip_access.inspect"),
             icon: <ListFilter />,
@@ -135,9 +133,9 @@ export function ThreatOverviewTab({
           return (
             <PermissionGate
               permission="platform.ip_access.write"
-              fallback={<TableRowActions actions={[inspect]} />}
+              fallback={<GridRowActions actions={[inspect]} />}
             >
-              <TableRowActions
+              <GridRowActions
                 actions={[
                   inspect,
                   {
@@ -187,18 +185,18 @@ export function ThreatOverviewTab({
         </div>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <DataTable<AuthSourceSummary>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DataGrid<AuthSourceSummary>
           fill
-          tableId="ip-access-threat-overview"
+          id="ip-access-threat-overview"
+          label={t("ip_access.tab_overview")}
           rows={items}
           columns={columns}
           rowKey={(item) => item.ip_prefix}
           loading={loading}
-          virtualize={false}
-          minWidth="min-w-[900px]"
-          emptyText={t("ip_access.no_threats")}
-          showAllLoadedMessage={false}
+          error={loadError === null ? null : loadError || t("ip_access.load_failed")}
+          onRetry={() => void load(window_)}
+          empty={{ title: t("ip_access.no_threats") }}
         />
       </div>
     </>

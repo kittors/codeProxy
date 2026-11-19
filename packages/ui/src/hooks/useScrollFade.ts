@@ -22,7 +22,7 @@ import {
  * sticky 的页签栏、操作栏、表头加 `data-scroll-fade-pin="top" | "bottom"`，渐隐从它的边缘开始。
  *
  * 用法：`const fade = useScrollFade();` → `<div ref={fade.ref} className="overflow-y-auto">`。
- * 滚动条、浮层不该被淡掉时，传 `host` 把遮罩挂到只包内容的那一层（见 DataTable 的 TableFadeFrame）。
+ * 滚动条、浮层不该被淡掉时，传 `host` 把遮罩挂到只包内容的那一层（例如 DataGrid 的滚动视口）。
  */
 export function useScrollFade<T extends HTMLElement = HTMLDivElement>({
   size = 28,

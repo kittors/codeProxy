@@ -36,6 +36,12 @@ vi.mock("../SystemMonitorSection", () => ({
   SystemMonitorSection: () => <div data-testid="system-monitor-section" />,
 }));
 
+vi.mock("../ClusterNodesSection", () => ({
+  ClusterNodesSection: ({ enabled }: { enabled: boolean }) => (
+    <div data-testid="cluster-nodes-section" data-enabled={String(enabled)} />
+  ),
+}));
+
 vi.mock("@code-proxy/ui", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   return {
@@ -290,6 +296,8 @@ describe("DashboardPage", () => {
     });
 
     expect(screen.queryByTestId("system-monitor-section")).toBeNull();
+    // GET /cluster needs the same permission, so the node view is not even mounted.
+    expect(screen.queryByTestId("cluster-nodes-section")).toBeNull();
     // RPM/TPM cards use the latest tenant-scoped series point, not host system-stats.
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getByText("345")).toBeInTheDocument();
@@ -305,6 +313,8 @@ describe("DashboardPage", () => {
       expect(screen.getByTestId("system-monitor-section")).toBeInTheDocument();
     });
     expect(mocks.useSystemStats).toHaveBeenCalledWith(15, true);
+    // The node view polls only while the page is visible.
+    expect(screen.getByTestId("cluster-nodes-section")).toHaveAttribute("data-enabled", "true");
   });
 
   test("shows all-tenants throughput hint for platform super-admin", async () => {

@@ -175,7 +175,8 @@ for (const width of [1280, 1470]) {
     expect(box).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(width);
-    const overflow = await dialog.getByRole("table").evaluate((table) => {
+    // 成员表可以拖动排行，是 role="grid" 的交互表格。
+    const overflow = await dialog.getByRole("grid").evaluate((table) => {
       const scroller = table.parentElement!;
       return scroller.scrollWidth - scroller.clientWidth;
     });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import {
   NO_ACCESS_POLICY_CAPABILITIES,
   apiKeyEntriesApi,
@@ -18,9 +18,9 @@ import {
 import {
   Button,
   Card,
-  DataTable,
+  DataGrid,
+  DataGridPagination,
   MaskToggleButton,
-  PaginationBar,
   buttonClassName,
   useSensitiveDataMasking,
   useToast,
@@ -28,6 +28,12 @@ import {
 } from "@code-proxy/ui";
 import { PermissionGate } from "@app/providers/PermissionGate";
 import { useAuth } from "@app/providers/AuthProvider";
+import {
+  AccessFreezeDetailModal,
+  AccessFreezeOverviewModal,
+  useAccessFreezeOverview,
+  type AccessFreezeSubjectRef,
+} from "@features/access-freeze";
 import { describeWindowParts, formatAccessPolicyError, resettableWindows } from "@features/access-policy";
 import { useApiKeyPermissionOptions } from "@features/api-key-restrictions";
 import { resolvePasswordApiError } from "@features/password-policy";
@@ -97,7 +103,14 @@ export function EndUsersPage() {
   /** 用量弹窗描述里的对象：「账号下全部密钥」或单把 Key 的名称。 */
   const [usageLabel, setUsageLabel] = useState("");
   const [optionsLoaded, setOptionsLoaded] = useState(false);
+  /** 上游冻结的总览弹窗，和正在看详情的那一方（账号，或总览里列出的 Key）。 */
+  const [freezesOpen, setFreezesOpen] = useState(false);
+  const [freezeSubject, setFreezeSubject] = useState<AccessFreezeSubjectRef | null>(null);
   const canWrite = can("end_users.write");
+  // 按上游的冻结要后端声明能力（面板会自动更新到旧后端），读它们要 end_users.read；后端没有数据库
+  // （503）时整块界面不出现。它和账号状态的「已冻结」（status: locked，整个账号停用）不是一回事。
+  const accessFreezes = useAccessFreezeOverview(capabilities.accessFreezes && can("end_users.read"));
+  const freezeEnabled = capabilities.accessFreezes && can("end_users.read") && !accessFreezes.unavailable;
   const permissionOptions = useApiKeyPermissionOptions();
   const { fetchModelOptions, refreshPermissionOptions, loadModels } = permissionOptions;
   const usageView = useApiKeyUsageView();
@@ -150,6 +163,14 @@ export function EndUsersPage() {
     );
   }, [ensurePolicyOptions, keysParam, loading, setSearchParams, users]);
 
+  const endUserName = useCallback(
+    (id: string) => {
+      const user = users.find((candidate) => candidate.id === id);
+      return user ? endUserLabel(user) : undefined;
+    },
+    [users],
+  );
+
   const profileById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const boundCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -180,6 +201,12 @@ export function EndUsersPage() {
     [currentPage, filteredUsers, pageSize],
   );
   const hasFilters = search.trim().length > 0 || statusFilter !== "all" || sourceFilter !== "all";
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setSourceFilter("all");
+    setPage(1);
+  };
 
   // 列表刷新或筛选后，选中项只保留仍然存在的账号。
   useEffect(() => {
@@ -192,8 +219,6 @@ export function EndUsersPage() {
   }, [users]);
 
   const batchEnabled = canWrite && capabilities.batchProfileBinding && profiles.length > 0;
-  const pageIds = pageUsers.map((user) => user.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   const openEdit = useCallback(
     (user: EndUser) => {
@@ -286,28 +311,9 @@ export function EndUsersPage() {
         busy,
         masked,
         profileById,
-        selection: batchEnabled
-          ? {
-              selected,
-              allSelected: allPageSelected,
-              someSelected: !allPageSelected && pageIds.some((id) => selected.has(id)),
-              onSelectAll: (checked) =>
-                setSelected((current) => {
-                  const next = new Set(current);
-                  for (const id of pageIds) {
-                    if (checked) next.add(id);
-                    else next.delete(id);
-                  }
-                  return next;
-                }),
-              onSelect: (id, checked) =>
-                setSelected((current) => {
-                  const next = new Set(current);
-                  if (checked) next.add(id);
-                  else next.delete(id);
-                  return next;
-                }),
-            }
+        accessFreezes: freezeEnabled ? accessFreezes.byEndUser : undefined,
+        onViewAccessFreezes: freezeEnabled
+          ? (user) => setFreezeSubject({ kind: "end_user", id: user.id, name: endUserLabel(user) })
           : undefined,
         onViewUsage: viewUsage,
         onManageKeys: (user) => {
@@ -324,9 +330,8 @@ export function EndUsersPage() {
         onResetPassword: setResetUser,
         onDelete: setDeleteUser,
       }),
-    // pageIds 由 pageUsers 推出，allPageSelected 由 selected 推出。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allPageSelected, batchEnabled, busy, can, canWrite, ensurePolicyOptions, i18n.resolvedLanguage, masked, openEdit, openHistory, pageUsers, profileById, selected, t, toggleFrozen, viewUsage],
+    [accessFreezes.byEndUser, busy, can, canWrite, ensurePolicyOptions, freezeEnabled, i18n.resolvedLanguage, masked, openEdit, openHistory, profileById, t, toggleFrozen, viewUsage],
   );
 
   const onCreate = async (event: FormEvent) => {
@@ -452,6 +457,17 @@ export function EndUsersPage() {
           actions={
             <div className="flex items-center gap-2">
               <MaskToggleButton masked={masked} onToggle={() => setMasked((prev) => !prev)} />
+              {freezeEnabled ? (
+                <Button variant="secondary" size="sm" onClick={() => setFreezesOpen(true)}>
+                  <Lock size={14} aria-hidden="true" />
+                  {t("access_freeze.toolbar_button")}
+                  {accessFreezes.freezes.length > 0 ? (
+                    <span className="rounded-full bg-rose-500/10 px-1.5 text-2xs font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                      {accessFreezes.freezes.length}
+                    </span>
+                  ) : null}
+                </Button>
+              ) : null}
               {can("api_key_profiles.read") ? (
                 <Link to="/access/api-key-permissions" className={buttonClassName({ size: "sm", variant: "secondary" })}>
                   <ShieldCheck size={14} aria-hidden="true" />
@@ -465,9 +481,7 @@ export function EndUsersPage() {
               ) : null}
             </div>
           }
-          // 首次加载交给表格自己的骨架（同一个框，数据回来不跳）；刷新时才罩住旧数据。以前首次加载
-          // 是卡片遮罩罩着一个「暂无门户账号」的空态。
-          loading={loading && users.length > 0}
+          // 加载由表格自己表示：首次是骨架，刷新是表头下沿的进度条，框都不动。
         >
           <EndUserToolbar
             search={search}
@@ -487,52 +501,56 @@ export function EndUsersPage() {
             }}
             profiles={profiles}
             showSourceFilter={profiles.length > 0}
-            selectedCount={selected.size}
-            onBindSelected={batchEnabled ? () => setBindOpen(true) : undefined}
-            onClearSelection={() => setSelected(new Set())}
-            onClearFilters={() => {
-              setSearch("");
-              setStatusFilter("all");
-              setSourceFilter("all");
-              setPage(1);
-            }}
+            onClearFilters={clearFilters}
           />
-          <DataTable
+          <DataGrid
             fill
-            tableId="end-users"
+            id="end-users"
+            label={t("end_users.title")}
             loading={loading}
             rows={pageUsers}
             columns={columns}
             rowKey={(row) => row.id}
-            virtualize={false}
-            rowHeight={64}
-            minWidth="min-w-[1520px]"
-            rowClassName={(row) => (selected.has(row.id) ? "bg-accent-soft/60" : "")}
-            emptyText={hasFilters ? t("end_users.filtered_empty") : t("end_users.empty")}
-            showAllLoadedMessage={false}
-            columnResizable
+            // 批量绑定权限策略：表头复选框全选本页、Shift 连选，选中后表头换成选择条，翻页保留选择。
+            selectable={batchEnabled}
+            rowLabel={(row) => row.display_name || row.username}
+            selectedKeys={selected}
+            onSelectedKeysChange={setSelected}
+            selectionActions={() => (
+              <Button size="xs" variant="primary" onClick={() => setBindOpen(true)}>
+                <ShieldCheck size={12} aria-hidden="true" />
+                {t("access_policy.batch_bind_action")}
+              </Button>
+            )}
+            empty={
+              hasFilters
+                ? {
+                    title: t("end_users.filtered_empty"),
+                    action: (
+                      <Button size="sm" onClick={clearFilters}>
+                        {t("common.clear_filters")}
+                      </Button>
+                    ),
+                  }
+                : { title: t("end_users.empty") }
+            }
+            resetScrollKey={`${currentPage}|${pageSize}|${search}|${statusFilter}|${sourceFilter}`}
+            footer={
+              <DataGridPagination
+                page={currentPage}
+                pageSize={pageSize}
+                total={filteredUsers.length}
+                pending={loading && users.length === 0}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
+            }
           />
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={filteredUsers.length}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(size) => {
-              setPageSize(size);
-              setPage(1);
-            }}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            className="mt-3"
-            labels={{
-              firstPage: t("end_users.first_page"),
-              previousPage: t("end_users.previous_page"),
-              nextPage: t("end_users.next_page"),
-              lastPage: t("end_users.last_page"),
-              rowsPerPage: t("end_users.rows_per_page"),
-              pageInfo: ({ start, end, total }) => t("end_users.page_info", { start, end, total }),
-            }}
-          />
+
         </Card>
       </div>
 
@@ -650,6 +668,24 @@ export function EndUsersPage() {
         rawTodayCost={historyRawTodayCost}
         dailySpendingUsed={historyDailyUsed}
       />
+      {freezeEnabled ? (
+        <>
+          <AccessFreezeOverviewModal
+            open={freezesOpen}
+            onClose={() => setFreezesOpen(false)}
+            canWrite={canWrite}
+            overview={accessFreezes}
+            endUserName={endUserName}
+            onOpenSubject={setFreezeSubject}
+          />
+          <AccessFreezeDetailModal
+            subject={freezeSubject}
+            canWrite={canWrite}
+            onClose={() => setFreezeSubject(null)}
+            onChanged={() => void accessFreezes.refresh()}
+          />
+        </>
+      ) : null}
       <ApiKeyUsageDialogs view={usageView} maskedKey={usageView.usageOpen ? usageLabel : ""} />
     </PermissionGate>
   );

@@ -27,7 +27,8 @@ vi.mock("@code-proxy/api-client", () => ({
   apiKeyEntriesApi: {
     list: () => mocks.apiKeyEntriesList(),
   },
-  modelsApi: {},
+  // Old backends answer 404 for the pricing resync jobs: the page then says nothing more.
+  modelsApi: { getPricingResyncJobs: async () => null },
   modelTestApi: {
     // Mirrors the real endpoints: the modal asks which probe shapes the model
     // supports, then runs one with management authority and no API key.
@@ -836,9 +837,15 @@ describe("ModelsPage", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
     const libraryCard = await screen.findByTestId("model-library-card");
 
-    await userEvent.click(within(libraryCard).getByLabelText(/select seed-only-model/i));
+    // 勾选列是表格自己的（每行一个「Select row」）：按模型所在的行找它的勾选框。
+    const seedRow = within(libraryCard).getByText("seed-only-model").closest("tr") as HTMLElement;
+    await userEvent.click(within(seedRow).getByRole("checkbox", { name: "Select row" }));
 
-    expect(within(libraryCard).getByText(/1 selected/i)).toBeInTheDocument();
+    expect(
+      within(libraryCard.querySelector("[data-grid-selection-bar]") as HTMLElement).getByText(
+        /1 selected/i,
+      ),
+    ).toBeInTheDocument();
     await userEvent.click(
       within(libraryCard).getByRole("button", { name: /delete selected \(1\)/i }),
     );
@@ -906,11 +913,23 @@ describe("ModelsPage", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /model library/i }));
     const libraryCard = await screen.findByTestId("model-library-card");
 
-    await userEvent.click(within(libraryCard).getByLabelText(/select all visible models/i));
+    // 表头勾选框只管当前可见（筛选后）的行。
+    await userEvent.click(
+      within(libraryCard).getByRole("checkbox", { name: "Select all rows on this page" }),
+    );
 
-    expect(within(libraryCard).getByText(/2 selected/i)).toBeInTheDocument();
-    expect(within(libraryCard).getByLabelText(/select gpt-5\.5/i)).toBeChecked();
-    expect(within(libraryCard).getByLabelText(/select claude-sonnet-4-6/i)).toBeChecked();
+    expect(
+      within(libraryCard.querySelector("[data-grid-selection-bar]") as HTMLElement).getByText(
+        /2 selected/i,
+      ),
+    ).toBeInTheDocument();
+    const rowBox = (model: string) =>
+      within(within(libraryCard).getByText(model).closest("tr") as HTMLElement).getByRole(
+        "checkbox",
+        { name: "Select row" },
+      );
+    expect(rowBox("gpt-5.5")).toBeChecked();
+    expect(rowBox("claude-sonnet-4-6")).toBeChecked();
   });
 
   test("saves model id, description, enabled state, pricing mode, and per-call price", async () => {
@@ -946,6 +965,39 @@ describe("ModelsPage", () => {
           price_per_call: 0.08,
         },
       });
+    });
+  });
+
+  test("asks whether to recompute logged costs only when the price changes, and sends the choice", async () => {
+    renderPage();
+
+    await screen.findByText("qwen3.5-plus");
+    await userEvent.click(screen.getByRole("button", { name: /edit qwen3.5-plus/i }));
+    const dialog = await screen.findByRole("dialog");
+    const recompute = () => within(dialog).queryByRole("checkbox", { name: /recompute the costs of the last 7 days/i });
+    expect(recompute()).not.toBeInTheDocument();
+
+    const input = within(dialog).getByLabelText(/input token price/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    expect(recompute()).toBeInTheDocument();
+    expect(recompute()).not.toBeChecked();
+
+    // Back to the old price: nothing to recompute.
+    await userEvent.clear(input);
+    await userEvent.type(input, "1");
+    expect(recompute()).not.toBeInTheDocument();
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "2");
+    await userEvent.click(recompute()!);
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(mocks.apiPut).toHaveBeenCalledWith(
+        "/model-configs/qwen3.5-plus",
+        expect.objectContaining({ resync_history: "reprice_7d" }),
+      );
     });
   });
 

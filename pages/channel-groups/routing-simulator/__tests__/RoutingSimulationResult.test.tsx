@@ -105,6 +105,23 @@ describe("RoutingSimulationResult", () => {
     expect(screen.getByText("客户端会立即收到这个错误。")).toBeInTheDocument();
   });
 
+  test.each([
+    ["zh-CN", "这个 Key 对该上游的使用权限已冻结"],
+    ["en", "Access to this upstream is frozen for this key"],
+    ["ru", "Доступ этого ключа к данному провайдеру заморожен"],
+  ])("says an account left out for a frozen upstream is frozen, in %s", async (language, reason) => {
+    await i18n.changeLanguage(language);
+    render(
+      <RoutingSimulationResult
+        nowMs={NOW}
+        result={unavailable([credential("auth-1", { label: "Team A", excluded: "frozen" })])}
+      />,
+    );
+    // The backend's value is a gate name, never shown as such.
+    expect(screen.getByText(reason)).toBeInTheDocument();
+    expect(screen.queryByText("frozen")).toBeNull();
+  });
+
   test("shows where a reset-aware group ranks each account", async () => {
     await i18n.changeLanguage("en");
     render(

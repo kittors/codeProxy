@@ -13,16 +13,16 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
-  COLUMN_WIDTH,
   Checkbox,
-  DataTable,
+  DataGrid,
+  DataGridPagination,
+  GRID_WIDTH,
   Modal,
-  PaginationBar,
   Tabs,
   TabsList,
   TabsTrigger,
   useToast,
-  type DataTableColumn,
+  type DataGridColumn,
 } from "@code-proxy/ui";
 import {
   RebindChannelsConfirm,
@@ -89,7 +89,6 @@ export function ModerationChannelPickerModal({
   const [tagBindingPreview, setTagBindingPreview] = useState<TagBindingPreview | null>(null);
 
   const channelType: ContentModerationChannelType = tab === "auth" ? "auth_file" : providerScope;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const profileNames = useMemo(
     () => new Map(profiles.map((item) => [item.id, item.name])),
     [profiles],
@@ -340,16 +339,18 @@ export function ModerationChannelPickerModal({
     }
   }, [channelType, notify, pendingTags, profile, t, tagMode]);
 
-  const columns = useMemo<DataTableColumn<ContentModerationChannelView>[]>(
+  const columns = useMemo<DataGridColumn<ContentModerationChannelView>[]>(
     () => [
       {
-        key: "select",
-        label: t("content_moderation.select"),
-        width: COLUMN_WIDTH.checkbox,
+        // 勾选要绑定的渠道（跨页保留、底部按钮统一提交），点整行也能勾；勾上的行是选中行的底色。
+        id: "select",
+        header: t("content_moderation.select"),
+        pin: "start",
+        align: "center",
+        width: 56,
         resizable: false,
-        reorderable: false,
-        lockOrder: "start",
-        render: (row) => {
+        overflowTooltip: false,
+        cell: (row) => {
           const key = channelKey(row);
           return (
             <div
@@ -368,10 +369,11 @@ export function ModerationChannelPickerModal({
         },
       },
       {
-        key: "name",
-        label: t("content_moderation.channel_name"),
-        width: "w-[240px] min-w-[240px]",
-        render: (row) => (
+        id: "name",
+        header: t("content_moderation.channel_name"),
+        width: 240,
+        grow: true,
+        cell: (row) => (
           <div className="min-w-0">
             <p className="truncate font-semibold text-ink">{row.name}</p>
             <p className="mt-0.5 truncate font-mono text-xs text-ink-3">{row.channel_id}</p>
@@ -379,16 +381,16 @@ export function ModerationChannelPickerModal({
         ),
       },
       {
-        key: "provider",
-        label: t("content_moderation.provider"),
-        width: COLUMN_WIDTH.numericWide,
-        render: (row) => row.provider || "--",
+        id: "provider",
+        header: t("content_moderation.provider"),
+        width: GRID_WIDTH.numericWide,
+        cell: (row) => row.provider || "--",
       },
       {
-        key: "tags",
-        label: t("content_moderation.tags"),
-        width: "w-[220px] min-w-[220px]",
-        render: (row) =>
+        id: "tags",
+        header: t("content_moderation.tags"),
+        width: 220,
+        cell: (row) =>
           row.tags.length ? (
             <div className="flex flex-wrap gap-1">
               {row.tags.slice(0, 3).map((tag) => (
@@ -410,10 +412,10 @@ export function ModerationChannelPickerModal({
           ),
       },
       {
-        key: "binding",
-        label: t("content_moderation.current_profile"),
-        width: COLUMN_WIDTH.name,
-        render: (row) => {
+        id: "binding",
+        header: t("content_moderation.current_profile"),
+        width: GRID_WIDTH.name,
+        cell: (row) => {
           if (!row.profile_id) {
             return (
               // 「未绑定」是要读得清的信息，用弱化色 ink-3（ink-4 只给占位装饰，对比度不够）。
@@ -436,10 +438,10 @@ export function ModerationChannelPickerModal({
         },
       },
       {
-        key: "status",
-        label: t("content_moderation.status"),
-        width: COLUMN_WIDTH.badge,
-        render: (row) =>
+        id: "status",
+        header: t("content_moderation.status"),
+        width: GRID_WIDTH.badge,
+        cell: (row) =>
           row.disabled ? (
             <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
               {t("content_moderation.channel_disabled")}
@@ -562,43 +564,33 @@ export function ModerationChannelPickerModal({
           onTagBind={() => void prepareTagBinding()}
         />
 
-        <div className="flex min-h-0 flex-col">
-          <DataTable<ContentModerationChannelView>
-            tableId="content-moderation-channels"
+        {/* 弹窗正文是固定高度：表格铺满剩下的空间，分页落在表格底部，翻到行少的页也不跳。 */}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DataGrid<ContentModerationChannelView>
+            id="content-moderation-channels"
+            frame={false}
+            fill
             rows={rows}
             columns={columns}
             rowKey={(row) => channelKey(row)}
             loading={loading}
-            rowHeight={56}
-            minWidth="min-w-[980px]"
-            caption={t("content_moderation.channels_table_caption")}
-            emptyText={t("content_moderation.channels_empty")}
-            showAllLoadedMessage={false}
-            columnResizable={false}
-            columnReorderable={false}
-            rowAriaSelected={(row) => selected.has(channelKey(row))}
-            rowClassName={(row) =>
-              selected.has(channelKey(row)) ? "bg-accent-soft colorful:bg-sky-500/[0.06]" : ""
-            }
+            label={t("content_moderation.channels_table_caption")}
+            empty={{ title: t("content_moderation.channels_empty") }}
+            resizable={false}
+            columnReorder={false}
+            isRowActive={(row) => selected.has(channelKey(row))}
             onRowClick={(row) => toggleSelected(row)}
+            resetScrollKey={page}
+            footer={
+              <DataGridPagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={total}
+                onPageChange={setPage}
+              />
+            }
           />
         </div>
-
-        <PaginationBar
-          currentPage={page}
-          totalPages={totalPages}
-          totalCount={total}
-          pageSize={PAGE_SIZE}
-          onPageChange={setPage}
-          labels={{
-            firstPage: t("content_moderation.first_page"),
-            previousPage: t("content_moderation.previous_page"),
-            nextPage: t("content_moderation.next_page"),
-            lastPage: t("content_moderation.last_page"),
-            pageInfo: ({ start, end, total: totalCount }) =>
-              t("content_moderation.page_info", { start, end, total: totalCount }),
-          }}
-        />
       </div>
 
       <TagBindingConfirm

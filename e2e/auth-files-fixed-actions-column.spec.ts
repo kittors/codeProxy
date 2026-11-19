@@ -3,12 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 /**
  * AI 账号列表视图的固定「操作」列。
  *
- * 线上看到的样子：操作列左侧那道阴影从表头一路拖到卡片底部，空白处也有一条灰带；
- * 第一个操作按钮（查看）还被阴影压住。两个原因叠在一起：
- * - 轨道和阴影按视口高度画，表格只有几行时就悬在最后一行下面；
- * - 表格写死了 min-w-[2420px]，比各列宽度之和大出三分之一，table-fixed 把多出来
- *   的宽度摊给每一列（固定列也变宽），而轨道和阴影还按名义列宽定位，于是阴影画进
- *   了固定列里面。
+ * 线上看到过的样子：操作列左侧那道阴影从表头一路拖到卡片底部，空白处也有一条灰带；
+ * 第一个操作按钮（查看）还被阴影压住。那是旧表格另画一层「冻结轨道」、按视口高度和名义列宽
+ * 定位造成的。DataGrid 的冻结列就是 sticky 单元格，阴影是每个冻结格边上的伪元素：
+ * 它天然只到最后一行、贴着列的外侧。这里锁住的就是这两条，以及「表格比列宽之和更宽时，
+ * 多出来的宽度只给可伸展的列，固定列保持自己的宽度」。
  */
 
 const files = ["ada", "alan", "grace", "katherine", "linus", "margaret"].map((name, i) => ({
@@ -53,44 +52,53 @@ const openListView = async (page: Page) => {
     return json({ items: [] });
   });
   await page.goto("/#/access/ai-accounts");
-  await expect(page.locator('th[data-vt-column-key="actions"]')).toBeVisible();
-  await expect(page.locator('td[data-vt-column-key="actions"]')).toHaveCount(files.length);
+  await expect(page.locator('th[data-col="actions"]')).toBeVisible();
+  await expect(page.locator('td[data-col="actions"]')).toHaveCount(files.length);
 };
 
 const readGeometry = (page: Page) =>
   page.evaluate(async () => {
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-    const rect = (selector: string) => {
-      const element = document.querySelector<HTMLElement>(selector);
-      if (!element) throw new Error(`missing ${selector}`);
-      return element.getBoundingClientRect();
-    };
-    const rows = [...document.querySelectorAll<HTMLElement>('td[data-vt-column-key="actions"]')];
-    const firstButton = rows[0]?.querySelector("button");
-    if (!firstButton) throw new Error("missing first action button");
+    // 阴影有 180ms 的淡入淡出。
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    const header = document.querySelector<HTMLElement>('th[data-col="actions"]');
+    const cells = [...document.querySelectorAll<HTMLElement>('td[data-col="actions"]')];
+    const firstButton = cells[0]?.querySelector("button");
+    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    if (!header || !firstButton || !viewport) throw new Error("missing fixed actions column");
+    const headerRect = header.getBoundingClientRect();
+    const firstCellRect = cells[0]!.getBoundingClientRect();
+    const shadow = getComputedStyle(cells[0]!, "::after");
+    const lastRowBottom = cells[cells.length - 1]!.getBoundingClientRect().bottom;
+    // 带边缘阴影的格子：每一行的操作格加表头，不多也不少（没有一条按视口高度画的轨道）。
+    const edges = [...document.querySelectorAll<HTMLElement>('.cp-grid [data-pin-edge="end"]')];
     return {
-      header: rect('th[data-vt-column-key="actions"]'),
-      rail: rect("[data-vt-sticky-end-rail]"),
-      boundary: rect("[data-vt-sticky-end-boundary]"),
-      boundaryOpacity: Number(
-        getComputedStyle(document.querySelector("[data-vt-sticky-end-boundary]")!).opacity,
-      ),
-      lastRowBottom: rows[rows.length - 1]!.getBoundingClientRect().bottom,
+      header: { left: headerRect.left, right: headerRect.right, width: headerRect.width },
+      firstCell: { left: firstCellRect.left, width: firstCellRect.width },
+      viewportRight: viewport.getBoundingClientRect().left + viewport.clientWidth,
+      shadowOpacity: Number(shadow.opacity),
+      shadowLeft: shadow.left,
+      shadowWidth: shadow.width,
+      edgeCount: edges.length,
+      lowestEdgeBottom: Math.max(...edges.map((edge) => edge.getBoundingClientRect().bottom)),
+      lastRowBottom,
       firstButtonLeft: firstButton.getBoundingClientRect().left,
     };
   });
 
 const expectShadowHugsTheFixedColumn = (geometry: Awaited<ReturnType<typeof readGeometry>>) => {
-  // The rail backs exactly the fixed column…
-  expect(Math.abs(geometry.rail.left - geometry.header.left)).toBeLessThanOrEqual(1);
-  expect(Math.abs(geometry.rail.width - geometry.header.width)).toBeLessThanOrEqual(1);
-  // …the shadow sits just outside it, never over its first button…
-  expect(Math.abs(geometry.boundary.right - geometry.header.left)).toBeLessThanOrEqual(1);
-  expect(geometry.firstButtonLeft).toBeGreaterThan(geometry.boundary.right);
-  // …and both stop at the last row instead of hanging over the empty card.
-  expect(geometry.rail.bottom).toBeLessThanOrEqual(geometry.lastRowBottom + 1);
-  expect(geometry.boundary.bottom).toBeLessThanOrEqual(geometry.lastRowBottom + 1);
+  // The fixed column sits at the right edge, header and cells on one line…
+  expect(Math.abs(geometry.header.right - geometry.viewportRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.firstCell.left - geometry.header.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.firstCell.width - geometry.header.width)).toBeLessThanOrEqual(1);
+  // …the shadow sits just outside it (a 22px strip left of the cell), never over its first button…
+  expect(geometry.shadowLeft).toBe("-22px");
+  expect(geometry.shadowWidth).toBe("22px");
+  expect(geometry.firstButtonLeft).toBeGreaterThan(geometry.firstCell.left);
+  // …and it belongs to the rows themselves, so it stops at the last row.
+  expect(geometry.edgeCount).toBe(files.length + 1);
+  expect(geometry.lowestEdgeBottom).toBeLessThanOrEqual(geometry.lastRowBottom + 1);
 };
 
 test("AI accounts: the fixed actions column's shadow hugs the column and stops at the last row", async ({
@@ -101,7 +109,7 @@ test("AI accounts: the fixed actions column's shadow hugs the column and stops a
 
   const geometry = await readGeometry(page);
   // Columns overflow at this width, so the shadow is showing.
-  expect(geometry.boundaryOpacity).toBe(1);
+  expect(geometry.shadowOpacity).toBe(1);
   expectShadowHugsTheFixedColumn(geometry);
 });
 
@@ -111,17 +119,17 @@ test("AI accounts: a table wider than its columns leaves the fixed column at its
   await page.setViewportSize({ width: 1440, height: 900 });
   await openListView(page);
 
-  // A table wider than the sum of its columns used to stretch every column, the fixed one
-  // included, and a drag then stored the stretched width. Now the spare width goes to the flex
-  // column only: the fixed column keeps its width and the overlays still hug it.
+  // When the table is wider than the sum of its columns, the spare width goes to the columns that
+  // stretch; the fixed column keeps its width (a drag would otherwise store a stretched width),
+  // and its edge still hugs it.
   const nominalWidth = (await readGeometry(page)).header.width;
-  await page.evaluate(() => {
-    const table = document.querySelector<HTMLTableElement>("[data-vt-scroll-content] table");
-    if (!table) throw new Error("missing table");
-    table.style.minWidth = `${table.getBoundingClientRect().width + 600}px`;
-  });
-
+  await page.setViewportSize({ width: 2560, height: 900 });
   const widened = await readGeometry(page);
+  expect(
+    await page.evaluate(() => document.querySelector(".cp-grid")?.getAttribute("data-x-overflow")),
+  ).toBe("false");
   expect(Math.abs(widened.header.width - nominalWidth)).toBeLessThanOrEqual(1);
   expectShadowHugsTheFixedColumn(widened);
+  // Nothing scrolls under it any more, so there is no shadow to show.
+  expect(widened.shadowOpacity).toBe(0);
 });

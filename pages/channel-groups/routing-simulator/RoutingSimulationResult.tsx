@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Minus, X } from "lucide-react";
 import type {
@@ -9,7 +9,7 @@ import type {
   RoutingSimulationStage,
 } from "@code-proxy/api-client/endpoints/routing-simulation";
 import { normalizeCooldownReason } from "@code-proxy/domain";
-import { Callout, ProviderTag, surface } from "@code-proxy/ui";
+import { Callout, DataGrid, ProviderTag, surface, type DataGridColumn } from "@code-proxy/ui";
 import { distributionLabel } from "@features/routing-config-editor";
 import type { RoutingDistribution } from "@code-proxy/api-client/endpoints/routing-config";
 import {
@@ -42,6 +42,7 @@ const KNOWN_EXCLUSIONS = new Set([
   "pinned",
   "channel",
   "allowed-groups",
+  "frozen",
   "route-group",
   "tried",
   "model",
@@ -196,6 +197,69 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
     ? distributionLabel(t, group.distribution as RoutingDistribution)
     : group.distribution;
   const leastLoad = group.distribution === "least-load";
+  const columns = useMemo<DataGridColumn<RoutingSimulationCredential>[]>(
+    () => [
+      {
+        id: "account",
+        header: t("channel_groups_page.simulator.col_account"),
+        // 基础宽度合计约 570px：放得进模拟弹窗，多出的宽度按权重分给账号和状态两列。
+        width: 200,
+        grow: 1.2,
+        overflowTooltip: false,
+        cell: (credential) => <AccountCell credential={credential} />,
+      },
+      {
+        id: "state",
+        header: t("channel_groups_page.simulator.col_state"),
+        width: 180,
+        grow: 1,
+        overflowTooltip: false,
+        cell: (credential) => <CredentialState credential={credential} nowMs={nowMs} />,
+      },
+      {
+        id: "weight",
+        header: t("channel_groups_page.simulator.col_weight"),
+        align: "end",
+        width: 72,
+        cell: (credential) => (
+          <span className="text-xs tabular-nums text-ink-2">{credential.weight}</span>
+        ),
+      },
+      {
+        id: "concurrency",
+        header: t("channel_groups_page.simulator.col_concurrency"),
+        align: "end",
+        width: 88,
+        cell: (credential) => (
+          <span className="text-xs tabular-nums text-ink-2">
+            {credential["concurrency-limit"]
+              ? `${credential["in-flight"]}/${credential["concurrency-limit"]}`
+              : credential["in-flight"]}
+          </span>
+        ),
+      },
+      {
+        id: "load",
+        header: t("channel_groups_page.simulator.col_load"),
+        align: "end",
+        width: 96,
+        cell: (credential) => (
+          <span className="flex flex-col items-end text-xs tabular-nums text-ink-2">
+            {percent(credential["load-ratio"])}
+            {leastLoad ? (
+              <span className="text-ink-3">
+                {/* 后端在得分为 0 时省略这个字段。 */}
+                {t("channel_groups_page.simulator.score", {
+                  score: (credential.score ?? 0).toFixed(2),
+                })}
+              </span>
+            ) : null}
+          </span>
+        ),
+      },
+    ],
+    [leastLoad, nowMs, t],
+  );
   return (
     <section className={`${surface({ tone: "inset" })} p-4`}>
       <h4 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
@@ -220,59 +284,17 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
         </div>
       ) : null}
       {candidates.length > 0 ? (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[640px] table-fixed text-left">
-            <thead>
-              <tr className="text-2xs text-ink-3">
-                <th className="w-[38%] pb-1.5 font-medium">
-                  {t("channel_groups_page.simulator.col_account")}
-                </th>
-                <th className="w-[34%] pb-1.5 font-medium">
-                  {t("channel_groups_page.simulator.col_state")}
-                </th>
-                <th className="w-[8%] pb-1.5 font-medium">
-                  {t("channel_groups_page.simulator.col_weight")}
-                </th>
-                <th className="w-[10%] pb-1.5 font-medium">
-                  {t("channel_groups_page.simulator.col_concurrency")}
-                </th>
-                <th className="w-[10%] pb-1.5 font-medium">
-                  {t("channel_groups_page.simulator.col_load")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((credential) => (
-                <tr key={credential["auth-id"]} className="align-top">
-                  <td className="py-1.5 pr-3">
-                    <AccountCell credential={credential} />
-                  </td>
-                  <td className="py-1.5 pr-3">
-                    <CredentialState credential={credential} nowMs={nowMs} />
-                  </td>
-                  <td className="py-1.5 pr-3 text-xs text-ink-2 tabular-nums">
-                    {credential.weight}
-                  </td>
-                  <td className="py-1.5 pr-3 text-xs text-ink-2 tabular-nums">
-                    {credential["concurrency-limit"]
-                      ? `${credential["in-flight"]}/${credential["concurrency-limit"]}`
-                      : credential["in-flight"]}
-                  </td>
-                  <td className="py-1.5 text-xs text-ink-2 tabular-nums">
-                    {percent(credential["load-ratio"])}
-                    {leastLoad ? (
-                      <span className="block text-ink-3">
-                        {/* 后端在得分为 0 时省略这个字段。 */}
-                        {t("channel_groups_page.simulator.score", {
-                          score: (credential.score ?? 0).toFixed(2),
-                        })}
-                      </span>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        // 浅底框里的小表：不再套外框，按行收高，放不下时横向在表格里滚。
+        // 浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。
+        <div className="mt-3 [--cp-backdrop:var(--cp-subtle)]">
+          <DataGrid<RoutingSimulationCredential>
+            frame={false}
+            density="compact"
+            label={t("channel_groups_page.simulator.col_account")}
+            columns={columns}
+            rows={candidates}
+            rowKey={(credential) => credential["auth-id"]}
+          />
         </div>
       ) : null}
       {excluded.length > 0 ? (

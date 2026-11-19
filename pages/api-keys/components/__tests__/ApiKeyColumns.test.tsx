@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import { createApiKeyColumns } from "../ApiKeyColumns";
-import { COLUMN_WIDTH, GlobalIconButtonTooltip } from "@code-proxy/ui";
+import { GlobalIconButtonTooltip, type DataGridColumn } from "@code-proxy/ui";
 
 const t = ((key: string, options?: Record<string, string>) => {
   const labels: Record<string, string> = {
@@ -50,11 +50,6 @@ const setTooltipSize = (width: number, height: number) => {
 const createColumns = (overrides: Partial<Parameters<typeof createApiKeyColumns>[0]> = {}) =>
   createApiKeyColumns({
     t,
-    selectedKeys: new Set(),
-    allRowsSelected: false,
-    someRowsSelected: false,
-    onSelectAll: vi.fn(),
-    onSelectRow: vi.fn(),
     onCopy: vi.fn(),
     onRotate: vi.fn(),
     onDelete: vi.fn(),
@@ -66,6 +61,12 @@ const createColumns = (overrides: Partial<Parameters<typeof createApiKeyColumns>
     onViewResetHistory: vi.fn(),
     ...overrides,
   });
+
+const cellOf = (
+  column: DataGridColumn<ApiKeyEntry> | undefined,
+  row: ApiKeyEntry,
+  rowIndex = 0,
+) => column?.cell(row, { rowIndex, selected: false, expanded: false });
 
 describe("ApiKeyColumns", () => {
   beforeEach(() => {
@@ -95,12 +96,12 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns();
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
     render(
       <>
         <GlobalIconButtonTooltip />
-        <div>{actionsColumn?.render(row, 0)}</div>
+        <div>{cellOf(actionsColumn, row)}</div>
       </>,
     );
 
@@ -112,10 +113,10 @@ describe("ApiKeyColumns", () => {
 
   test("keeps the API key column at the wider fixed width", () => {
     const columns = createColumns();
-    const keyColumn = columns.find((column) => column.key === "key");
+    const keyColumn = columns.find((column) => column.id === "key");
 
-    // 仍是 320px，只是改用最宽的语义令牌表达，避免测试绑死具体类名
-    expect(keyColumn?.width).toBe(COLUMN_WIDTH.composite);
+    // 设计像素：掩码后的 Key 放得下，再长的在徽标里截断、悬停看全文。
+    expect(keyColumn?.width).toBe(256);
   });
 
   test("truncates API key text inside an intact rounded badge", () => {
@@ -125,10 +126,10 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns();
-    const keyColumn = columns.find((column) => column.key === "key");
+    const keyColumn = columns.find((column) => column.id === "key");
     const maskedKey = `sk-ab${"•".repeat(20)}789`;
 
-    render(<div>{keyColumn?.render(row, 0)}</div>);
+    render(<div>{cellOf(keyColumn, row)}</div>);
 
     const text = screen.getByText(maskedKey);
     const badge = text.closest("code");
@@ -157,9 +158,9 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns();
-    const modelColumn = columns.find((column) => column.key === "allowedModels");
+    const modelColumn = columns.find((column) => column.id === "allowedModels");
 
-    render(<div>{modelColumn?.render(row, 0)}</div>);
+    render(<div>{cellOf(modelColumn, row)}</div>);
 
     const modelText = screen.getByText("deepseek-v4-flash-ultra-long-model-name");
     const pill = modelText.parentElement;
@@ -186,66 +187,33 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns();
-    const spendingColumn = columns.find((column) => column.key === "spendingLimit");
+    const spendingColumn = columns.find((column) => column.id === "spendingLimit");
 
-    expect(spendingColumn?.label).toBe("Spending limit");
-
-    render(
-      <>
-        <div>{spendingColumn?.headerRender?.()}</div>
-        <div>{spendingColumn?.render(row, 0)}</div>
-      </>,
+    expect(spendingColumn?.header).toBe("Spending limit");
+    // 口径说明挂在表头文字上（点状下划线，悬停显示），不再单独放 ⓘ 图标。
+    expect(spendingColumn?.headerHint).toBe(
+      "Maximum cumulative API key cost in USD. Empty means unlimited.",
     );
+
+    render(<div>{cellOf(spendingColumn, row)}</div>);
 
     expect(screen.getByText("$12.50")).toBeInTheDocument();
-
-    await userEvent.hover(screen.getByText("Spending limit"));
-
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Maximum cumulative API key cost");
   });
 
-  test("keeps selection, name, and actions as responsive fixed columns", () => {
+  test("pins the name to the start and the actions to the end; selection is the grid's own", () => {
     const columns = createColumns();
-    const selectColumn = columns.find((column) => column.key === "select");
-    const nameColumn = columns.find((column) => column.key === "name");
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const nameColumn = columns.find((column) => column.id === "name");
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
-    expect(selectColumn?.lockOrder).toBe("start");
-    expect(nameColumn?.lockOrder).toBe("start");
-    expect(actionsColumn?.lockOrder).toBe("end");
-    expect(selectColumn?.headerClassName).toContain("md:sticky");
-    expect(selectColumn?.cellClassName).toContain("md:sticky");
-    expect(nameColumn?.headerClassName).toContain("md:sticky");
-    expect(nameColumn?.cellClassName).toContain("md:sticky");
-    expect(actionsColumn?.headerClassName).toContain("md:sticky");
-    expect(actionsColumn?.cellClassName).toContain("md:sticky");
-    expect(actionsColumn?.width).toBe("w-40 min-w-40 max-w-40");
-    expect(actionsColumn?.minWidthPx).toBe(160);
-    expect(actionsColumn?.maxWidthPx).toBe(160);
+    // 勾选列由 DataGrid 的 selectable 画，不在列定义里。
+    expect(columns.find((column) => column.id === "select")).toBeUndefined();
+    expect(nameColumn?.pin).toBe("start");
+    expect(actionsColumn?.pin).toBe("end");
+    expect(actionsColumn?.width).toBe(160);
+    expect(actionsColumn?.minWidth).toBe(160);
+    expect(actionsColumn?.maxWidth).toBe(160);
     expect(actionsColumn?.resizable).toBe(false);
-    expect(`${selectColumn?.headerClassName} ${selectColumn?.cellClassName}`).not.toMatch(
-      /\bmd:(?:left|right)-/,
-    );
-    expect(`${nameColumn?.headerClassName} ${nameColumn?.cellClassName}`).not.toMatch(
-      /\bmd:(?:left|right)-/,
-    );
-    expect(`${actionsColumn?.headerClassName} ${actionsColumn?.cellClassName}`).not.toMatch(
-      /\bmd:(?:left|right)-/,
-    );
-    const fixedColumnClassNames = [
-      selectColumn?.headerClassName,
-      selectColumn?.cellClassName,
-      nameColumn?.headerClassName,
-      nameColumn?.cellClassName,
-      actionsColumn?.headerClassName,
-      actionsColumn?.cellClassName,
-    ].join(" ");
-    expect(fixedColumnClassNames).not.toMatch(/\bmd:border-[lr]\b/);
-    expect(fixedColumnClassNames).not.toContain("md:border-slate-900/8");
-    expect(fixedColumnClassNames).not.toContain("md:dark:border-white/8");
-    expect(selectColumn?.headerClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
-    expect(nameColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
-    expect(actionsColumn?.cellClassName).not.toMatch(/(^|\s)sticky(\s|$)/);
+    expect(actionsColumn?.hideable).toBe(false);
   });
 
   test("renders the status toggle inside the actions column", () => {
@@ -256,12 +224,12 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns();
-    const statusColumn = columns.find((column) => column.key === "status");
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const statusColumn = columns.find((column) => column.id === "status");
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
     expect(statusColumn).toBeUndefined();
 
-    render(<div>{actionsColumn?.render(row, 0)}</div>);
+    render(<div>{cellOf(actionsColumn, row)}</div>);
 
     expect(screen.getByRole("button", { name: "Click to enable" })).toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(4);
@@ -276,11 +244,10 @@ describe("ApiKeyColumns", () => {
       "created-at": "2026-04-28T00:00:00Z",
     };
     const columns = createColumns({ accountScoped: true });
-    const keys = columns.map((column) => column.key);
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const keys = columns.map((column) => column.id);
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
     expect(keys).toEqual([
-      "select",
       "name",
       "quota",
       "dailySpending",
@@ -290,9 +257,9 @@ describe("ApiKeyColumns", () => {
       "createdAt",
       "actions",
     ]);
-    expect(actionsColumn?.width).toBe("w-40 min-w-40 max-w-40");
+    expect(actionsColumn?.width).toBe(160);
 
-    render(<div>{actionsColumn?.render(row, 0)}</div>);
+    render(<div>{cellOf(actionsColumn, row)}</div>);
 
     expect(screen.queryByRole("button", { name: "View usage" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy key" })).toBeInTheDocument();
@@ -304,7 +271,7 @@ describe("ApiKeyColumns", () => {
 
   test("places quota and spending fact columns immediately after name", () => {
     const columns = createColumns();
-    const keys = columns.map((column) => column.key);
+    const keys = columns.map((column) => column.id);
     const nameIndex = keys.indexOf("name");
     expect(keys[nameIndex + 1]).toBe("quota");
     expect(keys[nameIndex + 2]).toBe("dailySpending");
@@ -323,14 +290,14 @@ describe("ApiKeyColumns", () => {
       "lifetime-spending-used": 300.12,
     };
     const columns = createColumns();
-    const quotaColumn = columns.find((column) => column.key === "quota");
-    const dailyColumn = columns.find((column) => column.key === "dailySpending");
-    const lifetimeColumn = columns.find((column) => column.key === "lifetimeSpending");
+    const quotaColumn = columns.find((column) => column.id === "quota");
+    const dailyColumn = columns.find((column) => column.id === "dailySpending");
+    const lifetimeColumn = columns.find((column) => column.id === "lifetimeSpending");
     const { container } = render(
       <div>
-        <div>{quotaColumn?.render(limited, 0)}</div>
-        <div>{dailyColumn?.render(limited, 0)}</div>
-        <div>{lifetimeColumn?.render(limited, 0)}</div>
+        <div>{cellOf(quotaColumn, limited)}</div>
+        <div>{cellOf(dailyColumn, limited)}</div>
+        <div>{cellOf(lifetimeColumn, limited)}</div>
       </div>,
     );
     expect(container.textContent).toContain("$20 / $100");
@@ -350,16 +317,16 @@ describe("ApiKeyColumns", () => {
       name: "Free",
     };
     const columns = createColumns({ onResetPeriodSpending });
-    const actionsColumn = columns.find((column) => column.key === "actions");
+    const actionsColumn = columns.find((column) => column.id === "actions");
 
-    const { rerender } = render(<div>{actionsColumn?.render(unlimited, 0)}</div>);
+    const { rerender } = render(<div>{cellOf(actionsColumn, unlimited)}</div>);
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     expect(
       screen.getByRole("menuitem", { name: "No resettable period quota; edit Key quota" }),
     ).toHaveAttribute("data-disabled");
     await userEvent.keyboard("{Escape}");
 
-    rerender(<div>{actionsColumn?.render(limited, 1)}</div>);
+    rerender(<div>{cellOf(actionsColumn, limited, 1)}</div>);
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     const enabled = await screen.findByRole("menuitem", { name: "Reset this Key quota" });
     expect(enabled).not.toHaveAttribute("data-disabled");
@@ -375,8 +342,8 @@ describe("ApiKeyColumns", () => {
       "daily-spending-reset-count": 3,
     };
     const columns = createColumns({ onViewResetHistory });
-    const countColumn = columns.find((column) => column.key === "dailySpendingResetCount");
-    render(<div>{countColumn?.render(row, 0)}</div>);
+    const countColumn = columns.find((column) => column.id === "dailySpendingResetCount");
+    render(<div>{cellOf(countColumn, row)}</div>);
     const button = screen.getByRole("button", { name: "View reset history" });
     expect(button).toHaveTextContent("3");
     await userEvent.click(button);

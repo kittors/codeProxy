@@ -226,7 +226,10 @@ describe("RoutingSimulatorDialog", () => {
       }),
     );
     // 读屏只播报结论这一句，和结果的标题是同一句话。
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Served by Team A"));
+    // 表格自己也有一个播报区（排序、移动列时用）；这里看的是弹窗的结论播报。
+    const conclusion = () =>
+      screen.getAllByRole("status").find((node) => !node.closest(".cp-grid"));
+    await waitFor(() => expect(conclusion()).toHaveTextContent("Served by Team A"));
     expect(screen.getAllByText("Served by Team A")).toHaveLength(2);
     expect(screen.getByText("Group: team · Model sent upstream: gpt-5-codex")).toBeInTheDocument();
     expect(screen.getByText("If it fails, 1 more account can take over")).toBeInTheDocument();

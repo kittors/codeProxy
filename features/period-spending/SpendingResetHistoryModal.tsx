@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { History } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { COLUMN_WIDTH, DataTable, Modal, type DataTableColumn } from "@code-proxy/ui";
+import { DataGrid, GRID_WIDTH, Modal, type DataGridColumn } from "@code-proxy/ui";
 import { formatQuotaUsdAmount } from "./PeriodSpendingCell";
 
 /** API Key 与用户账号两种重置记录共有的字段（接口里两者结构一致）。 */
@@ -28,7 +28,6 @@ const formatResetAt = (value: string | undefined): string => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
-const CELL = "whitespace-nowrap tabular-nums text-ink-2";
 
 /**
  * 手动重置每日消费的历史记录（API Key 与用户账号共用）。
@@ -71,63 +70,73 @@ export function SpendingResetHistoryModal({
     [events],
   );
 
-  const columns: DataTableColumn<SpendingResetEvent>[] = [
+  /** 等宽数字的取值：时间、日期、金额都按位对齐。 */
+  const numeric = (value: ReactNode) => (
+    <span className="truncate whitespace-nowrap tabular-nums text-ink-2">{value}</span>
+  );
+  const amount = (value: number | undefined) =>
+    numeric(isAmount(value) ? formatQuotaUsdAmount(value) : "—");
+
+  const columns: DataGridColumn<SpendingResetEvent>[] = [
     ...(showEventId
       ? [
           {
-            key: "id",
-            label: label("col_id"),
-            width: COLUMN_WIDTH.compact,
-            cellClassName: CELL,
-            render: (row: SpendingResetEvent) => row.id,
+            id: "id",
+            header: label("col_id"),
+            align: "end" as const,
+            width: GRID_WIDTH.compact,
+            cell: (row: SpendingResetEvent) => numeric(row.id),
           },
         ]
       : []),
     {
-      key: "reset_at",
-      label: label("col_time"),
-      width: "w-[190px] min-w-[170px]",
-      cellClassName: CELL,
-      render: (row) => formatResetAt(row.reset_at),
+      id: "reset_at",
+      header: label("col_time"),
+      width: 190,
+      minWidth: 170,
+      cell: (row) => numeric(formatResetAt(row.reset_at)),
     },
     {
-      key: "day_key",
-      label: label("col_day"),
-      width: COLUMN_WIDTH.numericWide,
-      cellClassName: CELL,
-      render: (row) => row.day_key || "—",
+      id: "day_key",
+      header: label("col_day"),
+      width: GRID_WIDTH.numericWide,
+      cell: (row) => numeric(row.day_key || "—"),
     },
     {
-      key: "effective_used_before",
-      label: label("col_cleared"),
-      width: COLUMN_WIDTH.name,
-      cellClassName: CELL,
-      render: (row) => formatQuotaUsdAmount(row.effective_used_before ?? 0),
+      id: "effective_used_before",
+      header: label("col_cleared"),
+      align: "end",
+      width: GRID_WIDTH.name,
+      cell: (row) => amount(row.effective_used_before ?? 0),
     },
     {
-      key: "raw_today_cost",
-      label: label("col_raw_today"),
-      width: COLUMN_WIDTH.name,
-      cellClassName: CELL,
-      render: (row) => (isAmount(row.raw_today_cost) ? formatQuotaUsdAmount(row.raw_today_cost) : "—"),
+      id: "raw_today_cost",
+      header: label("col_raw_today"),
+      align: "end",
+      width: GRID_WIDTH.name,
+      cell: (row) => amount(row.raw_today_cost),
     },
     {
-      key: "cost_baseline",
-      label: label("col_baseline"),
-      width: "w-[160px] min-w-[140px]",
-      cellClassName: CELL,
-      render: (row) => (isAmount(row.cost_baseline) ? formatQuotaUsdAmount(row.cost_baseline) : "—"),
+      id: "cost_baseline",
+      header: label("col_baseline"),
+      align: "end",
+      width: 160,
+      minWidth: 140,
+      cell: (row) => amount(row.cost_baseline),
     },
     {
-      key: "actor",
-      label: label("col_actor"),
-      width: COLUMN_WIDTH.numericWide,
-      cellClassName: "text-ink-2",
-      render: (row) =>
-        row.actor_username?.trim() ||
-        (row.actor_kind === "service_credential"
-          ? label("actor_service")
-          : label("actor_unknown")),
+      id: "actor",
+      header: label("col_actor"),
+      width: GRID_WIDTH.numericWide,
+      grow: true,
+      cell: (row) => (
+        <span className="truncate text-ink-2">
+          {row.actor_username?.trim() ||
+            (row.actor_kind === "service_credential"
+              ? label("actor_service")
+              : label("actor_unknown"))}
+        </span>
+      ),
     },
   ];
 
@@ -141,14 +150,16 @@ export function SpendingResetHistoryModal({
       size="xl"
     >
       {summary ? <div className="mb-4">{summary}</div> : null}
-      <DataTable
+      {/* 弹窗里的小表：不套外框，按行收高、最高 360px 后表内滚动。 */}
+      <DataGrid
+        frame={false}
+        label={title}
         columns={columns}
         rows={sortedEvents}
         loading={loading}
-        emptyText={label("empty")}
+        empty={{ title: label("empty") }}
         rowKey={(row) => String(row.id)}
-        maxHeight="max-h-[360px]"
-        minWidth={showEventId ? "min-w-[1080px]" : "min-w-[940px]"}
+        maxHeight="360px"
       />
     </Modal>
   );

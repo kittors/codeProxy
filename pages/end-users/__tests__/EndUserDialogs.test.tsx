@@ -27,6 +27,7 @@ const FULL: AccessPolicyCapabilities = {
   batchProfileBinding: true,
   createWithProfile: true,
   ownedKeyAdmin: true,
+  accessFreezes: false,
 };
 
 const alice: EndUser = normalizeEndUser({
