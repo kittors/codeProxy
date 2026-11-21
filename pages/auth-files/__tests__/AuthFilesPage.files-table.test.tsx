@@ -3471,13 +3471,11 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
-          shared_subscription_started_at: new Date(
-            Date.now() - 5 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-          shared_subscription_expires_at: new Date(
-            Date.now() + 26 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-          shared_subscription_source: "signed_claims",
+          shared_subscription: {
+            started_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            expires_at: new Date(Date.now() + 26 * 24 * 60 * 60 * 1000).toISOString(),
+            source: "signed_claims",
+          },
         },
       ],
     }));
