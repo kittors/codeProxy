@@ -188,6 +188,21 @@ export const normalizeAccountStatusView = (
     subscription_source: normalizeString(
       value.subscription_source ?? value.subscriptionSource,
     ),
+    subscription_renews_at: normalizeString(
+      value.subscription_renews_at ?? value.subscriptionRenewsAt,
+    ),
+    subscription_cancels_at: normalizeString(
+      value.subscription_cancels_at ?? value.subscriptionCancelsAt,
+    ),
+    subscription_period: normalizeString(
+      value.subscription_period ?? value.subscriptionPeriod,
+    ),
+    subscription_state: normalizeString(
+      value.subscription_state ?? value.subscriptionState,
+    ),
+    subscription_checked_at: normalizeString(
+      value.subscription_checked_at ?? value.subscriptionCheckedAt,
+    ),
     reset_credit_count: toFiniteNumber(
       value.reset_credit_count ?? value.resetCreditCount,
     ),

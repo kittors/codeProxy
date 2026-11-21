@@ -13,7 +13,6 @@ import { Download, RefreshCw, ShieldCheck } from "lucide-react";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
 import type {
   AuthFileItem,
-  AuthFileSubscriptionPeriod,
   IdentityFingerprintAccountDetail,
   IdentityFingerprintFieldSource,
 } from "@code-proxy/api-client";
@@ -24,7 +23,6 @@ import {
   Checkbox,
   confirmDialog,
   DataGrid,
-  DateTimePicker,
   GRID_WIDTH,
   EmptyState,
   Modal,
@@ -42,6 +40,7 @@ import { CodexImageGenerationBridgePanel } from "./CodexImageGenerationBridgePan
 import { AuthFilePlanBadge } from "./AuthFilePlanBadge";
 import { useIdentityDesktopLayout } from "./useIdentityDesktopLayout";
 import { AuthFileSchedulingFields } from "./AuthFileSchedulingFields";
+import { AuthFileSubscriptionFields } from "./AuthFileSubscriptionFields";
 import { buildDetailTrendChartOption } from "./detailTrendChartOption";
 import { TrendSummaryGrid } from "./TrendSummaryGrid";
 import { EChart, useTheme } from "@code-proxy/ui";
@@ -217,7 +216,7 @@ export function AuthFileDetailModal({
   xaiEndpointDirty,
   saveXAIEndpoint,
 }: AuthFileDetailModalProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { state: { mode: themeMode } } = useTheme();
   const moderationPerms = useModerationPermissions();
   const isIdentityDesktopLayout = useIdentityDesktopLayout();
@@ -1488,59 +1487,11 @@ export function AuthFileDetailModal({
                               </p>
                             </div>
 
-                            <div className="grid gap-2">
-                              <p className="text-xs font-semibold text-ink-2">
-                                {t("auth_files.subscription_started_at_label")}
-                              </p>
-                              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                                <DateTimePicker
-                                  value={prefixProxyEditor.subscriptionStartedAt}
-                                  onChange={(value) => {
-                                    setPrefixProxyEditor((prev) => ({
-                                      ...prev,
-                                      subscriptionStartedAt: value,
-                                    }));
-                                  }}
-                                  aria-label={t("auth_files.subscription_started_at_label")}
-                                  locale={i18n.language}
-                                  labels={{
-                                    picker: t("auth_files.subscription_date_picker"),
-                                    open: t("auth_files.subscription_date_picker_open"),
-                                    previousMonth: t(
-                                      "auth_files.subscription_date_picker_previous_month",
-                                    ),
-                                    nextMonth: t("auth_files.subscription_date_picker_next_month"),
-                                    today: t("auth_files.subscription_date_picker_today"),
-                                    clear: t("auth_files.subscription_date_picker_clear"),
-                                    hour: t("auth_files.subscription_date_picker_hour"),
-                                    minute: t("auth_files.subscription_date_picker_minute"),
-                                  }}
-                                />
-                                <Select
-                                  value={prefixProxyEditor.subscriptionPeriod}
-                                  onChange={(value) =>
-                                    setPrefixProxyEditor((prev) => ({
-                                      ...prev,
-                                      subscriptionPeriod: value as AuthFileSubscriptionPeriod,
-                                    }))
-                                  }
-                                  options={[
-                                    {
-                                      value: "monthly",
-                                      label: t("auth_files.subscription_period_monthly"),
-                                    },
-                                    {
-                                      value: "yearly",
-                                      label: t("auth_files.subscription_period_yearly"),
-                                    },
-                                  ]}
-                                  aria-label={t("auth_files.subscription_period_label")}
-                                />
-                              </div>
-                              <p className="text-xs text-ink-3">
-                                {t("auth_files.subscription_started_at_hint")}
-                              </p>
-                            </div>
+                            <AuthFileSubscriptionFields
+                              file={detailFile}
+                              editor={prefixProxyEditor}
+                              setEditor={setPrefixProxyEditor}
+                            />
                           </>
                         ) : null}
                       </div>

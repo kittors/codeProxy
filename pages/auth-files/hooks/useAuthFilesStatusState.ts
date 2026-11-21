@@ -24,6 +24,7 @@ import {
   normalizeAuthIndexValue,
   readAndMigrateQuotaAutoRefreshMs,
   readAuthFilesDataCache,
+  sharedSubscriptionFromStatus,
   writeAuthFilesDataCache,
   type AuthFileCycleBudgetStats,
 } from "@code-proxy/domain";
@@ -579,9 +580,8 @@ export function useAuthFilesStatusState({
           const hasPrivatePlan = Boolean(file?.plan_type ?? file?.planType);
           // Partial refresh: only write subscription / scope / plan when present.
           // Empty/null must not wipe known card badges (remaining days, plan, scope).
-          const started = group.account.subscription_started_at;
-          const expires = group.account.subscription_expires_at;
-          const source = group.account.subscription_source;
+          // A reported subscription replaces the stored set whole.
+          const sharedSubscription = sharedSubscriptionFromStatus(group.account);
           const filePatch: Partial<AuthFileItem> = {};
           if (group.account.status_scope) {
             filePatch.account_status_scope = group.account.status_scope;
@@ -598,14 +598,8 @@ export function useAuthFilesStatusState({
           if (group.account.usage?.projected_since) {
             filePatch.usage_projected_since = group.account.usage.projected_since;
           }
-          if (typeof started === "string" && started.trim()) {
-            filePatch.shared_subscription_started_at = started;
-          }
-          if (typeof expires === "string" && expires.trim()) {
-            filePatch.shared_subscription_expires_at = expires;
-          }
-          if (typeof source === "string" && source.trim()) {
-            filePatch.shared_subscription_source = source;
+          if (sharedSubscription) {
+            filePatch.shared_subscription = sharedSubscription;
           }
           if (!hasPrivatePlan && planType) {
             filePatch.plan_type = planType;

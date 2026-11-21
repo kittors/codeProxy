@@ -339,7 +339,7 @@ describe("useAuthFilesStatusState batch refresh", () => {
         expect(file.share_eligible).toBe(true);
         expect(file.usage_history_complete).toBe(false);
         expect(file.usage_projected_since).toBe("2026-06-15T00:00:00Z");
-        expect(file.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
+        expect(file.shared_subscription?.expires_at).toBe("2026-08-01T00:00:00Z");
       }
     });
   });
@@ -426,9 +426,11 @@ describe("useAuthFilesStatusState batch refresh", () => {
         name: "a.json",
         auth_index: "a1",
         type: "codex",
-        shared_subscription_started_at: "2026-07-01T00:00:00Z",
-        shared_subscription_expires_at: "2026-08-01T00:00:00Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: {
+          started_at: "2026-07-01T00:00:00Z",
+          expires_at: "2026-08-01T00:00:00Z",
+          source: "signed_claims",
+        },
       } as AuthFileItem,
     ];
     mocks.getStatus.mockResolvedValue({
@@ -466,9 +468,75 @@ describe("useAuthFilesStatusState batch refresh", () => {
     for (const [update] of setFiles.mock.calls) {
       if (typeof update === "function") patched = update(patched);
     }
-    expect(patched[0]?.shared_subscription_started_at).toBe("2026-07-01T00:00:00Z");
-    expect(patched[0]?.shared_subscription_expires_at).toBe("2026-08-01T00:00:00Z");
-    expect(patched[0]?.shared_subscription_source).toBe("signed_claims");
+    expect(patched[0]?.shared_subscription).toEqual({
+      started_at: "2026-07-01T00:00:00Z",
+      expires_at: "2026-08-01T00:00:00Z",
+      source: "signed_claims",
+    });
+  });
+
+  // A live read replaces the stored set whole: once renewal is turned off the
+  // renewal date it carried must not linger next to the new cancel date.
+  test("live subscription replaces the stored set whole", async () => {
+    const seeded: AuthFileItem[] = [
+      {
+        name: "a.json",
+        auth_index: "a1",
+        type: "codex",
+        shared_subscription: {
+          expires_at: "2026-12-10T11:03:33Z",
+          renews_at: "2026-12-10T05:03:33Z",
+          source: "probe",
+          state: "active",
+          period: "monthly",
+          checked_at: "2026-11-20T12:00:00Z",
+        },
+      } as AuthFileItem,
+    ];
+    mocks.getStatus.mockResolvedValue({
+      items: [
+        {
+          auth_index: "a1",
+          quotas: [{ quota_key: "code_5h", percent: 40 }],
+          subscription_expires_at: "2026-12-10T11:03:33Z",
+          subscription_cancels_at: "2026-12-10T05:03:33Z",
+          subscription_source: "probe",
+          subscription_state: "canceling",
+          subscription_period: "monthly",
+          subscription_checked_at: "2026-11-21T12:00:00Z",
+        },
+      ],
+    });
+    const setFiles = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthFilesStatusState({
+        tab: "files",
+        pageItems: seeded,
+        loading: false,
+        setFiles,
+        setDetailFile: vi.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.quotaByFileName["a.json"]?.items[0]?.percent).toBe(40);
+    });
+    await waitFor(() => {
+      let patched = seeded;
+      for (const [update] of setFiles.mock.calls) {
+        if (typeof update === "function") patched = update(patched);
+      }
+      expect(patched[0]?.shared_subscription).toEqual({
+        started_at: null,
+        expires_at: "2026-12-10T11:03:33Z",
+        source: "probe",
+        renews_at: null,
+        cancels_at: "2026-12-10T05:03:33Z",
+        period: "monthly",
+        state: "canceling",
+        checked_at: "2026-11-21T12:00:00Z",
+      });
+    });
   });
 
   // Plan metadata is genuinely sticky (an omitted plan_type means "unchanged"),

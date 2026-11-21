@@ -2,7 +2,6 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
-  CalendarClock,
   Download,
   Eye,
   Gauge,
@@ -15,6 +14,7 @@ import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";
 import { AuthFilePlanBadge } from "../components/AuthFilePlanBadge";
+import { AuthFileSubscriptionBadge } from "../components/AuthFileSubscriptionBadge";
 import { ProviderTag, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { GRID_ROW_ACTIONS_COLUMN, GRID_WIDTH, GridRowActions, HoverTooltip } from "@code-proxy/ui";
 import { ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
@@ -51,7 +51,6 @@ import {
   CLAUDE_OAUTH_HEALTH_TONE_CLASSES,
   KNOWN_QUOTA_TEXT_KEYS,
   RESTRICTION_TONE_CLASSES,
-  SUBSCRIPTION_TONE_CLASSES,
 } from "./presentationStyles";
 
 interface UseAuthFilesFilesPresentationOptions {
@@ -207,35 +206,9 @@ export function useAuthFilesFilesPresentation({
   const renderSubscriptionBadge = useCallback(
     (file: AuthFileItem): ReactNode | null => {
       const status = resolveAuthFileSubscriptionStatus(file, nowMs);
-      if (!status) return null;
-
-      const days = Math.max(0, Math.abs(status.remainingDays));
-      const label = status.expired
-        ? t("auth_files.subscription_expired_short", { days })
-        : status.expiresAtMs - nowMs < 24 * 60 * 60 * 1000
-          ? t("auth_files.subscription_remaining_less_than_day")
-          : t("auth_files.subscription_remaining_short", { days });
-      const title = t("auth_files.subscription_expires_at_title", {
-        start: status.startedAtText,
-        date: status.expiresAtText,
-        period: t(`auth_files.subscription_period_${status.period}`),
-      });
-
-      return (
-        <HoverTooltip content={title}>
-          <span
-            className={[
-              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
-              SUBSCRIPTION_TONE_CLASSES[status.tone],
-            ].join(" ")}
-          >
-            <CalendarClock size={11} className="shrink-0" />
-            <span className="min-w-0 truncate">{label}</span>
-          </span>
-        </HoverTooltip>
-      );
+      return status ? <AuthFileSubscriptionBadge status={status} nowMs={nowMs} /> : null;
     },
-    [nowMs, t],
+    [nowMs],
   );
 
   const formatQuotaResetTextCompact = useCallback(

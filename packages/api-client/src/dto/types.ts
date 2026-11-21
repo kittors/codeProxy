@@ -39,6 +39,23 @@ export type AuthFileType =
 
 export type AuthFileSubscriptionPeriod = "monthly" | "yearly";
 
+/**
+ * The account's subscription as the AI account status API reported it, shared
+ * by every tenant holding the account. The fields move together: a refresh that
+ * reports a subscription replaces the whole set. Mirror of the domain type.
+ */
+export interface AuthFileSharedSubscription {
+  started_at?: string | null;
+  expires_at?: string | null;
+  /** "probe" is a live read of the provider's billing; "signed_claims" a token snapshot. */
+  source?: "probe" | "signed_claims" | "migration" | string | null;
+  renews_at?: string | null;
+  cancels_at?: string | null;
+  period?: string | null;
+  state?: "active" | "canceling" | "past_due" | "inactive" | string | null;
+  checked_at?: string | null;
+}
+
 export interface TagDisplayFields {
   default_tags?: string[];
   custom_tags?: string[];
@@ -189,9 +206,7 @@ export interface AuthFileItem extends TagDisplayFields {
   share_eligible?: boolean;
   usage_history_complete?: boolean;
   usage_projected_since?: string | null;
-  shared_subscription_started_at?: string | null;
-  shared_subscription_expires_at?: string | null;
-  shared_subscription_source?: string | null;
+  shared_subscription?: AuthFileSharedSubscription | null;
   runtimeOnly?: boolean | string;
   runtime_only?: boolean | string;
   disabled?: boolean;
@@ -624,6 +639,12 @@ export interface AiAccountLatestStatusDto {
   subscription_started_at?: string | null;
   subscription_expires_at?: string | null;
   subscription_source?: "probe" | "signed_claims" | "migration" | string | null;
+  /** Live billing reads (source "probe") only; absent from older backends. */
+  subscription_renews_at?: string | null;
+  subscription_cancels_at?: string | null;
+  subscription_period?: string | null;
+  subscription_state?: "active" | "canceling" | "past_due" | "inactive" | string | null;
+  subscription_checked_at?: string | null;
   /** Optional Codex reset-credit fields retained by backend. */
   reset_credit_count?: number | null;
   reset_credit_expirations?: string[];

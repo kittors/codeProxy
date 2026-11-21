@@ -99,6 +99,23 @@ export interface AuthFileIdentityFingerprintSummary {
   last_seen_at?: string;
 }
 
+/**
+ * The account's subscription as the AI account status API reported it, shared
+ * by every tenant holding the account. The fields move together: a refresh that
+ * reports a subscription replaces the whole set. Mirrors the api-client type.
+ */
+export interface AuthFileSharedSubscription {
+  started_at?: string | null;
+  expires_at?: string | null;
+  /** "probe" is a live read of the provider's billing; "signed_claims" a token snapshot. */
+  source?: "probe" | "signed_claims" | "migration" | string | null;
+  renews_at?: string | null;
+  cancels_at?: string | null;
+  period?: string | null;
+  state?: "active" | "canceling" | "past_due" | "inactive" | string | null;
+  checked_at?: string | null;
+}
+
 export interface AuthFileItem extends AuthFileTagDisplayFields {
   name: string;
   type?: string;
@@ -139,6 +156,8 @@ export interface AuthFileItem extends AuthFileTagDisplayFields {
   subscriptionRemainingMinutes?: number;
   subscription_expired?: boolean;
   subscriptionExpired?: boolean;
+  /** Written by the AI account status refresh, not by the auth-files list. */
+  shared_subscription?: AuthFileSharedSubscription | null;
   claude_oauth_health?: ClaudeOAuthHealth;
   identity_fingerprint_summary?: AuthFileIdentityFingerprintSummary;
   concurrency_limit?: number;
