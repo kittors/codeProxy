@@ -85,6 +85,7 @@ export type * from "./endpoints/access-freezes";
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
 export {
+  apiKeyBillingApi,
   billingAdminApi,
   formatCnyCents,
   portalBillingApi,

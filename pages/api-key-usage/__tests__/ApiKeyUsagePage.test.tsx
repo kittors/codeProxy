@@ -9,6 +9,17 @@ import { ApiKeyUsagePage } from "../ApiKeyUsagePage";
 const mocks = vi.hoisted(() => ({
   fetchPublicLogs: vi.fn(),
   fetchPublicUsageSummary: vi.fn(),
+  apiKeyBillingApi: {
+    overview: vi.fn(),
+    createOrder: vi.fn(),
+    listOrders: vi.fn(),
+    getOrder: vi.fn(),
+  },
+}));
+
+vi.mock("@code-proxy/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@code-proxy/api-client")>()),
+  apiKeyBillingApi: mocks.apiKeyBillingApi,
 }));
 
 vi.mock("../../api-key-lookup/api", () => ({
@@ -39,6 +50,11 @@ describe("ApiKeyUsagePage", () => {
     window.localStorage.clear();
     mocks.fetchPublicLogs.mockReset();
     mocks.fetchPublicUsageSummary.mockReset();
+    mocks.apiKeyBillingApi.overview.mockReset();
+    mocks.apiKeyBillingApi.createOrder.mockReset();
+    mocks.apiKeyBillingApi.listOrders.mockReset();
+    mocks.apiKeyBillingApi.getOrder.mockReset();
+    mocks.apiKeyBillingApi.overview.mockRejectedValue(new Error("not enabled"));
     mocks.fetchPublicLogs.mockResolvedValue({
       items: [
         {
@@ -154,5 +170,155 @@ describe("ApiKeyUsagePage", () => {
     });
     expect(await screen.findByText("张军宝")).toBeInTheDocument();
     expect(screen.queryByTestId("apikey-usage-empty")).not.toBeInTheDocument();
+  });
+
+  test("shows subscription expiry banner, billing tab, plans, and payment history for a bound key", async () => {
+    const expiresIso = new Date(Date.now() + 34 * 24 * 3600 * 1000).toISOString();
+    mocks.apiKeyBillingApi.overview.mockResolvedValue({
+      enabled: true,
+      has_billing_info: true,
+      currency: "CNY",
+      channels: ["wechat"],
+      orders_count: 1,
+      target: {
+        binding_id: "bind-1",
+        target_kind: "api_key",
+        target_id: "key-1",
+        label: "曹俊涛",
+        key_masked: "sk-b****78o1",
+        expires_at: expiresIso,
+        lifetime_limit_usd: 0,
+        lifetime_used_usd: 100,
+        note: "续费自动顺延",
+        plans: [
+          {
+            id: "plan-1",
+            name: "codex 套餐1",
+            description: "包月续费",
+            kind: "subscription",
+            price_cents: 20400,
+            duration_days: 30,
+            quota_amount_usd: 0,
+            quota_requests: 0,
+            quota_tokens: 0,
+            rate_usd_per_cny: 0,
+            min_amount_cents: 0,
+            max_amount_cents: 0,
+            badge: "推荐",
+          },
+        ],
+      },
+    });
+    mocks.apiKeyBillingApi.listOrders.mockResolvedValue({
+      items: [
+        {
+          id: "ord-hist",
+          order_no: "ORD20261026120000MANUAL01",
+          tenant_id: "t1",
+          binding_id: "bind-1",
+          target_kind: "api_key",
+          target_id: "key-1",
+          target_label: "曹俊涛",
+          end_user_id: "u1",
+          plan_id: "plan-1",
+          plan_name: "codex 套餐1",
+          plan_kind: "subscription",
+          plan_snapshot: {
+            id: "plan-1",
+            tenant_id: "t1",
+            name: "codex 套餐1",
+            description: "",
+            kind: "subscription",
+            price_cents: 20400,
+            duration_days: 30,
+            quota_amount_usd: 0,
+            quota_requests: 0,
+            quota_tokens: 0,
+            rate_usd_per_cny: 0,
+            min_amount_cents: 0,
+            max_amount_cents: 0,
+            permission_profile_id: "",
+            badge: "",
+            sort_order: 0,
+            enabled: true,
+            created_at: "",
+            updated_at: "",
+          },
+          provider: "manual",
+          pay_channel: "manual",
+          amount_cents: 40000,
+          currency: "CNY",
+          status: "fulfilled",
+          fulfillment_summary: "历史线下收款补录（2个月）",
+          source: "admin_manual",
+          expires_at: "2026-10-26T04:00:00Z",
+          paid_at: "2026-10-26T04:00:00Z",
+          created_at: "2026-10-26T04:00:00Z",
+          updated_at: "2026-10-26T04:00:00Z",
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 30,
+      summary: {
+        today_amount_cents: 0,
+        month_amount_cents: 0,
+        total_amount_cents: 40000,
+        paid_count: 1,
+        pending_count: 0,
+        failed_count: 0,
+      },
+    });
+    mocks.apiKeyBillingApi.createOrder.mockResolvedValue({
+      id: "ord-new",
+      order_no: "ORD202611229999",
+      tenant_id: "t1",
+      binding_id: "bind-1",
+      target_kind: "api_key",
+      target_id: "key-1",
+      target_label: "曹俊涛",
+      end_user_id: "u1",
+      plan_id: "plan-1",
+      plan_name: "codex 套餐1",
+      plan_kind: "subscription",
+      plan_snapshot: {} as never,
+      provider: "xunhupay",
+      pay_channel: "wechat",
+      amount_cents: 20400,
+      currency: "CNY",
+      status: "pending",
+      qrcode_url: "https://api.xunhupay.com/qr.png",
+      pay_url: "https://api.xunhupay.com/pay/ORD202611229999",
+      source: "apikey_usage",
+      expires_at: new Date(Date.now() + 900_000).toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    window.localStorage.setItem(
+      "apiKeyUsage.lastApiKey.v1",
+      JSON.stringify({ apiKey: "sk-bound-key", name: "曹俊涛" }),
+    );
+    renderPage();
+
+    // Expiry banner and Billing tab appear immediately without leaving the usage page.
+    expect(await screen.findByTestId("apikey-usage-billing-banner")).toHaveTextContent(/剩余约 34 天/);
+    expect(screen.getByRole("tab", { name: "充值续费" })).toBeInTheDocument();
+
+    // Click shortcut button to enter Billing tab and view plans + historical payment records.
+    await userEvent.click(screen.getByRole("button", { name: /套餐与充值/ }));
+    expect(await screen.findByText("codex 套餐1")).toBeInTheDocument();
+    expect(await screen.findByText("ORD20261026120000MANUAL01")).toBeInTheDocument();
+    expect(screen.getByText("¥400.00")).toBeInTheDocument();
+
+    // Create a live checkout order and verify QR modal pops up.
+    await userEvent.click(screen.getByRole("button", { name: /立即支付 ¥204\.00/ }));
+    await waitFor(() => {
+      expect(mocks.apiKeyBillingApi.createOrder).toHaveBeenCalledWith("sk-bound-key", {
+        plan_id: "plan-1",
+        pay_channel: "wechat",
+      });
+    });
+    expect(await screen.findByText("扫码完成支付")).toBeInTheDocument();
   });
 });

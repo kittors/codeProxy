@@ -1,6 +1,6 @@
-import { Plus, RefreshCw } from "lucide-react";
+import { CalendarClock, Plus, RefreshCw } from "lucide-react";
 import type { EndUser, EndUserAPIKey } from "@code-proxy/api-client";
-import { Button, Card, surface } from "@code-proxy/ui";
+import { Button, Card, surface, type DataGridColumn } from "@code-proxy/ui";
 import { PolicyBadges, QuotaUsageCell, resettableWindows } from "@features/access-policy";
 import { OwnedApiKeysTable } from "@features/period-spending";
 import { PortalRecentSignIns } from "./PortalRecentSignIns";
@@ -34,6 +34,55 @@ export function ManageKeysTabContent({
   onEdit: (key: EndUserAPIKey) => void;
   onResetPeriodSpending: (key: EndUserAPIKey) => void;
 }) {
+  const hasAnyExpiry = keys.some((k) => Boolean(k.expires_at));
+  const extraColumns: DataGridColumn<EndUserAPIKey>[] = [];
+  if (accessPolicy) {
+    extraColumns.push({
+      id: "rules",
+      header: t("access_policy.col_model_policy"),
+      width: 160,
+      minWidth: 144,
+      overflowTooltip: false,
+      cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
+    });
+  }
+  if (hasAnyExpiry) {
+    extraColumns.push({
+      id: "expiry",
+      header: t("apikey_lookup.col_expiry"),
+      width: 144,
+      minWidth: 120,
+      overflowTooltip: false,
+      cell: (row) => {
+        if (!row.expires_at) {
+          return <span className="text-xs text-ink-3">{t("billing.no_expiry_limit")}</span>;
+        }
+        const ms = Date.parse(row.expires_at);
+        if (Number.isNaN(ms)) return null;
+        const diff = ms - Date.now();
+        const expired = diff <= 0;
+        const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
+        return (
+          <span
+            title={new Date(ms).toLocaleString()}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium tabular-nums ${
+              expired
+                ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
+                : diff <= 3 * 24 * 3600 * 1000
+                  ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                  : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+            }`}
+          >
+            <CalendarClock size={11} />
+            {expired
+              ? t("billing.expiry_expired")
+              : t("billing.expiry_remaining_days", { days })}
+          </span>
+        );
+      },
+    });
+  }
+
   // 「管理 API Key」页签就是页面本身（flat）：操作按钮、Key 表格直接落在页面上，最近登录是下面
   // 唯一的一张卡片。以前整页包在一张卡里，按钮行和表格之间再画一道分隔线。
   return (
@@ -87,20 +136,7 @@ export function ManageKeysTabContent({
           canResetQuota={
             accessPolicy ? (row) => resettableWindows(row["quota-limits"], row["model-rules"]).length > 0 : undefined
           }
-          extraColumns={
-            accessPolicy
-              ? [
-                  {
-                    id: "rules",
-                    header: t("access_policy.col_model_policy"),
-                    width: 160,
-                    minWidth: 144,
-                    overflowTooltip: false,
-                    cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
-                  },
-                ]
-              : undefined
-          }
+          extraColumns={extraColumns.length > 0 ? extraColumns : undefined}
           actions={{
             onRotate,
             onDelete,
