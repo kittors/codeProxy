@@ -43,6 +43,7 @@ import {
   formatExpiryRemaining,
   formatYuan,
 } from "@features/portal-billing";
+import { AdjustExpiryModal } from "./AdjustExpiryModal";
 
 interface BindingDraft {
   targetKind: BillingTargetKind;
@@ -104,6 +105,7 @@ export function BindingsTab({
   const [draft, setDraft] = useState<BindingDraft>(() => emptyBindingDraft());
   const [saving, setSaving] = useState(false);
   const [qrTarget, setQrTarget] = useState<BillingBinding | null>(null);
+  const [adjustTarget, setAdjustTarget] = useState<BillingBinding | null>(null);
   const [rotating, setRotating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BillingBinding | null>(null);
 
@@ -395,6 +397,14 @@ export function BindingsTab({
                       <td className="py-3 text-right">
                         {canWrite ? (
                           <div className="inline-flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setAdjustTarget(b)}
+                            >
+                              <CalendarClock size={13} />
+                              {t("billing_admin.adjust_expiry_btn")}
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => openEditBinding(b)}>
                               <Pencil size={14} />
                             </Button>
@@ -643,6 +653,12 @@ export function BindingsTab({
           </div>
         ) : null}
       </Modal>
+
+      <AdjustExpiryModal
+        target={adjustTarget}
+        onClose={() => setAdjustTarget(null)}
+        onSaved={onReload}
+      />
 
       <ConfirmModal
         open={Boolean(deleteTarget)}

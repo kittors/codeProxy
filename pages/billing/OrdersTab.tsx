@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   billingAdminApi,
+  type BillingManualExtendMode,
   type BillingOrder,
   type BillingOrderListResult,
   type BillingPlan,
@@ -60,6 +61,9 @@ export function OrdersTab({
   const [manualTargetId, setManualTargetId] = useState("");
   const [manualPlanId, setManualPlanId] = useState("");
   const [manualYuan, setManualYuan] = useState("");
+  const [manualPaidAtLocal, setManualPaidAtLocal] = useState("");
+  const [manualDurationDays, setManualDurationDays] = useState("");
+  const [manualExtendMode, setManualExtendMode] = useState<BillingManualExtendMode>("extend_current");
   const [manualNote, setManualNote] = useState("");
   const [creatingManual, setCreatingManual] = useState(false);
 
@@ -118,6 +122,13 @@ export function OrdersTab({
     setManualTargetId(firstTarget);
     setManualPlanId(firstPlan?.id ?? "");
     setManualYuan(firstPlan ? (firstPlan.price_cents / 100).toFixed(2) : "");
+    setManualPaidAtLocal("");
+    setManualDurationDays(
+      firstPlan?.kind === "subscription" && firstPlan.duration_days > 0
+        ? String(firstPlan.duration_days)
+        : "",
+    );
+    setManualExtendMode("extend_current");
     setManualNote("");
     setManualOpen(true);
   };
@@ -164,13 +175,18 @@ export function OrdersTab({
     if (!manualTargetId || !manualPlanId) return;
     setCreatingManual(true);
     try {
-      const cents = Math.round((Number.parseFloat(manualYuan) || 0) * 100);
+      const cents = Math.max(0, Math.round((Number.parseFloat(manualYuan) || 0) * 100));
+      const days = Number.parseInt(manualDurationDays, 10);
+      const paidAtIso = manualPaidAtLocal ? new Date(manualPaidAtLocal).toISOString() : undefined;
       await billingAdminApi.createManualOrder({
         target_kind: manualKind,
         target_id: manualTargetId,
         plan_id: manualPlanId,
         amount_cents: cents,
         custom_amount_cents: cents,
+        ...(paidAtIso ? { paid_at: paidAtIso } : {}),
+        ...(Number.isFinite(days) && days > 0 ? { duration_days: days } : {}),
+        extend_mode: manualExtendMode,
         note: manualNote.trim(),
       });
       setManualOpen(false);
@@ -457,7 +473,14 @@ export function OrdersTab({
               onChange={(pid) => {
                 setManualPlanId(pid);
                 const found = plans.find((p) => p.id === pid);
-                if (found) setManualYuan((found.price_cents / 100).toFixed(2));
+                if (found) {
+                  setManualYuan((found.price_cents / 100).toFixed(2));
+                  setManualDurationDays(
+                    found.kind === "subscription" && found.duration_days > 0
+                      ? String(found.duration_days)
+                      : "",
+                  );
+                }
               }}
               options={plans.map((p) => ({
                 value: p.id,
@@ -465,15 +488,54 @@ export function OrdersTab({
               }))}
             />
           </FormField>
-          <FormField label={t("billing_admin.manual_amount_label")}>
-            <TextInput
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={manualYuan}
-              onChange={(e) => setManualYuan(e.target.value)}
-            />
-          </FormField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label={t("billing_admin.manual_amount_label")}>
+              <TextInput
+                type="number"
+                step="0.01"
+                min="0"
+                value={manualYuan}
+                onChange={(e) => setManualYuan(e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label={t("billing_admin.manual_paid_at_label")}
+              description={t("billing_admin.manual_paid_at_desc")}
+            >
+              <TextInput
+                type="datetime-local"
+                value={manualPaidAtLocal}
+                onChange={(e) => setManualPaidAtLocal(e.target.value)}
+              />
+            </FormField>
+          </div>
+          {plans.find((p) => p.id === manualPlanId)?.kind === "subscription" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                label={t("billing_admin.manual_duration_days_label")}
+                description={t("billing_admin.manual_duration_days_desc")}
+              >
+                <TextInput
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={manualDurationDays}
+                  onChange={(e) => setManualDurationDays(e.target.value)}
+                />
+              </FormField>
+              <FormField label={t("billing_admin.manual_extend_mode_label")}>
+                <Select
+                  value={manualExtendMode}
+                  onChange={(v) => setManualExtendMode(v as BillingManualExtendMode)}
+                  options={[
+                    { value: "extend_current", label: t("billing_admin.extend_mode.extend_current") },
+                    { value: "from_paid_at", label: t("billing_admin.extend_mode.from_paid_at") },
+                    { value: "record_only", label: t("billing_admin.extend_mode.record_only") },
+                  ]}
+                />
+              </FormField>
+            </div>
+          ) : null}
           <FormField label={t("billing_admin.manual_note_label")}>
             <TextInput
               value={manualNote}

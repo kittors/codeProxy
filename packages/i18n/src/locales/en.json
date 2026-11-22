@@ -9300,6 +9300,30 @@
     "manual_order_created": "Manual order recorded and fulfilled",
     "configure_billing": "Billing & QR setup",
     "key_billing_col": "Expiry / Billing",
-    "key_qr_shortcut": "Pay QR"
+    "key_qr_shortcut": "Pay QR",
+    "adjust_expiry_btn": "Adjust duration",
+    "adjust_expiry_title": "Adjust Subscription Duration",
+    "current_expiry_line": "Current expiry: {{value}}",
+    "adjust_mode_days": "Add / subtract days",
+    "adjust_mode_exact": "Exact date & time",
+    "quick_extend_days": "Quick extend / shorten",
+    "custom_delta_days_label": "Custom days delta (positive to extend, negative to shorten)",
+    "custom_delta_days_desc": "Positive values extend from current expiry (if active) or from now.",
+    "exact_expiry_label": "Target expiration date & time",
+    "exact_expiry_desc": "Leaving empty clears expiration (never expires).",
+    "preview_new_expiry": "New expiration preview",
+    "confirm_adjust_expiry": "Apply duration",
+    "expiry_adjusted": "Subscription duration updated across cluster",
+    "expiry_adjust_failed": "Failed to adjust duration",
+    "manual_paid_at_label": "Actual payment time (optional)",
+    "manual_paid_at_desc": "Backdate historical offline payments; defaults to now.",
+    "manual_duration_days_label": "Effective days",
+    "manual_duration_days_desc": "Override plan days for this record (e.g. 61 for 2 months).",
+    "manual_extend_mode_label": "Expiry calculation",
+    "extend_mode": {
+      "extend_current": "Extend from current expiry",
+      "from_paid_at": "Start from payment date",
+      "record_only": "Ledger only (keep expiry unchanged)"
+    }
   }
 }

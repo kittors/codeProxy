@@ -197,6 +197,8 @@ export interface BillingCreateOrderInput {
   custom_amount_cents?: number;
 }
 
+export type BillingManualExtendMode = "extend_current" | "from_paid_at" | "record_only";
+
 export interface BillingManualOrderInput {
   target_kind: BillingTargetKind;
   target_id: string;
@@ -204,6 +206,23 @@ export interface BillingManualOrderInput {
   amount_cents?: number;
   custom_amount_cents?: number;
   note?: string;
+  paid_at?: string;
+  duration_days?: number;
+  extend_mode?: BillingManualExtendMode;
+}
+
+export interface BillingAdjustEntitlementInput {
+  target_kind: BillingTargetKind;
+  target_id: string;
+  mode: "set" | "add_days";
+  delta_days?: number;
+  expires_at?: string | null;
+}
+
+export interface BillingEntitlementView {
+  target_kind: BillingTargetKind;
+  target_id: string;
+  expires_at?: string | null;
 }
 
 export interface PortalBillingPlan {
@@ -275,6 +294,8 @@ export const billingAdminApi = {
   rotateBindingCode: (id: string) =>
     apiClient.post<BillingBinding>(`/billing/bindings/${encodeURIComponent(id)}/rotate-code`, {}),
   deleteBinding: (id: string) => apiClient.delete(`/billing/bindings/${encodeURIComponent(id)}`),
+  adjustEntitlement: (body: BillingAdjustEntitlementInput) =>
+    apiClient.patch<BillingEntitlementView>("/billing/entitlements", body),
   listOrders: (params?: {
     status?: string;
     search?: string;
