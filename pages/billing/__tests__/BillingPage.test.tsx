@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
     upsertBinding: vi.fn(),
     rotateBindingCode: vi.fn(),
     deleteBinding: vi.fn(),
+    adjustEntitlement: vi.fn(),
     listOrders: vi.fn(),
     syncOrder: vi.fn(),
     fulfillOrder: vi.fn(),
@@ -138,6 +139,11 @@ describe("BillingPage", () => {
     });
     mocks.billingAdminApi.listPlans.mockResolvedValue([PLAN]);
     mocks.billingAdminApi.listBindings.mockResolvedValue([BINDING]);
+    mocks.billingAdminApi.adjustEntitlement.mockResolvedValue({
+      target_kind: "api_key",
+      target_id: "key-1",
+      expires_at: "2027-01-25T15:59:59Z",
+    });
     mocks.billingAdminApi.listOrders.mockResolvedValue({
       items: [],
       total: 0,
@@ -208,9 +214,22 @@ describe("BillingPage", () => {
     expect(await screen.findByText("Standard Monthly")).toBeInTheDocument();
     expect(screen.getByText("¥30.00")).toBeInTheDocument();
 
-    // Switch to Bindings tab and open QR modal.
+    // Switch to Bindings tab and open QR modal + Adjust Duration modal.
     fireEvent.click(screen.getByRole("tab", { name: "Bindings & QR Codes" }));
     expect(await screen.findByText("Alice Key")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Adjust duration/i }));
+    expect(await screen.findByText("Adjust Subscription Duration")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /60d/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Apply duration/i }));
+    await waitFor(() => {
+      expect(mocks.billingAdminApi.adjustEntitlement).toHaveBeenCalledWith({
+        target_kind: "api_key",
+        target_id: "key-1",
+        mode: "add_days",
+        delta_days: 60,
+      });
+    });
+
     fireEvent.click(screen.getByRole("button", { name: /QR Code/i }));
     expect(await screen.findByText("Direct Payment QR Code")).toBeInTheDocument();
 

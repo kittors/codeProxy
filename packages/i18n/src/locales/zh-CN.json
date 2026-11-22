@@ -9235,6 +9235,30 @@
     "manual_order_created": "线下订单已录入并自动发放权益",
     "configure_billing": "支付与收款配置",
     "key_billing_col": "有效期 / 收款",
-    "key_qr_shortcut": "收款码"
+    "key_qr_shortcut": "收款码",
+    "adjust_expiry_btn": "调时长",
+    "adjust_expiry_title": "调整有效期时长",
+    "current_expiry_line": "当前到期时间：{{value}}",
+    "adjust_mode_days": "按天数加减",
+    "adjust_mode_exact": "指定精确日期",
+    "quick_extend_days": "快捷延长 / 缩短",
+    "custom_delta_days_label": "自定义增减天数（正数延长，负数缩短）",
+    "custom_delta_days_desc": "延长会在当前到期日（未到期）或今天（已过期/未设置）基础上叠加。",
+    "exact_expiry_label": "目标到期日期时间",
+    "exact_expiry_desc": "留空并保存等同于清除到期限制（长期有效）。",
+    "preview_new_expiry": "调整后新到期时间",
+    "confirm_adjust_expiry": "确认调整",
+    "expiry_adjusted": "有效期已调整并同步到集群节点",
+    "expiry_adjust_failed": "调整有效期失败",
+    "manual_paid_at_label": "实际付款时间（可选）",
+    "manual_paid_at_desc": "补录历史收款时填写，留空则按当前时间记账。",
+    "manual_duration_days_label": "本次生效天数",
+    "manual_duration_days_desc": "例如买了 2 个月可填 60 或 61 天。",
+    "manual_extend_mode_label": "时长生效方式",
+    "extend_mode": {
+      "extend_current": "从当前到期日顺延",
+      "from_paid_at": "从付款日期起算",
+      "record_only": "仅记账，不改到期时间"
+    }
   }
 }
