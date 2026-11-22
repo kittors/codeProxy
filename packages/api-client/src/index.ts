@@ -84,6 +84,13 @@ export type * from "./endpoints/access-freezes";
 
 export { configApi } from "./endpoints/config";
 export type * from "./endpoints/config";
+export {
+  billingAdminApi,
+  formatCnyCents,
+  portalBillingApi,
+  publicBillingApi,
+} from "./endpoints/billing";
+export type * from "./endpoints/billing";
 export { payloadRulesApi, readConfigCapabilities } from "./endpoints/payload-rules";
 export type * from "./endpoints/payload-rules";
 export { usageApi } from "./endpoints/usage";

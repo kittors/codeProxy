@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, ShieldCheck } from "lucide-react";
 import {
   NO_ACCESS_POLICY_CAPABILITIES,
@@ -68,6 +68,7 @@ export function EndUsersPage() {
   const { notify } = useToast();
   const { t, i18n } = useTranslation();
   const { can } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [masked, setMasked] = useSensitiveDataMasking();
   const [users, setUsers] = useState<EndUser[]>([]);
@@ -314,6 +315,12 @@ export function EndUsersPage() {
         accessFreezes: freezeEnabled ? accessFreezes.byEndUser : undefined,
         onViewAccessFreezes: freezeEnabled
           ? (user) => setFreezeSubject({ kind: "end_user", id: user.id, name: endUserLabel(user) })
+          : undefined,
+        onConfigureBilling: can("tenant_settings.read")
+          ? (user) =>
+              navigate(
+                `/access/billing?tab=bindings&target_kind=end_user&target_id=${encodeURIComponent(user.id)}`,
+              )
           : undefined,
         onViewUsage: viewUsage,
         onManageKeys: (user) => {
@@ -591,6 +598,14 @@ export function EndUsersPage() {
         user={keysUser}
         catalog={catalog}
         canWrite={canWrite || can("api_keys.write")}
+        onConfigureKeyBilling={
+          can("tenant_settings.read")
+            ? (key) =>
+                navigate(
+                  `/access/billing?tab=bindings&target_kind=api_key&target_id=${encodeURIComponent(key.id)}`,
+                )
+            : undefined
+        }
         onViewKeyUsage={(key, secret) => {
           setUsageLabel(key.key_masked || key.name || t("api_keys_page.unnamed"));
           usageView.openUsageView(

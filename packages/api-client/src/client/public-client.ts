@@ -32,6 +32,28 @@ export class PublicApiClient {
     return `${base}${MANAGEMENT_API_PREFIX}/public${normalizePublicPath(path)}`;
   }
 
+  async get<T>(path: string, options?: PublicRequestOptions): Promise<T> {
+    const url = this.buildUrl(path, options?.base);
+    const headers = new Headers(options?.headers);
+    const response = await fetch(url, {
+      method: "GET",
+      signal: options?.signal,
+      headers,
+    });
+    const payload = await parseJsonOrText(response);
+    if (!response.ok) {
+      throw new ApiClientError({
+        message: extractApiErrorMessage(payload, `Request failed (${response.status})`),
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        method: "GET",
+        data: payload ?? null,
+      });
+    }
+    return payload as T;
+  }
+
   async post<T>(path: string, body?: unknown, options?: PublicRequestOptions): Promise<T> {
     const url = this.buildUrl(path, options?.base);
     const headers = new Headers(options?.headers);

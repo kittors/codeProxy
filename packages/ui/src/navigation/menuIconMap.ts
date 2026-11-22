@@ -27,6 +27,7 @@ import {
   UserRound,
   UsersRound,
   Video,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +63,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "user-round": UserRound,
   "users-round": UsersRound,
   video: Video,
+  wallet: Wallet,
 };
 
 export function resolveMenuIcon(name: string | undefined | null): LucideIcon {

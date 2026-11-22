@@ -12,6 +12,7 @@ import {
   Snowflake,
   Trash2,
   Unlock,
+  Wallet,
 } from "lucide-react";
 import type { AccessFreeze, ApiKeyPermissionProfile, EndUser } from "@code-proxy/api-client";
 import {
@@ -66,6 +67,34 @@ const formatRelativeTime = (iso: string, locale: string): string => {
   return formatter.format(0, "minute");
 };
 
+function ExpiryTag({ expiresAt, t }: { expiresAt?: string | null; t: Translate }) {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime();
+  if (Number.isNaN(ms)) return null;
+  const diff = ms - Date.now();
+  const expired = diff <= 0;
+  const soon = !expired && diff <= 3 * 24 * 3600 * 1000;
+  const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
+  return (
+    <HoverTooltip content={new Date(ms).toLocaleString()}>
+      <span
+        className={cn(
+          "shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums",
+          expired
+            ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
+            : soon
+              ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
+              : NEUTRAL,
+        )}
+      >
+        {expired
+          ? t("billing.expiry_expired")
+          : t("billing.expiry_remaining_days", { days })}
+      </span>
+    </HoverTooltip>
+  );
+}
+
 function AccountCell({ row, masked, t }: { row: EndUser; masked: boolean; t: Translate }) {
   const displayName = masked ? maskSensitiveIdentity(row.display_name) : row.display_name;
   const username = masked ? maskSensitiveIdentity(row.username) : row.username;
@@ -89,7 +118,10 @@ function AccountCell({ row, masked, t }: { row: EndUser; masked: boolean; t: Tra
             {t("access_policy.key_count", { count: row.api_key_count ?? 0 })}
           </span>
         </div>
-        <div className="truncate text-xs text-ink-3">{username}</div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-xs text-ink-3">{username}</span>
+          <ExpiryTag expiresAt={row.expires_at} t={t} />
+        </div>
       </div>
     </div>
   );
@@ -169,6 +201,7 @@ export interface EndUserColumnsParams {
   accessFreezes?: ReadonlyMap<string, readonly AccessFreeze[]>;
   /** 打开某个账号的上游冻结详情；不传时没有这个入口。 */
   onViewAccessFreezes?: (user: EndUser) => void;
+  onConfigureBilling?: (user: EndUser) => void;
   onViewUsage: (user: EndUser) => void;
   onManageKeys: (user: EndUser) => void;
   onEdit: (user: EndUser) => void;
@@ -194,6 +227,7 @@ export function getEndUserColumns({
   profileById,
   accessFreezes,
   onViewAccessFreezes,
+  onConfigureBilling,
   onViewUsage,
   onManageKeys,
   onEdit,
@@ -370,6 +404,13 @@ export function getEndUserColumns({
                 icon: <Lock className="h-4 w-4" />,
                 visible: Boolean(onViewAccessFreezes),
                 onClick: () => onViewAccessFreezes?.(row),
+              },
+              {
+                key: "billing",
+                label: t("billing_admin.configure_billing"),
+                icon: <Wallet className="h-4 w-4" />,
+                visible: Boolean(onConfigureBilling),
+                onClick: () => onConfigureBilling?.(row),
               },
               {
                 key: "reset-password",

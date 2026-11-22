@@ -81,6 +81,8 @@ export interface EndUser {
   /** 总额度各格与每条规则当前的用量（列表接口填充）。 */
   "quota-usage"?: QuotaUsageView;
   "capped-cells"?: CappedCell[];
+  /** 付费订阅到期时间（ISO8601），未设置表示无到期限制。 */
+  expires_at?: string | null;
 }
 
 export type EndUserUpdateBody = {
@@ -157,6 +159,7 @@ export interface EndUserAPIKey {
   "quota-limits": QuotaMatrix;
   "model-rules": ModelRule[];
   "quota-usage"?: QuotaUsageView;
+  expires_at?: string | null;
 }
 
 export interface EndUserAPIKeyMutationBody {
@@ -409,6 +412,8 @@ export const portalApi = {
      * console's. An older backend does not, and the portal then neither offers it nor asks for it.
      */
     privacyMasking: boolean;
+    /** True when tenant billing is enabled and this account or one of its keys has an active plan binding. */
+    billingEnabled: boolean;
   }> => {
     const raw = await portalClient.get<unknown>("/v0/portal/auth/me");
     const record = isRecord(raw) ? raw : {};
@@ -417,6 +422,7 @@ export const portalApi = {
       capabilities: readAccessPolicyCapabilities(record.capabilities),
       wordPolicyAllowed: record.word_policy_allowed === true,
       privacyMasking: isRecord(record.capabilities) && record.capabilities["privacy-masking"] === true,
+      billingEnabled: record.billing_enabled === true,
     };
   },
   /**
