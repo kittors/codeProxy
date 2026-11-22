@@ -4775,7 +4775,8 @@
     "words_forbidden_title": "管理员未开放自定义敏感词",
     "words_forbidden_description": "你的账号现在不能设置敏感词。之前设置过的词已保留，但暂不生效；如需使用，请联系管理员开通。",
     "privacy_tab": "隐私脱敏",
-    "billing_tab": "充值续费"
+    "billing_tab": "充值续费",
+    "col_expiry": "服务有效期"
   },
   "config_page": {
     "save_warning_title": "确认高影响配置变更",
@@ -9072,6 +9073,9 @@
     "pay_success_title": "支付成功，权益已自动生效",
     "pay_success_toast": "支付成功，权益已即时到账",
     "my_orders_title": "我的支付记录",
+    "key_orders_title": "支付记录",
+    "key_banner_plans_available": "当前 API 密钥支持自助续费与充值（{{count}} 个可选方案）",
+    "view_plans_and_renew": "套餐与充值",
     "no_orders_title": "暂无支付订单",
     "no_orders_desc": "选择上方套餐完成扫码付款后，订单与到账明细会显示在这里。",
     "col_time": "时间",

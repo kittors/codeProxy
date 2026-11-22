@@ -4480,7 +4480,8 @@
     "words_forbidden_title": "Your administrator has not opened sensitive words to you",
     "words_forbidden_description": "Your account cannot set sensitive words right now. Words you set before are kept but not applied; ask your administrator if you need them.",
     "privacy_tab": "Privacy masking",
-    "billing_tab": "Billing & Top-up"
+    "billing_tab": "Billing & Top-up",
+    "col_expiry": "Validity"
   },
   "auth_files_page": {
     "files_tab": "Files",
@@ -9137,6 +9138,9 @@
     "pay_success_title": "Payment received and fulfilled",
     "pay_success_toast": "Payment confirmed and applied immediately",
     "my_orders_title": "My payment history",
+    "key_orders_title": "Payment history",
+    "key_banner_plans_available": "Self-service renewal & top-up available for this key ({{count}} plans)",
+    "view_plans_and_renew": "Plans & Top-up",
     "no_orders_title": "No payment orders yet",
     "no_orders_desc": "Once you purchase a plan above, your orders and fulfillment details will appear here.",
     "col_time": "Time",

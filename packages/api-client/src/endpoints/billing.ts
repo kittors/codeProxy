@@ -269,6 +269,15 @@ export interface PublicBillingPayInfo {
   target: PortalBillingTarget;
 }
 
+export interface APIKeyBillingOverview {
+  enabled: boolean;
+  has_billing_info: boolean;
+  currency: string;
+  channels: Array<"wechat" | "alipay">;
+  target: PortalBillingTarget;
+  orders_count: number;
+}
+
 export const formatCnyCents = (cents: number): string => `¥${(cents / 100).toFixed(2)}`;
 
 export const billingAdminApi = {
@@ -348,4 +357,29 @@ export const publicBillingApi = {
     publicApiClient.get<BillingOrder>(
       `/billing/pay/${encodeURIComponent(code)}/orders/${encodeURIComponent(orderNo)}${sync ? "?sync=1" : ""}`,
     ),
+};
+
+export const apiKeyBillingApi = {
+  overview: (apiKey: string) =>
+    publicApiClient.post<APIKeyBillingOverview>("/billing/key/overview", { api_key: apiKey }),
+  createOrder: (
+    apiKey: string,
+    body: { plan_id: string; pay_channel: "wechat" | "alipay"; custom_amount_cents?: number },
+  ) =>
+    publicApiClient.post<BillingOrder>("/billing/key/orders", {
+      api_key: apiKey,
+      ...body,
+    }),
+  listOrders: (apiKey: string, params?: { page?: number; size?: number }) =>
+    publicApiClient.post<BillingOrderListResult>("/billing/key/orders/list", {
+      api_key: apiKey,
+      page: params?.page ?? 1,
+      size: params?.size ?? 30,
+    }),
+  getOrder: (apiKey: string, orderNo: string, sync = false) =>
+    publicApiClient.post<BillingOrder>("/billing/key/orders/status", {
+      api_key: apiKey,
+      order_no: orderNo,
+      sync,
+    }),
 };

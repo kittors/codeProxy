@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Key, KeyRound, LogOut } from "lucide-react";
-import { isApiClientError } from "@code-proxy/api-client";
-import { Button } from "@code-proxy/ui";
-import { DropdownMenu } from "@code-proxy/ui";
-import { LanguageSelector } from "@code-proxy/ui";
-import { PageBackground } from "@code-proxy/ui";
-import { Reveal } from "@code-proxy/ui";
-import { ThemeToggleButton } from "@code-proxy/ui";
+import { CalendarClock, ChevronRight, Key, KeyRound, LogOut, Wallet } from "lucide-react";
+import {
+  apiKeyBillingApi,
+  isApiClientError,
+  type APIKeyBillingOverview,
+} from "@code-proxy/api-client";
+import { Button, DropdownMenu, LanguageSelector, PageBackground, PageLoader, Reveal, ThemeToggleButton, cn, surface } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
 import {
@@ -21,11 +20,15 @@ import { QuickImportTabContent } from "../api-key-lookup/components/QuickImportT
 import type { PublicLogItem, PublicQuotaScope, PublicUsageLimits } from "../api-key-lookup/types";
 import { ApiKeyUsageKeyModal } from "./ApiKeyUsageKeyModal";
 
+const KeyBillingPanel = lazy(() =>
+  import("@features/portal-billing").then((m) => ({ default: m.KeyBillingPanel })),
+);
+
 const DEFAULT_PAGE_SIZE = 50;
 // ponytail: plain localStorage key; no multi-account until users ask
 const LAST_API_KEY_STORAGE_KEY = "apiKeyUsage.lastApiKey.v1";
 
-type UsageTab = "logs" | "quickImport";
+type UsageTab = "logs" | "billing" | "quickImport";
 
 type StoredUsageKey = {
   apiKey: string;
@@ -158,14 +161,17 @@ export function ApiKeyUsagePage() {
 
   const [quotaLimits, setQuotaLimits] = useState<PublicUsageLimits | null>(null);
   const [quotaScopes, setQuotaScopes] = useState<PublicQuotaScope[]>([]);
+  const [billingOverview, setBillingOverview] = useState<APIKeyBillingOverview | null>(null);
   const summaryAbortControllerRef = useRef<AbortController | null>(null);
   const summaryFetchIdRef = useRef(0);
+  const billingFetchIdRef = useRef(0);
 
   const resetResults = useCallback(() => {
     abortControllerRef.current?.abort();
     summaryAbortControllerRef.current?.abort();
     fetchIdRef.current += 1;
     summaryFetchIdRef.current += 1;
+    billingFetchIdRef.current += 1;
     paginationInFlightRef.current = false;
     setLoading(false);
     setError(null);
@@ -178,7 +184,23 @@ export function ApiKeyUsagePage() {
     setApiKeyName("");
     setQuotaLimits(null);
     setQuotaScopes([]);
+    setBillingOverview(null);
   }, [logFilters.reset]);
+
+  const fetchBillingOverview = useCallback(async (apiKey: string) => {
+    const trimmed = apiKey.trim();
+    if (!trimmed) return;
+    const myId = ++billingFetchIdRef.current;
+    try {
+      const ov = await apiKeyBillingApi.overview(trimmed);
+      if (myId !== billingFetchIdRef.current) return;
+      setBillingOverview(ov);
+    } catch {
+      // Older backends without key-scoped billing return 404; degrade silently.
+      if (myId !== billingFetchIdRef.current) return;
+      setBillingOverview(null);
+    }
+  }, []);
 
   const fetchQuotaLimits = useCallback(async (apiKey: string) => {
     const trimmed = apiKey.trim();
@@ -251,6 +273,7 @@ export function ApiKeyUsagePage() {
         writeStoredUsageKey({ apiKey: trimmed, ...(nextName ? { name: nextName } : {}) });
         setKeyModalOpen(false);
         void fetchQuotaLimits(trimmed);
+        void fetchBillingOverview(trimmed);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (myFetchId !== fetchIdRef.current) return;
@@ -265,7 +288,7 @@ export function ApiKeyUsagePage() {
         if (myFetchId === fetchIdRef.current) setLoading(false);
       }
     },
-    [fetchQuotaLimits, logFilters.query, logFilters.readResponse, pageSize, t, timeRange],
+    [fetchBillingOverview, fetchQuotaLimits, logFilters.query, logFilters.readResponse, pageSize, t, timeRange],
   );
 
   const rows = useMemo(() => rawItems.map((item) => toLogRow(item)), [rawItems]);
@@ -333,8 +356,9 @@ export function ApiKeyUsagePage() {
     if (!bootstrap?.apiKey || restoredLookupFetchedRef.current) return;
     restoredLookupFetchedRef.current = true;
     void fetchQuotaLimits(bootstrap.apiKey);
+    void fetchBillingOverview(bootstrap.apiKey);
     fetchLogs(bootstrap.apiKey, 1);
-  }, [bootstrap, fetchLogs, fetchQuotaLimits]);
+  }, [bootstrap, fetchBillingOverview, fetchLogs, fetchQuotaLimits]);
 
   useEffect(() => {
     try {
@@ -353,6 +377,25 @@ export function ApiKeyUsagePage() {
       // ignore
     }
   }, []);
+
+  const showBillingTab = Boolean(
+    billingOverview && (billingOverview.enabled || billingOverview.has_billing_info),
+  );
+  const expiryMeta = useMemo(() => {
+    const iso = billingOverview?.target?.expires_at;
+    if (!iso) return null;
+    const ms = Date.parse(iso);
+    if (Number.isNaN(ms)) return null;
+    const diff = ms - Date.now();
+    const expired = diff <= 0;
+    const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
+    return {
+      expired,
+      soon: !expired && diff <= 3 * 24 * 3600 * 1000,
+      days,
+      formatted: new Date(ms).toLocaleString(),
+    };
+  }, [billingOverview]);
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
   const headerControlClass =
@@ -438,7 +481,9 @@ export function ApiKeyUsagePage() {
                 t={t}
                 activeTab={activeTab as ApiKeyLookupTab}
                 setActiveTab={(value) => {
-                  if (value === "logs" || value === "quickImport") setActiveTab(value);
+                  if (value === "logs" || value === "billing" || value === "quickImport") {
+                    setActiveTab(value);
+                  }
                 }}
                 timeRange={timeRange}
                 setTimeRange={setTimeRange}
@@ -448,8 +493,59 @@ export function ApiKeyUsagePage() {
                 modelsLoading={false}
                 quotaLimits={quotaLimits}
                 quotaScopes={quotaScopes}
-                tabs={["logs", "quickImport"]}
+                showBillingTab={showBillingTab}
+                tabs={showBillingTab ? ["logs", "billing", "quickImport"] : ["logs", "quickImport"]}
               />
+
+              {activeTab !== "billing" && (expiryMeta || billingOverview?.enabled) ? (
+                <div
+                  data-testid="apikey-usage-billing-banner"
+                  className={cn(
+                    surface({ tone: "card", radius: "2xl" }),
+                    "flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs",
+                    expiryMeta?.expired
+                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                      : expiryMeta?.soon
+                        ? "bg-amber-500/10 text-amber-800 dark:text-amber-300"
+                        : "text-ink-2",
+                  )}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    {expiryMeta ? (
+                      <>
+                        <CalendarClock size={15} className="shrink-0" />
+                        <span>
+                          {expiryMeta.expired
+                            ? t("billing.expiry_banner_expired", { date: expiryMeta.formatted })
+                            : t("billing.expiry_banner_active", {
+                                date: expiryMeta.formatted,
+                                days: expiryMeta.days,
+                              })}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Wallet size={15} className="shrink-0 text-accent" />
+                        <span>
+                          {t("billing.key_banner_plans_available", {
+                            count: billingOverview?.target.plans.length ?? 0,
+                          })}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {showBillingTab ? (
+                    <Button
+                      size="sm"
+                      variant={expiryMeta?.expired ? "primary" : "secondary"}
+                      onClick={() => setActiveTab("billing")}
+                    >
+                      <Wallet size={14} />
+                      {t("billing.view_plans_and_renew")}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
 
               {activeTab === "logs" ? (
                 <PublicLogsSection
@@ -465,6 +561,28 @@ export function ApiKeyUsagePage() {
                   onPageChange={handlePageChange}
                   onPageSizeChange={handlePageSizeChange}
                 />
+              ) : null}
+
+              {activeTab === "billing" && showBillingTab ? (
+                <Reveal>
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center py-16">
+                        <PageLoader variant="inline" text={t("common.loading")} />
+                      </div>
+                    }
+                  >
+                    <KeyBillingPanel
+                      apiKey={queriedKey}
+                      initialOverview={billingOverview}
+                      onOverviewUpdated={setBillingOverview}
+                      onOrderFulfilled={() => {
+                        void fetchBillingOverview(queriedKey);
+                        void fetchQuotaLimits(queriedKey);
+                      }}
+                    />
+                  </Suspense>
+                </Reveal>
               ) : null}
 
               {activeTab === "quickImport" ? (
