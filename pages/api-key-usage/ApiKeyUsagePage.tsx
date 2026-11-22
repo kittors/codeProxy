@@ -525,7 +525,7 @@ export function ApiKeyUsagePage() {
                       </>
                     ) : (
                       <>
-                        <Wallet size={15} className="shrink-0 text-accent" />
+                        <Wallet size={15} className="shrink-0 text-accent-ink" />
                         <span>
                           {t("billing.key_banner_plans_available", {
                             count: billingOverview?.target.plans.length ?? 0,

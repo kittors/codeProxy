@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, KeyRound, QrCode, RefreshCw, Wallet } from "lucide-react";
+import { CalendarClock, Info, KeyRound, QrCode, RefreshCw, Wallet } from "lucide-react";
 import {
   apiKeyBillingApi,
   type APIKeyBillingOverview,
@@ -131,7 +131,7 @@ export function KeyBillingPanel({
       <div className={`${surface({ tone: "card", radius: "2xl" })} space-y-3 p-4 sm:p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink">
               <KeyRound size={18} />
             </span>
             <div>
@@ -185,8 +185,9 @@ export function KeyBillingPanel({
         </div>
 
         {target.note ? (
-          <div className={`${surface({ tone: "inset", radius: "xl" })} px-3.5 py-2 text-xs text-ink-2`}>
-            {target.note}
+          <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-ink-3">
+            <Info size={14} className="shrink-0" />
+            <span>{target.note}</span>
           </div>
         ) : null}
       </div>

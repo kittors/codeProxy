@@ -304,6 +304,12 @@ describe("ApiKeyUsagePage", () => {
     // Expiry banner and Billing tab appear immediately without leaving the usage page.
     expect(await screen.findByTestId("apikey-usage-billing-banner")).toHaveTextContent(/剩余约 34 天/);
     expect(screen.getByRole("tab", { name: "充值续费" })).toBeInTheDocument();
+    const navTablist = screen.getAllByRole("tablist")[0];
+    expect(within(navTablist).getAllByRole("tab").map((el) => el.textContent)).toEqual([
+      "请求日志",
+      "充值续费",
+      "快捷导入",
+    ]);
 
     // Click shortcut button to enter Billing tab and view plans + historical payment records.
     await userEvent.click(screen.getByRole("button", { name: /套餐与充值/ }));

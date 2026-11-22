@@ -363,7 +363,7 @@ export function OrdersTab({
                         </span>
                       </td>
                       <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
-                        {new Date(o.created_at).toLocaleString()}
+                        {new Date(o.paid_at || o.created_at).toLocaleString()}
                       </td>
                       <td className="py-2.5 text-right">
                         {canWrite && o.status !== "fulfilled" && o.status !== "closed" ? (
