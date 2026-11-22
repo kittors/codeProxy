@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  Info,
   KeyRound,
   RefreshCw,
   UserRound,
@@ -104,7 +105,7 @@ export function PublicPayPage() {
         <div className="mx-auto max-w-3xl space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink">
                 <Wallet size={20} />
               </span>
               <div>
@@ -224,10 +225,9 @@ export function PublicPayPage() {
                 </div>
 
                 {target.note ? (
-                  <div
-                    className={`${surface({ tone: "inset", radius: "xl" })} px-3.5 py-2 text-xs text-ink-2`}
-                  >
-                    {target.note}
+                  <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-ink-3">
+                    <Info size={14} className="shrink-0" />
+                    <span>{target.note}</span>
                   </div>
                 ) : null}
               </div>

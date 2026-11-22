@@ -260,7 +260,7 @@ export function PlansTab({
                         : formatYuan(plan.price_cents)}
                     </span>
                     {plan.badge ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-accent/12 px-2 py-0.5 text-2xs font-medium text-accent">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-2xs font-medium text-accent-ink">
                         <Sparkles size={11} />
                         {plan.badge}
                       </span>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, KeyRound, QrCode, RefreshCw, UserRound, Wallet } from "lucide-react";
+import { CalendarClock, Info, KeyRound, QrCode, RefreshCw, UserRound, Wallet } from "lucide-react";
 import {
   portalBillingApi,
   type BillingOrder,
@@ -135,7 +135,7 @@ export function PortalBillingTab({
         <div className={`${surface({ tone: "card", radius: "2xl" })} space-y-3 p-4 sm:p-5`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink">
                 {currentTarget.target_kind === "api_key" ? (
                   <KeyRound size={18} />
                 ) : (
@@ -200,8 +200,9 @@ export function PortalBillingTab({
           </div>
 
           {currentTarget.note ? (
-            <div className={`${surface({ tone: "inset", radius: "xl" })} px-3.5 py-2 text-xs text-ink-2`}>
-              {currentTarget.note}
+            <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-ink-3">
+              <Info size={14} className="shrink-0" />
+              <span>{currentTarget.note}</span>
             </div>
           ) : null}
         </div>
@@ -242,7 +243,7 @@ export function PortalBillingTab({
                   return (
                     <tr key={order.id} className="text-ink-2">
                       <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
-                        {new Date(order.created_at).toLocaleString()}
+                        {new Date(order.paid_at || order.created_at).toLocaleString()}
                       </td>
                       <td className="py-2.5 pr-3 font-medium text-ink">{order.target_label}</td>
                       <td className="py-2.5 pr-3">

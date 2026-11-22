@@ -149,8 +149,19 @@ describe("PortalBillingTab", () => {
     fireEvent.change(amountInput, { target: { value: "20" } });
     expect(screen.getByText("+$10.00")).toBeInTheDocument();
 
-    // Switch back to Monthly Pro and submit order.
+    // Switch back to Monthly Pro, verify channel toggle styling/semantics, and submit order.
     fireEvent.click(screen.getByRole("button", { name: /Monthly Pro/i }));
+    const wechatBtn = screen.getByRole("button", { name: /WeChat Pay/i });
+    const alipayBtn = screen.getByRole("button", { name: /Alipay/i });
+    expect(wechatBtn).toHaveAttribute("aria-pressed", "true");
+    expect(alipayBtn).toHaveAttribute("aria-pressed", "false");
+    expect(wechatBtn.className).not.toContain("bg-accent text-white");
+    expect(wechatBtn.className).toContain("text-ink");
+    fireEvent.click(alipayBtn);
+    expect(alipayBtn).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(wechatBtn);
+    expect(wechatBtn).toHaveAttribute("aria-pressed", "true");
+
     fireEvent.click(screen.getByRole("button", { name: /Pay ¥29\.90/i }));
 
     await waitFor(() => {

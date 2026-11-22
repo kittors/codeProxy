@@ -58,7 +58,58 @@ export function LookupResultsToolbar({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [stuck, setStuck] = useState(false);
   const visibleTabs = tabs?.length ? tabs : DEFAULT_TABS;
-  const showTab = (tab: ApiKeyLookupTab) => visibleTabs.includes(tab);
+  const renderTabTrigger = (tab: ApiKeyLookupTab) => {
+    switch (tab) {
+      case "usage":
+        return (
+          <TabsTrigger key="usage" value="usage">
+            {t("apikey_lookup.usage_stats")}
+          </TabsTrigger>
+        );
+      case "keys":
+        return showKeysTab ? (
+          <TabsTrigger key="keys" value="keys">
+            {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
+          </TabsTrigger>
+        ) : null;
+      case "billing":
+        return showBillingTab ? (
+          <TabsTrigger key="billing" value="billing">
+            {t("apikey_lookup.billing_tab")}
+          </TabsTrigger>
+        ) : null;
+      case "words":
+        return showWordsTab ? (
+          <TabsTrigger key="words" value="words">
+            {t("apikey_lookup.words_tab")}
+          </TabsTrigger>
+        ) : null;
+      case "privacy":
+        return showPrivacyTab ? (
+          <TabsTrigger key="privacy" value="privacy">
+            {t("apikey_lookup.privacy_tab")}
+          </TabsTrigger>
+        ) : null;
+      case "logs":
+        return (
+          <TabsTrigger key="logs" value="logs">
+            {t("apikey_lookup.request_logs")}
+          </TabsTrigger>
+        );
+      case "models":
+        return (
+          <TabsTrigger key="models" value="models">
+            {t("model_plaza.title")}
+          </TabsTrigger>
+        );
+      case "quickImport":
+        return (
+          <TabsTrigger key="quickImport" value="quickImport">
+            {t("apikey_lookup.quick_import")}
+          </TabsTrigger>
+        );
+    }
+  };
   const logsQuotaItems =
     activeTab === "logs" ? buildQuotaKpiItems(t, quotaLimits, quotaScopes) : [];
 
@@ -113,34 +164,7 @@ export function LookupResultsToolbar({
             tone="brand"
             onValueChange={(value) => setActiveTab(value as typeof activeTab)}
           >
-            <TabsList>
-              {showTab("usage") ? (
-                <TabsTrigger value="usage">{t("apikey_lookup.usage_stats")}</TabsTrigger>
-              ) : null}
-              {showTab("keys") && showKeysTab ? (
-                <TabsTrigger value="keys">
-                  {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
-                </TabsTrigger>
-              ) : null}
-              {showTab("billing") && showBillingTab ? (
-                <TabsTrigger value="billing">{t("apikey_lookup.billing_tab")}</TabsTrigger>
-              ) : null}
-              {showTab("words") && showWordsTab ? (
-                <TabsTrigger value="words">{t("apikey_lookup.words_tab")}</TabsTrigger>
-              ) : null}
-              {showTab("privacy") && showPrivacyTab ? (
-                <TabsTrigger value="privacy">{t("apikey_lookup.privacy_tab")}</TabsTrigger>
-              ) : null}
-              {showTab("logs") ? (
-                <TabsTrigger value="logs">{t("apikey_lookup.request_logs")}</TabsTrigger>
-              ) : null}
-              {showTab("models") ? (
-                <TabsTrigger value="models">{t("model_plaza.title")}</TabsTrigger>
-              ) : null}
-              {showTab("quickImport") ? (
-                <TabsTrigger value="quickImport">{t("apikey_lookup.quick_import")}</TabsTrigger>
-              ) : null}
-            </TabsList>
+            <TabsList>{visibleTabs.map((tab) => renderTabTrigger(tab))}</TabsList>
           </Tabs>
           {activeTab === "usage" || activeTab === "logs" ? (
             <TimeRangeSelector value={timeRange} onChange={setTimeRange} tone="brand" />

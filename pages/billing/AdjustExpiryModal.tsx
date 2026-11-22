@@ -161,27 +161,29 @@ export function AdjustExpiryModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-track p-1">
             <button
               type="button"
+              aria-pressed={mode === "add_days"}
               onClick={() => setMode("add_days")}
               className={cn(
-                "rounded-xl px-3 py-2 text-xs font-medium transition",
+                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                 mode === "add_days"
-                  ? "bg-accent text-white shadow-xs"
-                  : "bg-ink/[0.05] text-ink-2 hover:bg-ink/[0.09] dark:bg-white/[0.07]",
+                  ? "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/[0.12] dark:shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
+                  : "text-ink-2 hover:text-ink",
               )}
             >
               {t("billing_admin.adjust_mode_days")}
             </button>
             <button
               type="button"
+              aria-pressed={mode === "set"}
               onClick={() => setMode("set")}
               className={cn(
-                "rounded-xl px-3 py-2 text-xs font-medium transition",
+                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                 mode === "set"
-                  ? "bg-accent text-white shadow-xs"
-                  : "bg-ink/[0.05] text-ink-2 hover:bg-ink/[0.09] dark:bg-white/[0.07]",
+                  ? "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/[0.12] dark:shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
+                  : "text-ink-2 hover:text-ink",
               )}
             >
               {t("billing_admin.adjust_mode_exact")}
