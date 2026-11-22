@@ -76,6 +76,8 @@ export interface ConfigCapabilities {
   privacyMasking: boolean;
   /** GET /cluster 给每个节点带资源快照：仪表盘的「服务器节点」。 */
   nodeMetrics: boolean;
+  /** 租户级支付与收款配置（/billing/*）。 */
+  billing: boolean;
 }
 
 export function readConfigCapabilities(
@@ -92,5 +94,6 @@ export function readConfigCapabilities(
     poolCapacity: capabilities["pool-capacity"] === true,
     privacyMasking: capabilities["privacy-masking"] === true,
     nodeMetrics: capabilities["node-metrics"] === true,
+    billing: capabilities["billing"] === true,
   };
 }

@@ -13,27 +13,52 @@ const PrivacyMaskingWorkspace = lazy(() =>
   })),
 );
 
+const PortalBillingTab = lazy(() =>
+  import("@features/portal-billing").then((module) => ({
+    default: module.PortalBillingTab,
+  })),
+);
+
 /**
- * 门户账号的两个自助标签：敏感词（自己设置）和隐私脱敏（只读）。都是一直挂着、只在当前标签时显示：
+ * 门户账号的自助标签：充值续费、敏感词（自己设置）和隐私脱敏（只读）。都是一直挂着、只在当前标签时显示：
  * 切到别的标签再回来，敏感词没保存的修改、脱敏列表看到的位置都还在。页面按账号给它 key，切换账号时
  * 整个换掉，不把上一个账号的草稿留下。
  *
- * 隐私脱敏第一次点开才挂上：概览每 15 秒刷新一次记录，不能让每个只看用量的门户用户都在后台查库；
- * 挂上之后切走也只是停下刷新。
+ * 隐私脱敏与充值续费第一次点开才挂上，避免只看用量的门户用户在后台发无关请求。
  */
 export function PortalSelfServiceTabs({
   activeTab,
   grants,
+  onOrderFulfilled,
 }: {
   activeTab: ApiKeyLookupTab;
   grants: PortalGrants;
+  onOrderFulfilled?: () => void;
 }) {
   const { t } = useTranslation();
   const [privacyOpened, setPrivacyOpened] = useState(false);
+  const [billingOpened, setBillingOpened] = useState(false);
   if (activeTab === "privacy" && grants.privacyMasking && !privacyOpened) setPrivacyOpened(true);
+  if (activeTab === "billing" && grants.billing && !billingOpened) setBillingOpened(true);
 
   return (
     <>
+      {grants.billing && billingOpened ? (
+        <div hidden={activeTab !== "billing"}>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-16">
+                <PageLoader variant="inline" text={t("common.loading")} />
+              </div>
+            }
+          >
+            <PortalBillingTab
+              active={activeTab === "billing"}
+              onOrderFulfilled={onOrderFulfilled}
+            />
+          </Suspense>
+        </div>
+      ) : null}
       {grants.words ? (
         <div hidden={activeTab !== "words"} className="flex flex-col md:min-h-0 md:flex-1">
           <PortalWordsTab />

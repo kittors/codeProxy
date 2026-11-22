@@ -69,7 +69,7 @@ describe("the portal's self-service tabs", () => {
   });
 
   test("privacy masking asks for nothing until its tab is opened, then stays mounted behind other tabs", async () => {
-    const grants: PortalGrants = { words: true, privacyMasking: true };
+    const grants: PortalGrants = { words: true, privacyMasking: true, billing: false };
     const view = render(ui("usage", grants));
     // 等可能发起的 import 都落定再数：脱敏界面就算提前挂上，lazy 加载完之前也不会发请求，
     // 渲染完当场数到 0 说明不了它没挂
@@ -96,7 +96,7 @@ describe("the portal's self-service tabs", () => {
   });
 
   test("an older backend gets no privacy masking at all", () => {
-    render(ui("privacy", { words: false, privacyMasking: false }));
+    render(ui("privacy", { words: false, privacyMasking: false, billing: false }));
     expect(screen.queryByRole("tab", { name: "Rules in effect" })).not.toBeInTheDocument();
     expect(screen.queryByText("sensitive words")).not.toBeInTheDocument();
     expect(asked()).toBe(0);

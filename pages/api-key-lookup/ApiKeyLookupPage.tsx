@@ -1016,34 +1016,28 @@ export function ApiKeyLookupPage() {
                 quotaLimits={quotaLimits}
                 quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
+                showBillingTab={Boolean(portalUser) && portalGrants.billing}
                 showWordsTab={Boolean(portalUser) && portalGrants.words}
                 showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking}
               />
 
               {activeTab === "usage" && usageReady ? (
                 <UsageTabSection
-                  t={t}
-                  timeRange={timeRange}
-                  chartStats={chartStats}
-                  chartLoading={chartLoading}
-                  quotaLimits={quotaLimits}
-                  quotaScopes={quotaScopes}
+                  t={t} timeRange={timeRange} chartStats={chartStats} chartLoading={chartLoading}
+                  quotaLimits={quotaLimits} quotaScopes={quotaScopes}
+                  expiresAt={portalUser?.expires_at}
+                  showBillingShortcut={Boolean(portalUser) && portalGrants.billing}
+                  onOpenBilling={() => setActiveTab("billing")}
                   showApiKeyDistribution={Boolean(portalUser)}
-                  apiKeyMetric={apiKeyMetric}
-                  setApiKeyMetric={setApiKeyMetric}
-                  apiKeyDistributionData={apiKeyDistributionData}
-                  apiKeyDistributionOption={apiKeyDistributionOption}
+                  apiKeyMetric={apiKeyMetric} setApiKeyMetric={setApiKeyMetric}
+                  apiKeyDistributionData={apiKeyDistributionData} apiKeyDistributionOption={apiKeyDistributionOption}
                   apiKeyDistributionLegend={apiKeyDistributionLegend}
-                  modelMetric={modelMetric}
-                  setModelMetric={setModelMetric}
-                  heatmapSeries={heatmapSeries}
-                  modelDistributionData={modelDistributionData}
+                  modelMetric={modelMetric} setModelMetric={setModelMetric}
+                  heatmapSeries={heatmapSeries} modelDistributionData={modelDistributionData}
                   modelDistributionOption={modelDistributionOption as Record<string, unknown>}
                   modelDistributionLegend={modelDistributionLegend}
-                  dailySeries={dailySeries}
-                  dailyTrendOption={dailyTrendOption as Record<string, unknown>}
-                  dailyLegendAvailability={dailyLegendAvailability}
-                  dailyLegendSelected={dailyLegendSelected}
+                  dailySeries={dailySeries} dailyTrendOption={dailyTrendOption as Record<string, unknown>}
+                  dailyLegendAvailability={dailyLegendAvailability} dailyLegendSelected={dailyLegendSelected}
                   toggleDailyLegend={toggleDailyLegend}
                 />
               ) : null}
@@ -1081,7 +1075,7 @@ export function ApiKeyLookupPage() {
                 </Reveal>
               ) : null}
 
-              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} /> : null}
+              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} onOrderFulfilled={() => { void hydratePortalSession(); if (usageSubject) void fetchQuotaLimits(usageSubject); }} /> : null}
 
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection

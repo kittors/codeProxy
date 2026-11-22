@@ -6,14 +6,14 @@ import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import type { PublicQuotaScope, PublicUsageLimits } from "../types";
 import { buildQuotaKpiItems } from "./QuotaLimitsBanner";
 
-export type ApiKeyLookupTab = "usage" | "keys" | "words" | "privacy" | "logs" | "models" | "quickImport";
+export type ApiKeyLookupTab = "usage" | "keys" | "billing" | "words" | "privacy" | "logs" | "models" | "quickImport";
 
 /** sticky top-3 = 0.75rem */
 const STICKY_TOP_OFFSET_PX = 12;
 /** 亚像素容差，避免临界抖动 */
 const STUCK_EPSILON_PX = 1;
 
-const DEFAULT_TABS: ApiKeyLookupTab[] = ["usage", "keys", "words", "privacy", "logs", "models", "quickImport"];
+const DEFAULT_TABS: ApiKeyLookupTab[] = ["usage", "keys", "billing", "words", "privacy", "logs", "models", "quickImport"];
 
 export function LookupResultsToolbar({
   t,
@@ -28,6 +28,7 @@ export function LookupResultsToolbar({
   quotaLimits,
   quotaScopes,
   showKeysTab = false,
+  showBillingTab = false,
   showWordsTab = false,
   showPrivacyTab = false,
   tabs,
@@ -45,6 +46,8 @@ export function LookupResultsToolbar({
   quotaScopes?: PublicQuotaScope[] | null;
   /** Portal login: show “管理 API Key” as the 2nd tab. */
   showKeysTab?: boolean;
+  /** Portal login when tenant billing is enabled: show self-service recharge & renewal tab. */
+  showBillingTab?: boolean;
   /** Portal login whose tenant lets the account keep sensitive words of its own. */
   showWordsTab?: boolean;
   /** Portal login on a backend with portal privacy masking (read-only for every account). */
@@ -119,6 +122,9 @@ export function LookupResultsToolbar({
                   {t("apikey_lookup.manage_keys", { defaultValue: "管理 API Key" })}
                 </TabsTrigger>
               ) : null}
+              {showTab("billing") && showBillingTab ? (
+                <TabsTrigger value="billing">{t("apikey_lookup.billing_tab")}</TabsTrigger>
+              ) : null}
               {showTab("words") && showWordsTab ? (
                 <TabsTrigger value="words">{t("apikey_lookup.words_tab")}</TabsTrigger>
               ) : null}
@@ -158,10 +164,10 @@ export function LookupResultsToolbar({
             </div>
           ) : null}
         </div>
-        {/* 敏感词、隐私脱敏标签有自己的保存与刷新；这里的刷新会打断草稿，不放。 */}
+        {/* 敏感词、隐私脱敏、充值续费标签有自己的保存与刷新；这里的刷新会打断草稿，不放。 */}
         <div
           className={
-            activeTab === "words" || activeTab === "privacy"
+            activeTab === "words" || activeTab === "privacy" || activeTab === "billing"
               ? "hidden"
               : activeTab === "keys"
                 ? "hidden items-center gap-2 sm:flex"

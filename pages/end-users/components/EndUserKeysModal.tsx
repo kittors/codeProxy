@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Plus, RefreshCw, RotateCw, Trash2 } from "lucide-react";
+import { CalendarClock, KeyRound, Plus, QrCode, RefreshCw, RotateCw, Trash2 } from "lucide-react";
 import {
   endUsersApi,
   quotaMatrixEquals,
@@ -54,6 +54,7 @@ export function EndUserKeysModal({
   catalog,
   canWrite,
   onViewKeyUsage,
+  onConfigureKeyBilling,
   onClose,
 }: {
   user: EndUser | null;
@@ -61,6 +62,8 @@ export function EndUserKeysModal({
   canWrite: boolean;
   /** 打开一把 Key 的用量统计（父组件持有用量弹窗）。 */
   onViewKeyUsage: (key: EndUserAPIKey, secret: string) => void;
+  /** 可选：跳转到支付与收款页为单把 Key 配置付费套餐/收款码。 */
+  onConfigureKeyBilling?: (key: EndUserAPIKey) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -88,22 +91,64 @@ export function EndUserKeysModal({
     void copyTextToClipboard(plain).catch(() => undefined);
   };
 
-  const keyColumns = useMemo<DataGridColumn<EndUserAPIKey>[]>(
-    () =>
-      policyCaps
-        ? [
-            {
-              id: "rules",
-              header: t("access_policy.col_model_policy"),
-              width: 160,
-              minWidth: 144,
-              overflowTooltip: false,
-              cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
-            },
-          ]
-        : [],
-    [policyCaps, t],
-  );
+  const keyColumns = useMemo<DataGridColumn<EndUserAPIKey>[]>(() => {
+    const cols: DataGridColumn<EndUserAPIKey>[] = [];
+    if (policyCaps) {
+      cols.push({
+        id: "rules",
+        header: t("access_policy.col_model_policy"),
+        width: 160,
+        minWidth: 144,
+        overflowTooltip: false,
+        cell: (row) => <PolicyBadges rules={row["model-rules"]} usage={row["quota-usage"]} />,
+      });
+    }
+    if (onConfigureKeyBilling) {
+      cols.push({
+        id: "billing",
+        header: t("billing_admin.key_billing_col"),
+        width: 136,
+        minWidth: 120,
+        overflowTooltip: false,
+        cell: (row) => {
+          const expMs = row.expires_at ? new Date(row.expires_at).getTime() : Number.NaN;
+          const hasExpiry = !Number.isNaN(expMs);
+          const expired = hasExpiry && expMs <= Date.now();
+          return (
+            <div className="flex flex-col items-start gap-1">
+              {hasExpiry ? (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums ${
+                    expired
+                      ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
+                      : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+                  }`}
+                  title={new Date(expMs).toLocaleString()}
+                >
+                  <CalendarClock size={11} />
+                  {expired
+                    ? t("billing.expiry_expired")
+                    : new Date(expMs).toLocaleDateString()}
+                </span>
+              ) : null}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  onClose();
+                  onConfigureKeyBilling(row);
+                }}
+              >
+                <QrCode size={13} />
+                {t("billing_admin.key_qr_shortcut")}
+              </Button>
+            </div>
+          );
+        },
+      });
+    }
+    return cols;
+  }, [onClose, onConfigureKeyBilling, policyCaps, t]);
 
   const submitKey = async (value: KeyPolicyValue) => {
     if (!user || !editor) return;

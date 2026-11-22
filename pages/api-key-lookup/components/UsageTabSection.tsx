@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
-import { Activity, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
-import { AnimatedNumber, ScrollFade } from "@code-proxy/ui";
+import { Activity, CalendarClock, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
+import { AnimatedNumber, Button, ScrollFade, cn, surface } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
@@ -213,6 +213,9 @@ export function UsageTabSection({
   chartLoading,
   quotaLimits,
   quotaScopes,
+  expiresAt,
+  showBillingShortcut,
+  onOpenBilling,
   showApiKeyDistribution,
   apiKeyMetric,
   setApiKeyMetric,
@@ -245,6 +248,9 @@ export function UsageTabSection({
   chartLoading: boolean;
   quotaLimits?: PublicUsageLimits | null;
   quotaScopes?: PublicQuotaScope[] | null;
+  expiresAt?: string | null;
+  showBillingShortcut?: boolean;
+  onOpenBilling?: () => void;
   showApiKeyDistribution: boolean;
   apiKeyMetric: "requests" | "tokens";
   setApiKeyMetric: (value: "requests" | "tokens") => void;
@@ -285,9 +291,54 @@ export function UsageTabSection({
   const showInitialLoading = chartLoading && !chartStats;
   const renderKpiValue = (value: ReactNode) => (showInitialLoading ? <KpiValueSkeleton /> : value);
 
+  const expiryMeta = useMemo(() => {
+    if (!expiresAt) return null;
+    const ms = new Date(expiresAt).getTime();
+    if (Number.isNaN(ms)) return null;
+    const diff = ms - Date.now();
+    const expired = diff <= 0;
+    const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
+    return {
+      expired,
+      soon: !expired && diff <= 3 * 24 * 3600 * 1000,
+      days,
+      formatted: new Date(ms).toLocaleString(),
+    };
+  }, [expiresAt]);
+
   return (
     <Reveal>
       <div className="space-y-5">
+        {expiryMeta ? (
+          <div
+            className={cn(
+              surface({ tone: "card", radius: "2xl" }),
+              "flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs",
+              expiryMeta.expired
+                ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                : expiryMeta.soon
+                  ? "bg-amber-500/10 text-amber-800 dark:text-amber-300"
+                  : "text-ink-2",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <CalendarClock size={15} className="shrink-0" />
+              <span>
+                {expiryMeta.expired
+                  ? t("billing.expiry_banner_expired", { date: expiryMeta.formatted })
+                  : t("billing.expiry_banner_active", {
+                      date: expiryMeta.formatted,
+                      days: expiryMeta.days,
+                    })}
+              </span>
+            </div>
+            {showBillingShortcut && onOpenBilling ? (
+              <Button size="sm" variant={expiryMeta.expired ? "primary" : "secondary"} onClick={onOpenBilling}>
+                {t("billing.go_recharge")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <QuotaLimitKpiCards
             t={t}
