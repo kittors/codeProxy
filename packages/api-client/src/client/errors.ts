@@ -29,6 +29,31 @@ export const truncateErrorText = (text: string): string => {
 };
 
 /**
+ * Detects an HTML error page (e.g. Cloudflare 502/503/504 or nginx error document)
+ * so API clients never dump raw markup into user-facing toasts.
+ */
+export const isHtmlDocument = (contentType: string, text: string): boolean => {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const startsLikeHtml = /^<!doctype html\b|^<html[\s>]/i.test(trimmed);
+  if (contentType.toLowerCase().includes("text/html")) {
+    return startsLikeHtml;
+  }
+  return startsLikeHtml;
+};
+
+export const buildHtmlErrorMessage = (
+  response: Pick<Response, "status" | "statusText">,
+  label = "Service",
+): string => {
+  const status = response.status || 0;
+  const suffix = response.statusText?.trim()
+    ? `${status} ${response.statusText.trim()}`
+    : String(status);
+  return `${label} temporarily returned an HTML error page (${suffix}).`;
+};
+
+/**
  * Reads the flat `{"error": "<code>", "message": "<reason>"}` body several CliRelay
  * management handlers answer with (PUT /config.yaml's invalid_yaml / invalid_config,
  * the update and Vertex import handlers) as "code: reason". The string `error` alone

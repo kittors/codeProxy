@@ -157,7 +157,7 @@ function ToastItem({
           {record.title}
         </p>
         {hasDescription ? (
-          <div className="mt-1 text-sm leading-5 break-words whitespace-pre-line opacity-75 [overflow-wrap:anywhere]">
+          <div className="mt-1 max-h-40 overflow-y-auto text-sm leading-5 break-words whitespace-pre-line opacity-75 [overflow-wrap:anywhere]">
             {record.description}
           </div>
         ) : null}

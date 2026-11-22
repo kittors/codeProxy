@@ -1,7 +1,13 @@
 import { detectApiBaseFromLocation, normalizeApiBase, REQUEST_TIMEOUT_MS } from "./constants";
 
 export { detectApiBaseFromLocation };
-import { ApiClientError, extractApiErrorMessage } from "./errors";
+import {
+  ApiClientError,
+  buildHtmlErrorMessage,
+  extractApiErrorMessage,
+  isHtmlDocument,
+  truncateErrorText,
+} from "./errors";
 import { classifyRefreshStatus } from "./refresh-classify";
 
 export const PORTAL_AUTH_STORAGE_KEY = "code-proxy-portal-auth";
@@ -357,8 +363,28 @@ export class PortalApiClient {
         if (ok) return this.request<T>(method, path, body, true, options);
       }
       if (response.status === 204) return undefined as T;
-      const payload = await parseJsonOrText(response);
+      const text = await response.text();
+      const trimmed = text.trim();
+      const isHtml = isHtmlDocument(response.headers.get("Content-Type") ?? "", trimmed);
       if (!response.ok) {
+        if (isHtml) {
+          throw new ApiClientError({
+            message: buildHtmlErrorMessage(response),
+            status: response.status,
+            statusText: response.statusText,
+            url: this.url(path),
+            method,
+            data: truncateErrorText(trimmed),
+          });
+        }
+        let payload: unknown = undefined;
+        if (trimmed) {
+          try {
+            payload = JSON.parse(trimmed) as unknown;
+          } catch {
+            payload = trimmed;
+          }
+        }
         throw new ApiClientError({
           message: extractApiErrorMessage(payload, `Request failed (${response.status})`),
           status: response.status,
@@ -368,7 +394,22 @@ export class PortalApiClient {
           data: payload ?? null,
         });
       }
-      return payload as T;
+      if (!trimmed) return undefined as T;
+      if (isHtml) {
+        throw new ApiClientError({
+          message: "Service returned an HTML page instead of JSON.",
+          status: response.status,
+          statusText: response.statusText,
+          url: this.url(path),
+          method,
+          data: truncateErrorText(trimmed),
+        });
+      }
+      try {
+        return JSON.parse(trimmed) as T;
+      } catch {
+        return trimmed as T;
+      }
     } finally {
       globalThis.clearTimeout(timer);
       options?.signal?.removeEventListener("abort", abortFromCaller);

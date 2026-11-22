@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ApiClient } from "@code-proxy/api-client";
 import { extractApiErrorMessage } from "../errors";
+import { PortalApiClient } from "../portal-client";
+import { PublicApiClient } from "../public-client";
 
 const FALLBACK = "Request failed (422)";
 
@@ -125,6 +127,34 @@ describe("ApiClient error messages", () => {
       message: 'invalid_config: duplicate channel group "team-a"',
       payload: body,
       isAuthError: false,
+    });
+  });
+
+  test("PublicApiClient and PortalApiClient never dump raw Cloudflare 502 HTML into error messages", async () => {
+    const html = "<!DOCTYPE html><html><head><title>502: Bad gateway</title></head><body>cf</body></html>";
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        new Response(html, {
+          status: 502,
+          statusText: "Bad Gateway",
+          headers: { "Content-Type": "text/html; charset=UTF-8" },
+        }),
+    );
+
+    const pub = new PublicApiClient();
+    await expect(
+      pub.post("/billing/key/orders", { api_key: "sk-1" }, { base: "https://code.example.test" }),
+    ).rejects.toMatchObject({
+      name: "ApiClientError",
+      status: 502,
+      message: "Service temporarily returned an HTML error page (502 Bad Gateway).",
+    });
+
+    const portal = new PortalApiClient();
+    await expect(portal.post("/v0/portal/billing/orders", {})).rejects.toMatchObject({
+      name: "ApiClientError",
+      status: 502,
+      message: "Service temporarily returned an HTML error page (502 Bad Gateway).",
     });
   });
 });
