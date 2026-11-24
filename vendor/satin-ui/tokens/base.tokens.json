@@ -1,0 +1,929 @@
+{
+  "$description": "和主题无关的令牌：字体、缓动、圆角、间距刻度和语义间距、按下手感；以及浅色值写在 :root 上的几个组件令牌",
+  "color": {
+    "table": {
+      "selectionRing": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.accent} 45%, transparent)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--sel-ring",
+            "source": "kit.css"
+          }
+        },
+        "$description": "可文字编辑单元格的柔和修改框选"
+      },
+      "rangeLine": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.accent} 52%, transparent)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--range-line",
+            "source": "kit.css"
+          }
+        },
+        "$description": "多格合并范围框选的柔和边框"
+      },
+      "guideLine": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.text.primary} 48%, transparent)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--guide-line",
+            "source": "kit.css"
+          }
+        },
+        "$description": "对齐参考线"
+      },
+      "treeLine": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.text.primary} 12%, transparent)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--tree-line",
+            "source": "kit.css"
+          }
+        },
+        "$description": "树形缩进线"
+      }
+    },
+    "menu": {
+      "bg": {
+        "$type": "color",
+        "$value": "{color.bg.overlay}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--menu-bg",
+            "source": "form.css"
+          }
+        },
+        "$description": "菜单底色"
+      }
+    },
+    "skeleton": {
+      "shine": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .75)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sk-shine",
+            "source": "feedback.css"
+          }
+        },
+        "$description": "骨架屏扫光"
+      }
+    },
+    "scrollbar": {
+      "thumb": {
+        "$type": "color",
+        "$value": "rgba(0, 0, 0, .26)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sa-thumb",
+            "source": "scroll.css"
+          }
+        },
+        "$description": "滚动条滑块"
+      },
+      "thumbHover": {
+        "$type": "color",
+        "$value": "rgba(0, 0, 0, .44)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sa-thumb-hover",
+            "source": "scroll.css"
+          }
+        },
+        "$description": "滚动条滑块（悬停）"
+      }
+    },
+    "flow": {
+      "dot": {
+        "$type": "color",
+        "$value": "rgba(0, 0, 0, .12)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--flow-dot",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图画布网格点"
+      }
+    }
+  },
+  "shadow": {
+    "lift": {
+      "$type": "shadow",
+      "$value": "inset 0 0 0 1px {color.line.control}, 0 12px 28px -10px rgba(0, 0, 0, .26), 0 2px 6px -2px rgba(0, 0, 0, .1)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--lift-shadow",
+          "source": "kit.css"
+        }
+      },
+      "$description": "拖起来的东西：一圈细边 + 很淡的落影"
+    },
+    "menu": {
+      "$type": "shadow",
+      "$value": "0 18px 34px rgba(0, 0, 0, .12), 0 2px 4px rgba(0, 0, 0, .05), 0 0 0 1px rgba(0, 0, 0, .06), inset 0 1px 0 rgba(255, 255, 255, .74)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--menu-shadow",
+          "source": "form.css"
+        }
+      },
+      "$description": "菜单阴影"
+    }
+  },
+  "font": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "PingFang SC",
+          "Helvetica Neue",
+          "Microsoft YaHei",
+          "sans-serif"
+        ],
+        "$extensions": {
+          "com.satin": {
+            "quoted": [
+              false,
+              false,
+              true,
+              true,
+              true,
+              true,
+              false
+            ],
+            "var": "--sans",
+            "source": "kit.css"
+          }
+        },
+        "$description": "正文字体（系统字体栈，中文回退苹方 / 微软雅黑）"
+      },
+      "mono": {
+        "$type": "fontFamily",
+        "$value": [
+          "SF Mono",
+          "ui-monospace",
+          "Menlo",
+          "Cascadia Mono",
+          "Consolas",
+          "monospace"
+        ],
+        "$extensions": {
+          "com.satin": {
+            "quoted": [
+              true,
+              false,
+              false,
+              true,
+              false,
+              false
+            ],
+            "var": "--mono",
+            "source": "kit.css"
+          }
+        },
+        "$description": "等宽字体（代码、数字）"
+      },
+      "serif": {
+        "$type": "fontFamily",
+        "$value": [
+          "Songti SC",
+          "STSong",
+          "Noto Serif SC",
+          "serif"
+        ],
+        "$extensions": {
+          "com.satin": {
+            "quoted": [
+              true,
+              true,
+              true,
+              false
+            ],
+            "var": "--serif",
+            "source": "kit.css"
+          }
+        },
+        "$description": "衬线字体（长文阅读）"
+      }
+    }
+  },
+  "motion": {
+    "easing": {
+      "linear": {
+        "$type": "cubicBezier",
+        "$value": "linear",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--ease-linear",
+            "source": "kit.css"
+          }
+        },
+        "$description": "线性（只给进度这类匀速的）"
+      },
+      "out": {
+        "$type": "cubicBezier",
+        "$value": [
+          0,
+          0,
+          0.58,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-out",
+            "source": "kit.css"
+          }
+        },
+        "$description": "默认的减速曲线：大多数出现、移动"
+      },
+      "outStrong": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.22,
+          1,
+          0.36,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-out-strong",
+            "source": "kit.css"
+          }
+        },
+        "$description": "更快到位的减速：小元素弹出"
+      },
+      "in": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.42,
+          0,
+          1,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-in",
+            "source": "kit.css"
+          }
+        },
+        "$description": "加速：离开、消失"
+      },
+      "inOut": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.42,
+          0,
+          0.58,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-in-out",
+            "source": "kit.css"
+          }
+        },
+        "$description": "两头慢：在屏幕上来回移动"
+      },
+      "overshoot": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.34,
+          1.56,
+          0.64,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-overshoot",
+            "source": "kit.css"
+          }
+        },
+        "$description": "带一点回弹：对勾、开关"
+      },
+      "spring": {
+        "$type": "cubicBezier",
+        "$value": "linear(0, .32, .78, 1.04, 1.09, 1.06, 1.02, 1, .99, .99, 1)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--ease-spring",
+            "source": "kit.css"
+          }
+        },
+        "$description": "弹簧：拖拽松手归位"
+      },
+      "open": {
+        "$type": "cubicBezier",
+        "$value": [
+          0.32,
+          0.72,
+          0,
+          1
+        ],
+        "$extensions": {
+          "com.satin": {
+            "var": "--ease-open",
+            "source": "kit.css"
+          }
+        },
+        "$description": "展开 / 抽屉 / 侧栏开合"
+      }
+    },
+    "press": {
+      "text": {
+        "$type": "number",
+        "$value": 0.97,
+        "$extensions": {
+          "com.satin": {
+            "var": "--press",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "按钮按下时缩到的比例"
+      },
+      "icon": {
+        "$type": "number",
+        "$value": 0.92,
+        "$extensions": {
+          "com.satin": {
+            "var": "--press-icon",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "图标按钮按下时缩到的比例"
+      }
+    },
+    "scale": {
+      "$type": "number",
+      "$value": 1,
+      "$extensions": {
+        "com.satin": {
+          "var": "--motion-scale",
+          "source": "base.css"
+        }
+      },
+      "$description": "全局动效节奏倍率：1 标准，0.55 干脆，0 零过渡"
+    },
+    "duration": {
+      "fast": {
+        "$type": "duration",
+        "$value": "calc(120ms * {motion.scale})",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--dur-fast",
+            "source": "base.css"
+          }
+        },
+        "$description": "即时反馈时长（悬停、按下、微态切换）"
+      },
+      "base": {
+        "$type": "duration",
+        "$value": "calc(200ms * {motion.scale})",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--dur-base",
+            "source": "base.css"
+          }
+        },
+        "$description": "小型进出时长（提示、浮层、微动效显影）"
+      },
+      "slow": {
+        "$type": "duration",
+        "$value": "calc(320ms * {motion.scale})",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--dur-slow",
+            "source": "base.css"
+          }
+        },
+        "$description": "中型容器展开时长（抽屉、对话框、卡片展开）"
+      }
+    }
+  },
+  "border": {
+    "width": {
+      "hairline": {
+        "$type": "dimension",
+        "$value": "1px",
+        "$extensions": {
+          "com.satin": {
+            "var": "--bw-hairline",
+            "source": "base.css"
+          }
+        },
+        "$description": "常规分割线、表格网格线、卡片细描边"
+      },
+      "control": {
+        "$type": "dimension",
+        "$value": "1px",
+        "$extensions": {
+          "com.satin": {
+            "var": "--bw-ctrl",
+            "source": "base.css"
+          }
+        },
+        "$description": "输入框、次要按钮与选择器描边"
+      },
+      "focus": {
+        "$type": "dimension",
+        "$value": "2px",
+        "$extensions": {
+          "com.satin": {
+            "var": "--bw-focus",
+            "source": "base.css"
+          }
+        },
+        "$description": "键盘焦点环粗细"
+      },
+      "accent": {
+        "$type": "dimension",
+        "$value": "2px",
+        "$extensions": {
+          "com.satin": {
+            "var": "--bw-accent",
+            "source": "base.css"
+          }
+        },
+        "$description": "拉引线、思考导引线、侧边刻度指示线粗细"
+      }
+    }
+  },
+  "blur": {
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--blur-sm",
+          "source": "base.css"
+        }
+      },
+      "$description": "轻虚化：悬浮图注标签、小型毛玻璃徽标"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--blur-md",
+          "source": "base.css"
+        }
+      },
+      "$description": "标准虚化：吸顶顶栏、浮层卡片、对话侧边浮窗"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "24px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--blur-lg",
+          "source": "base.css"
+        }
+      },
+      "$description": "深虚化：全幅媒体控制栏、沉浸式遮罩浮层"
+    }
+  },
+  "radius": {
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-xs",
+          "source": "kit.css"
+        }
+      },
+      "$description": "圆角 4：标签、徽标"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "6px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-sm",
+          "source": "kit.css"
+        }
+      },
+      "$description": "圆角 6：小按钮、输入框内元素"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-md",
+          "source": "kit.css"
+        }
+      },
+      "$description": "圆角 8：输入框、菜单项"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-lg",
+          "source": "kit.css"
+        }
+      },
+      "$description": "圆角 12：卡片、表格、面板"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-xl",
+          "source": "kit.css"
+        }
+      },
+      "$description": "圆角 16：弹窗、大面板"
+    },
+    "full": {
+      "$type": "dimension",
+      "$value": "9999px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--r-full",
+          "source": "kit.css"
+        }
+      },
+      "$description": "整圆：头像、胶囊"
+    },
+    "button": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--btn-r",
+          "source": "buttons.css"
+        }
+      },
+      "$description": "按钮圆角（跟着 data-radius 档：6 / 8 / 10 / 胶囊，默认胶囊）"
+    }
+  },
+  "space": {
+    "0": {
+      "$type": "dimension",
+      "$value": "0px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-0",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 0px（刻度：4 的倍数为主）"
+    },
+    "2": {
+      "$type": "dimension",
+      "$value": "2px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-2",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 2px（刻度：4 的倍数为主）"
+    },
+    "4": {
+      "$type": "dimension",
+      "$value": "4px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-4",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 4px（刻度：4 的倍数为主）"
+    },
+    "6": {
+      "$type": "dimension",
+      "$value": "6px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-6",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 6px（刻度：4 的倍数为主）"
+    },
+    "8": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-8",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 8px（刻度：4 的倍数为主）"
+    },
+    "10": {
+      "$type": "dimension",
+      "$value": "10px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-10",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 10px（刻度：4 的倍数为主）"
+    },
+    "12": {
+      "$type": "dimension",
+      "$value": "12px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-12",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 12px（刻度：4 的倍数为主）"
+    },
+    "14": {
+      "$type": "dimension",
+      "$value": "14px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-14",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 14px（刻度：4 的倍数为主）"
+    },
+    "16": {
+      "$type": "dimension",
+      "$value": "16px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-16",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 16px（刻度：4 的倍数为主）"
+    },
+    "20": {
+      "$type": "dimension",
+      "$value": "20px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-20",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 20px（刻度：4 的倍数为主）"
+    },
+    "24": {
+      "$type": "dimension",
+      "$value": "24px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-24",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 24px（刻度：4 的倍数为主）"
+    },
+    "28": {
+      "$type": "dimension",
+      "$value": "28px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-28",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 28px（刻度：4 的倍数为主）"
+    },
+    "32": {
+      "$type": "dimension",
+      "$value": "32px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-32",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 32px（刻度：4 的倍数为主）"
+    },
+    "40": {
+      "$type": "dimension",
+      "$value": "40px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-40",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 40px（刻度：4 的倍数为主）"
+    },
+    "48": {
+      "$type": "dimension",
+      "$value": "48px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-48",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 48px（刻度：4 的倍数为主）"
+    },
+    "64": {
+      "$type": "dimension",
+      "$value": "64px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-64",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 64px（刻度：4 的倍数为主）"
+    },
+    "80": {
+      "$type": "dimension",
+      "$value": "80px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--sp-80",
+          "source": "kit.css"
+        }
+      },
+      "$description": "间距 80px（刻度：4 的倍数为主）"
+    },
+    "gap": {
+      "tight": {
+        "$type": "dimension",
+        "$value": "{space.4}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-tight",
+            "source": "kit.css"
+          }
+        },
+        "$description": "最紧的间距：图标和文字"
+      },
+      "inline": {
+        "$type": "dimension",
+        "$value": "{space.8}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-inline",
+            "source": "kit.css"
+          }
+        },
+        "$description": "同一行元素之间"
+      },
+      "stack": {
+        "$type": "dimension",
+        "$value": "{space.12}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-stack",
+            "source": "kit.css"
+          }
+        },
+        "$description": "上下相邻的小块之间"
+      },
+      "group": {
+        "$type": "dimension",
+        "$value": "{space.16}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-group",
+            "source": "kit.css"
+          }
+        },
+        "$description": "一组和一组之间"
+      },
+      "section": {
+        "$type": "dimension",
+        "$value": "{space.32}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-section",
+            "source": "kit.css"
+          }
+        },
+        "$description": "页面大块之间"
+      }
+    },
+    "pad": {
+      "card": {
+        "$type": "dimension",
+        "$value": "{space.16}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-card",
+            "source": "kit.css"
+          }
+        },
+        "$description": "卡片内边距"
+      },
+      "panel": {
+        "$type": "dimension",
+        "$value": "{space.24}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-panel",
+            "source": "kit.css"
+          }
+        },
+        "$description": "面板内边距"
+      },
+      "page": {
+        "$type": "dimension",
+        "$value": "{space.32}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-page",
+            "source": "kit.css"
+          }
+        },
+        "$description": "页面内边距"
+      }
+    }
+  },
+  "flow": {
+    "edge": {
+      "saturation": {
+        "$type": "number",
+        "$value": "58%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--edge-s",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（饱和度）"
+      },
+      "lightness": {
+        "$type": "number",
+        "$value": "52%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--edge-l",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（明度）"
+      },
+      "alpha": {
+        "$type": "number",
+        "$value": 0.62,
+        "$extensions": {
+          "com.satin": {
+            "var": "--edge-a",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（透明度）"
+      }
+    },
+    "beam": {
+      "saturation": {
+        "$type": "number",
+        "$value": "85%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--beam-s",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图光束（饱和度）"
+      },
+      "lightness": {
+        "$type": "number",
+        "$value": "70%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--beam-l",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图光束（明度）"
+      }
+    }
+  }
+}

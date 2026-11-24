@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check, RefreshCw } from "lucide-react";
-import { Button, useScrollFade } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { Button, Checkbox, TextInput, useScrollFade } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 interface OpenAIModelDiscoveryPanelProps {
@@ -181,11 +180,9 @@ export function OpenAIModelDiscoveryPanel({
                     }}
                   >
                     <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-xs font-mono text-ink-2 transition-colors hover:bg-hover">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={checked}
-                        onChange={() => handleCheckboxChange(model.id)}
-                        className="h-3.5 w-3.5 shrink-0 accent-accent"
+                        onCheckedChange={() => handleCheckboxChange(model.id)}
                       />
                       <span className="truncate">{model.id}</span>
                     </label>

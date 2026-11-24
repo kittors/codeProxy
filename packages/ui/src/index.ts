@@ -218,6 +218,7 @@ export {
   popoverEnterTransition,
   popoverExitTransition,
 } from "./utils/motion";
+export { useSatinFluidThumb } from "./utils/satinMotion";
 
 export { FormSection } from "./forms/FormSection";
 export { SettingGroup, SettingRow } from "./forms/SettingRow";

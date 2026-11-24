@@ -16,7 +16,7 @@ export function ChartLegend({
 }) {
   return (
     <div
-      className={["flex flex-wrap items-center justify-center gap-2", className]
+      className={["flex flex-wrap items-center justify-center gap-1.5", className]
         .filter(Boolean)
         .join(" ")}
     >
@@ -27,14 +27,15 @@ export function ChartLegend({
           aria-pressed={item.enabled}
           onClick={() => item.onToggle(item.key)}
           className={[
-            "inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-colors hover:bg-hover",
-            // 关闭的序列整体压淡（色点一起），并划线，表示「已从图上隐藏」。
-            item.enabled ? "text-ink-2" : "text-ink-3 line-through opacity-50",
+            "sn-btn sn-ghost sn-xs sn-round !h-7 !px-2.5 !text-xs",
+            item.enabled
+              ? "text-[var(--sn-label2)]"
+              : "text-[var(--sn-label3)] line-through opacity-50",
           ].join(" ")}
         >
           <span
             className={[
-              "h-2.5 w-2.5 rounded-full ring-1 ring-black/5 dark:ring-white/10",
+              "h-2 w-2 rounded-full ring-1 ring-black/5 dark:ring-white/10",
               item.colorClass,
             ]
               .filter(Boolean)

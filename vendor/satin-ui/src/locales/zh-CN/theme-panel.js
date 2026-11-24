@@ -1,0 +1,27 @@
+// zh-CN · theme-panel
+export default {
+  "theme-panel.0": "主色",
+  "theme-panel.1": "自定义颜色",
+  "theme-panel.2": "自定义主色",
+  "theme-panel.3": "状态色",
+  "theme-panel.4": "成功",
+  "theme-panel.5": "警告",
+  "theme-panel.6": "危险",
+  "theme-panel.7": "字体",
+  "theme-panel.8": "字号",
+  "theme-panel.9": "圆角",
+  "theme-panel.10": "恢复默认",
+  "theme-panel.11": "线条质感",
+  "theme-panel.12": "过渡节奏",
+  "theme-panel.13": "饱和度与明度",
+  "theme-panel.14": "色相",
+  "theme-panel.15": "十六进制色值",
+  "theme-panel.16": "吸管取色",
+  "theme-panel.17": "精选色板",
+  "theme-panel.18": "还原",
+  "theme-panel.19": "关闭取色器",
+  "theme-panel.20": "成功色",
+  "theme-panel.21": "警告色",
+  "theme-panel.22": "危险色",
+  "theme-panel.23": "已自动适配对比度"
+};

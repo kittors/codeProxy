@@ -57,6 +57,86 @@ if (typeof window !== "undefined") {
   if (!Element.prototype.releasePointerCapture) {
     Element.prototype.releasePointerCapture = () => undefined;
   }
+
+  // jsdom 缺少 Web Animations API、CSS.escape 与原生 <dialog> showModal/close：
+  // Satin 组件的微动效（NumberFlow / initSeg / Toast / Dialog）在测试里走立即完成态。
+  if (typeof Element !== "undefined" && !Element.prototype.animate) {
+    Element.prototype.animate = (() => {
+      const anim: {
+        onfinish: (() => void) | null;
+        oncancel: (() => void) | null;
+        finished: Promise<void>;
+        cancel: () => void;
+        finish: () => void;
+        pause: () => void;
+        play: () => void;
+      } = {
+        onfinish: null,
+        oncancel: null,
+        finished: Promise.resolve(),
+        cancel() {
+          this.oncancel?.();
+        },
+        finish() {
+          this.onfinish?.();
+        },
+        pause() {},
+        play() {},
+      };
+      queueMicrotask(() => {
+        anim.onfinish?.();
+      });
+      return anim as unknown as Animation;
+    }) as typeof Element.prototype.animate;
+  }
+
+  if (typeof Element !== "undefined" && !Element.prototype.getAnimations) {
+    Element.prototype.getAnimations = () => [];
+  }
+
+  if (typeof HTMLDialogElement !== "undefined") {
+    if (!HTMLDialogElement.prototype.showModal) {
+      HTMLDialogElement.prototype.showModal = function showModal() {
+        this.setAttribute("open", "");
+      };
+    }
+    if (!HTMLDialogElement.prototype.close) {
+      HTMLDialogElement.prototype.close = function close(returnValue?: string) {
+        if (returnValue !== undefined) this.returnValue = returnValue;
+        this.removeAttribute("open");
+        this.dispatchEvent(new Event("close"));
+      };
+    }
+  }
+
+  if (typeof HTMLElement !== "undefined") {
+    if (!("showPopover" in HTMLElement.prototype)) {
+      (HTMLElement.prototype as unknown as { showPopover: () => void }).showPopover =
+        function showPopover(this: HTMLElement) {
+          this.setAttribute("data-popover-open", "true");
+        };
+    }
+    if (!("hidePopover" in HTMLElement.prototype)) {
+      (HTMLElement.prototype as unknown as { hidePopover: () => void }).hidePopover =
+        function hidePopover(this: HTMLElement) {
+          this.removeAttribute("data-popover-open");
+        };
+    }
+  }
+
+  if (typeof globalThis.CSS === "undefined") {
+    (globalThis as unknown as { CSS: { escape: (value: string) => string; supports: () => boolean } }).CSS = {
+      escape: (value: string) => String(value).replace(/([^\w-])/g, "\\$1"),
+      supports: () => false,
+    };
+  } else {
+    if (typeof globalThis.CSS.escape !== "function") {
+      globalThis.CSS.escape = (value: string) => String(value).replace(/([^\w-])/g, "\\$1");
+    }
+    if (typeof globalThis.CSS.supports !== "function") {
+      globalThis.CSS.supports = () => false;
+    }
+  }
 }
 
 // jsdom 不实现 IntersectionObserver。framer-motion 的 whileInView 会直接 new 它，
@@ -93,6 +173,23 @@ if (typeof globalThis !== "undefined" && !(globalThis as any).ResizeObserver) {
     }
     disconnect() {
       // noop
+    }
+  };
+}
+
+if (typeof globalThis !== "undefined" && !(globalThis as any).DOMMatrixReadOnly) {
+  (globalThis as any).DOMMatrixReadOnly = class DOMMatrixReadOnly {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+    constructor(init?: string | number[]) {
+      if (typeof init === "string") {
+        const match = init.match(/translateY\(([-\d.]+)/);
+        if (match) this.f = Number(match[1]) || 0;
+      }
     }
   };
 }

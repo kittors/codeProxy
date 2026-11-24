@@ -1,19 +1,12 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Pipette } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { ACCENT_PRESETS, accentFill, cn, useTheme } from "@code-proxy/ui";
 
-/*
- * 外观页的几个小控件：强调色色板、状态色取色器、带读数的滑杆。只在外观页用，不进 ui 包。
- *
- * 取色用浏览器原生的 <input type="color">：各平台都有系统取色板，还自带吸管，比自己画一个
- * 色盘可靠；它只认 #rrggbb，正好和外观设置存的格式一致。
- */
-
 const SWATCH_RING =
-  "shadow-[0_0_0_2px_var(--cp-surface),0_0_0_4px_var(--cp-accent)] dark:shadow-[0_0_0_2px_var(--cp-surface),0_0_0_4px_var(--cp-accent-ink)]";
+  "shadow-[0_0_0_2px_var(--sn-overlay),0_0_0_4px_var(--sn-accent)]";
 
-/** 强调色：预设色块 + 自选颜色。墨色的色块一半黑一半白，表示它在深浅模式下反转。 */
+/** Satin 强调色色板：预设色点（.sn-th-dot 按压缩放）+ 自选色。 */
 export function AccentPicker({
   value,
   onChange,
@@ -48,7 +41,7 @@ export function AccentPicker({
             title={label}
             onClick={() => onChange(preset.id)}
             className={cn(
-              "grid size-7 place-items-center rounded-full transition-[box-shadow,scale] duration-150 ease-soft active:scale-90",
+              "grid size-7 place-items-center rounded-full transition-[box-shadow,scale] duration-150 ease-[var(--sn-ease-out)] active:scale-90",
               selected
                 ? SWATCH_RING
                 : "shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16)]",
@@ -63,10 +56,9 @@ export function AccentPicker({
             }}
           >
             {selected ? (
-              <Check
+              <Icon
+                name="check"
                 size={13}
-                strokeWidth={3}
-                aria-hidden="true"
                 className="text-white drop-shadow-[0_0_1.5px_rgb(0_0_0/0.85)]"
               />
             ) : null}
@@ -77,7 +69,7 @@ export function AccentPicker({
         htmlFor={customId}
         title={t("appearance.accent_custom")}
         className={cn(
-          "relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full transition-[box-shadow] duration-150",
+          "relative grid size-7 cursor-pointer place-items-center overflow-hidden rounded-full transition-[box-shadow,scale] duration-150 active:scale-90",
           custom
             ? SWATCH_RING
             : "shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16)]",
@@ -91,9 +83,9 @@ export function AccentPicker({
               }
         }
       >
-        <Pipette
+        <Icon
+          name="droplet"
           size={13}
-          aria-hidden="true"
           className="text-white drop-shadow-[0_1px_1px_rgb(0_0_0/0.4)]"
         />
         <input
@@ -109,7 +101,7 @@ export function AccentPicker({
   );
 }
 
-/** 状态色：当前颜色的色块（点开系统取色板）+ 十六进制读数。 */
+/** 状态色：Satin 色点 + 十六进制等宽读数。 */
 export function StatusColorInput({
   value,
   label,
@@ -121,13 +113,15 @@ export function StatusColorInput({
 }) {
   const id = useId();
   return (
-    <label htmlFor={id} className="inline-flex cursor-pointer items-center gap-2.5">
+    <label htmlFor={id} className="sn-th-pick inline-flex cursor-pointer items-center gap-2.5">
       <span
         aria-hidden="true"
         className="relative size-7 shrink-0 overflow-hidden rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.16)]"
         style={{ background: value }}
       />
-      <span className="font-mono text-xs text-ink-2 uppercase tabular-nums">{value}</span>
+      <span className="font-mono text-xs text-[var(--sn-label2)] uppercase tabular-nums">
+        {value}
+      </span>
       <input
         id={id}
         type="color"
@@ -140,7 +134,12 @@ export function StatusColorInput({
   );
 }
 
-/** 滑杆 + 右侧读数。原生 range：键盘、读屏、触屏都现成可用，颜色跟随强调色。 */
+/**
+ * 基于 Satin `.sn-slider` 的精准滑块：
+ * - 视觉完全由 Satin `.sn-rail` / `.sn-fillbar` / `.sn-knob` / `.sn-bubble` 绘制，
+ *   悬停旋钮轻放大 1.12×、拖动放大 1.25× 并弹出反色读数气泡；
+ * - 内部叠加透明原生 `<input type="range">` 承载完整键盘步进、无障碍与自动测试 `.fill()` 语义。
+ */
 export function RangeControl({
   value,
   min,
@@ -160,22 +159,47 @@ export function RangeControl({
   disabled?: boolean;
   onChange: (value: number) => void;
 }) {
+  const [dragging, setDragging] = useState(false);
+
+  const percent = max > min ? Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100)) : 0;
+  const formatted = format(value);
+
   return (
     <div className={cn("flex w-full items-center gap-3", disabled ? "opacity-50" : null)}>
-      <input
-        type="range"
-        aria-label={label}
-        aria-valuetext={format(value)}
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="h-1.5 min-w-0 flex-1 cursor-pointer accent-[var(--cp-accent)] disabled:cursor-not-allowed"
-      />
-      <span className="w-12 shrink-0 text-right text-sm font-medium text-ink tabular-nums">
-        {format(value)}
+      <div
+        className={cn(
+          "sn-slider relative !w-auto min-w-0 flex-1 has-[:focus-visible]:rounded-full has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--sn-ring)]",
+          dragging ? "sn-drag" : null,
+          disabled ? "cursor-not-allowed" : null,
+        )}
+      >
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          aria-label={label}
+          aria-valuetext={formatted}
+          onChange={(event) => onChange(Number(event.target.value))}
+          onPointerDown={() => {
+            if (!disabled) setDragging(true);
+          }}
+          onPointerUp={() => setDragging(false)}
+          onPointerCancel={() => setDragging(false)}
+          onBlur={() => setDragging(false)}
+          className="absolute inset-0 z-10 m-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+        />
+        <span className="sn-rail pointer-events-none" />
+        <span className="sn-fillbar pointer-events-none" style={{ width: `${percent}%` }} />
+        <span className="sn-knob pointer-events-none" style={{ left: `${percent}%` }} />
+        <span className="sn-bubble pointer-events-none" style={{ left: `${percent}%` }}>
+          {formatted}
+        </span>
+      </div>
+      <span className="w-12 shrink-0 text-right text-sm font-medium text-[var(--sn-label)] tabular-nums">
+        {formatted}
       </span>
     </div>
   );

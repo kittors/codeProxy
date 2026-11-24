@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CircleCheck, FileWarning, OctagonAlert } from "lucide-react";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
-import { Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Button, Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import { MeterBar, meterTone } from "@features/monitor-widgets/monitorVisuals";
 import {
@@ -189,13 +189,14 @@ export function FailureCard({
                         {failure.latency_ms > 0 ? formatMonitorDuration(failure.latency_ms) : "—"}
                       </span>
                       {canViewDetail ? (
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="xs"
                           onClick={() => setDetail({ id: failure.id, model: failure.model })}
-                          className="shrink-0 rounded-full px-2 py-1 font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+                          className="shrink-0"
                         >
                           {t("monitor_center.failures.view_detail")}
-                        </button>
+                        </Button>
                       ) : null}
                     </li>
                   ))}

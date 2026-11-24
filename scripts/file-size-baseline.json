@@ -9,7 +9,7 @@
     "pages/api-keys/ApiKeysPage.tsx": 1024,
     "pages/auth-files/AuthFilesPage.tsx": 1011,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 1715,
-    "pages/auth-files/components/AuthFilesFilesTab.tsx": 1664,
+    "pages/auth-files/components/AuthFilesFilesTab.tsx": 1635,
     "pages/auth-files/hooks/useAuthFilesDetailEditors.ts": 1321,
     "pages/auth-files/hooks/useAuthFilesStatusState.ts": 1292,
     "pages/identity-fingerprint/IdentityFingerprintPage.tsx": 2020,

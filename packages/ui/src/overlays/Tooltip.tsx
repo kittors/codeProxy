@@ -286,10 +286,9 @@ export function TooltipBubble({
       role="tooltip"
       className={[
         interactive ? "pointer-events-auto select-text" : "pointer-events-none",
-        // 只淡入显得硬；补 2px 上浮与轻微放大后，提示读起来是「浮出来」而不是「闪出来」。
-        // 深色实心气泡（深色模式反转成浅色）：和页面上的白卡片拉开最大反差，一眼就知道是临时提示。
-        "w-max max-w-[calc(100vw-2rem)] rounded-xl bg-ink px-3 py-1.5 text-sm leading-snug text-canvas shadow-[0_8px_20px_-6px_rgb(0_0_0/0.28)] sm:max-w-md",
-        "transition-[opacity,transform] duration-150 ease-soft motion-reduce:transition-none",
+        // 与 Satin 全局 .sn-tip 同一套反色材质、圆角和浮出物理节奏。
+        "w-max max-w-[calc(100vw-2rem)] rounded-lg bg-[var(--sn-tip-bg)] px-2.5 py-1.5 text-xs leading-snug text-[var(--sn-tip-fg)] shadow-[0_6px_18px_rgb(0_0_0/0.22)] sm:max-w-md",
+        "transition-[opacity,transform] duration-150 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none",
       ].join(" ")}
       style={style}
       onMouseEnter={onMouseEnter}

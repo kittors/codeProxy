@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Infinity as InfinityIcon, Minus, Plus } from "lucide-react";
 import { billingAdminApi, type BillingBinding } from "@code-proxy/api-client";
-import { Button, FormField, Modal, TextInput, cn, surface, useToast } from "@code-proxy/ui";
+import { Button, FormField, Modal, SegmentedControl, TextInput, surface, useToast } from "@code-proxy/ui";
 import { formatExpiryRemaining } from "@features/portal-billing";
 
 const QUICK_ADD_DAYS = [7, 15, 30, 60, 90, 180, 365] as const;
@@ -161,34 +161,17 @@ export function AdjustExpiryModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-1 rounded-full bg-track p-1">
-            <button
-              type="button"
-              aria-pressed={mode === "add_days"}
-              onClick={() => setMode("add_days")}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                mode === "add_days"
-                  ? "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/[0.12] dark:shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
-                  : "text-ink-2 hover:text-ink",
-              )}
-            >
-              {t("billing_admin.adjust_mode_days")}
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "set"}
-              onClick={() => setMode("set")}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                mode === "set"
-                  ? "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)] dark:bg-white/[0.12] dark:shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
-                  : "text-ink-2 hover:text-ink",
-              )}
-            >
-              {t("billing_admin.adjust_mode_exact")}
-            </button>
-          </div>
+          <SegmentedControl
+            size="sm"
+            className="w-full"
+            ariaLabel={t("billing_admin.adjust_expiry_title")}
+            value={mode}
+            onChange={(next) => setMode(next)}
+            options={[
+              { value: "add_days", label: t("billing_admin.adjust_mode_days") },
+              { value: "set", label: t("billing_admin.adjust_mode_exact") },
+            ]}
+          />
 
           {mode === "add_days" ? (
             <div className="space-y-3">

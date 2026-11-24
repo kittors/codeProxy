@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Check,
-  Copy,
   ExternalLink,
   Globe,
   GitBranch,
@@ -11,6 +9,7 @@ import {
   KeyRound,
   Server,
 } from "lucide-react";
+import { Icon as SatinIcon } from "satin-ui/react";
 import { useAuth } from "@app/providers/AuthProvider";
 import { Card, iconHueClass } from "@code-proxy/ui";
 import { useToast } from "@code-proxy/ui";
@@ -65,10 +64,18 @@ function InfoCard({
         <button
           type="button"
           onClick={handleCopy}
-          className="absolute right-2.5 top-2.5 rounded-md p-1 text-ink-3 opacity-100 transition hover:bg-hover hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          className="sn-btn sn-ghost sn-xs sn-icon !absolute right-2.5 top-2.5 !h-6 !w-6 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
           title={t("system_page.copy")}
+          aria-label={t("system_page.copy")}
         >
-          {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+          <span className="sn-swap" data-swapped={copied ? "true" : "false"} aria-hidden="true">
+            <span className="sn-swap-a">
+              <SatinIcon name="copy" size={13} />
+            </span>
+            <span className="sn-swap-b text-emerald-500">
+              <SatinIcon name="check" size={13} />
+            </span>
+          </span>
         </button>
       ) : null}
 

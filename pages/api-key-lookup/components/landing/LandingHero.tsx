@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, Copy } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { VendorIcon } from "@code-proxy/assets";
 import { copyTextToClipboard } from "@code-proxy/ui";
 import { LANDING_EASE } from "./landingMotion";
@@ -106,22 +106,29 @@ export function LandingHero({
                   type="button"
                   onClick={handleCopy}
                   aria-label={copied ? copy.workflow.copied : copy.workflow.copy}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors duration-150 hover:bg-white/10 hover:text-white/85"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 !text-white/65 hover:!bg-white/10 hover:!text-white"
                 >
-                  {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+                  <span className={copied ? "sn-swap sn-swapped" : "sn-swap"}>
+                    <span className="sn-swap-a">
+                      <Icon name="copy" size={15} />
+                    </span>
+                    <span className="sn-swap-b text-emerald-400">
+                      <Icon name="check" size={15} />
+                    </span>
+                  </span>
                 </button>
               </div>
 
               <button
                 type="button"
                 onClick={onBrowseModels}
-                className="group inline-flex h-12 items-center gap-1.5 px-2 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:text-ink"
+                className="sn-btn sn-ghost sn-round group !h-12 !px-4 !text-sm font-semibold text-[var(--sn-label2)]"
               >
                 {copy.hero.secondaryCta}
-                <ArrowRight
+                <Icon
+                  name="arrow-right"
                   size={16}
-                  aria-hidden
-                  className="transition-transform duration-200 group-hover:translate-x-1"
+                  className="transition-transform duration-200 ease-[var(--sn-ease-out-strong)] group-hover:translate-x-1"
                 />
               </button>
             </motion.div>

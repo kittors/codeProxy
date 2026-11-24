@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { PanelLeft } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { ScrollArea } from "@code-proxy/ui";
 import { BRAND_NAME, LogoMark } from "@code-proxy/assets";
 import { AccountMenu } from "./AccountMenu";
@@ -67,10 +67,10 @@ export function Sidebar({
           >
             <LogoMark size={26} />
           </span>
-          <PanelLeft
+          <Icon
+            name="panel-left"
             size={20}
-            aria-hidden="true"
-            className="col-start-1 row-start-1 scale-90 text-ink-2 opacity-0 transition-[opacity,scale] duration-200 ease-soft group-hover/logo:scale-100 group-hover/logo:opacity-100 group-focus-visible/logo:scale-100 group-focus-visible/logo:opacity-100"
+            className="col-start-1 row-start-1 scale-90 text-[var(--sn-label2)] opacity-0 transition-[opacity,scale] duration-200 ease-[var(--sn-ease-out-strong)] group-hover/logo:scale-100 group-hover/logo:opacity-100 group-focus-visible/logo:scale-100 group-focus-visible/logo:opacity-100"
           />
         </button>
         <span

@@ -1,0 +1,197 @@
+/* Satin：Markdown 渲染（kit-md.js）。字号行高跟正文一致（14 / 24），块之间的距离都在间距刻度上；
+   代码块、图片、表格的高度由 --sn-md-code-max / --sn-md-img-h / --sn-md-table-max 决定，单个块可以在 Markdown 里覆盖。 */
+@layer satin {
+.sn-md {
+  --sn-md-code-bg: color-mix(in srgb, var(--sn-label) 3%, var(--sn-raised)); --sn-md-code-max: 240px; --sn-md-img-h: 220px; --sn-md-table-max: none;
+  --sn-t-kw: #ad3da4; --sn-t-str: #c41a16; --sn-t-num: #1c00cf; --sn-t-com: #8e8e93; --sn-t-fn: #326d74; --sn-t-typ: #3900a0; --sn-t-prop: #0f68a0; --sn-t-attr: #836c28; --sn-t-tag: #ad3da4;
+  font: 400 calc(14px * var(--sn-font-scale, 1))/calc(24px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label); overflow-wrap: anywhere;
+}
+[data-theme="dark"] .sn-md { --sn-t-kw: #fc5fa3; --sn-t-str: #fc6a5d; --sn-t-num: #d0bf69; --sn-t-com: #7f8c98; --sn-t-fn: #67b7a4; --sn-t-typ: #5dd8ff; --sn-t-prop: #41a1c0; --sn-t-attr: #bf8555; --sn-t-tag: #fc5fa3; }
+.sn-md > :first-child { margin-top: 0; }
+.sn-md > :last-child { margin-bottom: 0; }
+
+/* 标题：悬停出 # 锚点 */
+.sn-md :is(h1, h2, h3, h4, h5, h6) { position: relative; margin: 28px 0 12px; font-weight: 600; color: var(--sn-label); scroll-margin-top: 64px; }
+.sn-md h1 { font-size: calc(24px * var(--sn-font-scale, 1)); line-height: 32px; letter-spacing: -.01em; }
+.sn-md h2 { padding-bottom: 8px; font-size: calc(19px * var(--sn-font-scale, 1)); line-height: 28px; }
+.sn-md h3 { font-size: calc(16px * var(--sn-font-scale, 1)); line-height: 24px; }
+.sn-md h4 { font-size: calc(14px * var(--sn-font-scale, 1)); line-height: 22px; }
+.sn-md :is(h5, h6) { font-size: calc(13px * var(--sn-font-scale, 1)); line-height: 20px; color: var(--sn-label2); }
+.sn-md-anchor { margin-left: 6px; font-weight: 400; color: var(--sn-label-off); text-decoration: none; opacity: 0; transition: opacity .12s; }
+.sn-md-anchor:focus-visible { opacity: 1; }
+@media (hover: hover) {
+.sn-md :is(h1, h2, h3, h4, h5, h6):hover .sn-md-anchor { opacity: 1; } }
+
+/* 正文 */
+.sn-md p { margin: 12px 0; }
+.sn-md a { color: var(--sn-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--sn-accent) 30%, transparent); text-underline-offset: 3px; transition: text-decoration-color .12s; }
+@media (hover: hover) {
+.sn-md a:hover { text-decoration-color: currentColor; } }
+.sn-md strong { font-weight: 600; }
+.sn-md del { color: var(--sn-label3); }
+.sn-md hr { height: 1px; margin: 24px 0; border: 0; background: var(--sn-line); }
+.sn-md-ic { padding: 2px 6px; border-radius: 4px; background: var(--sn-fill-subtle); font: 400 .9em/1 var(--sn-mono); }
+
+/* 列表、任务 */
+.sn-md :is(ul, ol) { margin: 12px 0; padding-left: 24px; }
+.sn-md li { margin: 4px 0; }
+.sn-md li > :is(ul, ol) { margin: 4px 0; }
+.sn-md li > p, .sn-md-task > div > p { margin: 4px 0; }
+.sn-md-task > div > :is(ul, ol) { margin: 4px 0; } /* 任务项里的子列表和普通列表项一样贴近 */
+.sn-md li::marker { color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+.sn-md ul.sn-md-tasks { padding-left: 0; list-style: none; }
+.sn-md-task { display: flex; align-items: flex-start; gap: 8px; }
+.sn-md-task > div { min-width: 0; }
+.sn-md-check { position: relative; flex: none; width: 16px; height: 16px; margin-top: 4px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--sn-line-control); }
+.sn-md-check.sn-on { background: var(--sn-accent); box-shadow: none; }
+.sn-md-check.sn-on::after { content: ""; position: absolute; inset: 0; background: var(--sn-raised); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.4 2.4 4.6-5' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.4 2.4 4.6-5' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 16px no-repeat; }
+.sn-md-task:has(.sn-md-check.sn-on) > div { color: var(--sn-label3); }
+
+/* 引用、提示块（NOTE 中性，TIP 绿，IMPORTANT 强调色，WARNING 橙，CAUTION 红） */
+.sn-md blockquote { margin: 16px 0; padding: 2px 0 2px 16px; box-shadow: inset 3px 0 0 var(--sn-line-control); color: var(--sn-label2); }
+.sn-md blockquote > :first-child { margin-top: 0; } .sn-md blockquote > :last-child { margin-bottom: 0; }
+.sn-md-callout { --sn-tone: var(--sn-label3); margin: 16px 0; padding: 12px 16px; border-radius: var(--sn-r-md); background: color-mix(in srgb, var(--sn-tone) 7%, var(--sn-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sn-tone) 22%, transparent); }
+.sn-md-callout.sn-tip { --sn-tone: var(--sn-success); } .sn-md-callout.sn-important { --sn-tone: var(--sn-accent); } .sn-md-callout.sn-warning { --sn-tone: var(--sn-warning); } .sn-md-callout.sn-caution { --sn-tone: var(--sn-danger); }
+.sn-md .sn-md-callout-t { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-weight: 600; color: color-mix(in srgb, var(--sn-tone) 85%, var(--sn-label)); }
+.sn-md-callout-t svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sn-md-callout > :not(.sn-md-callout-t) { margin: 4px 0 0; }
+
+/* 表格：表头吸顶；超过 --sn-md-table-max 在框里滚 */
+.sn-md-table { margin: 16px 0; max-height: var(--sn-md-table-max); overflow: auto; border: 1px solid var(--sn-line); border-radius: var(--sn-r-md); overscroll-behavior-x: none; overscroll-behavior-y: auto; } /* 表格里不回弹：横向滚到头就停；竖向滚到头交给页面接着滚 */
+.sn-md-table table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: calc(13px * var(--sn-font-scale, 1)); line-height: 20px; font-variant-numeric: tabular-nums; }
+.sn-md-table th { position: sticky; top: 0; z-index: 1; padding: 8px 12px; background: color-mix(in srgb, var(--sn-label) 3%, var(--sn-raised)); box-shadow: inset 0 -1px 0 var(--sn-line); font-weight: 600; text-align: left; white-space: nowrap; }
+.sn-md-table td { padding: 8px 12px; box-shadow: inset 0 -1px 0 var(--sn-line); }
+.sn-md-table td, .sn-md-table th { word-break: keep-all; overflow-wrap: break-word; } /* 中文按词不拆（"已完成"不会断成两行）；放不下时表格在自己的框里横着滑 */
+.sn-md-table tr:last-child td { box-shadow: none; }
+
+/* 代码块：头部（文件名 / 语言、行数、自动换行、复制）+ 带行号的代码；超过 --sn-md-code-max 折叠，底部渐隐 */
+.sn-md-code { position: relative; margin: 16px 0; overflow: hidden; border: 1px solid var(--sn-line); border-radius: var(--sn-r-md); background: var(--sn-md-code-bg); } /* 用真边框：行号的底色贴着左边，内阴影画的框会被它盖掉 */
+.sn-md-code-hd { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 14px; font: 400 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+.sn-md-code-file { font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-mono); color: var(--sn-label); }
+.sn-md-code-n { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sn-md-code-btn { all: unset; height: 24px; padding: 0 8px; border-radius: 6px; color: var(--sn-label2); cursor: pointer; transition: background-color .12s, color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-md-code-btn:hover { background: var(--sn-fill-hover); color: var(--sn-label); } }
+.sn-md-code-btn[aria-pressed="true"] { background: var(--sn-fill-active); color: var(--sn-label); }
+.sn-md-code-btn.sn-ok { color: var(--sn-success); }
+.sn-md-code-btn:focus-visible, .sn-md-code-more:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-md-code-bd { position: relative; }
+.sn-md-code pre { margin: 0; padding: 12px 0; overflow: auto; outline: none; counter-reset: ln; font: 400 calc(12.5px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-mono); tab-size: 4; color: var(--sn-label); }
+.sn-md-code pre:focus-visible { box-shadow: inset 0 0 0 2px var(--sn-focus); }
+.sn-md-code .sn-l { display: block; padding-right: 16px; white-space: pre; }
+/* 行号：横着滚时贴在左边不动；自动换行时折下来的行缩进到行号后面 */
+.sn-md-code .sn-l::before { counter-increment: ln; content: counter(ln); position: sticky; left: 0; display: inline-block; box-sizing: content-box; width: var(--sn-md-gw, 2ch); margin-right: 4px; padding: 0 12px 0 14px; background: var(--sn-md-code-bg); color: var(--sn-label-off); text-align: right; user-select: none; }
+.sn-md-code.sn-nonum .sn-l { padding-left: 14px; }
+.sn-md-code.sn-nonum .sn-l::before { display: none; }
+.sn-md-code:not(.sn-wrap) .sn-l { width: max-content; min-width: 100%; }
+.sn-md-code.sn-wrap .sn-l { white-space: pre-wrap; padding-left: calc(var(--sn-md-gw, 2ch) + 30px); text-indent: calc(-1 * (var(--sn-md-gw, 2ch) + 30px)); } /* sp-ok: 30 = 行号左右留白 14 + 12 再加间隔 4，换行后折下来的行和不换行时的代码起点对齐 */
+.sn-md-code.sn-wrap.sn-nonum .sn-l { padding-left: 14px; text-indent: 0; }
+.sn-md-code.sn-clip .sn-md-code-bd { max-height: var(--sn-md-code-max); overflow: hidden; }
+.sn-md-code.sn-clip .sn-md-code-bd::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, color-mix(in srgb, var(--sn-md-code-bg) 0%, transparent), var(--sn-md-code-bg)); pointer-events: none; }
+.sn-md-code-more { all: unset; display: flex; align-items: center; justify-content: center; width: 100%; height: 36px; font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); cursor: pointer; transition: background-color .12s, color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-md-code-more:hover { background: var(--sn-fill-hover); color: var(--sn-label); } }
+.sn-md-code-more[hidden] { display: none; }
+.sn-t-kw, .sn-t-lit { color: var(--sn-t-kw); } .sn-t-str { color: var(--sn-t-str); } .sn-t-num { color: var(--sn-t-num); } .sn-t-com { color: var(--sn-t-com); font-style: italic; }
+.sn-t-fn { color: var(--sn-t-fn); } .sn-t-typ { color: var(--sn-t-typ); } .sn-t-prop, .sn-t-var { color: var(--sn-t-prop); } .sn-t-attr, .sn-t-dec, .sn-t-sel { color: var(--sn-t-attr); } .sn-t-tag { color: var(--sn-t-tag); }
+.sn-t-op { color: var(--sn-label2); } .sn-t-pun { color: var(--sn-label3); }
+
+/* 图片：块级图片在一个 --sn-md-img-h 高的框里完整显示（不裁）；加载中是占位微光，失败给图标和说明；点开放大 */
+.sn-md-fig { margin: 16px 0; }
+.sn-md-fig figcaption { margin-top: 8px; font-size: calc(12px * var(--sn-font-scale, 1)); line-height: 18px; color: var(--sn-label3); text-align: center; }
+.sn-md-img { position: relative; display: inline-block; max-width: 100%; overflow: hidden; vertical-align: middle; border-radius: 6px; }
+.sn-md-img img { display: block; max-width: 100%; height: auto; opacity: 0; transition: opacity .3s var(--sn-ease-out); }
+.sn-md-img.sn-ok img { opacity: 1; }
+.sn-md-img:not(.sn-ok):not(.sn-bad) { min-width: 48px; min-height: 24px; background: var(--sn-fill-subtle); }
+.sn-md-img:not(.sn-ok):not(.sn-bad)::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sn-label) 6%, transparent), transparent); animation: sn-md-shimmer 1.2s ease-in-out infinite; }
+@keyframes sn-md-shimmer { from { translate: -100% 0; } to { translate: 100% 0; } }
+.sn-md-img.sn-blk { display: flex; justify-content: center; width: 100%; height: var(--sn-md-img-h); border: 1px solid var(--sn-line); border-radius: var(--sn-r-md); background: color-mix(in srgb, var(--sn-label) 3%, var(--sn-raised)); }
+.sn-md-img.sn-blk img { width: auto; height: 100%; max-width: 100%; object-fit: contain; cursor: zoom-in; outline: none; }
+.sn-md-img.sn-blk img:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-md.sn-img-auto .sn-md-img.sn-blk:not(.sn-sized) { height: auto; }
+.sn-md.sn-img-auto .sn-md-img.sn-blk:not(.sn-sized) img { width: 100%; height: auto; }
+.sn-md-img-bad { display: none; }
+.sn-md-img.sn-bad img { display: none; }
+.sn-md-img.sn-bad .sn-md-img-bad { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font-size: calc(12px * var(--sn-font-scale, 1)); line-height: 18px; color: var(--sn-label3); }
+.sn-md-img.sn-blk.sn-bad .sn-md-img-bad { flex-direction: column; justify-content: center; gap: 8px; }
+.sn-md-img-bad svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sn-md-img.sn-blk.sn-bad .sn-md-img-bad svg { width: 24px; height: 24px; }
+
+/* 公式：MathML 原生排版；块级居中，太宽横着滚；写法不认识就原样标红显示 */
+.sn-md math { font-family: "STIX Two Math", "Latin Modern Math", math; font-size: 1.08em; }
+.sn-md-math { margin: 16px 0; padding: 4px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.sn-md-math math { font-size: 1.18em; }
+/* 矩阵、分段函数、对齐：单元格留白；分段函数左对齐，aligned 右左交替（MathML Core 不认 columnalign，用样式定） */
+.sn-md math mtd { padding: .25em .5em; }
+.sn-md math mtable.sn-matrix mtd { padding: .2em .45em; }
+.sn-md math mtable.sn-cases mtd { padding: .3em 1em .3em 0; text-align: left; }
+.sn-md math mtable.sn-aligned mtd { padding: .25em 0; }
+.sn-md math mtable.sn-aligned mtd:nth-child(odd) { text-align: right; }
+.sn-md math mtable.sn-aligned mtd:nth-child(even) { text-align: left; }
+.sn-md-math-err { padding: 2px 6px; border-radius: 4px; background: color-mix(in srgb, var(--sn-danger) 8%, transparent); font: 400 .9em/1.6 var(--sn-mono); color: var(--sn-danger); }
+
+@media (prefers-reduced-motion: reduce) { .sn-md-img::before { animation: none !important; } }
+html.sn-reduce-motion .sn-md-img::before { animation: none !important; }
+
+/* ———— 演示 ———— */
+.sn-md-cfg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; }
+.sn-md-cfg-g { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sn-md-demo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; } /* 只有一列也写成 minmax(0, 1fr)：长代码、宽表格在自己的框里横着滚，不把整块撑出容器 */
+.sn-md-demo[data-view="doc"] .sn-md-src, .sn-md-demo[data-view="src"] .sn-md-doc, .sn-md-demo[data-view="doc"] .sn-sa:has(> .sn-md-src) { display: none; } /* 源码框包了滚动区域：藏外面那一层 */
+.sn-md-demo[data-view="split"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sn-md-doc { max-width: 760px; }
+.sn-md-demo .sn-md-doc { max-height: 480px; } /* 预览限高在一屏内舒适阅读，在里面的滚动视口里滚（kit-md.js 用 scrollArea 套的） */
+.sn-md-src { display: block; width: 100%; height: 480px; padding: 16px; resize: vertical; border: 1px solid var(--sn-line); border-radius: var(--sn-r-md); outline: none; background: var(--sn-md-code-bg, var(--sn-raised)); font: 400 calc(12.5px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-mono); color: var(--sn-label); }
+.sn-md-src:focus { border-color: var(--sn-focus); box-shadow: 0 0 0 3px var(--sn-ring); }
+
+/* 视频、音频：组件库的播放器和音频条（kit-media.js）；视频撑满正文宽度，音频条居中 */
+.sn-md .sn-md-media .sn-player { max-width: 100%; }
+.sn-md .sn-md-media .sn-audio-row { max-width: 560px; margin: 0 auto; }
+/* 写在 Markdown 里的 HTML */
+.sn-md kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border-radius: 6px; background: var(--sn-raised); box-shadow: inset 0 0 0 1px var(--sn-line-control), 0 1px 0 var(--sn-line-control); font: 500 .86em/1.7 var(--sn-sans); text-align: center; color: var(--sn-label); }
+.sn-md mark { padding: 0 2px; border-radius: 3px; background: color-mix(in srgb, var(--sn-warning) 24%, transparent); color: inherit; }
+.sn-md sup, .sn-md sub { font-size: .75em; line-height: 0; }
+.sn-md details { margin: 16px 0; border-radius: 12px; background: var(--sn-md-code-bg); box-shadow: inset 0 0 0 1px var(--sn-line); interpolate-size: allow-keywords; }
+.sn-md summary { display: flex; align-items: center; gap: 8px; padding: 10px 14px; list-style: none; font-weight: 500; cursor: pointer; user-select: none; border-radius: 12px; }
+.sn-md summary::-webkit-details-marker { display: none; }
+.sn-md summary::before { content: ""; flex: none; width: 14px; height: 14px; background: var(--sn-label3); transition: transform .28s var(--sn-ease-out-strong);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.sn-md details[open] > summary::before { transform: rotate(90deg); }
+.sn-md summary:focus-visible { box-shadow: inset 0 0 0 2px var(--sn-focus); }
+.sn-md details > :not(summary) { margin-left: 36px; margin-right: 14px; }
+.sn-md details > :last-child { margin-bottom: 12px; }
+/* 展开收起：内容高度从 0 缓到自然高度（和代码块展开同一个做法），收起时先淡出 */
+.sn-md details::details-content { block-size: 0; overflow: clip; opacity: 0; transition: block-size .32s var(--sn-ease-open), opacity .2s var(--sn-ease-out), content-visibility .32s allow-discrete; }
+.sn-md details[open]::details-content { block-size: auto; opacity: 1; }
+.sn-md figure:not(.sn-md-fig) { margin: 16px 0; text-align: center; }
+.sn-md figure:not(.sn-md-fig) img { max-width: 100%; height: auto; border-radius: 12px; }
+.sn-md figure:not(.sn-md-fig) figcaption { margin-top: 8px; font-size: calc(12px * var(--sn-font-scale, 1)); line-height: 18px; color: var(--sn-label3); }
+.sn-md img:not(.sn-md-img img) { max-width: 100%; height: auto; }
+.sn-md video:not(.sn-md-video video) { max-width: 100%; border-radius: 12px; }
+/* 能动的 HTML：沙箱 iframe，"预览 / 代码"两格切换（滑块按非线性曲线走） */
+.sn-md-live { margin: 16px 0; overflow: hidden; border-radius: var(--sn-r-md); background: var(--sn-raised); box-shadow: inset 0 0 0 1px var(--sn-line); }
+.sn-md-live-hd { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 8px 0 8px; background: var(--sn-md-code-bg); }
+.sn-md-live-tabs { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 2px; border-radius: 9px; background: var(--sn-fill-active); }
+.sn-md-live-tabs button { all: unset; position: relative; z-index: 1; height: 26px; padding: 0 14px; font: 500 calc(12px * var(--sn-font-scale, 1))/26px var(--sn-sans); text-align: center; color: var(--sn-label3); cursor: pointer; transition: color .16s var(--sn-ease-out); }
+.sn-md-live-tabs button[aria-selected="true"] { color: var(--sn-label); }
+.sn-md-live-tabs button:focus-visible { outline: 2px solid var(--sn-focus); outline-offset: 1px; border-radius: 7px; }
+.sn-md-live-thumb { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 7px; background: var(--sn-raised); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); transition: transform .34s var(--sn-ease-out-strong); }
+[data-theme="dark"] .sn-md-live-thumb { background: var(--sn-overlay); }
+.sn-md-live.sn-code .sn-md-live-thumb { transform: translateX(100%); }
+.sn-md-live-frame { display: block; width: 100%; height: 120px; border: 0; background: transparent; color-scheme: normal; }
+.sn-md-live-view[hidden], .sn-md-live-code[hidden] { display: none; }
+.sn-md-live-code .sn-md-code { margin: 0; border: 0; border-radius: 0; }
+
+/* 窄处：代码头每一项都不换行；放不下时先收行数（缩到没有），再省略文件名，按钮始终完整 */
+.sn-md-code-hd > * { flex: none; white-space: nowrap; }
+.sn-md-code-hd > .sn-md-code-file { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sn-md-code-hd > .sn-md-code-n { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: clip; text-align: right; }
+.sn-md-live-hd button { white-space: nowrap; }
+/* 并排视图：演示框窄于 640 时预览和源码上下叠（源码在下） */
+@container demo (max-width: 640px) {
+  .sn-md-demo[data-view="split"] { grid-template-columns: minmax(0, 1fr); }
+  .sn-md-demo[data-view="split"] .sn-md-doc { max-height: 420px; }
+  .sn-md-demo[data-view="split"] .sn-md-src { height: 320px; }
+}
+}

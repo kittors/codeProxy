@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Palette, RotateCcw } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { Button, DEFAULT_APPEARANCE, Drawer, Skeleton, useAppearance } from "@code-proxy/ui";
 
 /*
@@ -45,20 +45,20 @@ export function AppearanceButton({ className }: { className?: string }) {
         data-tooltip={label}
         title={label}
       >
-        <Palette size={16} />
+        <Icon name="palette" size={16} />
       </button>
       <Drawer
         open={open}
         title={label}
         description={t("appearance.drawer_description")}
-        icon={<Palette />}
+        icon={<Icon name="palette" size={18} />}
         widthClassName="w-[min(30rem,100vw)]"
         dirty={false}
         onClose={() => setOpen(false)}
         footer={
           <>
             <Button size="sm" className="mr-auto" onClick={reset} disabled={isDefault}>
-              <RotateCcw size={15} />
+              <Icon name="rotate-ccw" size={14} />
               {t("appearance.reset")}
             </Button>
             <Button size="sm" variant="primary" onClick={() => setOpen(false)}>

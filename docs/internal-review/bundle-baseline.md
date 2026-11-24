@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-11-21 00:35 +0800（仅 `AuthFilesPage` 行）
+更新时间：2026-11-25 00:53 +0800（全站迁移至 `satin-ui` 组件库，移除 `react-markdown`/`remark-gfm`/`react-syntax-highlighter`/`@radix-ui/react-dropdown-menu`/`chart.js`/`gsap`）
 
 ## 当前构建命令
 
@@ -11,21 +11,21 @@ bun run build
 
 ## 当前关键产物
 
-| Chunk                |       Size |      Gzip | 备注                                                                        |
-| -------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
-| `vendor-echarts`     | 1118.03 kB | 375.96 kB | 图表主依赖，明显过大；6.1.0 为 XSS 安全修复（GHSA-fgmj-fm8m-jvvx）后的体积 |
-| `vendor-markdown`    |  761.13 kB | 263.84 kB | Markdown + syntax highlighter 组合                                          |
-| `vendor-animation`   |  126.21 kB |  41.93 kB | 动画依赖独立 vendor chunk                                                   |
-| `vendor-charts`      |    0.07 kB |   0.08 kB | Chart.js 入口当前几乎未进入业务路径                                         |
-| `index`              |  396.29 kB | 121.04 kB | 多账号切换（AuthProvider vault + AppShell 账号菜单）进入 shell 入口；后续可再拆 account menu |
-| `index.css`          |  430.02 kB |  86.34 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明（Inter / Noto Sans SC / JetBrains Mono），字体文件本身按 unicode-range 懒加载不计入此行 |
-| `ConfigPage`         |  127.99 kB |  38.77 kB | 与当前构建对齐：dev 在 #1034（表单校验与配置页重做）后已是约 37.3 kB，未刷新本行；本次分组页签 + 分区胶囊再约 +1.5 kB；仍低于 `< 80 kB gzip` 页面预算 |
-| `AuthFilesPage`      |  259.10 kB |  75.23 kB | 与当前构建对齐：此前各 PR 已把 dev 推到 5 kB 容差边缘，未刷新本行；订阅时间改由上游实时读取（卡片徽标、详情只读区）再约 +1 kB（vite gzip 75.98 → 77.03 kB）；低于 `< 80 kB gzip` 页面预算 |
-| `ProvidersPage`      |  121.98 kB |  30.85 kB | 已低于 `< 80 kB gzip` 页面预算                                              |
-| `MonitorPage`        |   74.70 kB |  23.20 kB | 监控中心重做（健康评分、实时流量、六格指标、四视图趋势、耗时分布、失败分析、三张排行、流向与热力图）；路由级懒加载，低于 `< 80 kB gzip` 页面预算 |
-| `LogsPage`           |   22.15 kB |   6.51 kB | 已拆为 live logs / error logs / helpers                                     |
-| `EChartRenderer`     |    3.76 kB |   1.41 kB | 图表实际渲染器按需要加载                                                    |
-| `rendering-markdown` |   14.38 kB |   2.75 kB | 按交互加载的 Markdown 入口，重依赖在 `vendor-markdown`                      |
+| Chunk                   |       Size |      Gzip | 备注                                                                        |
+| ----------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
+| `vendor-echarts`        | 1118.03 kB | 375.96 kB | 图表主依赖，明显过大；6.1.0 为 XSS 安全修复（GHSA-fgmj-fm8m-jvvx）后的体积 |
+| `vendor-satin`          |  121.32 kB |  42.34 kB | Satin UI 核心引擎（Solar Icons、Avatar、NumberFlow、EmptyArt、Loader、edgeFrames 等） |
+| `vendor-satin-markdown` |   35.45 kB |  14.42 kB | 按需懒加载的零依赖 Satin Markdown 渲染器（取代原 263.84 kB gzip 的 `vendor-markdown`，净减重 -249.42 kB gzip） |
+| `vendor-animation`      |  122.21 kB |  40.36 kB | 动画依赖独立 vendor chunk（已移除 `gsap` 及核心 UI 控件中的 `framer-motion`） |
+| `index`                 |  321.52 kB | 101.35 kB | 主入口脚本（已移除 Radix Dropdown 等第三方重依赖，较原基线净降 -19.69 kB gzip） |
+| `index.css`             |  695.36 kB | 124.53 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明与 Satin 组件库 10 个核心样式模块（`md.css` 已按需懒加载拆分；全站总传输较原基线净减重 >200 kB gzip） |
+| `ConfigPage`            |  143.55 kB |  43.44 kB | 接入 Satin 分组流体滑块与表单控件；低于 `< 80 kB gzip` 页面预算 |
+| `AuthFilesPage`         |  259.72 kB |  75.50 kB | 接入 Satin 复选框/加载器与专控重置额度端点；低于 `< 80 kB gzip` 页面预算 |
+| `ProvidersPage`         |  127.92 kB |  34.69 kB | 接入 Satin 控件与复制翻转/测速加载微动效；低于 `< 80 kB gzip` 页面预算 |
+| `MonitorPage`           |   86.60 kB |  26.73 kB | 监控中心接入 Satin 实时标签与控件；路由级懒加载，低于 `< 80 kB gzip` 页面预算 |
+| `LogsPage`              |   19.39 kB |   6.31 kB | 已拆为 live logs / error logs / helpers                                     |
+| `EChartRenderer`        |    4.03 kB |   1.59 kB | 图表实际渲染器按需要加载                                                    |
+| `rendering-markdown`    |    0.26 kB |   0.20 kB | 按交互加载的 Markdown 入口，重依赖已切换至轻量 `vendor-satin-markdown`      |
 
 ## 目标预算
 

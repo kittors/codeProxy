@@ -542,7 +542,10 @@ describe("ImageGenerationPage", () => {
     expect(stage).toHaveClass("bg-subtle");
     expect(stage).not.toHaveClass("h-auto");
     expect(within(stage).getByText("上游图片生成失败").parentElement?.className).toContain(
-      "bg-rose-500/",
+      "sn-banner",
+    );
+    expect(within(stage).getByText("上游图片生成失败").parentElement?.className).toContain(
+      "sn-err",
     );
   });
 

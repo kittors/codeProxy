@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock, Info } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { HoverTooltip, Skeleton } from "@code-proxy/ui";
 import { clampPercent } from "./quota-helpers";
 
@@ -228,7 +228,7 @@ export function QuotaBar({
                 data-testid="quota-bar-hint"
                 aria-label={hint}
               >
-                <Info size={11} aria-hidden />
+                <Icon name="info" size={12} />
               </span>
             </HoverTooltip>
           ) : null}
@@ -247,9 +247,7 @@ export function QuotaBar({
               tone.barMetaClass,
             ].join(" ")}
           >
-            {detailIcon ?? (
-              <Clock size={10} className="shrink-0" aria-hidden />
-            )}
+            {detailIcon ?? <Icon name="clock" size={11} className="shrink-0" />}
             <span className="min-w-0 truncate">{detailText}</span>
           </span>
         ) : null}

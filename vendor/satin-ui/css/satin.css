@@ -1,0 +1,21 @@
+/* satin-ui/css：全部组件样式，一行引入。不含页面级重置：嵌进已有页面时用这个（不改页面其他元素）；整页都用 Satin 时改引 satin-ui/css/page.css（多一份 reset.css）。
+   只用几个组件时也可以按文件单引：tokens.css、base.css 必需，其余按组件挑。 */
+@import "./tokens.css";
+@import "./base.css";
+@import "./buttons.css";
+@import "./form.css";
+@import "./input.css";
+@import "./overlay.css";
+@import "./feedback.css";
+@import "./data.css";
+@import "./scroll.css";
+@import "./content.css";
+@import "./picker.css";
+@import "./number.css";
+@import "./grid.css";
+@import "./charts.css";
+@import "./md.css";
+@import "./tree.css";
+@import "./volumetric.css";
+@import "./carousel.css";
+@import "./shell.css";

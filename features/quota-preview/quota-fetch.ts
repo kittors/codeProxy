@@ -1,4 +1,10 @@
-import { apiCallApi, getApiCallErrorMessage } from "@code-proxy/api-client";
+import {
+  apiCallApi,
+  authFilesApi,
+  extractApiErrorCode,
+  getApiCallErrorMessage,
+  isApiClientError,
+} from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import {
   CODEX_REQUEST_HEADERS,
@@ -66,11 +72,43 @@ export const resolveQuotaProvider = (file: AuthFileItem): QuotaProvider | null =
   return null;
 };
 
+/**
+ * 判断错误是否为旧版后端尚未提供 `/auth-files/reset-credit` 路由导致的 404/405。
+ * 新后端的业务 404 会携带 `auth_not_found` 错误码，必须直接向上呈现，不能回退到 `/api-call`。
+ */
+const isResetCreditEndpointUnsupported = (error: unknown): boolean => {
+  if (!isApiClientError(error)) return false;
+  if (error.status !== 404 && error.status !== 405) return false;
+  const code = extractApiErrorCode(error.payload ?? error.data).toLowerCase();
+  if (code === "auth_not_found") return false;
+  return true;
+};
+
 export const consumeCodexResetCredit = async (
   file: AuthFileItem,
   options?: { creditId?: string },
 ): Promise<void> => {
   const authIndex = resolveAuthIndex(file);
+  const redeemRequestId = createRedeemRequestId();
+
+  // 优先调用后端专控接口 POST /v0/management/auth-files/reset-credit：
+  // 走凭据/全局出口代理与标准 Codex 指纹、自动 FIFO 选取额度并在成功后清理本地限流状态。
+  try {
+    await authFilesApi.resetCredit({
+      authIndex,
+      id: typeof file.id === "string" ? file.id : undefined,
+      name: file.name,
+      creditId: options?.creditId,
+      redeemRequestId,
+    });
+    return;
+  } catch (error) {
+    if (!isResetCreditEndpointUnsupported(error)) {
+      throw error;
+    }
+  }
+
+  // 向后兼容尚未升级该专控路由的旧后端：回退到通用 /api-call。
   const header = buildCodexRequestHeaders(file);
 
   let targetCreditId = options?.creditId;
@@ -95,7 +133,7 @@ export const consumeCodexResetCredit = async (
   }
 
   const payload: Record<string, string> = {
-    redeem_request_id: createRedeemRequestId(),
+    redeem_request_id: redeemRequestId,
   };
   if (targetCreditId) {
     payload.credit_id = targetCreditId;

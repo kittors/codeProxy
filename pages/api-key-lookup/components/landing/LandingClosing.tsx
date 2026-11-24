@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { Icon as SatinIcon } from "satin-ui/react";
 import { BRAND_NAME, Wordmark } from "@code-proxy/assets";
 import { LandingButton } from "./LandingButton";
 import { useLandingFade } from "./landingMotion";
@@ -46,12 +46,12 @@ export function LandingClosing({
             <button
               type="button"
               onClick={onBrowseModels}
-              className="group inline-flex h-12 items-center gap-1.5 px-4 text-sm font-semibold text-white/70 transition-colors duration-150 hover:text-white"
+              className="sn-btn sn-ghost group !h-12 gap-1.5 !rounded-full !px-4 !text-sm font-semibold !text-white/70 hover:!bg-white/10 hover:!text-white"
             >
               {copy.closing.secondary}
-              <ArrowRight
+              <SatinIcon
+                name="arrow-right"
                 size={16}
-                aria-hidden
                 className="transition-transform duration-200 group-hover:translate-x-1"
               />
             </button>

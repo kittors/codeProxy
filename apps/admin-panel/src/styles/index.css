@@ -1,5 +1,7 @@
+@layer theme, base, satin, components, utilities;
 @import "tailwindcss";
 @import "./fonts.css";
+@import "./satin-bridge.css";
 @plugin "@tailwindcss/typography";
 @source "../../../../apps/admin-panel/src";
 @source "../../../../pages";
@@ -332,83 +334,77 @@
  *   选了彩色强调色时跟随强调色。
  */
 :root {
-  --cp-rail: #f3f3f4;
-  --cp-panel: #f8f8f9;
-  --cp-canvas: #ffffff;
-  --cp-surface: #ffffff;
-  --cp-surface-hover: #f8f8f9;
-  --cp-track: #ebebee;
-  --cp-elevated: #ffffff;
-  --cp-subtle: #f6f6f7;
-  --cp-field: #ffffff;
-  --cp-hover: rgb(0 0 0 / 0.045);
-  --cp-selected: rgb(0 0 0 / 0.07);
-  --cp-ink: #111113;
-  --cp-ink-2: #55555c;
-  /* 弱化文字在白底上 4.5:1（原 #8f8f8f 只有 3.3:1，小字号在 Windows 上更难认） */
-  --cp-ink-3: #76767d;
-  --cp-ink-4: #c2c2c7;
-  --cp-line: rgb(0 0 0 / 0.07);
-  --cp-line-strong: rgb(0 0 0 / 0.1);
-  --cp-accent: var(--cp-pref-accent, #111113);
-  --cp-accent-hover: var(--cp-pref-accent-hover, #2c2c31);
-  --cp-accent-fg: var(--cp-pref-accent-fg, #ffffff);
-  --cp-accent-ink: var(--cp-pref-accent-ink, #111113);
-  --cp-accent-soft: var(--cp-pref-accent-soft, rgb(0 0 0 / 0.06));
-  --cp-focus: var(--cp-pref-focus, #2a6ee8);
-  /* 伪元素细边：只有 7% 的黑，比原来的 #ececec 实线轻，靠下面的投影把盒子「托起来」 */
-  --cp-edge: rgb(0 0 0 / 0.07);
+  --cp-rail: var(--sn-shell, #eff0f3);
+  --cp-panel: var(--sn-side-bg, #eff0f3);
+  --cp-canvas: var(--sn-workspace, #ffffff);
+  --cp-surface: var(--sn-raised, #ffffff);
+  --cp-surface-hover: var(--sn-fill-hover-solid, #f5f5f7);
+  --cp-track: var(--sn-sunken, #e8e8ed);
+  --cp-elevated: var(--sn-overlay, #ffffff);
+  --cp-subtle: var(--sn-fill-subtle, rgb(0 0 0 / 0.05));
+  --cp-field: var(--sn-field, #ffffff);
+  --cp-hover: var(--sn-fill-hover, rgb(0 0 0 / 0.04));
+  --cp-selected: var(--sn-fill-active, rgb(0 0 0 / 0.07));
+  --cp-ink: var(--sn-label, #1d1d1f);
+  --cp-ink-2: var(--sn-label2, #424245);
+  --cp-ink-3: var(--sn-label3, #6e6e73);
+  --cp-ink-4: var(--sn-label-off, #aeaeb2);
+  --cp-line: var(--sn-line, rgb(0 0 0 / 0.08));
+  --cp-line-strong: var(--sn-line-control, rgb(0 0 0 / 0.14));
+  --cp-accent: var(--cp-pref-accent, var(--sn-accent, #1d1d1f));
+  --cp-accent-hover: var(--cp-pref-accent-hover, var(--sn-b-primary-hover, #2c2c31));
+  --cp-accent-fg: var(--cp-pref-accent-fg, var(--sn-on-primary, #ffffff));
+  --cp-accent-ink: var(--cp-pref-accent-ink, var(--sn-accent, #1d1d1f));
+  --cp-accent-soft: var(--cp-pref-accent-soft, var(--sn-fill-subtle, rgb(0 0 0 / 0.05)));
+  --cp-focus: var(--cp-pref-focus, var(--sn-focus, rgb(0 0 0 / 0.4)));
+  /* 细边与层次严格对齐 Satin 令牌：卡片靠 1px 细描边与极轻托影，浮层用 --sn-e1 / --sn-e2。 */
+  --cp-edge: var(--sn-line, rgb(0 0 0 / 0.08));
   --cp-edge-highlight: rgb(255 255 255 / 0);
-  --cp-shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 6px -1px rgb(0 0 0 / 0.04),
-    0 10px 24px -12px rgb(0 0 0 / 0.1);
-  --cp-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.04), 0 8px 16px -4px rgb(0 0 0 / 0.06),
-    0 22px 44px -16px rgb(0 0 0 / 0.16);
-  --cp-shadow-pop: 0 0 0 1px rgb(0 0 0 / 0.06), 0 2px 4px rgb(0 0 0 / 0.04),
-    0 12px 28px -6px rgb(0 0 0 / 0.14);
-  --cp-shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.05), 0 4px 10px rgb(0 0 0 / 0.04),
-    0 28px 70px -14px rgb(0 0 0 / 0.26);
-  --cp-shadow-control: 0 0 0 1px rgb(0 0 0 / 0.09), 0 1px 2px rgb(0 0 0 / 0.05);
-  --cp-shadow-control-hover: 0 0 0 1px rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.06);
+  --cp-shadow-card: var(--sn-card-shadow, 0 1px 3px rgb(0 0 0 / 0.04));
+  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.26));
+  --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.06));
+  --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.16), 0 0 0 1px rgb(0 0 0 / 0.06));
+  --cp-shadow-control: 0 0 0 1px var(--sn-line-control, rgb(0 0 0 / 0.14)), var(--sn-b-lift, 0 1px 2px rgb(0 0 0 / 0.05));
+  --cp-shadow-control-hover: 0 0 0 1px var(--sn-line-control-hover, rgb(0 0 0 / 0.24)), var(--sn-b-lift, 0 1px 2px rgb(0 0 0 / 0.05));
   --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 55%, transparent),
-    0 0 0 4px color-mix(in srgb, var(--cp-focus) 14%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--cp-focus) 14%, transparent);
 }
 
-.dark {
-  --cp-rail: #0b0b0d;
-  --cp-panel: #131316;
-  --cp-canvas: #111114;
-  --cp-surface: #18181c;
-  --cp-surface-hover: #1e1e23;
-  --cp-track: #26262c;
-  --cp-elevated: #1d1d22;
-  --cp-subtle: #141417;
-  --cp-field: rgb(255 255 255 / 0.04);
-  --cp-hover: rgb(255 255 255 / 0.06);
-  --cp-selected: rgb(255 255 255 / 0.1);
-  --cp-ink: #f2f2f4;
-  --cp-ink-2: #b4b4bc;
-  --cp-ink-3: #86868f;
-  --cp-ink-4: #4e4e56;
-  --cp-line: rgb(255 255 255 / 0.07);
-  --cp-line-strong: rgb(255 255 255 / 0.11);
-  --cp-accent: var(--cp-pref-accent-dark, #f2f2f4);
-  --cp-accent-hover: var(--cp-pref-accent-hover-dark, #ffffff);
-  --cp-accent-fg: var(--cp-pref-accent-fg-dark, #111113);
-  --cp-accent-ink: var(--cp-pref-accent-ink-dark, #f2f2f4);
-  --cp-accent-soft: var(--cp-pref-accent-soft-dark, rgb(255 255 255 / 0.1));
-  --cp-focus: var(--cp-pref-focus-dark, #6e9ef0);
-  /* 深色下投影几乎看不见，层次靠「细边 + 顶部一道 4% 的高光」：像光从上方打在卡片边缘 */
-  --cp-edge: rgb(255 255 255 / 0.07);
+.dark,
+[data-theme="dark"] {
+  --cp-rail: var(--sn-shell, #0b0b0e);
+  --cp-panel: var(--sn-side-bg, #0b0b0e);
+  --cp-canvas: var(--sn-workspace, #16161a);
+  --cp-surface: var(--sn-raised, #1c1c1e);
+  --cp-surface-hover: var(--sn-fill-hover-solid, #262629);
+  --cp-track: var(--sn-sunken, #0e0e10);
+  --cp-elevated: var(--sn-overlay, #2c2c2e);
+  --cp-subtle: var(--sn-fill-subtle, rgb(255 255 255 / 0.08));
+  --cp-field: var(--sn-field, #1c1c1e);
+  --cp-hover: var(--sn-fill-hover, rgb(255 255 255 / 0.06));
+  --cp-selected: var(--sn-fill-active, rgb(255 255 255 / 0.1));
+  --cp-ink: var(--sn-label, #f5f5f7);
+  --cp-ink-2: var(--sn-label2, #aeaeb2);
+  --cp-ink-3: var(--sn-label3, #86868b);
+  --cp-ink-4: var(--sn-label-off, #48484a);
+  --cp-line: var(--sn-line, rgb(255 255 255 / 0.09));
+  --cp-line-strong: var(--sn-line-control, rgb(255 255 255 / 0.14));
+  --cp-accent: var(--cp-pref-accent-dark, var(--sn-accent, #f5f5f7));
+  --cp-accent-hover: var(--cp-pref-accent-hover-dark, var(--sn-b-primary-hover, #ffffff));
+  --cp-accent-fg: var(--cp-pref-accent-fg-dark, var(--sn-on-primary, #000000));
+  --cp-accent-ink: var(--cp-pref-accent-ink-dark, var(--sn-accent, #f5f5f7));
+  --cp-accent-soft: var(--cp-pref-accent-soft-dark, var(--sn-fill-subtle, rgb(255 255 255 / 0.08)));
+  --cp-focus: var(--cp-pref-focus-dark, var(--sn-focus, rgb(255 255 255 / 0.5)));
+  --cp-edge: var(--sn-line, rgb(255 255 255 / 0.09));
   --cp-edge-highlight: rgb(255 255 255 / 0.04);
-  --cp-shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 24px -12px rgb(0 0 0 / 0.6);
-  --cp-shadow-lift: 0 2px 4px rgb(0 0 0 / 0.5), 0 22px 44px -16px rgb(0 0 0 / 0.75);
-  --cp-shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.09), 0 2px 4px rgb(0 0 0 / 0.4),
-    0 16px 40px -8px rgb(0 0 0 / 0.7);
-  --cp-shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.09), 0 28px 70px -14px rgb(0 0 0 / 0.8);
-  --cp-shadow-control: 0 0 0 1px rgb(255 255 255 / 0.09), 0 1px 2px rgb(0 0 0 / 0.35);
-  --cp-shadow-control-hover: 0 0 0 1px rgb(255 255 255 / 0.16), 0 1px 2px rgb(0 0 0 / 0.35);
+  --cp-shadow-card: var(--sn-card-shadow, none);
+  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.48));
+  --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.5), inset 0 0 0 1px rgb(255 255 255 / 0.09));
+  --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.7), inset 0 0 0 1px rgb(255 255 255 / 0.1));
+  --cp-shadow-control: 0 0 0 1px var(--sn-line-control, rgb(255 255 255 / 0.14));
+  --cp-shadow-control-hover: 0 0 0 1px var(--sn-line-control-hover, rgb(255 255 255 / 0.24));
   --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 70%, transparent),
-    0 0 0 4px color-mix(in srgb, var(--cp-focus) 20%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--cp-focus) 20%, transparent);
 }
 
 /*

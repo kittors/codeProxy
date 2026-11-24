@@ -31,11 +31,7 @@
           var apply = function (isDark) {
             root.classList.toggle("dark", isDark);
             root.style.colorScheme = isDark ? "dark" : "light";
-            if (isDark) {
-              root.setAttribute("data-theme", "dark");
-            } else {
-              root.removeAttribute("data-theme");
-            }
+            root.setAttribute("data-theme", isDark ? "dark" : "light");
           };
           // Windows 用系统字体与 1.0 根字号（见 styles/index.css 的 data-os 说明）。
           // 只认平台字段开头的 Win（Win32 / Windows），不能宽松匹配——"darwin" 里也有 win。
@@ -91,16 +87,14 @@
     </script>
     <style>
       :root {
-        --pl-bg: #ffffff;
-        --pl-ring-track: rgba(13, 13, 13, 0.1);
-        --pl-ring: #111113;
-        --pl-text: #76767d;
+        --pl-bg: #f8f8fa;
+        --pl-dot: #1d1d1f;
+        --pl-text: #86868b;
       }
       .dark {
-        --pl-bg: #111114;
-        --pl-ring-track: rgba(255, 255, 255, 0.12);
-        --pl-ring: #f2f2f4;
-        --pl-text: #86868f;
+        --pl-bg: #0b0b0e;
+        --pl-dot: #f5f5f7;
+        --pl-text: #86868b;
       }
       body {
         margin: 0;
@@ -117,7 +111,7 @@
         flex-direction: column;
         background-color: var(--pl-bg);
         opacity: 1;
-        transition: opacity 0.4s ease, visibility 0.4s ease;
+        transition: opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.32s ease;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", system-ui, sans-serif;
       }
       #app-loader.fade-out {
@@ -129,26 +123,41 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        animation: pl-content-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        gap: 14px;
+        animation: pl-content-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
-      .pl-ring {
-        width: 40px;
-        height: 40px;
+      /* Satin 3×3 对角波纹点阵几何加载器 */
+      .pl-matrix {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3px;
+        width: 24px;
+        height: 24px;
+        padding: 1.5px;
         box-sizing: border-box;
-        border-radius: 50%;
-        border: 2px solid var(--pl-ring-track);
-        border-top-color: var(--pl-ring);
-        animation: pl-spin 0.9s linear infinite;
-        margin-bottom: 18px;
       }
+      .pl-matrix i {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: var(--pl-dot);
+        animation: pl-mat 1.15s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+      }
+      .pl-matrix i:nth-child(1) { animation-delay: 0s; }
+      .pl-matrix i:nth-child(2), .pl-matrix i:nth-child(4) { animation-delay: 0.11s; }
+      .pl-matrix i:nth-child(3), .pl-matrix i:nth-child(5), .pl-matrix i:nth-child(7) { animation-delay: 0.22s; }
+      .pl-matrix i:nth-child(6), .pl-matrix i:nth-child(8) { animation-delay: 0.33s; }
+      .pl-matrix i:nth-child(9) { animation-delay: 0.44s; }
       .pl-text {
         font-size: 13px;
         font-weight: 500;
         color: var(--pl-text);
         user-select: none;
       }
-      @keyframes pl-spin {
-        to { transform: rotate(360deg); }
+      @keyframes pl-mat {
+        0%, 100% { transform: scale(0.42); opacity: 0.22; }
+        38% { transform: scale(1); opacity: 1; }
       }
       @keyframes pl-content-in {
         from { opacity: 0; transform: translateY(6px); }
@@ -160,7 +169,7 @@
   <body>
     <div id="app-loader" aria-label="Loading">
       <div class="pl-loader-content">
-        <div class="pl-ring"></div>
+        <span class="pl-matrix" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <span class="pl-text">CliRelay</span>
       </div>
     </div>

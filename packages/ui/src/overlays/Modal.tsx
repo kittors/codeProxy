@@ -8,7 +8,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from "react";
-import { X } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useScrollFade } from "../hooks/useScrollFade";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
 import { overlayBackdropMotion, overlayPanelMotion, useOverlayPresence } from "./overlayMotion";
@@ -18,9 +18,8 @@ import {
   type DialogInitialFocus,
 } from "./useDialogBehavior";
 
-/** 关闭按钮：无底色圆形，悬停才出现浅灰叠层。 */
-const CLOSE_BUTTON_CLASS =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60";
+/** Satin 弹窗关闭按钮：无底色圆角图标按钮，带物理按压微缩放与 Esc 快捷键提示。 */
+const CLOSE_BUTTON_CLASS = "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
@@ -186,8 +185,8 @@ export function Modal({
         tabIndex={-1}
         style={backdropMotion.style}
         className={[
-          // 只压暗、不模糊：模糊会把背后的页面整片糊掉，打开一个小确认框也像换了个场景。
-          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
+          // Satin 遮罩令牌：只压暗、不模糊，层次通透清晰。
+          "absolute inset-0 cursor-default bg-[var(--sn-scrim)]",
           backdropMotion.className,
         ].join(" ")}
       />
@@ -206,7 +205,7 @@ export function Modal({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-elevated text-ink shadow-dialog outline-none [--cp-backdrop:var(--cp-elevated)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
+          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
           panelClassName,
@@ -218,10 +217,11 @@ export function Modal({
               type="button"
               onClick={onClose}
               disabled={!open}
+              data-kbd="Esc"
               className={`absolute top-4 right-4 z-20 ${CLOSE_BUTTON_CLASS}`}
               aria-label={t("common.close")}
             >
-              <X size={18} />
+              <Icon name="x" size={16} />
             </button>
           ) : null
         ) : (
@@ -257,10 +257,11 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 disabled={!open}
+                data-kbd="Esc"
                 className={CLOSE_BUTTON_CLASS}
                 aria-label={t("common.close")}
               >
-                <X size={18} />
+                <Icon name="x" size={16} />
               </button>
             ) : null}
           </div>

@@ -81,6 +81,12 @@ export default defineConfig({
           // chunk; left to auto-placement it can land in a heavy lazy chunk and
           // drag it into every page's modulepreload list.
           if (id.includes("vite/preload-helper")) return "vendor-react";
+          if (id.includes("/vendor/satin-ui/")) {
+            if (id.includes("/src/charts.js") || id.includes("/react/charts.js")) return "vendor-satin-charts";
+            if (id.includes("/src/grid.js") || id.includes("/src/canvas-grid.js") || id.includes("/react/grid.js")) return "vendor-satin-grid";
+            if (id.includes("/src/markdown.js") || id.includes("/react/markdown.js")) return "vendor-satin-markdown";
+            return "vendor-satin";
+          }
           if (!id.includes("node_modules")) return undefined;
           const match = (...packages: string[]) =>
             packages.some((name) => id.includes(`/node_modules/${name}/`));
@@ -90,10 +96,6 @@ export default defineConfig({
           if (match("i18next", "react-i18next")) return "vendor-i18n";
           if (match("echarts", "echarts-for-react", "zrender")) return "vendor-echarts";
           if (match("framer-motion")) return "vendor-animation";
-          if (match("react-markdown", "react-syntax-highlighter", "remark-gfm")) {
-            return "vendor-markdown";
-          }
-          if (match("@radix-ui/react-dropdown-menu")) return "vendor-radix-dropdown";
           return undefined;
         },
       },

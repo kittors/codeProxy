@@ -1,13 +1,14 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Copy } from "lucide-react";
+import { Icon as SatinIcon } from "satin-ui/react";
 import {
   copyTextToClipboard,
   highlightSnippet,
   TOKEN_CLASS,
+  useSatinFluidThumb,
   type SnippetLanguage,
 } from "@code-proxy/ui";
-import { LANDING_EASE, useLandingFade } from "./landingMotion";
+import { useLandingFade } from "./landingMotion";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy } from "./landingCopy";
 
@@ -73,6 +74,10 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
   const snippets = useMemo(() => buildSnippets(copy.apiBaseUrl), [copy.apiBaseUrl]);
   const [activeId, setActiveId] = useState<string>(snippets[0].id);
   const [copied, setCopied] = useState(false);
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const tabThumbRef = useRef<HTMLSpanElement | null>(null);
+
+  useSatinFluidThumb(tabListRef, tabThumbRef, 'button[aria-pressed="true"]', activeId);
 
   const active = snippets.find((snippet) => snippet.id === activeId) ?? snippets[0];
   const highlighted = useMemo(
@@ -127,36 +132,42 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
             className="cp-edge overflow-hidden rounded-3xl bg-[#0B0D13]"
           >
             <div className="flex items-center gap-1 px-3 pt-2.5">
-              {snippets.map((snippet) => (
-                <button
-                  key={snippet.id}
-                  type="button"
-                  onClick={() => setActiveId(snippet.id)}
-                  aria-pressed={snippet.id === activeId}
-                  className={[
-                    "relative rounded-full px-4 py-1.5 font-display text-xs font-medium transition-colors duration-150",
-                    snippet.id === activeId
-                      ? "text-white"
-                      : "text-white/55 hover:text-white/85",
-                  ].join(" ")}
-                >
-                  {snippet.id === activeId ? (
-                    <motion.span
-                      layoutId="landing-snippet-tab"
-                      transition={{ duration: 0.28, ease: LANDING_EASE }}
-                      aria-hidden
-                      className="absolute inset-0 -z-10 rounded-full bg-accent"
-                    />
-                  ) : null}
-                  {snippet.label}
-                </button>
-              ))}
+              <div ref={tabListRef} className="relative flex items-center gap-1 p-0.5">
+                <span
+                  ref={tabThumbRef}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 z-0 origin-left rounded-full bg-accent opacity-0 will-change-transform"
+                />
+                {snippets.map((snippet) => (
+                  <button
+                    key={snippet.id}
+                    type="button"
+                    onClick={() => setActiveId(snippet.id)}
+                    aria-pressed={snippet.id === activeId}
+                    className={[
+                      "sn-btn !h-auto !bg-transparent !shadow-none relative z-[1] !rounded-full !px-4 !py-1.5 font-display !text-xs font-medium",
+                      snippet.id === activeId
+                        ? "!text-white"
+                        : "!text-white/55 hover:!text-white/85",
+                    ].join(" ")}
+                  >
+                    {snippet.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-display text-xs font-medium text-white/55 transition-colors duration-150 hover:bg-white/10 hover:text-white/85"
+                className="sn-btn sn-ghost !h-auto ml-auto gap-1.5 !rounded-full !px-3 !py-1.5 font-display !text-xs font-medium !text-white/55 hover:!bg-white/10 hover:!text-white/85"
               >
-                {copied ? <Check size={13} aria-hidden /> : <Copy size={13} aria-hidden />}
+                <span className="sn-swap" data-swapped={copied ? "true" : "false"} aria-hidden="true">
+                  <span className="sn-swap-a">
+                    <SatinIcon name="copy" size={13} />
+                  </span>
+                  <span className="sn-swap-b text-emerald-400">
+                    <SatinIcon name="check" size={13} />
+                  </span>
+                </span>
                 {copied ? copy.workflow.copied : copy.workflow.copy}
               </button>
             </div>

@@ -1,4 +1,5 @@
-import { Loader2, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
+import { Loader } from "satin-ui/react";
 import { formatLatency } from "@features/provider-latency";
 
 export interface ProviderLatencyEntry {
@@ -42,11 +43,11 @@ export function ProviderLatencyButton({
     <button
       type="button"
       className={[
-        "inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none tabular-nums transition-colors hover:bg-ink/[0.08] focus-visible:outline-none focus-visible:shadow-control-focus dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+        "sn-btn !h-5 shrink-0 gap-1 !rounded-md !bg-ink/[0.05] !px-1.5 !text-2xs font-semibold leading-none tabular-nums !shadow-none hover:!bg-ink/[0.08] dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]",
         entry.loading
-          ? "text-ink-3"
+          ? "!text-ink-3"
           : entry.error
-            ? "text-rose-700 dark:text-rose-300"
+            ? "!text-rose-700 dark:!text-rose-300"
             : latencyColor,
       ].join(" ")}
       onClick={(event) => {
@@ -57,7 +58,7 @@ export function ProviderLatencyButton({
       title={label}
     >
       {entry.loading ? (
-        <Loader2 size={10} className="animate-spin" />
+        <Loader variant="arc" size={10} label={label} />
       ) : entry.error ? (
         <span>×</span>
       ) : latencyMs !== null ? (

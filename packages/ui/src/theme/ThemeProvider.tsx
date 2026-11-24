@@ -11,15 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Monitor, Moon, Sun } from "lucide-react";
-import {
-  cn,
-  selectOptionBase,
-  selectOptionCheck,
-  selectOptionIdle,
-  selectOptionSelected,
-  selectPanel,
-} from "../utils/selectStyles";
+import { Icon as SatinIcon } from "satin-ui/react";
+import { cn } from "../utils/selectStyles";
 
 const THEME_STORAGE_KEY = "code-proxy-admin-theme";
 const THEME_TRANSITION_LOCK_CLASS = "theme-transition-lock";
@@ -45,9 +38,9 @@ interface ThemeContextState {
 const ThemeContext = createContext<ThemeContextState | null>(null);
 
 const THEME_OPTIONS = [
-  { value: "light", labelKey: "theme.light", Icon: Sun },
-  { value: "dark", labelKey: "theme.dark", Icon: Moon },
-  { value: "auto", labelKey: "theme.auto", Icon: Monitor },
+  { value: "light", labelKey: "theme.light", icon: "sun" },
+  { value: "dark", labelKey: "theme.dark", icon: "moon" },
+  { value: "auto", labelKey: "theme.auto", icon: "monitor" },
 ] as const;
 
 const isThemePreference = (value: unknown): value is ThemePreference =>
@@ -91,11 +84,9 @@ const applyThemeToDom = (mode: ThemeMode): void => {
 
   document.documentElement.classList.toggle("dark", isDark);
   document.documentElement.style.colorScheme = mode;
-  if (isDark) {
-    document.documentElement.setAttribute("data-theme", "dark");
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
+  // 显式写入 data-theme="light" | "dark"，避免系统深色 + 应用手选浅色时命中
+  // Satin tokens.css 的 @media (prefers-color-scheme: dark) { :root:not([data-theme]) }。
+  document.documentElement.setAttribute("data-theme", mode);
 };
 
 const persistTheme = (mode: ThemePreference): void => {
@@ -211,7 +202,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
   const selectedOption = THEME_OPTIONS.find((option) => option.value === preference);
-  const TriggerIcon = preference === "auto" ? Monitor : mode === "dark" ? Moon : Sun;
+  const triggerIconName = preference === "auto" ? "monitor" : mode === "dark" ? "moon" : "sun";
   const buttonLabel = label ?? t("theme.switch");
   const tooltip = `${buttonLabel}: ${t(selectedOption?.labelKey ?? "theme.switch")}`;
 
@@ -269,14 +260,13 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={className}
+        className={cn("sn-btn sn-ghost sn-ibtn sn-round", open ? "sn-is-open" : null, className)}
         aria-label={buttonLabel}
         aria-expanded={open}
         aria-haspopup="menu"
-        data-tooltip={tooltip}
-        title={tooltip}
+        data-tip={tooltip}
       >
-        <TriggerIcon size={16} />
+        <SatinIcon name={triggerIconName} size={16} />
       </button>
 
       {open
@@ -287,10 +277,10 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
               data-state="open"
               data-side="bottom"
               aria-label={buttonLabel}
-              className={cn(selectPanel, "w-[220px]")}
-              style={{ top: pos.top, left: pos.left }}
+              className="sn-menu sn-solid sn-open w-[220px]"
+              style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
             >
-              {THEME_OPTIONS.map(({ value, labelKey, Icon }) => {
+              {THEME_OPTIONS.map(({ value, labelKey, icon }) => {
                 const selected = value === preference;
                 return (
                   <button
@@ -300,13 +290,17 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
                     aria-checked={selected}
                     onClick={() => handleModeChange(value)}
                     className={cn(
-                      selectOptionBase,
-                      selected ? selectOptionSelected : selectOptionIdle,
+                      "sn-item w-full border-0 bg-transparent text-left hover:bg-[var(--sn-b-ghost-hover)]",
+                      selected ? "sn-sel font-medium" : null,
                     )}
                   >
-                    <Icon size={16} className="shrink-0" aria-hidden="true" />
+                    <SatinIcon name={icon} size={16} />
                     <span className="min-w-0 flex-1 truncate">{t(labelKey)}</span>
-                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
+                    {selected ? (
+                      <span className="sn-chk">
+                        <SatinIcon name="check" size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}

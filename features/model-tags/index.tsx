@@ -397,10 +397,10 @@ export function CopyableModelTag({
       title={title}
       style={brand.style}
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-xs font-semibold leading-none transition hover:bg-ink/[0.08] active:scale-95 dark:hover:bg-white/[0.1]",
+        "sn-btn !h-auto max-w-full gap-1.5 !rounded-lg !px-2.5 !py-1.5 font-mono !text-xs font-semibold leading-none !shadow-none hover:!bg-ink/[0.08] dark:hover:!bg-white/[0.1]",
         brand.className,
         // 多彩风格悬停时保留品牌淡底，只浮起一层投影（中性的悬停底会把品牌色盖掉）。
-        "colorful:hover:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:hover:shadow-sm colorful:dark:hover:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
+        "colorful:hover:!bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:hover:!shadow-sm colorful:dark:hover:!bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}
     >
@@ -431,7 +431,8 @@ export function ModelVendorStatBadge({
 }) {
   const vars = vendorBrandVars(vendorKey);
   const className = cn(
-    "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-2xs font-semibold",
+    onClick ? "sn-btn !h-auto !shadow-none" : "inline-flex items-center",
+    "gap-1.5 rounded-md px-2 py-0.5 text-2xs font-semibold",
     vars.className,
     // 选中：简约风格用唯一的强调色淡底；多彩风格是品牌淡底再套一圈品牌色的选中圈，和淡底同一家族。
     active

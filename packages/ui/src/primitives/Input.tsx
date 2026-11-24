@@ -1,11 +1,5 @@
 import { forwardRef, type InputHTMLAttributes, type ReactNode } from "react";
-import {
-  controlHeightBySize,
-  controlPaddingBySize,
-  controlSurface,
-  controlTextBySize,
-  type ControlSize,
-} from "../utils/controlStyles";
+import type { ControlSize } from "../utils/controlStyles";
 
 type InputVariant = "solid" | "ghost";
 
@@ -18,9 +12,10 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   invalid?: boolean;
 }
 
-const VARIANT_STYLES: Record<InputVariant, string> = {
-  solid: controlSurface,
-  ghost: "bg-transparent text-inherit placeholder:text-inherit placeholder:opacity-60",
+const SIZE_CLASS: Record<ControlSize, string> = {
+  sm: "sn-sm",
+  default: "",
+  lg: "sn-lg",
 };
 
 export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
@@ -35,9 +30,6 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   },
   ref,
 ) {
-  // 没有标签可依附时才拿 placeholder 兜底当名称（搜索框这类独立输入框）。有 id（FormField 会
-  // 用 `<label for>` 指过来）或 aria-labelledby 时不能兜底：aria-label 的优先级高于 label，
-  // 读屏会把「例如：香港住宅 IP」这种示例读成字段名，可见的标签反而被盖掉。
   const ariaLabel =
     props["aria-label"] ??
     (!props.id && !props["aria-labelledby"] && typeof props.placeholder === "string"
@@ -45,24 +37,17 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       : undefined);
 
   const ariaInvalid = props["aria-invalid"];
-  const isInvalid =
-    invalid === true || ariaInvalid === true || ariaInvalid === "true";
+  const isInvalid = invalid === true || ariaInvalid === true || ariaInvalid === "true";
 
-  const mergedClassName = [
-    "w-full text-sm outline-none",
-    "focus:outline-none focus-visible:outline-none",
-    controlHeightBySize[size],
-    controlTextBySize[size],
-    variant === "solid" ? controlPaddingBySize[size] : null,
-    // 无效态的红色描边由 controlSurface 里的 aria-[invalid=true] 变体负责，下面会把
-    // invalid 属性同步成 aria-invalid，这里不再条件拼接类名。
-    VARIANT_STYLES[variant],
-    startAdornment ? "pl-9" : null,
-    endAdornment ? "pr-10" : null,
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const mergedClassName =
+    variant === "ghost"
+      ? [
+          "w-full bg-transparent text-sm text-inherit outline-none placeholder:text-inherit placeholder:opacity-60",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : ["sn-input", SIZE_CLASS[size], className].filter(Boolean).join(" ");
 
   const inputProps = {
     ...props,
@@ -74,16 +59,22 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   }
 
   return (
-    <div className="relative">
+    <span
+      className={[
+        "sn-ib w-full",
+        startAdornment ? "sn-has-pre" : null,
+        endAdornment ? "sn-has-post" : null,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {startAdornment ? (
-        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-          {startAdornment}
-        </div>
+        <span className="sn-pre inline-flex items-center justify-center">{startAdornment}</span>
       ) : null}
       <input ref={ref} className={mergedClassName} aria-label={ariaLabel} {...inputProps} />
       {endAdornment ? (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2">{endAdornment}</div>
+        <span className="sn-post inline-flex items-center justify-center">{endAdornment}</span>
       ) : null}
-    </div>
+    </span>
   );
 });

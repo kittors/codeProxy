@@ -241,7 +241,7 @@ export function ScrollArea({
         >
           <div
             role="presentation"
-            className="pointer-events-auto absolute right-0 w-1.5 cursor-pointer rounded-full bg-[#C7C7C7] transition-[width] duration-150 ease-out hover:w-2 active:w-2 group-hover/scrollbar:w-2 dark:bg-white/25"
+            className="pointer-events-auto absolute right-0.5 w-[5px] cursor-pointer rounded-full bg-[var(--sn-sa-thumb)] transition-[width,background-color] duration-150 ease-out hover:w-2 hover:bg-[var(--sn-sa-thumb-hover)] active:w-2 active:bg-[var(--sn-sa-thumb-hover)] group-hover/scrollbar:w-2 group-hover/scrollbar:bg-[var(--sn-sa-thumb-hover)]"
             style={{ top: thumb.top + Math.max(0, scrollbarTrackInset), height: thumb.height }}
             onPointerDown={handleThumbPointerDown}
             onPointerMove={handleThumbPointerMove}

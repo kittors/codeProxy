@@ -1,0 +1,49 @@
+{
+  "$description": "Satin 设计令牌（W3C DTCG 格式）。build.mjs 按 order 依次生成 CSS 变量块；令牌的 CSS 变量名在 $extensions.com.satin.var（生成时加前缀）。",
+  "prefix": "sn-",
+  "order": [
+    {
+      "file": "base.tokens.json",
+      "selector": ":root"
+    },
+    {
+      "file": "theme.light.tokens.json",
+      "selector": ":root, [data-theme=\"light\"]",
+      "declarations": {
+        "color-scheme": "light"
+      }
+    },
+    {
+      "file": "theme.dark.tokens.json",
+      "selector": "[data-theme=\"dark\"]",
+      "declarations": {
+        "color-scheme": "dark"
+      }
+    },
+    {
+      "file": "density.compact.tokens.json",
+      "selector": "[data-density=\"compact\"]"
+    },
+    {
+      "file": "density.comfortable.tokens.json",
+      "selector": "[data-density=\"comfortable\"]"
+    },
+    {
+      "file": "radius.6.tokens.json",
+      "selector": "[data-radius=\"6\"]"
+    },
+    {
+      "file": "radius.8.tokens.json",
+      "selector": "[data-radius=\"8\"]"
+    },
+    {
+      "file": "radius.10.tokens.json",
+      "selector": "[data-radius=\"10\"]"
+    },
+    {
+      "file": "radius.pill.tokens.json",
+      "selector": ":root:not([data-radius]), [data-radius=\"pill\"]",
+      "note": "没设 data-radius 时也按胶囊（设计稿的默认外观），不依赖 theme-boot"
+    }
+  ]
+}

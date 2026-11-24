@@ -1,0 +1,960 @@
+{
+  "$description": "深色主题",
+  "color": {
+    "bg": {
+      "canvas": {
+        "$type": "color",
+        "$value": "#000",
+        "$extensions": {
+          "com.satin": {
+            "var": "--canvas",
+            "source": "kit.css"
+          }
+        },
+        "$description": "页面底色（最底层）"
+      },
+      "raised": {
+        "$type": "color",
+        "$value": "#1c1c1e",
+        "$extensions": {
+          "com.satin": {
+            "var": "--raised",
+            "source": "kit.css"
+          }
+        },
+        "$description": "卡片、面板、表格、输入区的底色（比页面高一层）"
+      },
+      "overlay": {
+        "$type": "color",
+        "$value": "#2c2c2e",
+        "$extensions": {
+          "com.satin": {
+            "var": "--overlay",
+            "source": "kit.css"
+          }
+        },
+        "$description": "浮层底色：菜单、弹出面板、弹窗、通知"
+      },
+      "sunken": {
+        "$type": "color",
+        "$value": "#0e0e10",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sunken",
+            "source": "kit.css"
+          }
+        },
+        "$description": "凹下去的底色：轨道、进度条底、代码块"
+      }
+    },
+    "fill": {
+      "hover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .06)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--fill-hover",
+            "source": "kit.css"
+          }
+        },
+        "$description": "悬停时叠一层的填充（半透明）"
+      },
+      "active": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .1)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--fill-active",
+            "source": "kit.css"
+          }
+        },
+        "$description": "按下 / 选中时叠一层的填充"
+      },
+      "hoverSolid": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, #fff 6%, {color.bg.raised})",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--fill-hover-solid",
+            "source": "kit.css"
+          }
+        },
+        "$description": "悬停填充的不透明版（行交叉时不透字）"
+      },
+      "activeSolid": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, #fff 10%, {color.bg.raised})",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--fill-active-solid",
+            "source": "kit.css"
+          }
+        },
+        "$description": "按下填充的不透明版"
+      },
+      "subtle": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .08)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--fill-subtle",
+            "source": "kit.css"
+          }
+        },
+        "$description": "很淡的底：图标底、标签底、占位"
+      }
+    },
+    "scrim": {
+      "$type": "color",
+      "$value": "rgba(0, 0, 0, .6)",
+      "$extensions": {
+        "com.satin": {
+          "var": "--scrim",
+          "source": "kit.css"
+        }
+      },
+      "$description": "弹窗、抽屉后面的遮罩"
+    },
+    "text": {
+      "primary": {
+        "$type": "color",
+        "$value": "#f5f5f7",
+        "$extensions": {
+          "com.satin": {
+            "var": "--label",
+            "source": "kit.css"
+          }
+        },
+        "$description": "主文字（标题、正文）"
+      },
+      "secondary": {
+        "$type": "color",
+        "$value": "#aeaeb2",
+        "$extensions": {
+          "com.satin": {
+            "var": "--label2",
+            "source": "kit.css"
+          }
+        },
+        "$description": "次要文字（说明、表格里的次要列）"
+      },
+      "tertiary": {
+        "$type": "color",
+        "$value": "#86868b",
+        "$extensions": {
+          "com.satin": {
+            "var": "--label3",
+            "source": "kit.css"
+          }
+        },
+        "$description": "第三级文字（辅助说明、时间、表头）"
+      },
+      "disabled": {
+        "$type": "color",
+        "$value": "#48484a",
+        "$extensions": {
+          "com.satin": {
+            "var": "--label-off",
+            "source": "kit.css"
+          }
+        },
+        "$description": "禁用、占位文字"
+      },
+      "onAccent": {
+        "$type": "color",
+        "$value": "#000",
+        "$extensions": {
+          "com.satin": {
+            "var": "--on-primary",
+            "source": "kit.css"
+          }
+        },
+        "$description": "主色底上的文字"
+      }
+    },
+    "line": {
+      "subtle": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .09)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--line",
+            "source": "kit.css"
+          }
+        },
+        "$description": "分隔线、卡片描边"
+      },
+      "control": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .14)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--line-control",
+            "source": "kit.css"
+          }
+        },
+        "$description": "输入框、次要按钮的描边"
+      },
+      "controlHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .24)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--line-control-hover",
+            "source": "kit.css"
+          }
+        },
+        "$description": "输入框、次要按钮悬停时的描边"
+      },
+      "focus": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .5)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--focus",
+            "source": "kit.css"
+          }
+        },
+        "$description": "键盘焦点框"
+      }
+    },
+    "accent": {
+      "$type": "color",
+      "$value": "#f5f5f7",
+      "$extensions": {
+        "com.satin": {
+          "var": "--accent",
+          "source": "kit.css"
+        }
+      },
+      "$description": "强调色 / 主按钮（默认是墨色，跟着文字走；可换品牌色）"
+    },
+    "danger": {
+      "$type": "color",
+      "$value": "#ff6961",
+      "$extensions": {
+        "com.satin": {
+          "var": "--danger",
+          "source": "kit.css"
+        }
+      },
+      "$description": "危险、错误"
+    },
+    "dangerRing": {
+      "$type": "color",
+      "$value": "rgba(255, 105, 97, .18)",
+      "$extensions": {
+        "com.satin": {
+          "var": "--danger-ring",
+          "source": "kit.css"
+        }
+      },
+      "$description": "错误输入框外圈"
+    },
+    "success": {
+      "$type": "color",
+      "$value": "#30d158",
+      "$extensions": {
+        "com.satin": {
+          "var": "--success",
+          "source": "kit.css"
+        }
+      },
+      "$description": "成功、完成"
+    },
+    "warning": {
+      "$type": "color",
+      "$value": "#ffd60a",
+      "$extensions": {
+        "com.satin": {
+          "var": "--warning",
+          "source": "kit.css"
+        }
+      },
+      "$description": "警告、待处理"
+    },
+    "field": {
+      "bg": {
+        "$type": "color",
+        "$value": "#1c1c1e",
+        "$extensions": {
+          "com.satin": {
+            "var": "--field",
+            "source": "kit.css"
+          }
+        },
+        "$description": "输入框底色"
+      }
+    },
+    "ring": {
+      "$type": "color",
+      "$value": "rgba(255, 255, 255, .09)",
+      "$extensions": {
+        "com.satin": {
+          "var": "--ring",
+          "source": "kit.css"
+        }
+      },
+      "$description": "很淡的一圈描边（头像、缩略图）"
+    },
+    "card": {
+      "line": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .09)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--card-line",
+            "source": "kit.css"
+          }
+        },
+        "$description": "卡片内描边"
+      }
+    },
+    "glass": {
+      "bg": {
+        "$type": "color",
+        "$value": "rgba(28, 28, 30, .74)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--glass-bg",
+            "source": "base.css"
+          }
+        },
+        "$description": "毛玻璃浮动表面底色（深色主题）"
+      },
+      "line": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .12)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--glass-line",
+            "source": "base.css"
+          }
+        },
+        "$description": "毛玻璃浮动表面细描边（深色主题）"
+      }
+    },
+    "button": {
+      "primary": {
+        "$type": "color",
+        "$value": "{color.accent}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-primary",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "主按钮底色"
+      },
+      "primaryHover": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.accent} 70%, #fff)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--b-primary-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "主按钮底色（悬停）"
+      },
+      "primaryActive": {
+        "$type": "color",
+        "$value": "color-mix(in srgb, {color.accent} 90%, #000)",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--b-primary-active",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "主按钮底色（按下）"
+      },
+      "onPrimary": {
+        "$type": "color",
+        "$value": "{color.text.onAccent}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-on-primary",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "主按钮文字"
+      },
+      "outline": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .03)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-outline",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "次要按钮底色"
+      },
+      "outlineHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .07)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-outline-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "次要按钮底色（悬停）"
+      },
+      "outlineActive": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .11)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-outline-active",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "次要按钮底色（按下）"
+      },
+      "outlineLine": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .13)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-outline-line",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "次要按钮底色（描边）"
+      },
+      "outlineLineHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .22)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-outline-line-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "次要按钮底色（悬停）"
+      },
+      "soft": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .08)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-soft",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "第三级按钮底色"
+      },
+      "softHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .12)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-soft-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "第三级按钮底色（悬停）"
+      },
+      "softActive": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .16)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-soft-active",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "第三级按钮底色（按下）"
+      },
+      "ghostHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .08)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-ghost-hover",
+            "source": "buttons.css"
+          }
+        }
+      },
+      "ghostActive": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .12)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-ghost-active",
+            "source": "buttons.css"
+          }
+        }
+      },
+      "danger": {
+        "$type": "color",
+        "$value": "#d92d20",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "危险按钮底色"
+      },
+      "dangerHover": {
+        "$type": "color",
+        "$value": "#c4291d",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "危险按钮底色（悬停）"
+      },
+      "dangerActive": {
+        "$type": "color",
+        "$value": "#b42318",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger-active",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "危险按钮底色（按下）"
+      },
+      "dangerSoft": {
+        "$type": "color",
+        "$value": "rgba(255, 105, 97, .12)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger-soft",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "弱危险按钮底色"
+      },
+      "dangerSoftHover": {
+        "$type": "color",
+        "$value": "rgba(255, 105, 97, .18)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger-soft-hover",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "危险按钮底色（悬停）"
+      },
+      "dangerSoftActive": {
+        "$type": "color",
+        "$value": "rgba(255, 105, 97, .24)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--b-danger-soft-active",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "危险按钮底色（按下）"
+      },
+      "lift": {
+        "$value": "0 0 0 0 transparent",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--b-lift",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "按钮极淡的落影"
+      }
+    },
+    "tooltip": {
+      "bg": {
+        "$type": "color",
+        "$value": "#3a3a3c",
+        "$extensions": {
+          "com.satin": {
+            "var": "--tip-bg",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "Tooltip、Toast 的反色底"
+      },
+      "fg": {
+        "$type": "color",
+        "$value": "#f5f5f7",
+        "$extensions": {
+          "com.satin": {
+            "var": "--tip-fg",
+            "source": "buttons.css"
+          }
+        },
+        "$description": "Tooltip、Toast 的文字"
+      }
+    },
+    "menu": {
+      "bg": {
+        "$type": "color",
+        "$value": "{color.bg.overlay}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--menu-bg",
+            "source": "form.css"
+          }
+        },
+        "$description": "菜单底色"
+      }
+    },
+    "skeleton": {
+      "shine": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .07)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sk-shine",
+            "source": "feedback.css"
+          }
+        },
+        "$description": "骨架屏扫光"
+      }
+    },
+    "scrollbar": {
+      "thumb": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .28)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sa-thumb",
+            "source": "scroll.css"
+          }
+        },
+        "$description": "滚动条滑块"
+      },
+      "thumbHover": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .48)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--sa-thumb-hover",
+            "source": "scroll.css"
+          }
+        },
+        "$description": "滚动条滑块（悬停）"
+      }
+    },
+    "flow": {
+      "dot": {
+        "$type": "color",
+        "$value": "rgba(255, 255, 255, .1)",
+        "$extensions": {
+          "com.satin": {
+            "var": "--flow-dot",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图画布网格点"
+      }
+    },
+    "avatar": {
+      "bg": {
+        "$type": "color",
+        "$value": "#a7a7aa",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-bg",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "头像的圆底（预设头像；照片没加载出来时也露出它）（深色下保留浅色、压到约 72%：头像是图片，不反色；页面、卡片、浮层上都分得出来，黑发有剪影）"
+      },
+      "ink": {
+        "$type": "color",
+        "$value": "#424245",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-ink",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的线条、眼睛（深色下不压暗，黑发在圆底上留一道轮廓）"
+      },
+      "face": {
+        "$type": "color",
+        "$value": "#e1e1e1",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-face",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的脸、耳朵、脖子（深色下沿用浅色、压到约 90%）"
+      },
+      "black": {
+        "$type": "color",
+        "$value": "#393432",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-black",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的发色：黑（深色下沿用浅色、压到约 90%）"
+      },
+      "brown": {
+        "$type": "color",
+        "$value": "#523f32",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-brown",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的发色：深棕（深色下沿用浅色、压到约 90%）"
+      },
+      "gray": {
+        "$type": "color",
+        "$value": "#b5b2ae",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-gray",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的发色：灰（年长者）（深色下沿用浅色、压到约 90%）"
+      },
+      "blue": {
+        "$type": "color",
+        "$value": "#b3bbc4",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-blue",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的衣服、帽子、耳机：灰蓝（深色下沿用浅色、压到约 90%）"
+      },
+      "green": {
+        "$type": "color",
+        "$value": "#b9c0b4",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-green",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的衣服：灰绿（深色下沿用浅色、压到约 90%）"
+      },
+      "pink": {
+        "$type": "color",
+        "$value": "#c6bab7",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-pink",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的衣服：灰粉（深色下沿用浅色、压到约 90%）"
+      },
+      "violet": {
+        "$type": "color",
+        "$value": "#c0bcc9",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-violet",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的衣服、耳机：淡紫（深色下沿用浅色、压到约 90%）"
+      },
+      "beard": {
+        "$type": "color",
+        "$value": "#867f7a",
+        "$extensions": {
+          "com.satin": {
+            "var": "--av-beard",
+            "source": "avatar-presets"
+          }
+        },
+        "$description": "预设头像的胡子（深色下沿用浅色、压到约 90%）"
+      }
+    }
+  },
+  "shadow": {
+    "fieldInset": {
+      "$type": "shadow",
+      "$value": "0 0 0 0 transparent",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--field-inset",
+          "source": "kit.css"
+        }
+      },
+      "$description": "输入框内阴影（默认没有）"
+    },
+    "card": {
+      "$type": "shadow",
+      "$value": "none",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--card-shadow",
+          "source": "kit.css"
+        }
+      },
+      "$description": "卡片极淡的落影（一般不用：卡片只靠描边）"
+    },
+    "e1": {
+      "$type": "shadow",
+      "$value": "0 8px 24px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .09)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--e1",
+          "source": "kit.css"
+        }
+      },
+      "$description": "浮层阴影：菜单、弹出面板、通知"
+    },
+    "e2": {
+      "$type": "shadow",
+      "$value": "0 24px 64px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(255, 255, 255, .1)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--e2",
+          "source": "kit.css"
+        }
+      },
+      "$description": "弹窗阴影"
+    },
+    "tooltip": {
+      "$type": "shadow",
+      "$value": "0 4px 14px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .08)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--tip-shadow",
+          "source": "buttons.css"
+        }
+      },
+      "$description": "Tooltip 阴影"
+    },
+    "menu": {
+      "$type": "shadow",
+      "$value": "0 18px 34px rgba(0, 0, 0, .42), 0 2px 4px rgba(0, 0, 0, .2), inset 0 0 0 1px rgba(255, 255, 255, .09), inset 0 1px 0 rgba(255, 255, 255, .06)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--menu-shadow",
+          "source": "form.css"
+        }
+      },
+      "$description": "菜单阴影"
+    }
+  },
+  "gradient": {
+    "scrim": {
+      "$type": "color",
+      "$value": "linear-gradient(to top, rgba(0, 0, 0, .74) 0%, rgba(0, 0, 0, .28) 50%, transparent 100%)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--grad-scrim",
+          "source": "base.css"
+        }
+      },
+      "$description": "功能性压图护字底罩（深色主题）"
+    },
+    "fade": {
+      "$type": "color",
+      "$value": "linear-gradient(to bottom, color-mix(in srgb, {color.bg.raised} 0%, transparent), {color.bg.raised})",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--grad-fade",
+          "source": "base.css"
+        }
+      },
+      "$description": "功能性边缘渐隐（深色主题）"
+    },
+    "sheen": {
+      "$type": "color",
+      "$value": "linear-gradient(90deg, transparent, rgba(255, 255, 255, .2), transparent)",
+      "$extensions": {
+        "com.satin": {
+          "css": true,
+          "var": "--grad-sheen",
+          "source": "base.css"
+        }
+      },
+      "$description": "功能性单向微光（深色主题）"
+    }
+  },
+  "flow": {
+    "edge": {
+      "saturation": {
+        "$type": "number",
+        "$value": "70%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--edge-s",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（饱和度）"
+      },
+      "lightness": {
+        "$type": "number",
+        "$value": "66%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--edge-l",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（明度）"
+      },
+      "alpha": {
+        "$type": "number",
+        "$value": 0.7,
+        "$extensions": {
+          "com.satin": {
+            "var": "--edge-a",
+            "source": "content.css"
+          }
+        },
+        "$description": "滚动边缘渐隐（透明度）"
+      }
+    },
+    "beam": {
+      "saturation": {
+        "$type": "number",
+        "$value": "95%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--beam-s",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图光束（饱和度）"
+      },
+      "lightness": {
+        "$type": "number",
+        "$value": "84%",
+        "$extensions": {
+          "com.satin": {
+            "css": true,
+            "var": "--beam-l",
+            "source": "content.css"
+          }
+        },
+        "$description": "流程图光束（明度）"
+      }
+    }
+  }
+}
