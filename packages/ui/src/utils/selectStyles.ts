@@ -49,50 +49,50 @@ export const selectTriggerGhost = [
 ].join(" ");
 
 export const selectChevron =
-  "ml-auto shrink-0 text-ink-3 transition-transform duration-200 ease-soft";
+  "ml-auto shrink-0 text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)]";
 
 /**
- * 所有浮层（下拉、菜单、日期面板）共用的表面：16px 圆角、实心底、堆叠投影。
- * 不画 border——shadow-pop 里第一层 1px 的阴影描边负责轮廓，深浅色各自一套。
+ * 所有浮层（下拉、菜单、日期面板）共用的 Satin 表面：--sn-menu-bg / --sn-menu-shadow / --sn-r-lg。
  */
 export const floatingPanelSurface =
-  "code-proxy-floating-surface rounded-2xl bg-elevated text-ink shadow-pop";
+  "code-proxy-floating-surface rounded-2xl bg-[var(--sn-menu-bg,var(--sn-overlay))] text-[var(--sn-label)] shadow-[var(--sn-menu-shadow,var(--sn-e1))]";
 
 export const selectPanel = `fixed z-[9999] overflow-hidden p-1.5 ${floatingPanelSurface}`;
 
 export const searchableSelectPanel = `fixed z-[9999] flex flex-col overflow-hidden ${floatingPanelSurface}`;
 
-export const selectSearchRow = "flex items-center gap-2 border-b border-line px-3.5 py-2.5";
+export const selectSearchRow = "flex items-center gap-2 border-b border-[var(--sn-line)] px-3.5 py-2.5";
 
 export const selectSearchInput =
-  "h-6 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-3";
+  "h-6 w-full bg-transparent text-sm text-[var(--sn-label)] outline-none placeholder:text-[var(--sn-label3)]";
 
-/** 选项：圆角行，悬停铺浅灰叠层；选中项不改底色，只在右侧放一个对勾。 */
+/** 选项：对齐 Satin `.sn-item`（圆角行 + --sn-b-ghost-hover 悬停 + 按压反馈）。 */
 export const selectOptionBase =
-  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-ink outline-none transition-colors duration-100 hover:bg-hover focus-visible:bg-hover";
+  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-[var(--sn-label)] outline-none transition-colors duration-100 hover:bg-[var(--sn-b-ghost-hover)] focus-visible:bg-[var(--sn-b-ghost-hover)]";
 
-export const selectOptionSelected = "font-medium text-ink";
+export const selectOptionSelected = "font-medium text-[var(--sn-label)]";
 
-export const selectOptionIdle = "text-ink";
+export const selectOptionIdle = "text-[var(--sn-label)]";
 
 /** 选中项右侧的对勾。 */
-export const selectOptionCheck = "ml-auto shrink-0 text-ink";
+export const selectOptionCheck = "ml-auto shrink-0 text-[var(--sn-label)]";
 
 /**
- * 多选列表里的方形勾选框：选中是实心强调色（深色模式反转），未选中只留一圈描边。
- * 未选中描边用 ink-3 而不是更浅的 ink-4，保证和白底之间有 3:1 的非文字对比度。
+ * 多选列表里的 Satin 方形勾选框：实心强调色 + 对勾。
  */
 export const selectCheckboxBox = (checked: boolean) =>
   cn(
-    "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-100",
-    checked ? "border-accent bg-accent text-accent-fg" : "border-ink-3",
+    "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-150 ease-[var(--sn-ease-overshoot)]",
+    checked
+      ? "border-[var(--sn-accent)] bg-[var(--sn-accent)] text-[var(--sn-on-primary)]"
+      : "border-[var(--sn-line-control-hover)] bg-[var(--sn-field)]",
   );
 
-/** 浮层里的轻量文字操作（全选、清空、取消）：无底色，悬停才出现浅灰叠层。 */
+/** 浮层里的轻量文字操作（全选、清空、取消）。 */
 export const selectTextAction =
-  "rounded-full px-2.5 py-1 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:text-ink-4 disabled:hover:bg-transparent";
+  "sn-btn sn-ghost sn-xs !h-7 !px-2.5 !text-xs text-[var(--sn-label2)]";
 
-export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-ink-3";
+export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-[var(--sn-label3)]";
 
 /**
  * 浮层进出：从触发器那条边长出来——透明度 120ms 淡入，同时从 0.96 放大、朝触发器反方向滑出 4px，

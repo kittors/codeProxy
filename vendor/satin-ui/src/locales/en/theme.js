@@ -1,0 +1,25 @@
+// en · theme
+export default {
+  "theme.0": "Ink",
+  "theme.1": "Blue",
+  "theme.2": "Indigo",
+  "theme.3": "Green",
+  "theme.4": "Amber",
+  "theme.5": "Rose",
+  "theme.6": "System",
+  "theme.7": "Rounded",
+  "theme.8": "Humanist",
+  "theme.9": "Serif",
+  "theme.10": "Small",
+  "theme.11": "Default",
+  "theme.12": "Large",
+  "theme.13": "Extra large",
+  "theme.14": "Sharp",
+  "theme.15": "Default",
+  "theme.16": "Soft",
+  "theme.17": "Pill",
+  "theme.18": "Hairline",
+  "theme.19": "Crisp",
+  "theme.20": "Snappy",
+  "theme.21": "Minimal"
+};

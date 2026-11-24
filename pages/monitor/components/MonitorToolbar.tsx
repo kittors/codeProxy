@@ -191,12 +191,11 @@ function LiveStatus({
       : refreshSeconds === 0 || legacy
         ? "paused"
         : "live";
-  // 正在刷新是进行中的状态，用强调色；天蓝留给「说明」类提示。
-  const dotClass = {
-    updating: "bg-accent",
-    failed: "bg-rose-500",
-    paused: "bg-ink-4",
-    live: "bg-emerald-500",
+  const tagTone = {
+    updating: "sn-run",
+    failed: "sn-bad",
+    paused: "",
+    live: "sn-ok",
   }[state];
   const label = {
     updating: t("monitor_center.status_updating"),
@@ -212,14 +211,9 @@ function LiveStatus({
       role="status"
       aria-live="polite"
       title={error ?? undefined}
-      className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
+      className={["sn-tag", tagTone].filter(Boolean).join(" ")}
     >
-      <span className="relative inline-flex size-2" aria-hidden="true">
-        {state === "live" ? (
-          <span className="absolute inset-0 rounded-full bg-emerald-500 motion-safe:animate-[monitor-live-ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
-        ) : null}
-        <span className={`relative inline-flex size-2 rounded-full ${dotClass}`} />
-      </span>
+      <i aria-hidden="true" />
       {label}
     </span>
   );
@@ -351,7 +345,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="ml-1 rounded-full px-2 py-0.5 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+        className="sn-btn sn-ghost sn-xs sn-round ml-1 !h-6 !px-2 !text-xs text-[var(--sn-label2)]"
       >
         {t("monitor_center.filter.clear_all")}
       </button>

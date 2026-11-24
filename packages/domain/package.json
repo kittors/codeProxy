@@ -5,9 +5,7 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "dependencies": {
-    "chart.js": "^4.5.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^25.4.0"
   }

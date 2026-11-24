@@ -1,6 +1,6 @@
 import { type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@code-proxy/ui";
+import { Button, Textarea } from "@code-proxy/ui";
 import type { ProviderKeyDraft } from "../providers-helpers";
 
 /**
@@ -45,7 +45,7 @@ export function ExcludedModelsEditor({
         </div>
       </div>
 
-      <textarea
+      <Textarea
         value={keyDraft.excludedModelsText}
         onChange={(e) => {
           const val = e.currentTarget.value;
@@ -53,8 +53,7 @@ export function ExcludedModelsEditor({
         }}
         placeholder={t("providers.excluded_placeholder")}
         aria-label="excludedModels"
-        // 多行输入框和共享 Textarea 同一套阴影描边；单独写是因为这里要等宽小字号。
-        className="mt-3 min-h-[140px] w-full resize-y rounded-2xl bg-field px-3.5 py-3 font-mono text-xs text-ink shadow-control outline-none transition-[box-shadow] duration-150 placeholder:text-ink-3 hover:shadow-control-hover focus:shadow-control-focus"
+        className="mt-3 min-h-[140px] resize-y font-mono text-xs"
       />
 
       <p className="mt-2 text-xs text-ink-3">

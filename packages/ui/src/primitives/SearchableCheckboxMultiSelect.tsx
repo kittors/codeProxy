@@ -9,16 +9,13 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Search, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectCheckboxBox,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -506,7 +503,8 @@ export function SearchableCheckboxMultiSelect({
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
-            <ChevronDown
+            <Icon
+              name="chevron-down"
               size={14}
               className={cn(
                 selectChevron,
@@ -515,7 +513,6 @@ export function SearchableCheckboxMultiSelect({
                   "group-hover/multi-select:opacity-0 group-focus-within/multi-select:opacity-0",
                 open && "rotate-180",
               )}
-              aria-hidden="true"
             />
           </span>
         </button>
@@ -525,31 +522,28 @@ export function SearchableCheckboxMultiSelect({
             aria-label={clearLabel}
             onClick={handleClear}
             className={cn(
-              "absolute right-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full",
-              "text-ink-3 opacity-0 pointer-events-none transition-colors",
+              "sn-btn sn-ghost sn-xs sn-ibtn sn-round absolute top-1/2 right-2.5 z-10 !h-5 !w-5 -translate-y-1/2",
+              "pointer-events-none opacity-0",
               "group-hover/multi-select:pointer-events-auto group-hover/multi-select:opacity-100",
               "group-focus-within/multi-select:pointer-events-auto group-focus-within/multi-select:opacity-100",
-              "hover:bg-hover hover:text-ink-2",
             )}
           >
-            <X size={12} />
+            <Icon name="x" size={12} />
           </button>
         ) : null}
       </div>
 
-      {createPortal(
-        <AnimatePresence>
-          {open ? (
-            <motion.div
+      {open
+        ? createPortal(
+            <div
               ref={dropdownRef}
               data-side={dropdownPlacement}
+              data-state="open"
               style={dropdownStyle}
               className={cn(searchableSelectPanel, "flex flex-col")}
-              {...getSelectDropdownMotion(dropdownPlacement)}
-              transition={selectDropdownTransition}
             >
               <div className={cn(selectSearchRow, "shrink-0")}>
-                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                <Icon name="search" size={14} className="shrink-0 text-[var(--sn-label3)]" />
                 <input
                   ref={searchRef}
                   type="text"
@@ -562,7 +556,7 @@ export function SearchableCheckboxMultiSelect({
                 />
               </div>
               {selectAllLabel || neutralAllSelection || showFilteredToggle || selectionHint ? (
-                <div className="flex items-center justify-between gap-2 border-b border-line py-2 pl-3.5 pr-2">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--sn-line)] py-2 pr-2 pl-3.5">
                   <span className="min-w-0">
                     <span
                       className={cn(
@@ -578,7 +572,7 @@ export function SearchableCheckboxMultiSelect({
                         : selectedCountLabel(effectiveValue.length)}
                     </span>
                     {selectionHint ? (
-                      <span className="mt-0.5 block truncate text-2xs text-ink-3">
+                      <span className="mt-0.5 block truncate text-2xs text-[var(--sn-label3)]">
                         {selectionHint}
                       </span>
                     ) : null}
@@ -651,7 +645,7 @@ export function SearchableCheckboxMultiSelect({
                         )}
                       >
                         <span className={selectCheckboxBox(checked)} aria-hidden="true">
-                          {checked ? <Check size={12} /> : null}
+                          {checked ? <Icon name="check" size={12} /> : null}
                         </span>
                         <span
                           className="min-w-0 flex-1 truncate text-left"
@@ -676,11 +670,11 @@ export function SearchableCheckboxMultiSelect({
                 )}
               </ScrollArea>
               {manualApply ? (
-                <div className="flex items-center justify-end gap-2 border-t border-line px-3 py-2.5">
+                <div className="flex items-center justify-end gap-2 border-t border-[var(--sn-line)] px-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => closeDropdown(true)}
-                    className={cn(selectTextAction, "px-3 py-1.5")}
+                    className={selectTextAction}
                   >
                     {cancelLabel}
                   </button>
@@ -688,17 +682,16 @@ export function SearchableCheckboxMultiSelect({
                     type="button"
                     onClick={applyDraftSelection}
                     disabled={!hasPendingChanges}
-                    className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-selected disabled:text-ink-3"
+                    className="sn-btn sn-primary sn-xs !h-7 !px-3.5 !text-xs"
                   >
                     {applyLabel}
                   </button>
                 </div>
               ) : null}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

@@ -1,22 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Languages } from "lucide-react";
+import { Icon as SatinIcon } from "satin-ui/react";
 import {
   ensureLanguageResources,
   LANGUAGE_ORDER,
   STORAGE_KEY_LANGUAGE,
   type Language,
 } from "@code-proxy/i18n";
-import { HoverTooltip } from "../overlays/Tooltip";
-import {
-  cn,
-  selectOptionBase,
-  selectOptionCheck,
-  selectOptionIdle,
-  selectOptionSelected,
-  selectPanel,
-} from "../utils/selectStyles";
+import { cn } from "../utils/selectStyles";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
 const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
@@ -119,20 +111,19 @@ export function LanguageSelector({ className }: { className?: string }) {
 
   return (
     <>
-      <HoverTooltip content={tooltip}>
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          className={className}
-          aria-label={label}
-          aria-expanded={open}
-          aria-haspopup="listbox"
-        >
-          <Languages size={16} />
-          <span className="ml-1 text-xs font-bold leading-none">{shortLabel}</span>
-        </button>
-      </HoverTooltip>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn("sn-btn sn-ghost sn-sm", open ? "sn-is-open" : null, className)}
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        data-tip={tooltip}
+      >
+        <SatinIcon name="compass" size={15} />
+        <span className="text-xs font-semibold leading-none">{shortLabel}</span>
+      </button>
 
       {open
         ? createPortal(
@@ -142,8 +133,8 @@ export function LanguageSelector({ className }: { className?: string }) {
               data-state="open"
               data-side="bottom"
               aria-label={label}
-              className={cn(selectPanel, "w-[170px]")}
-              style={{ top: pos.top, left: pos.left }}
+              className="sn-menu sn-solid code-proxy-floating-surface sn-open w-[176px]"
+              style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
             >
               {SUPPORTED_LANGUAGES.map((lng) => {
                 const selected = lng === currentValue;
@@ -155,15 +146,19 @@ export function LanguageSelector({ className }: { className?: string }) {
                     aria-selected={selected}
                     onClick={() => handleLanguageChange(lng)}
                     className={cn(
-                      selectOptionBase,
-                      selected ? selectOptionSelected : selectOptionIdle,
+                      "sn-item w-full border-0 bg-transparent text-left hover:bg-[var(--sn-b-ghost-hover)]",
+                      selected ? "sn-sel font-medium" : null,
                     )}
                   >
                     <span className="shrink-0 text-base leading-none" aria-hidden="true">
                       {FLAG_ICONS[lng]}
                     </span>
-                    <span className="flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
-                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
+                    <span className="min-w-0 flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
+                    {selected ? (
+                      <span className="sn-chk">
+                        <SatinIcon name="check" size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}

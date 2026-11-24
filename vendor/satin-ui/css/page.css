@@ -1,0 +1,21 @@
+/* satin-ui/css/page.css：整页都用 Satin 时引这一个——令牌、页面级重置（reset.css）和全部组件样式，顺序和设计稿一致。 */
+@import "./tokens.css";
+@import "./reset.css";
+@import "./base.css";
+@import "./buttons.css";
+@import "./form.css";
+@import "./input.css";
+@import "./overlay.css";
+@import "./feedback.css";
+@import "./data.css";
+@import "./scroll.css";
+@import "./content.css";
+@import "./picker.css";
+@import "./number.css";
+@import "./grid.css";
+@import "./charts.css";
+@import "./md.css";
+@import "./tree.css";
+@import "./volumetric.css";
+@import "./carousel.css";
+@import "./shell.css";

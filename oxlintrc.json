@@ -1,5 +1,6 @@
 {
   "$schema": "https://oxc-project.github.io/oxc-json-schema/schemas/oxlintrc.json",
+  "ignorePatterns": ["vendor/**"],
   "plugins": ["typescript", "react", "jsx-a11y"],
   "categories": {
     "correctness": "warn",

@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import type { MonitorBreakdownRow } from "@code-proxy/api-client";
-import { DataGrid, type DataGridColumn } from "@code-proxy/ui";
+import { Button, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
 export type RankingBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -143,10 +143,10 @@ export function MonitorRankingTable({
                 : null}
             </span>
             {hiddenCount > 0 || expanded ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setExpanded((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
               >
                 {expanded
                   ? t("monitor_center.ranking.collapse")
@@ -156,7 +156,7 @@ export function MonitorRankingTable({
                   aria-hidden="true"
                   className={`transition-[rotate] duration-200 ${expanded ? "rotate-180" : ""}`}
                 />
-              </button>
+              </Button>
             ) : null}
           </div>
         ) : undefined

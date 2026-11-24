@@ -17,7 +17,7 @@ import { AuthFilePlanBadge } from "../components/AuthFilePlanBadge";
 import { AuthFileSubscriptionBadge } from "../components/AuthFileSubscriptionBadge";
 import { ProviderTag, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { GRID_ROW_ACTIONS_COLUMN, GRID_WIDTH, GridRowActions, HoverTooltip } from "@code-proxy/ui";
-import { ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
+import { Checkbox, ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
 import {
   type FilesViewMode,
   type UsageIndex,
@@ -403,16 +403,12 @@ export function useAuthFilesFilesPresentation({
         overflowTooltip: false,
         skeleton: "box",
         headerAccessory: (
-          <input
-            type="checkbox"
+          <Checkbox
             aria-label={t("auth_files.select_current_page")}
             checked={allPageSelected}
+            indeterminate={somePageSelected}
             disabled={selectablePageNames.length === 0}
-            ref={(node) => {
-              if (node) node.indeterminate = somePageSelected;
-            }}
-            onChange={(event) => selectCurrentPage(event.currentTarget.checked)}
-            className="h-4 w-4 accent-accent disabled:cursor-not-allowed disabled:opacity-40"
+            onCheckedChange={(checked) => selectCurrentPage(checked)}
           />
         ),
         cell: (file) => {
@@ -420,14 +416,12 @@ export function useAuthFilesFilesPresentation({
             return <span className="text-xs text-ink-3">--</span>;
           }
           return (
-            <input
-              type="checkbox"
+            <Checkbox
               aria-label={t("auth_files.select_file", {
                 name: resolveAuthFileDisplayName(file) || file.name,
               })}
               checked={selectedFileNameSet.has(file.name)}
-              onChange={(event) => toggleFileSelection(file.name, event.currentTarget.checked)}
-              className="h-4 w-4 accent-accent"
+              onCheckedChange={(checked) => toggleFileSelection(file.name, checked)}
             />
           );
         },

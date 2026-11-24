@@ -1,16 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  RotateCcw,
-  RotateCw,
-  Scan,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { useDialogBehavior } from "./useDialogBehavior";
 
@@ -243,9 +233,8 @@ export function ImagePreviewOverlay({
     element.releasePointerCapture(event.pointerId);
   };
 
-  // 看图时背后是压暗的遮罩，工具条统一用深色实心胶囊 + 白色图标，深浅色模式一致。
-  const controlButtonClass =
-    "inline-flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/12 hover:text-white disabled:cursor-not-allowed disabled:opacity-35";
+  // 使用 Satin 玻璃控制条与按压微缩放按钮（.sn-glass + .sn-pb）。
+  const controlButtonClass = "sn-pb disabled:cursor-not-allowed disabled:opacity-35";
 
   return createPortal(
     <div
@@ -255,16 +244,18 @@ export function ImagePreviewOverlay({
       aria-label={title}
       tabIndex={-1}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-black/60 outline-none backdrop-blur-sm dark:bg-black/70"
+      className="fixed inset-0 z-[220] bg-black/75 outline-none backdrop-blur-sm dark:bg-black/80"
     >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white/80 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)] backdrop-blur transition-colors hover:bg-black/55 hover:text-white sm:top-5 sm:right-5"
-        aria-label={t("common.close")}
-      >
-        <X size={18} />
-      </button>
+      <div className="sn-glass absolute top-4 right-4 z-20 rounded-full p-1 sm:top-5 sm:right-5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="sn-pb !rounded-full"
+          aria-label={t("common.close")}
+        >
+          <Icon name="x" size={18} />
+        </button>
+      </div>
 
       <div
         ref={scrollRef}
@@ -327,7 +318,7 @@ export function ImagePreviewOverlay({
       </div>
 
       <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/80 p-1.5 shadow-[0_16px_40px_-8px_rgb(0_0_0/0.45)] ring-1 ring-white/10">
+        <div className="sn-glass pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5">
           <button
             type="button"
             className={controlButtonClass}
@@ -336,7 +327,7 @@ export function ImagePreviewOverlay({
             title={t("common.prev")}
             aria-label={t("common.prev")}
           >
-            <ChevronLeft size={17} />
+            <Icon name="chevron-left" size={17} />
           </button>
           <button
             type="button"
@@ -346,7 +337,7 @@ export function ImagePreviewOverlay({
             title={t("common.next")}
             aria-label={t("common.next")}
           >
-            <ChevronRight size={17} />
+            <Icon name="chevron-right" size={17} />
           </button>
           <button
             type="button"
@@ -356,7 +347,7 @@ export function ImagePreviewOverlay({
             title={t("common.zoom_out")}
             aria-label={t("common.zoom_out")}
           >
-            <ZoomOut size={17} />
+            <Icon name="zoom-out" size={17} />
           </button>
           <button
             type="button"
@@ -366,7 +357,7 @@ export function ImagePreviewOverlay({
             title={t("common.zoom_in")}
             aria-label={t("common.zoom_in")}
           >
-            <ZoomIn size={17} />
+            <Icon name="zoom-in" size={17} />
           </button>
           <button
             type="button"
@@ -375,7 +366,7 @@ export function ImagePreviewOverlay({
             title={t("common.rotate_left")}
             aria-label={t("common.rotate_left")}
           >
-            <RotateCcw size={17} />
+            <Icon name="rotate-ccw" size={17} />
           </button>
           <button
             type="button"
@@ -384,7 +375,7 @@ export function ImagePreviewOverlay({
             title={t("common.rotate_right")}
             aria-label={t("common.rotate_right")}
           >
-            <RotateCw size={17} />
+            <Icon name="rotate-cw" size={17} />
           </button>
           <button
             type="button"
@@ -399,7 +390,7 @@ export function ImagePreviewOverlay({
             title={t("common.reset_image")}
             aria-label={t("common.reset_image")}
           >
-            <Scan size={17} />
+            <Icon name="scan" size={17} />
           </button>
           <a
             className={controlButtonClass}
@@ -409,7 +400,7 @@ export function ImagePreviewOverlay({
             aria-label={t("log_content.download")}
             onClick={(event) => event.stopPropagation()}
           >
-            <Download size={17} />
+            <Icon name="download" size={17} />
           </a>
         </div>
       </div>

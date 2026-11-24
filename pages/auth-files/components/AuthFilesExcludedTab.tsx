@@ -1,9 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { FileJson, Plus, RefreshCw } from "lucide-react";
-import { Button, ProviderTag, surface, iconHueClass } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { Button, EmptyState, ProviderTag, Textarea, TextInput, surface, iconHueClass } from "@code-proxy/ui";
 
 interface AuthFilesExcludedTabProps {
   excludedLoading: boolean;
@@ -140,7 +138,7 @@ export function AuthFilesExcludedTab({
                           </Button>
                         </div>
                       </div>
-                      <textarea
+                      <Textarea
                         value={excludedDraft[provider] ?? text}
                         onChange={(e) => {
                           const nextText = e.currentTarget.value;
@@ -149,7 +147,7 @@ export function AuthFilesExcludedTab({
                         placeholder={t("auth_files.one_model_per_line")}
                         aria-label={`${provider} ${t("auth_files_page.excluded_tab")}`}
                         disabled={excludedUnsupported}
-                        className="mt-3 min-h-[120px] w-full resize-y rounded-inner bg-field px-3 py-2 font-mono text-xs text-ink shadow-control outline-none transition-[box-shadow] duration-200 ease-out placeholder:text-ink-3 hover:shadow-control-hover focus-visible:shadow-control-focus"
+                        className="mt-3 min-h-[120px] resize-y font-mono text-xs"
                       />
                     </div>
                   );

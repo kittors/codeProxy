@@ -1,6 +1,6 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "../utils/selectStyles";
+import { useSatinFluidThumb } from "../utils/satinMotion";
 
 export interface SegmentedOption<T extends string = string> {
   value: T;
@@ -9,11 +9,8 @@ export interface SegmentedOption<T extends string = string> {
 }
 
 /**
- * 分段单选：2–4 个简短、互斥、不需要解释的选项（协议、方式、单位）。
- * 需要逐项解释时用 ChoiceCards。
- *
- * 语义是 radiogroup（不是 tablist——它不切换面板，只是选值）；方向键切换并选中，
- * 选中块在选项间弹簧滑动，与「添加 AI 账号」里的方式切换同一种手感。
+ * Satin 分段单选（.sn-seg + .sn-thumb + edgeFrames 流体双曲线滑块微动效）：
+ * 前缘先到、后缘跟上、落定时纵向轻压回弹，保留 radiogroup 语义与方向键切换。
  */
 export function SegmentedControl<T extends string>({
   value,
@@ -32,10 +29,13 @@ export function SegmentedControl<T extends string>({
   size?: "sm" | "md";
   className?: string;
 }) {
-  const reduceMotion = useReducedMotion();
-  const layoutId = `segmented-${useId()}`;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLSpanElement | null>(null);
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const enabled = options.filter((option) => !option.disabled);
+
+  const selector = `[data-seg-value="${CSS.escape(value)}"]`;
+  useSatinFluidThumb(containerRef, thumbRef, selector, value);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
@@ -51,12 +51,14 @@ export function SegmentedControl<T extends string>({
 
   return (
     <div
+      ref={containerRef}
       role="radiogroup"
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       onKeyDown={onKeyDown}
-      className={cn("inline-flex rounded-full bg-track p-0.5", className)}
+      className={cn("sn-seg !inline-flex", size === "sm" ? "sn-sm" : null, className)}
     >
+      <span ref={thumbRef} aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -68,26 +70,17 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-selected={selected}
+            data-seg-value={option.value}
             tabIndex={selected ? 0 : -1}
             disabled={disabled || option.disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              "relative rounded-full font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-              size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
-              selected ? "text-ink" : "text-ink-3 hover:text-ink",
+              "!inline-flex h-full items-center justify-center gap-1.5 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-45",
+              size === "sm" ? "!px-2.5 !text-xs" : "!px-3.5 !text-sm",
             )}
           >
-            {selected ? (
-              <motion.span
-                layoutId={layoutId}
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full bg-elevated shadow-xs"
-                transition={
-                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }
-                }
-              />
-            ) : null}
-            <span className="relative">{option.label}</span>
+            {option.label}
           </button>
         );
       })}

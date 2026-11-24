@@ -3,9 +3,7 @@ import { Checkbox } from "../primitives/Checkbox";
 import { cn } from "../utils/selectStyles";
 
 /**
- * 带说明的勾选项：整行可点，勾选框 + 名称 + 一句说明。
- * 用在「同时删除日志」「保存后立即刷新」这类附加选项上，比一个裸复选框加长句子好读。
- * `tone="danger"` 给「勾上会多删东西」的选项，勾选后描边转红提醒。
+ * 带说明的 Satin 勾选项：整行可点，使用 Satin 一笔画弹性复选框与实面令牌。
  */
 export function CheckboxField({
   checked,
@@ -31,10 +29,10 @@ export function CheckboxField({
     <label
       htmlFor={id}
       className={cn(
-        "flex items-start gap-3 rounded-2xl px-3.5 py-3 transition-[background-color,box-shadow]",
+        "flex items-start gap-3 rounded-2xl border px-3.5 py-3 transition-[background-color,border-color]",
         checked && tone === "danger"
-          ? "bg-rose-500/[0.05] shadow-[0_0_0_1px_rgb(229_72_77/0.3)]"
-          : "bg-surface shadow-control hover:bg-surface-hover",
+          ? "border-[var(--sn-danger)]/40 bg-[var(--sn-b-danger-soft)]"
+          : "border-[var(--sn-line)] bg-[var(--sn-raised)] hover:border-[var(--sn-line-control-hover)] hover:bg-[var(--sn-fill-hover)]",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
         className,
       )}
@@ -44,17 +42,16 @@ export function CheckboxField({
         checked={checked}
         disabled={disabled}
         onCheckedChange={onCheckedChange}
-        // 整行 label 包住了说明，不显式指定的话读屏会把说明也念进名称里。
         aria-labelledby={labelId}
         aria-describedby={description ? descriptionId : undefined}
         className="mt-0.5"
       />
       <span className="min-w-0">
-        <span id={labelId} className="block text-sm font-medium text-ink">
+        <span id={labelId} className="block text-sm font-medium text-[var(--sn-label)]">
           {label}
         </span>
         {description ? (
-          <span id={descriptionId} className="mt-0.5 block text-xs leading-5 text-ink-3">
+          <span id={descriptionId} className="mt-0.5 block text-xs leading-5 text-[var(--sn-label3)]">
             {description}
           </span>
         ) : null}

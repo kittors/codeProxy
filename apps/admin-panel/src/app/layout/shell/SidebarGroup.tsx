@@ -10,9 +10,8 @@ import {
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
-import { floatingPanelSurface, popoverEnterTransition, popoverExitTransition } from "@code-proxy/ui";
+import { Icon } from "satin-ui/react";
+import { floatingPanelSurface } from "@code-proxy/ui";
 import type { NavSection } from "./navModel";
 import { SidebarItemLink } from "./SidebarItemLink";
 import { sidebarFadeClass, sidebarRowClass, SidebarRowIcon, SidebarRowLabel } from "./sidebarRow";
@@ -182,11 +181,11 @@ export function SidebarGroup({
         <SidebarRowIcon icon={section.icon} active={active} />
         <SidebarRowLabel collapsed={collapsed}>{label}</SidebarRowLabel>
         <span className={`grid shrink-0 place-items-center ${sidebarFadeClass(collapsed)}`}>
-          <ChevronRight
+          <Icon
+            name="chevron-right"
             size={14}
-            aria-hidden="true"
             className={[
-              "mr-2.5 text-ink-3 transition-transform duration-200 ease-soft motion-reduce:transition-none",
+              "mr-2.5 text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none",
               open ? "rotate-90" : "",
             ].join(" ")}
           />
@@ -224,19 +223,17 @@ export function SidebarGroup({
           </div>
         </div>
       </div>
-      <AnimatePresence>
-        {collapsed && flyoutOpen ? (
-          <SectionFlyout
-            key="flyout"
-            anchorRef={triggerRef}
-            section={section}
-            label={label}
-            activeTo={activeTo}
-            nav={nav}
-            onSelect={closeAndSuppress}
-          />
-        ) : null}
-      </AnimatePresence>
+      {collapsed && flyoutOpen ? (
+        <SectionFlyout
+          key="flyout"
+          anchorRef={triggerRef}
+          section={section}
+          label={label}
+          activeTo={activeTo}
+          nav={nav}
+          onSelect={closeAndSuppress}
+        />
+      ) : null}
     </div>
   );
 }
@@ -275,26 +272,22 @@ function SectionFlyout({
   }, [anchorRef]);
 
   return (
-    <motion.div
+    <div
       ref={ref}
       role="menu"
       aria-label={label}
       data-sidebar-flyout={section.id}
-      // 与下拉、菜单同一套节奏：朝图标反方向滑出一点、从 0.96 放大，退场更快、位移减半。
-      initial={{ opacity: 0, x: -4, scale: 0.96 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -2, scale: 0.98, transition: popoverExitTransition }}
-      transition={popoverEnterTransition}
+      data-side="right"
+      data-state="open"
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0,
         visibility: position ? undefined : "hidden",
-        transformOrigin: "left top",
       }}
       // before: 伪元素在图标与浮层之间搭一座 12px 的「桥」，指针穿过空隙时不会触发离开。
       className={`${floatingPanelSurface} fixed z-50 w-60 p-2 before:absolute before:top-0 before:-left-3 before:h-full before:w-3`}
     >
-      <div className="px-2.5 pt-1.5 pb-1.5 text-xs font-semibold text-ink-3">{label}</div>
+      <div className="px-2.5 pt-1.5 pb-1.5 text-xs font-semibold text-[var(--sn-label3)]">{label}</div>
       <div className="space-y-0.5">
         {section.items.map((item) => (
           <SidebarItemLink
@@ -309,6 +302,6 @@ function SectionFlyout({
           />
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

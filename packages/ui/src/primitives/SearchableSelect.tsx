@@ -8,15 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Plus, Search } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -109,9 +106,7 @@ function OptionContent({
       </span>
       {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-        {selected ? (
-          <Check size={15} className="text-ink" aria-hidden="true" />
-        ) : null}
+        {selected ? <Icon name="check" size={15} className="text-[var(--sn-label)]" /> : null}
       </span>
     </>
   );
@@ -322,24 +317,22 @@ export function SearchableSelect({
         )}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           size={14}
           className={cn(selectChevron, open && "rotate-180")}
-          aria-hidden="true"
         />
       </button>
 
-      {createPortal(
-        <AnimatePresence>
-          {open && !disabled ? (
-            <motion.div
+      {open && !disabled
+        ? createPortal(
+            <div
               ref={listRef}
               role="listbox"
               data-side={pos.placement}
+              data-state="open"
               aria-label={ariaLabel}
               className={searchableSelectPanel}
-              {...getSelectDropdownMotion(pos.placement)}
-              transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -350,7 +343,7 @@ export function SearchableSelect({
             >
               {/* Search input */}
               <div className={selectSearchRow}>
-                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                <Icon name="search" size={14} className="shrink-0 text-[var(--sn-label3)]" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -407,7 +400,7 @@ export function SearchableSelect({
                                 opt.action?.onClick();
                               }}
                               className={cn(
-                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/15 dark:hover:text-rose-300",
+                                "sn-btn sn-ghost-danger sn-xs sn-ibtn shrink-0",
                                 opt.action.className,
                               )}
                             >
@@ -440,9 +433,9 @@ export function SearchableSelect({
                         role="option"
                         aria-selected={false}
                         onClick={handleCreate}
-                        className={cn(selectOptionBase, "font-medium text-ink")}
+                        className={cn(selectOptionBase, "font-medium text-[var(--sn-label)]")}
                       >
-                        <Plus size={14} className="shrink-0 text-ink-2" aria-hidden="true" />
+                        <Icon name="plus" size={14} className="shrink-0 text-[var(--sn-label2)]" />
                         <span className="min-w-0 flex-1">
                           {createLabel ? createLabel(createValue) : createValue}
                         </span>
@@ -451,11 +444,10 @@ export function SearchableSelect({
                   </>
                 )}
               </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

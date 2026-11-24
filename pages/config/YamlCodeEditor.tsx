@@ -521,7 +521,7 @@ export const YamlCodeEditor = forwardRef<
             aria-label={ariaLabel}
             className={[
               "absolute inset-0 resize-none overflow-auto bg-transparent px-4 py-3 font-mono text-xs leading-6 outline-none",
-              "[scrollbar-color:#C7C7C7_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-corner]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C7C7C7] [&::-webkit-scrollbar-track]:bg-transparent",
+              "[scrollbar-color:var(--sn-sa-thumb)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-corner]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--sn-sa-thumb)] [&::-webkit-scrollbar-track]:bg-transparent",
               "text-transparent caret-ink",
               // 选区：简约风格跟随强调色，多彩风格是浅天蓝。
               "selection:bg-accent/20 dark:selection:bg-accent/30 colorful:selection:bg-sky-200/60 colorful:dark:selection:bg-white/15",

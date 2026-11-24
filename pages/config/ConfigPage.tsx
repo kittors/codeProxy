@@ -25,7 +25,7 @@ import {
   useVisualConfig,
   type LiveConfig,
 } from "@features/visual-config-editor";
-import { Callout, Card } from "@code-proxy/ui";
+import { Button, Callout, Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -666,36 +666,36 @@ export function ConfigPage() {
                             </span>
                           </p>
                         </div>
-                        <div className="flex h-11 items-center justify-end gap-3">
+                        <div className="flex h-11 items-center justify-end gap-1.5">
                           <HoverTooltip
                             content={t("config_page.prev_match_hint")}
                             placement="top"
                             disabled={!searchStats.total}
                           >
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => executeSearch("prev")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.prev_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <ChevronUp size={18} aria-hidden="true" />
-                            </button>
+                              <ChevronUp size={16} aria-hidden="true" />
+                            </Button>
                           </HoverTooltip>
                           <HoverTooltip
                             content={t("config_page.next_match_hint")}
                             placement="bottom"
                             disabled={!searchStats.total}
                           >
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => executeSearch("next")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.next_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <ChevronDown size={18} aria-hidden="true" />
-                            </button>
+                              <ChevronDown size={16} aria-hidden="true" />
+                            </Button>
                           </HoverTooltip>
                         </div>
                       </div>

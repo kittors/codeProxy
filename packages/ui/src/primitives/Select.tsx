@@ -8,14 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   selectChevron,
-  selectDropdownTransition,
   selectOptionBase,
   selectOptionCheck,
   selectOptionIdle,
@@ -194,25 +191,23 @@ export function Select({
         )}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           size={14}
           className={cn(selectChevron, open && "rotate-180")}
-          aria-hidden="true"
         />
       </button>
 
       {/* Dropdown (portal) */}
-      {createPortal(
-        <AnimatePresence>
-          {open && !disabled ? (
-            <motion.div
+      {open && !disabled
+        ? createPortal(
+            <div
               ref={listRef}
               role="listbox"
               data-side={pos.placement}
+              data-state="open"
               aria-label={ariaLabel}
               className={cn(selectPanel, "!p-0")}
-              {...getSelectDropdownMotion(pos.placement)}
-              transition={selectDropdownTransition}
               style={{
                 top: pos.top,
                 left: pos.left,
@@ -226,33 +221,32 @@ export function Select({
                 style={{ maxHeight: 280 }}
                 className="overflow-y-auto overscroll-contain p-1.5"
               >
-              {options.map((opt) => {
-                const selected = opt.value === value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => handleSelect(opt.value)}
-                    className={cn(
-                      selectOptionBase,
-                      selected ? selectOptionSelected : selectOptionIdle,
-                    )}
-                  >
-                    <span className="min-w-0 flex-1">{opt.label}</span>
-                    {selected ? (
-                      <Check size={15} className={selectOptionCheck} aria-hidden="true" />
-                    ) : null}
-                  </button>
-                );
-              })}
+                {options.map((opt) => {
+                  const selected = opt.value === value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => handleSelect(opt.value)}
+                      className={cn(
+                        selectOptionBase,
+                        selected ? selectOptionSelected : selectOptionIdle,
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">{opt.label}</span>
+                      {selected ? (
+                        <Icon name="check" size={15} className={selectOptionCheck} />
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

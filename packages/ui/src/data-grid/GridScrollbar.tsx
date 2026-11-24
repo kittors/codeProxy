@@ -181,12 +181,12 @@ export function GridScrollbar({
         ref={thumbRef}
         onPointerDown={onThumbPointerDown}
         className={[
-          "absolute rounded-full bg-ink/20 transition-[background-color,width,height] duration-150 ease-soft dark:bg-white/22",
-          "hover:bg-ink/35 group-hover/scrollbar:bg-ink/30 dark:hover:bg-white/38 dark:group-hover/scrollbar:bg-white/32",
-          "data-[dragging=true]:bg-ink/45 dark:data-[dragging=true]:bg-white/45",
+          "absolute rounded-full bg-[var(--sn-sa-thumb)] transition-[background-color,width,height] duration-150 ease-out",
+          "hover:bg-[var(--sn-sa-thumb-hover)] group-hover/scrollbar:bg-[var(--sn-sa-thumb-hover)]",
+          "data-[dragging=true]:bg-[var(--sn-sa-thumb-hover)]",
           horizontal
-            ? "bottom-[3px] left-0 h-1.5 group-hover/scrollbar:h-2 group-data-[dragging=true]/scrollbar:h-2"
-            : "right-[3px] top-0 w-1.5 group-hover/scrollbar:w-2 group-data-[dragging=true]/scrollbar:w-2",
+            ? "bottom-[3px] left-0 h-[5px] group-hover/scrollbar:h-2 group-data-[dragging=true]/scrollbar:h-2"
+            : "right-[3px] top-0 w-[5px] group-hover/scrollbar:w-2 group-data-[dragging=true]/scrollbar:w-2",
         ].join(" ")}
         data-dragging={dragging ? "true" : undefined}
         style={horizontal ? { width: thumb.size } : { height: thumb.size }}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, PanelLeft } from "lucide-react";
+import { Building2 } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   iconHueClass,
   LanguageSelector,
@@ -17,8 +18,7 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { AppearanceButton } from "./appearance/AppearanceButton";
 import { tenantDisplayName } from "./navModel";
 
-const TOPBAR_ICON_BUTTON =
-  "inline-flex h-9 items-center justify-center rounded-full text-ink-2 transition-colors duration-150 ease-soft hover:bg-hover hover:text-ink";
+const TOPBAR_ICON_BUTTON = "sn-btn sn-ghost sn-sm sn-round !h-9 text-[var(--sn-label2)]";
 
 /**
  * 内容区顶栏：左侧是「分区 / 页面」位置提示（手机上多一个打开抽屉的按钮），右侧是切换租户、
@@ -52,9 +52,9 @@ export function ShellTopBar({
           type="button"
           onClick={onToggleMobileNav}
           aria-label={mobileNavOpen ? t("shell.collapse_sidebar") : t("shell.expand_sidebar")}
-          className={`${TOPBAR_ICON_BUTTON} w-9`}
+          className={`${TOPBAR_ICON_BUTTON} sn-ibtn !w-9`}
         >
-          <PanelLeft size={20} />
+          <Icon name="panel-left" size={18} />
         </button>
       ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm" aria-hidden="true">

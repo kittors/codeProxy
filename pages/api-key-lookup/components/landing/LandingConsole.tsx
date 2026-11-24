@@ -37,12 +37,12 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
           className="overflow-hidden rounded-t-3xl bg-white shadow-[inset_0_1px_0_var(--cp-edge),inset_1px_0_0_var(--cp-edge),inset_-1px_0_0_var(--cp-edge)] dark:bg-[#0C0C10]"
         >
           <div>
-            <div className="flex items-center gap-2 px-5 py-3.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
-              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
-              <span className="h-2.5 w-2.5 rounded-full bg-ink-4" aria-hidden />
-              <span className="ml-3 font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
+            <div className="flex items-center justify-between gap-2 px-5 py-3.5">
+              <span className="font-display text-2xs font-medium uppercase tracking-[0.12em] text-ink-3">
                 {copy.console.title}
+              </span>
+              <span className="sn-tag sn-ok !h-5 !text-2xs" aria-hidden="true">
+                Live
               </span>
             </div>
 

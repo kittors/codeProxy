@@ -227,12 +227,12 @@ export function RestrictionMultiSelect({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full rounded-lg bg-subtle px-2.5 py-2 text-sm text-ink outline-none placeholder:text-ink-3"
+              className="sn-input sn-sm w-full"
             />
           </div>
           <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1">
             <span
-              className={`text-xs font-medium text-ink-3 ${
+              className={`text-xs font-medium text-[var(--sn-label3)] ${
                 selectedValues.length === 0 ? "colorful:text-emerald-600 colorful:dark:text-emerald-300" : ""
               }`}
             >
@@ -240,19 +240,19 @@ export function RestrictionMultiSelect({
                 ? unrestrictedLabel
                 : selectedCountLabel(selectedValues.length)}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={selectFiltered}
                 disabled={filteredOptions.length === 0}
-                className="rounded-md px-2 py-1 text-xs font-medium text-ink transition hover:bg-hover disabled:cursor-not-allowed disabled:text-ink-4"
+                className="sn-btn sn-ghost sn-xs !h-7 !px-2 !text-xs"
               >
                 {selectFilteredLabel}
               </button>
               <button
                 type="button"
                 onClick={clearRestriction}
-                className="rounded-md px-2 py-1 text-xs font-medium text-ink-2 transition hover:bg-hover hover:text-ink"
+                className="sn-btn sn-ghost sn-xs !h-7 !px-2 !text-xs text-[var(--sn-label2)]"
               >
                 {clearRestrictionLabel}
               </button>

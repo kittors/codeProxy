@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Ban, Boxes, ChevronRight, Loader2, ShieldAlert, TerminalSquare, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, Ban, Boxes, ChevronRight, ShieldAlert, TerminalSquare, X, type LucideIcon } from "lucide-react";
+import { Loader } from "satin-ui/react";
 import { VendorIcon, hasVendorIcon } from "@code-proxy/assets";
 import { Button, SegmentedControl, surface } from "@code-proxy/ui";
 import type { MaskRecord, MaskSummary } from "@code-proxy/api-client";
@@ -105,11 +106,7 @@ export function MaskingFeed({
           ]}
         />
         {live ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-ink-3" title={t("privacy_masking.feed.live_hint")}>
-            <span className="relative flex size-2" aria-hidden="true">
-              <span className="absolute inline-flex size-full rounded-full bg-emerald-400 opacity-60 motion-safe:animate-ping" />
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-            </span>
+          <span className="sn-tag sn-ok !h-6" title={t("privacy_masking.feed.live_hint")}>
             {t("privacy_masking.feed.live")}
           </span>
         ) : null}
@@ -119,7 +116,7 @@ export function MaskingFeed({
             key={filter.key}
             type="button"
             onClick={() => onClearFilter(filter.key)}
-            className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 py-1 pr-1.5 pl-2.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-500/15 dark:bg-violet-400/15 dark:text-violet-200"
+            className="sn-btn !h-auto gap-1 !rounded-full !bg-violet-500/10 !py-1 !pr-1.5 !pl-2.5 !text-xs font-medium !text-violet-700 !shadow-none hover:!bg-violet-500/15 dark:!bg-violet-400/15 dark:!text-violet-200"
             title={t("privacy_masking.feed.clear_filter")}
           >
             {filter.label}
@@ -140,10 +137,10 @@ export function MaskingFeed({
                 aria-pressed={active}
                 onClick={() => onFacet(f)}
                 className={[
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-colors",
+                  "sn-btn !h-auto gap-1.5 !rounded-full !px-3 !py-1 !text-xs !shadow-none",
                   active
-                    ? "bg-violet-500/12 text-violet-700 dark:bg-violet-400/20 dark:text-violet-100"
-                    : "bg-ink/[0.04] text-ink-2 hover:bg-ink/[0.07] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
+                    ? "!bg-violet-500/12 !text-violet-700 dark:!bg-violet-400/20 dark:!text-violet-100"
+                    : "!bg-ink/[0.04] !text-ink-2 hover:!bg-ink/[0.07] dark:!bg-white/[0.06] dark:hover:!bg-white/[0.09]",
                 ].join(" ")}
               >
                 {f ? <span aria-hidden="true" className={`size-1.5 rounded-full ${FACET_DOT[f]}`} /> : null}
@@ -160,7 +157,7 @@ export function MaskingFeed({
         <MaskingValueRanking summary={summary} facet={facet} onPickKind={onPickKind} />
       ) : loading && records.length === 0 ? (
         <div className="grid place-items-center py-16 text-ink-3">
-          <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          <Loader variant="arc" size={20} label={t("common.loading")} />
         </div>
       ) : records.length === 0 ? (
         <p className="px-5 py-14 text-center text-sm text-ink-3">

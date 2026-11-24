@@ -1,10 +1,13 @@
-import { Check, Copy } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { copyTextToClipboard } from "../utils/clipboard";
 import { cn } from "../utils/selectStyles";
 
-/** 复制按钮：点一下变成对勾 1.6 秒，失败不改状态（剪贴板不可用时浏览器会自己提示）。 */
+/**
+ * Satin 复制按钮：使用 `.sn-btn.sn-ghost.sn-xs.sn-ibtn.sn-round` + `.sn-swap`
+ * 实现复制图标到对勾的原地缩放交叉微动效。
+ */
 export function CopyButton({
   value,
   label,
@@ -43,12 +46,19 @@ export function CopyButton({
       aria-label={copied ? t("common.copied", { defaultValue: "已复制" }) : name}
       data-tooltip={copied ? t("common.copied", { defaultValue: "已复制" }) : name}
       className={cn(
-        "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink",
-        copied ? "text-emerald-600 dark:text-emerald-400" : null,
+        "sn-btn sn-ghost sn-xs sn-ibtn sn-round shrink-0",
+        copied ? "!text-[var(--sn-success)]" : null,
         className,
       )}
     >
-      {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+      <span className={cn("sn-swap", copied ? "sn-swapped" : null)}>
+        <span className="sn-swap-a">
+          <Icon name="copy" size={14} />
+        </span>
+        <span className="sn-swap-b">
+          <Icon name="check" size={14} />
+        </span>
+      </span>
     </button>
   );
 }
@@ -91,17 +101,14 @@ export function DetailList({
           item.value === undefined ||
           (typeof item.value === "string" && item.value.trim() === "");
         return (
-          <div
-            key={index}
-            className={cn("min-w-0", item.wide ? "sm:col-span-full" : null)}
-          >
-            <dt className="text-xs text-ink-3">{item.label}</dt>
-            <dd className="mt-1 flex min-w-0 items-start gap-1 text-sm text-ink">
+          <div key={index} className={cn("min-w-0", item.wide ? "sm:col-span-full" : null)}>
+            <dt className="text-xs text-[var(--sn-label3)]">{item.label}</dt>
+            <dd className="mt-1 flex min-w-0 items-start gap-1 text-sm text-[var(--sn-label)]">
               <span
                 className={cn(
                   "min-w-0 flex-1 break-words",
                   item.mono ? "font-mono text-xs leading-5" : null,
-                  empty ? "text-ink-4" : null,
+                  empty ? "text-[var(--sn-label-off)]" : null,
                 )}
               >
                 {empty ? "—" : item.value}
@@ -110,7 +117,7 @@ export function DetailList({
                 <CopyButton value={item.copyValue} className="-my-1" />
               ) : null}
             </dd>
-            {item.hint ? <p className="mt-1 text-xs text-ink-3">{item.hint}</p> : null}
+            {item.hint ? <p className="mt-1 text-xs text-[var(--sn-label3)]">{item.hint}</p> : null}
           </div>
         );
       })}

@@ -1,5 +1,5 @@
-import { ClipboardPaste, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { Callout, SegmentedControl, TextInput } from "@code-proxy/ui";
 import {
@@ -175,10 +175,9 @@ export function ProxyUrlInput({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          // 阴影描边的小按钮，和输入框同一套描边；虚线框只留给文件拖放区。
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 shadow-control transition-[color,box-shadow] hover:text-ink hover:shadow-control-hover focus-visible:shadow-control-focus focus-visible:outline-none"
+          className="sn-btn sn-secondary sn-xs sn-round"
         >
-          <Plus size={13} aria-hidden="true" />
+          <Icon name="plus" size={13} />
           {t("proxy_input.add")}
         </button>
       </fieldset>
@@ -212,9 +211,9 @@ export function ProxyUrlInput({
             setPasteError(false);
           }}
           aria-expanded={pasteOpen}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+          className="sn-btn sn-ghost sn-xs sn-round ml-auto text-[var(--sn-label2)]"
         >
-          {pasteOpen ? <X size={13} aria-hidden="true" /> : <ClipboardPaste size={13} aria-hidden="true" />}
+          <Icon name={pasteOpen ? "x" : "clipboard"} size={13} />
           {pasteOpen ? t("proxy_input.paste_cancel") : t("proxy_input.paste_open")}
         </button>
         {collapsible ? (
@@ -225,9 +224,9 @@ export function ProxyUrlInput({
               setPasteOpen(false);
               setExpanded(false);
             }}
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-300"
+            className="sn-btn sn-ghost-danger sn-xs sn-round"
           >
-            <Trash2 size={13} aria-hidden="true" />
+            <Icon name="trash-2" size={13} />
             {t("proxy_input.remove")}
           </button>
         ) : null}

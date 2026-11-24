@@ -1,0 +1,479 @@
+/* Satin：设计感轮播图（Carousel）
+   提供 4 种高阶视觉与交互范式：
+   - arc   : 3D 弧形透视卡片轮播（中间正对浮起，左右沿弧线倾斜缩放退隐，跟手拖拽实时连续插值）
+   - focus : 焦点景深体积轮播（中心主卡聚焦高亮 + 顶部微光轨，两侧退后暗化轻柔焦）
+   - peek  : 沉浸探索画廊（主视口 + 右侧窥视下一张，内置摄影大图 + 底部悬浮圆角信息卡）
+   - deck  : 立体物理叠牌（拖拽顶牌顺手飞出翻底，下方叠牌连续上浮补位）
+   全程只动 transform / opacity / filter，零重排 60fps，支持触控手势、键盘、无限循环、自动播与减少动态效果。 */
+@layer satin {
+
+.sn-cr {
+  --sn-cr-h: 280px;
+  --sn-cr-card-w: 236px;
+  --sn-cr-r: 22px;
+  position: relative;
+  display: grid;
+  gap: 14px;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+.sn-cr:focus-visible .sn-cr-vp {
+  box-shadow: 0 0 0 2px var(--sn-focus);
+}
+
+.sn-cr-vp {
+  position: relative;
+  width: 100%;
+  height: var(--sn-cr-h);
+  overflow: hidden;
+  border-radius: var(--sn-r-xl);
+  touch-action: pan-y;
+  cursor: grab;
+  perspective: 1100px;
+}
+.sn-cr-vp.sn-cr-drag {
+  cursor: grabbing;
+}
+
+/* 舞台（arc / focus / deck 为定位层，peek 为横向轨道） */
+.sn-cr-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+/* 单张卡片基础样式 */
+.sn-cr-slide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--sn-cr-card-w);
+  height: calc(var(--sn-cr-h) - 24px);
+  margin-left: calc(var(--sn-cr-card-w) * -.5);
+  margin-top: calc((var(--sn-cr-h) - 24px) * -.5);
+  border-radius: var(--sn-cr-r);
+  overflow: hidden;
+  background: var(--sn-raised);
+  box-shadow:
+    inset 0 0 0 1px var(--sn-line),
+    0 14px 32px -14px rgba(0, 0, 0, .20),
+    0 2px 6px rgba(0, 0, 0, .06);
+  transform-origin: center center;
+  will-change: transform, opacity;
+  transition: transform .48s var(--sn-ease-out-strong), opacity .38s var(--sn-ease-out), filter .38s var(--sn-ease-out), box-shadow .38s var(--sn-ease-out);
+}
+[data-theme="dark"] .sn-cr-slide {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .12),
+    0 18px 40px -12px rgba(0, 0, 0, .72);
+}
+.sn-cr-vp.sn-cr-drag .sn-cr-slide,
+.sn-cr-vp.sn-cr-instant .sn-cr-slide {
+  transition: none !important;
+}
+.sn-cr-slide:not(.sn-cr-cur) {
+  cursor: pointer;
+}
+
+/* 卡片内部视觉层：图片、体积渐变、顶部徽章、底部渐变衬底与信息浮卡 */
+.sn-cr-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  transition: transform .72s var(--sn-ease-out-strong);
+}
+.sn-cr-slide.sn-cr-cur .sn-cr-media {
+  transform: scale(1.015);
+}
+.sn-cr-slide > .sn-vol {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: none;
+}
+
+/* 卡片内精细微光描边与立体玻璃边缘 */
+.sn-cr-rim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .44),
+    inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+[data-theme="dark"] .sn-cr-rim {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .24),
+    inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+/* 顶部徽章与右上角角标 */
+.sn-cr-top {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+.sn-cr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(18, 18, 22, .44);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), inset 0 0 0 1px rgba(255, 255, 255, .14);
+  color: #ffffff;
+  font: 500 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  letter-spacing: .01em;
+}
+.sn-cr-badge-light {
+  background: rgba(255, 255, 255, .78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 0 0 1px rgba(0, 0, 0, .06);
+  color: #18181b;
+}
+
+/* 底部文字层（暗色渐隐衬底，适用于图片/暗底卡） */
+.sn-cr-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 36px 16px 14px;
+  background: linear-gradient(to top, rgba(10, 11, 16, .76) 0%, rgba(10, 11, 16, .28) 54%, transparent 100%);
+  color: #ffffff;
+  display: grid;
+  gap: 3px;
+}
+.sn-cr-cap b {
+  font: 600 calc(15px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans);
+  letter-spacing: -.01em;
+}
+.sn-cr-cap span {
+  font: 400 calc(12px * var(--sn-font-scale, 1))/calc(17px * var(--sn-font-scale, 1)) var(--sn-sans);
+  color: rgba(255, 255, 255, .78);
+}
+
+/* 底部悬浮白/磨砂信息卡（对标 TripStar 右屏 Recently Viewed！） */
+.sn-cr-float {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 4;
+  padding: 12px 14px;
+  border-radius: calc(var(--sn-cr-r) - 8px);
+  background: color-mix(in srgb, var(--sn-raised) 94%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .86),
+    0 0 0 1px rgba(0, 0, 0, .05),
+    0 8px 20px -8px rgba(0, 0, 0, .18);
+  display: grid;
+  gap: 4px;
+  color: var(--sn-label);
+}
+[data-theme="dark"] .sn-cr-float {
+  background: rgba(28, 28, 32, .86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    0 0 0 1px rgba(255, 255, 255, .08),
+    0 10px 24px -8px rgba(0, 0, 0, .58);
+}
+.sn-cr-float-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sn-cr-float b {
+  font: 600 calc(14px * var(--sn-font-scale, 1))/calc(19px * var(--sn-font-scale, 1)) var(--sn-sans);
+  color: var(--sn-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sn-cr-float-price {
+  flex: none;
+  font: 600 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--sn-label);
+}
+.sn-cr-float > span {
+  font: 400 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans);
+  color: var(--sn-label3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sn-cr-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.sn-cr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--sn-fill-subtle);
+  color: var(--sn-label2);
+  font: 500 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  white-space: nowrap;
+}
+.sn-cr-pill .sn-ic {
+  width: 12px;
+  height: 12px;
+  color: var(--sn-label3);
+}
+
+/* ———— 变体 1：arc（3D 弧形透视轮播，对标 TripStar 左屏） ———— */
+.sn-cr[data-variant="arc"] {
+  --sn-cr-h: 268px;
+  --sn-cr-card-w: 192px;
+  --sn-cr-r: 24px;
+}
+.sn-cr[data-variant="arc"] .sn-cr-vp {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+}
+.sn-cr[data-variant="arc"] .sn-cr-slide.sn-cr-cur {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .65),
+    0 0 0 1px rgba(0, 0, 0, .06),
+    0 22px 44px -16px rgba(15, 23, 42, .26),
+    0 4px 10px -2px rgba(15, 23, 42, .08);
+}
+
+/* ———— 变体 2：focus（暗场/磨砂焦点轮播，对标推文 2125045170446217643 卡片 4） ———— */
+.sn-cr[data-variant="focus"] {
+  --sn-cr-h: 256px;
+  --sn-cr-card-w: 278px;
+  --sn-cr-r: 28px;
+}
+.sn-cr[data-variant="focus"] .sn-cr-vp {
+  background: #0b0b10;
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.sn-cr[data-variant="focus"] .sn-cr-slide {
+  height: calc(var(--sn-cr-h) - 52px);
+  margin-top: calc((var(--sn-cr-h) - 52px) * -.5);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, .42),
+    0 22px 48px -12px rgba(0, 0, 0, .74);
+}
+/* 中心聚焦卡片顶部极细白色光学弧轨（致敬卡片 4 的 Product&Design 光轨） */
+.sn-cr[data-variant="focus"] .sn-cr-slide::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  top: 24px;
+  height: 1px;
+  z-index: 4;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .78), transparent);
+  opacity: 0;
+  transform: scaleX(.6);
+  pointer-events: none;
+  transition: opacity .36s var(--sn-ease-out), transform .46s var(--sn-ease-out-strong);
+}
+.sn-cr[data-variant="focus"] .sn-cr-slide.sn-cr-cur::after {
+  opacity: .9;
+  transform: scaleX(1);
+}
+.sn-cr-focus-center {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 20px;
+  gap: 6px;
+  color: #ffffff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .24);
+}
+.sn-cr-focus-center b {
+  font: 600 calc(17px * var(--sn-font-scale, 1))/calc(22px * var(--sn-font-scale, 1)) var(--sn-sans);
+  letter-spacing: -.015em;
+}
+.sn-cr-focus-center span {
+  font: 400 calc(12px * var(--sn-font-scale, 1))/calc(17px * var(--sn-font-scale, 1)) var(--sn-sans);
+  opacity: .84;
+}
+
+/* ———— 变体 3：peek（沉浸探索画廊，对标 TripStar 右屏 Recently Viewed） ———— */
+.sn-cr[data-variant="peek"] {
+  --sn-cr-h: 236px;
+  --sn-cr-card-w: 268px;
+  --sn-cr-r: 22px;
+}
+.sn-cr[data-variant="peek"] .sn-cr-vp {
+  border-radius: 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 92%, transparent 100%);
+}
+.sn-cr[data-variant="peek"] .sn-cr-slide {
+  left: 0;
+  margin-left: 0;
+  height: calc(var(--sn-cr-h) - 8px);
+  margin-top: calc((var(--sn-cr-h) - 8px) * -.5);
+}
+
+/* ———— 变体 4：deck（立体物理叠牌轮播） ———— */
+.sn-cr[data-variant="deck"] {
+  --sn-cr-h: 288px;
+  --sn-cr-card-w: 252px;
+  --sn-cr-r: 24px;
+}
+.sn-cr[data-variant="deck"] .sn-cr-slide {
+  height: calc(var(--sn-cr-h) - 34px);
+  margin-top: calc((var(--sn-cr-h) - 34px) * -.5);
+}
+
+/* ———— 悬浮前后按钮（桌面悬停浮现，触控端保持简洁拖拽优先） ———— */
+.sn-cr-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 12;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--sn-raised) 82%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  color: var(--sn-label);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .64), 0 0 0 1px var(--sn-line), 0 6px 18px -6px rgba(0, 0, 0, .24);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(.92);
+  transition: opacity .18s var(--sn-ease-out), transform .22s var(--sn-ease-out-strong), background-color .14s var(--sn-ease-out);
+}
+[data-theme="dark"] .sn-cr-nav,
+.sn-cr[data-variant="focus"] .sn-cr-nav {
+  background: rgba(28, 29, 36, .74);
+  color: #f5f5f7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .20), 0 0 0 1px rgba(255, 255, 255, .14), 0 8px 20px -6px rgba(0, 0, 0, .55);
+}
+.sn-cr-prev { left: 10px; }
+.sn-cr-next { right: 10px; }
+.sn-cr-nav .sn-ic { width: 16px; height: 16px; }
+.sn-cr:hover .sn-cr-nav,
+.sn-cr:focus-within .sn-cr-nav {
+  opacity: 1;
+  transform: scale(1);
+}
+.sn-cr-nav:disabled {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+.sn-cr-nav:active {
+  transform: scale(.92);
+}
+.sn-cr-nav:focus-visible {
+  outline: 2px solid var(--sn-focus);
+  outline-offset: 2px;
+}
+
+/* ———— 动态变形胶囊指示器（对标 TripStar 的精致小竖条 / 流动胶囊进度条） ———— */
+.sn-cr-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.sn-cr-dot {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  width: 24px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sn-cr-dot i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sn-label) 22%, transparent);
+  overflow: hidden;
+  transition: transform .32s var(--sn-ease-out-strong), background-color .22s var(--sn-ease-out);
+}
+.sn-cr-dot.sn-on i {
+  width: 22px;
+  background: color-mix(in srgb, var(--sn-accent) 24%, transparent);
+}
+.sn-cr-dot.sn-on i::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sn-accent);
+  transform-origin: left center;
+  transform: scaleX(var(--sn-cr-prog, 1));
+  transition: transform .12s linear;
+}
+.sn-cr-dot:focus-visible {
+  outline: 2px solid var(--sn-focus);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+/* 竖条律动指示器风格（.sn-cr-dots-bars，对标 TripStar 左屏 | | | 三短竖律动条！） */
+.sn-cr-dots.sn-cr-dots-bars {
+  gap: 4px;
+}
+.sn-cr-dots.sn-cr-dots-bars .sn-cr-dot {
+  width: 14px;
+  height: 22px;
+}
+.sn-cr-dots.sn-cr-dots-bars .sn-cr-dot i {
+  width: 3.5px;
+  height: 10px;
+  border-radius: 999px;
+}
+.sn-cr-dots.sn-cr-dots-bars .sn-cr-dot.sn-on i {
+  width: 4px;
+  height: 16px;
+  background: var(--sn-accent);
+}
+.sn-cr-dots.sn-cr-dots-bars .sn-cr-dot.sn-on i::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sn-cr-slide, .sn-cr-media, .sn-cr-nav, .sn-cr-dot i {
+    transition: none !important;
+  }
+}
+}

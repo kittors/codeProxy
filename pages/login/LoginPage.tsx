@@ -2,7 +2,8 @@ import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBigUpDash, ArrowRight, ChevronDown, Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
+import { ArrowBigUpDash } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";
 import {
@@ -155,8 +156,8 @@ export function LoginPage() {
 
   return (
     <PageBackground variant="login">
-      <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 shadow-control transition-[background-color,box-shadow,color] hover:bg-surface-hover hover:text-ink hover:shadow-control-hover" />
+      <div className="absolute top-6 right-6 z-20">
+        <ThemeToggleButton className="sn-btn sn-secondary sn-ibtn sn-round !h-10 !w-10" />
       </div>
       {/* 卡片四周的中继网络：卡片就是网关，线路从两侧接进来。宽屏才出现。 */}
       <LoginNetwork cardRef={cardRef} />
@@ -200,9 +201,7 @@ export function LoginPage() {
                 <AnimatePresence initial={false}>
                   {accessFailureMessage ? (
                     <motion.div {...HINT_MOTION} className="overflow-hidden">
-                      <div className="rounded-2xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
-                        {accessFailureMessage}
-                      </div>
+                      <Callout tone="warning">{accessFailureMessage}</Callout>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -233,7 +232,7 @@ export function LoginPage() {
                     autoComplete="username"
                     autoFocus
                     className="rounded-full px-5"
-                    startAdornment={<UserRound size={17} className={FIELD_ICON} />}
+                    startAdornment={<Icon name="user" size={16} className={FIELD_ICON} />}
                   />
                 </motion.label>
                 <motion.div variants={form.item}>
@@ -249,26 +248,22 @@ export function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       className="rounded-full px-5"
-                      startAdornment={<KeyRound size={17} className={FIELD_ICON} />}
+                      startAdornment={<Icon name="key-round" size={16} className={FIELD_ICON} />}
                       endAdornment={
                         <button
                           type="button"
                           onClick={() => setShowPassword((value) => !value)}
-                          className="relative flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                          className="sn-btn sn-ghost sn-xs sn-ibtn sn-round"
                           aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
                         >
-                          <AnimatePresence mode="wait" initial={false}>
-                            <motion.span
-                              key={showPassword ? "hide" : "show"}
-                              initial={{ opacity: 0, scale: 0.7, rotate: -20 }}
-                              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                              exit={{ opacity: 0, scale: 0.7, rotate: 20 }}
-                              transition={{ duration: 0.14 }}
-                              className="flex"
-                            >
-                              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </motion.span>
-                          </AnimatePresence>
+                          <span className={showPassword ? "sn-swap sn-swapped" : "sn-swap"}>
+                            <span className="sn-swap-a">
+                              <Icon name="eye" size={16} />
+                            </span>
+                            <span className="sn-swap-b">
+                              <Icon name="eye-off" size={16} />
+                            </span>
+                          </span>
                         </button>
                       }
                     />
@@ -301,13 +296,13 @@ export function LoginPage() {
                     type="button"
                     onClick={() => setShowAdvanced((value) => !value)}
                     aria-expanded={showAdvanced}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
+                    className="sn-btn sn-ghost sn-xs !h-7 !-ml-2 !px-2 !text-xs text-[var(--sn-label3)]"
                   >
                     {t("login.advanced_connection", "Advanced connection settings")}
-                    <ChevronDown
+                    <Icon
+                      name="chevron-down"
                       size={14}
-                      aria-hidden="true"
-                      className={`transition-transform duration-200 ease-soft ${showAdvanced ? "rotate-180" : ""}`}
+                      className={`transition-transform duration-200 ease-[var(--sn-ease-out-strong)] ${showAdvanced ? "rotate-180" : ""}`}
                     />
                   </button>
                   <AnimatePresence initial={false}>
@@ -339,10 +334,10 @@ export function LoginPage() {
                     ) : (
                       <>
                         {t("login.submit_button")}
-                        <ArrowRight
+                        <Icon
+                          name="arrow-right"
                           size={16}
-                          aria-hidden="true"
-                          className="transition-transform duration-200 ease-soft group-hover:translate-x-0.5"
+                          className="transition-transform duration-200 ease-[var(--sn-ease-out-strong)] group-hover:translate-x-0.5"
                         />
                       </>
                     )}

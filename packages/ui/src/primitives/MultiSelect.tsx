@@ -9,16 +9,13 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectCheckboxBox,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -207,19 +204,17 @@ export function MultiSelect({
     return map;
   }, [options]);
 
-  const dropdown = createPortal(
-    <AnimatePresence>
-      {open ? (
-        <motion.div
+  const dropdown = open
+    ? createPortal(
+        <div
           ref={dropdownRef}
           data-side={dropdownPlacement}
+          data-state="open"
           style={dropdownStyle}
           className={cn(searchableSelectPanel, "flex flex-col")}
-          {...getSelectDropdownMotion(dropdownPlacement)}
-          transition={selectDropdownTransition}
         >
           {searchable && (
-            <div className="flex-shrink-0 border-b border-line px-3.5 py-2.5">
+            <div className="flex-shrink-0 border-b border-[var(--sn-line)] px-3.5 py-2.5">
               <input
                 ref={searchRef}
                 type="text"
@@ -245,12 +240,12 @@ export function MultiSelect({
               )}
             >
               <div className={selectCheckboxBox(value.length === 0)}>
-                {value.length === 0 && <Check size={12} />}
+                {value.length === 0 && <Icon name="check" size={12} />}
               </div>
               <span className="font-medium">{selectAllLabel || t("common.all_models")}</span>
             </button>
 
-            <div className="mx-2.5 my-1 h-px bg-line" />
+            <div className="mx-2.5 my-1 h-px bg-[var(--sn-line)]" />
 
             {filteredOptions.length === 0 ? (
               <div className={selectEmptyState}>{t("ui.no_match")}</div>
@@ -268,7 +263,7 @@ export function MultiSelect({
                     )}
                   >
                     <div className={selectCheckboxBox(checked)}>
-                      {checked && <Check size={12} />}
+                      {checked && <Icon name="check" size={12} />}
                     </div>
                     {opt.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                     <span className="truncate font-mono text-xs">{opt.label}</span>
@@ -277,11 +272,10 @@ export function MultiSelect({
               })
             )}
           </div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>,
-    document.body,
-  );
+        </div>,
+        document.body,
+      )
+    : null;
 
   return (
     <div className={`relative ${className}`}>
@@ -331,18 +325,19 @@ export function MultiSelect({
                     <span
                       aria-hidden="true"
                       onClick={(e) => removeTag(v, e)}
-                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded-full p-0.5 text-ink-3 hover:bg-hover hover:text-ink"
+                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded-full p-0.5 text-[var(--sn-label3)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
                     >
-                      <X size={10} />
+                      <Icon name="x" size={10} />
                     </span>
                   )}
                 </span>
               );
             })
           )}
-          {value.length > 5 && <span className="text-xs text-ink-3">+{value.length - 5}</span>}
+          {value.length > 5 && <span className="text-xs text-[var(--sn-label3)]">+{value.length - 5}</span>}
         </div>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           size={16}
           className={cn(selectChevron, "flex-shrink-0", open && "rotate-180")}
         />

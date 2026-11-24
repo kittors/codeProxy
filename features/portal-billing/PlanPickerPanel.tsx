@@ -286,10 +286,10 @@ export function PlanPickerPanel({
                 className={cn(
                   // 禁止使用 bg-accent + text-white：深色模式下 --cp-accent 反转为近纯白会导致白底白字，
                   // 且左侧渠道选择不应与右侧 primary 支付主按钮争夺视觉焦点。
-                  "inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,box-shadow] duration-150",
+                  "sn-btn !h-9 gap-2 !rounded-full !px-3.5 !text-xs font-medium",
                   active
-                    ? "bg-accent-soft text-ink shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-accent)_45%,transparent)]"
-                    : "bg-surface text-ink-2 shadow-control hover:bg-surface-hover hover:text-ink",
+                    ? "!bg-accent-soft !text-ink !shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-accent)_45%,transparent)]"
+                    : "!bg-surface !text-ink-2 !shadow-control hover:!bg-surface-hover hover:!text-ink",
                 )}
               >
                 <span

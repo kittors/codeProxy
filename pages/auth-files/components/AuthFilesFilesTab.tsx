@@ -9,34 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  CircleOff,
-  Download,
-  Columns3,
-  Ellipsis,
-  Eye,
-  Gauge,
-  Loader2,
-  Power,
-  RefreshCw,
-  Search,
-  Settings2,
-  Share2,
-  SlidersHorizontal,
-  Tags,
-} from "lucide-react";
+import { CircleOff, Columns3, Download, Ellipsis, Eye, Gauge, Power, RefreshCw, Search, Settings2, Share2, SlidersHorizontal, Tags } from "lucide-react";
+import { Loader } from "satin-ui/react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DropdownMenu, ProviderTag, buttonClassName, iconHueClass } from "@code-proxy/ui";
-import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
-import { ScrollArea } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
-import { DataGrid, DataGridPagination, type DataGridColumn } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
+import { Button, Card, DataGrid, DataGridPagination, DropdownMenu, EmptyState, EntityCard, HoverTooltip, ProviderTag, ScrollArea, SearchableSelect, Select, TextInput, ToggleSwitch, buttonClassName, entityCardGridClass, iconHueClass, type DataGridColumn, type SearchableSelectOption } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
   AuthFileModelOwnerGroup,
@@ -1258,10 +1235,10 @@ export function AuthFilesFilesTab({
                                 <button
                                   type="button"
                                   className={[
-                                    "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                                    "sn-btn !h-6 !w-6 !p-0 !rounded-md !shadow-none",
                                     fileDisabled
-                                      ? "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] dark:bg-white/[0.07]"
-                                      : "bg-accent-soft text-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300",
+                                      ? "!bg-ink/[0.05] !text-ink-3 hover:!bg-ink/[0.08] dark:!bg-white/[0.07]"
+                                      : "!bg-accent-soft !text-accent-ink colorful:!bg-emerald-50 colorful:!text-emerald-600 colorful:hover:!bg-emerald-100 colorful:dark:!bg-emerald-500/15 colorful:dark:!text-emerald-300",
                                     statusUpdating[file.name]
                                       ? "cursor-wait opacity-70"
                                       : "",
@@ -1325,8 +1302,8 @@ export function AuthFilesFilesTab({
                               <button
                                 type="button"
                                 className={[
-                                  "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] text-2xs font-semibold text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-wait disabled:opacity-70 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-500/15 colorful:dark:hover:text-blue-200",
-                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                  "sn-btn !h-auto shrink-0 gap-1 !rounded-md !bg-ink/[0.05] !text-2xs font-semibold !text-ink-2 !shadow-none hover:!bg-accent-soft hover:!text-accent-ink disabled:cursor-wait disabled:opacity-70 dark:!bg-white/[0.07] colorful:hover:!bg-blue-50 colorful:hover:!text-blue-700 colorful:dark:hover:!bg-blue-500/15 colorful:dark:hover:!text-blue-200",
+                                  denseCards ? "!h-5 !px-1.5" : "!px-2 !py-0.5",
                                 ].join(" ")}
                                 disabled={quotaRefreshing}
                                 onClick={() =>
@@ -1492,10 +1469,7 @@ export function AuthFilesFilesTab({
                                 )}
                               >
                                 {resetCreditBusy ? (
-                                  <Loader2
-                                    size={actionIconSize}
-                                    className="animate-spin"
-                                  />
+                                  <Loader variant="arc" size={actionIconSize} label={t("common.loading")} />
                                 ) : (
                                   <Gauge size={actionIconSize} />
                                 )}
@@ -1564,10 +1538,7 @@ export function AuthFilesFilesTab({
                                   }
                                 >
                                   {clearStatusBusy ? (
-                                    <Loader2
-                                      size={15}
-                                      className="animate-spin"
-                                    />
+                                    <Loader variant="arc" size={15} label={t("common.loading")} />
                                   ) : (
                                     <CircleOff size={15} />
                                   )}

@@ -59,23 +59,23 @@ export interface ChartPalette {
 }
 
 const LIGHT: ChartPalette = {
-  ink: "#111113",
+  ink: "#1d1d1f",
   ink2: "#55555c",
-  ink3: "#76767d",
-  grid: "#f1f1f2",
+  ink3: "#86868b",
+  grid: "rgba(0, 0, 0, 0.06)",
   surface: "#ffffff",
-  axis: "#e4e4e7",
+  axis: "rgba(0, 0, 0, 0.12)",
   primary: "#2a6ee8",
   series: ["#2a6ee8", "#06b6d4", "#f59e0b", "#ec4899"],
   bar: "#a9c5f7",
   barHover: "#5f93ec",
-  ok: "#10a37f",
-  warn: "#e08e1f",
-  err: "#e5484d",
+  ok: "#248a3d",
+  warn: "#b25000",
+  err: "#d92d20",
   info: "#2a6ee8",
   metric: {
     requests: "#2a6ee8",
-    success: "#10a37f",
+    success: "#248a3d",
     tokens: "#8b5cf6",
     cost: "#f59e0b",
     costTotal: "#ea580c",
@@ -87,23 +87,23 @@ const LIGHT: ChartPalette = {
 };
 
 const DARK: ChartPalette = {
-  ink: "#f2f2f4",
-  ink2: "#b4b4bc",
-  ink3: "#86868f",
-  grid: "rgba(255, 255, 255, 0.06)",
-  surface: "#18181c",
-  axis: "rgba(255, 255, 255, 0.12)",
+  ink: "#f5f5f7",
+  ink2: "#aeaeb2",
+  ink3: "#86868b",
+  grid: "rgba(255, 255, 255, 0.08)",
+  surface: "#1c1c1e",
+  axis: "rgba(255, 255, 255, 0.14)",
   primary: "#5f93ec",
   series: ["#5f93ec", "#22d3ee", "#fbbf24", "#f472b6"],
   bar: "#2a5bc0",
   barHover: "#3b7cf0",
-  ok: "#3ecf9a",
-  warn: "#f0ad4e",
-  err: "#ff6b6b",
+  ok: "#30d158",
+  warn: "#ffd60a",
+  err: "#ff6961",
   info: "#77a6ff",
   metric: {
     requests: "#5f93ec",
-    success: "#3ecf9a",
+    success: "#30d158",
     tokens: "#a78bfa",
     cost: "#fbbf24",
     costTotal: "#f97316",
@@ -241,15 +241,19 @@ export function chartGradient(
 export const chartTooltipStyle = (isDark: boolean) => {
   const palette = chartPalette(isDark);
   return {
-    backgroundColor: isDark ? "#f2f2f4" : "#111113",
+    backgroundColor: isDark ? "#3a3a3c" : "#1d1d1f",
     borderWidth: 0,
-    padding: [8, 11],
-    textStyle: { color: isDark ? "#111113" : "#ffffff", fontSize: 12 },
-    extraCssText: `border-radius: 10px; box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.28);`,
+    padding: [8, 12],
+    textStyle: { color: "#f5f5f7", fontSize: 12 },
+    extraCssText: `border-radius: 10px; box-shadow: ${
+      isDark
+        ? "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.09)"
+        : "0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08)"
+    };`,
     axisPointer: {
       lineStyle: { color: palette.axis },
       crossStyle: { color: palette.axis },
-      shadowStyle: { color: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)" },
+      shadowStyle: { color: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.035)" },
     },
   } as const;
 };

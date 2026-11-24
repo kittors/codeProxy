@@ -1,8 +1,12 @@
 import { type PropsWithChildren, type ReactNode } from "react";
-import { useReducedMotion } from "framer-motion";
+import { Loader } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { useResizeLayoutAnimation } from "../hooks/useResizeLayoutAnimation";
 import { surface } from "./Surface";
+
+const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
 
 /**
  * Padding and the matching inner radius, as one decision.
@@ -49,7 +53,7 @@ export function Card({
   padding?: "default" | "compact" | "none";
 }>) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = prefersReducedMotion();
   const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
   const hasHeader = Boolean(title || description || actions);
 
@@ -86,9 +90,9 @@ export function Card({
         {children}
       </div>
       {loading ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-surface/70 backdrop-blur-[2px] motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out">
-          <div className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
-            <span className="h-4 w-4 rounded-full border-2 border-ink/15 border-t-ink motion-safe:animate-spin" />
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-[var(--sn-raised)]/72 backdrop-blur-[2px] motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[var(--sn-overlay)] px-4 py-2 text-sm font-medium text-[var(--sn-label2)] shadow-[var(--sn-e1)]">
+            <Loader variant="arc" size={16} label={t("common.loading_ellipsis")} />
             {t("common.loading_ellipsis")}
           </div>
         </div>

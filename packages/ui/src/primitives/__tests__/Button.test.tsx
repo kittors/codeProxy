@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { Button } from "../Button";
 
 describe("Button", () => {
-  test("uses icon-only sizing for a single non-text child", () => {
+  test("uses Satin icon-only styling (.sn-ibtn) for a single non-text child", () => {
     render(
       <Button aria-label="refresh">
         <span data-testid="icon" />
@@ -11,9 +11,8 @@ describe("Button", () => {
     );
 
     const button = screen.getByRole("button", { name: "refresh" });
-    // Default md icon-only: h-9 w-9 px-0
-    expect(button.className).toMatch(/\bw-9\b/);
-    expect(button.className).toMatch(/\bpx-0\b/);
+    expect(button.className).toMatch(/\bsn-btn\b/);
+    expect(button.className).toMatch(/\bsn-ibtn\b/);
   });
 
   test("does not treat Fragment-wrapped icon+label as icon-only", () => {
@@ -27,9 +26,9 @@ describe("Button", () => {
     );
 
     const button = screen.getByRole("button", { name: "保存中..." });
-    // Text size (md): h-10 px-4 — not the square icon-only w-9 px-0.
-    expect(button.className).toMatch(/\bpx-4\b/);
-    expect(button.className).not.toMatch(/\bw-9\b/);
+    expect(button.className).toMatch(/\bsn-btn\b/);
+    expect(button.className).toMatch(/\bsn-primary\b/);
+    expect(button.className).not.toMatch(/\bsn-ibtn\b/);
     expect(button).toHaveTextContent("保存中...");
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
@@ -43,8 +42,8 @@ describe("Button", () => {
     );
 
     const button = screen.getByRole("button", { name: "保存中..." });
-    expect(button.className).toMatch(/\bpx-4\b/);
-    expect(button.className).not.toMatch(/\bw-9\b/);
+    expect(button.className).toMatch(/\bsn-btn\b/);
+    expect(button.className).not.toMatch(/\bsn-ibtn\b/);
   });
 
   test("flattens nested Fragments before icon-only detection", () => {
@@ -60,7 +59,7 @@ describe("Button", () => {
     );
 
     const button = screen.getByRole("button", { name: "保存中..." });
-    expect(button.className).toMatch(/\bpx-4\b/);
-    expect(button.className).not.toMatch(/\bw-9\b/);
+    expect(button.className).toMatch(/\bsn-btn\b/);
+    expect(button.className).not.toMatch(/\bsn-ibtn\b/);
   });
 });

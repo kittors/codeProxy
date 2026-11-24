@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useCallback, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { useScrollFade } from "../hooks/useScrollFade";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
@@ -96,8 +96,8 @@ export function Drawer({
         tabIndex={-1}
         style={backdropMotion.style}
         className={[
-          // 与 Modal 用同一套遮罩语言：只压暗、不模糊。
-          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
+          // 与 Modal 用同一套 Satin 遮罩令牌：只压暗、不模糊。
+          "absolute inset-0 cursor-default bg-[var(--sn-scrim)]",
           backdropMotion.className,
         ].join(" ")}
       />
@@ -114,7 +114,7 @@ export function Drawer({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none [--cp-backdrop:var(--cp-elevated)] sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
+          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
         ].join(" ")}
@@ -138,10 +138,11 @@ export function Drawer({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            data-kbd="Esc"
+            className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0"
             aria-label={t("common.close")}
           >
-            <X size={18} />
+            <Icon name="x" size={16} />
           </button>
         </div>
         <div

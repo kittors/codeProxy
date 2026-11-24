@@ -51,7 +51,7 @@ export interface ProviderCardProps {
  * （强调色表达「选中 / 开启」），多彩风格是绿色淡底。
  */
 const HEADER_BUTTON =
-  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:shadow-control-focus";
+  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-[background-color,color,transform] duration-120 ease-[var(--sn-ease-out)] active:scale-[0.94] focus-visible:outline-none focus-visible:shadow-control-focus";
 const HEADER_BUTTON_IDLE =
   "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]";
 export function ProviderCard({

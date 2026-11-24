@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { AlertTriangle, CircleHelp, Trash2 } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { TextInput } from "../primitives/Input";
@@ -15,9 +15,9 @@ const TONE: Record<ConfirmVariant, DialogTone> = {
 };
 
 const DEFAULT_ICON: Record<ConfirmVariant, ReactNode> = {
-  danger: <Trash2 />,
-  warning: <AlertTriangle />,
-  primary: <CircleHelp />,
+  danger: <Icon name="trash-2" size={18} />,
+  warning: <Icon name="triangle-alert" size={18} />,
+  primary: <Icon name="info" size={18} />,
 };
 
 /**

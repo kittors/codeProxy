@@ -1,7 +1,6 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { HUE_GLYPH, HUE_SOFT, HUE_SOLID, HUE_TILE, useScrollFade } from "@code-proxy/ui";
+import { HUE_GLYPH, HUE_SOFT, HUE_SOLID, HUE_TILE, useSatinFluidThumb, useScrollFade } from "@code-proxy/ui";
 import type { ConfigGroupDef, ConfigNavGroupId, ConfigSectionDef, ConfigSectionId } from "./configSchema";
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
@@ -18,10 +17,9 @@ export interface ConfigGroupTab {
  * 顶部的分组页签（基础 / 运行 / 日志与数据 / 高级）。
  *
  * 取代原来页面左侧的纵向分区目录：外壳已经有一列纵向侧边栏，页面里再竖一列目录，
- * 两层纵向菜单并排看着很挤。分组横向排在内容上方，背后的选中底块用共享布局动画滑过去；
+ * 两层纵向菜单并排看着很挤。分组横向排在内容上方，背后的选中底块由 Satin `edgeFrames`
+ * 流体滑块驱动（前缘先走、后缘延迟跟上、落定轻压回弹），零 framer-motion 依赖；
  * 有未保存修改的组带一个圆点，搜索时显示命中数。
- * 图标着色多彩时每组的图标块是该组色相的淡渐变，选中那组变成同色相的实色；单色时图标平时是
- * 弱化墨色，选中的那组换成强调色淡底。命中数与圆点在多彩风格下也跟着色相 / 天蓝走。
  */
 export function ConfigGroupTabs({
   tabs,
@@ -38,8 +36,11 @@ export function ConfigGroupTabs({
   onChange: (id: ConfigNavGroupId) => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLSpanElement | null>(null);
   const buttonsRef = useRef<Partial<Record<ConfigNavGroupId, HTMLButtonElement | null>>>({});
+
+  useSatinFluidThumb(listRef, thumbRef, '[role="tab"][aria-selected="true"]', value ?? "");
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
@@ -58,11 +59,17 @@ export function ConfigGroupTabs({
 
   return (
     <div
+      ref={listRef}
       role="tablist"
       aria-label={t("config_ui.groups_label")}
       onKeyDown={onKeyDown}
       className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-track p-1"
     >
+      <span
+        ref={thumbRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-xl bg-elevated opacity-0 shadow-control will-change-transform"
+      />
       {tabs.map(({ def, modified, matches }) => {
         const selected = def.id === value;
         const Icon = def.icon;
@@ -81,18 +88,10 @@ export function ConfigGroupTabs({
             tabIndex={focusable ? 0 : -1}
             onClick={() => onChange(def.id)}
             className={cn(
-              "relative flex shrink-0 items-center gap-2 rounded-xl py-1.5 pr-3 pl-1.5 text-sm font-medium transition-colors",
+              "relative z-[1] flex shrink-0 items-center gap-2 rounded-xl py-1.5 pr-3 pl-1.5 text-sm font-medium transition-colors",
               selected ? "text-ink" : "text-ink-2 hover:text-ink",
             )}
           >
-            {selected ? (
-              <motion.span
-                layoutId={`${idPrefix}-group-pill`}
-                aria-hidden="true"
-                className="absolute inset-0 rounded-xl bg-elevated shadow-control"
-                transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }}
-              />
-            ) : null}
             <span
               aria-hidden="true"
               className={cn(
@@ -170,10 +169,10 @@ export function ConfigSectionChips({
               aria-current={selected ? "true" : undefined}
               onClick={() => onSelect(section.id)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,box-shadow]",
+                "sn-btn !h-auto shrink-0 gap-1.5 !rounded-full !border-0 !px-3 !py-1 !text-xs font-medium",
                 selected
-                  ? cn("bg-accent-soft text-accent-ink", HUE_SOFT[section.hue])
-                  : "bg-surface text-ink-2 shadow-control hover:text-ink hover:shadow-control-hover",
+                  ? cn("!bg-accent-soft !text-accent-ink !shadow-none", HUE_SOFT[section.hue])
+                  : "!bg-surface !text-ink-2 !shadow-control hover:!text-ink hover:!shadow-control-hover",
               )}
             >
               <Icon size={13} aria-hidden="true" className={cn(!selected && "text-ink-3", HUE_GLYPH[section.hue])} />

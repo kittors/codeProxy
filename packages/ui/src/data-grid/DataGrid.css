@@ -11,26 +11,27 @@
  * 混出悬停、选中色（同 index.css 的 bg-backdrop-hover），放在内容区、卡片、弹窗里都对得上。
  */
 .cp-grid {
-  --grid-bg: var(--cp-backdrop);
-  --grid-head-bg: color-mix(in srgb, var(--cp-backdrop) 96.5%, #000);
-  --grid-row-hover: color-mix(in srgb, var(--cp-backdrop) 96.5%, #000);
-  --grid-row-selected: color-mix(in srgb, var(--cp-backdrop) 92%, var(--cp-focus));
-  --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 89%, var(--cp-focus));
-  --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 98%, #000);
+  --grid-bg: var(--cp-backdrop, var(--sn-raised));
+  --grid-head-bg: var(--sn-raised);
+  --grid-row-hover: var(--sn-fill-hover-solid);
+  --grid-row-selected: var(--sn-fill-active-solid);
+  --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 92%, var(--sn-accent));
+  --grid-row-expanded: color-mix(in srgb, var(--grid-bg) 97.5%, var(--sn-label));
   --grid-sorted-tint: rgb(0 0 0 / 0.014);
-  --grid-pin-shadow: rgb(15 23 42 / 0.13);
-  --grid-head-shadow: rgb(0 0 0 / 0.07);
-  --grid-row-line: var(--cp-line);
+  --grid-pin-shadow: rgb(15 23 42 / 0.12);
+  --grid-head-shadow: rgb(0 0 0 / 0.06);
+  --grid-row-line: var(--sn-line);
 }
 
-.dark .cp-grid {
-  --grid-head-bg: color-mix(in srgb, var(--cp-backdrop) 95%, #fff);
-  --grid-row-hover: color-mix(in srgb, var(--cp-backdrop) 95.5%, #fff);
-  --grid-row-selected: color-mix(in srgb, var(--cp-backdrop) 86%, var(--cp-focus));
-  --grid-row-selected-hover: color-mix(in srgb, var(--cp-backdrop) 82%, var(--cp-focus));
-  --grid-row-expanded: color-mix(in srgb, var(--cp-backdrop) 97.5%, #fff);
+.dark .cp-grid,
+[data-theme="dark"] .cp-grid {
+  --grid-head-bg: var(--sn-raised);
+  --grid-row-hover: var(--sn-fill-hover-solid);
+  --grid-row-selected: var(--sn-fill-active-solid);
+  --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 90%, var(--sn-accent));
+  --grid-row-expanded: color-mix(in srgb, var(--grid-bg) 97%, #fff);
   --grid-sorted-tint: rgb(255 255 255 / 0.02);
-  --grid-pin-shadow: rgb(0 0 0 / 0.62);
+  --grid-pin-shadow: rgb(0 0 0 / 0.58);
   --grid-head-shadow: rgb(0 0 0 / 0.45);
 }
 
