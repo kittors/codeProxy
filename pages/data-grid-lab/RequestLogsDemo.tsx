@@ -18,7 +18,7 @@ import {
   type GridFilters,
   type GridSort,
 } from "@code-proxy/ui";
-import { Download, RefreshCw, ScrollText, SearchX } from "lucide-react";
+import { Download, RefreshCw } from "@code-proxy/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LabDetailPanel } from "./LabDetailPanel";
@@ -274,6 +274,8 @@ export function RequestLogsDemo({ switcher }: { switcher: ReactNode }) {
                   columns={columns}
                   density={prefs.density}
                   onDensityChange={prefs.setDensity}
+                  lines={prefs.lines}
+                  onLinesChange={prefs.setLines}
                   hiddenColumnIds={prefs.hiddenColumnIds}
                   onHiddenColumnIdsChange={prefs.setHiddenColumnIds}
                   onReset={prefs.resetView}
@@ -364,12 +366,12 @@ export function RequestLogsDemo({ switcher }: { switcher: ReactNode }) {
             empty={
               demoState === "nodata" || !hasFilters
                 ? {
-                    icon: <ScrollText aria-hidden="true" />,
+                    scene: "inbox",
                     title: "还没有请求日志",
                     description: "有请求经过网关后会出现在这里。新部署的实例要等第一次调用。",
                   }
                 : {
-                    icon: <SearchX aria-hidden="true" />,
+                    scene: "search",
                     title: "没有符合条件的请求",
                     description: "当前生效的筛选条件：",
                     details: (
@@ -378,10 +380,7 @@ export function RequestLogsDemo({ switcher }: { switcher: ReactNode }) {
                         aria-label="生效的筛选条件"
                       >
                         {activeFilterLabels.map((label) => (
-                          <li
-                            key={label}
-                            className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
-                          >
+                          <li key={label} className="sn-chip sn-tag !h-6 !px-2.5 !text-xs">
                             {label}
                           </li>
                         ))}
@@ -395,6 +394,7 @@ export function RequestLogsDemo({ switcher }: { switcher: ReactNode }) {
                   }
             }
             density={prefs.density}
+            lines={prefs.lines}
             hiddenColumnIds={prefs.hiddenColumnIds}
             onHiddenColumnIdsChange={prefs.setHiddenColumnIds}
             sort={sort}

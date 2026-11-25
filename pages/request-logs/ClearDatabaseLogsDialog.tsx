@@ -1,4 +1,4 @@
-import { Database } from "lucide-react";
+import { Database } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { ClearUsageLogsPayload } from "@code-proxy/api-client/endpoints/usage";
 import { CheckboxField, ConfirmModal, iconHueClass } from "@code-proxy/ui";

@@ -1,6 +1,6 @@
 import { type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { Copy } from "@code-proxy/ui/icons";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";

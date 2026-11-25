@@ -1,10 +1,10 @@
 import { VendorIcon } from "@code-proxy/assets";
 import { maskSensitiveIdentity } from "@code-proxy/domain";
 import {
+  Avatar,
   GridCellTooltip,
   GridTooltipRows,
-  HUE_SOFT_BASE,
-  HUE_TILE,
+  StatusTag,
   formatClock,
   formatCompactNumber,
   formatDateTime,
@@ -12,10 +12,9 @@ import {
   formatInteger,
   formatRelativeTime,
   formatUsd,
-  hueForIconName,
   isSameLocalDay,
 } from "@code-proxy/ui";
-import { CircleHelp, Globe, Package, SquareTerminal } from "lucide-react";
+import { CircleHelp, Globe, Package, SquareTerminal } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { channelAuthTypeBadgeClass } from "./ChannelIdentityLabel";
 import { describeRequestLogClient } from "./requestLogClients";
@@ -91,9 +90,9 @@ export function RequestLogIdentityCell({
   const { t } = useTranslation();
   if (row.isSystemCall) {
     return (
-      <span className="inline-flex items-center rounded-md bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
+      <StatusTag size="sm" tone="neutral" dot={false}>
         {t("request_logs.system_call")}
-      </span>
+      </StatusTag>
     );
   }
   const mask = (value: string) => (masked && value !== DASH ? maskSensitiveIdentity(value) : value);
@@ -103,7 +102,7 @@ export function RequestLogIdentityCell({
   );
   const primary = variant === "key" ? keyName : mask(row.endUserDisplayName || row.apiKeyName || DASH);
   const secondary = variant === "user" && keyName !== primary ? keyName : "";
-  const initial = primary === DASH ? "?" : (Array.from(primary)[0]?.toUpperCase() ?? "?");
+  const avatarSeed = masked ? "masked-user" : (primary === DASH ? "guest" : primary);
   return (
     <GridCellTooltip
       content={
@@ -117,11 +116,8 @@ export function RequestLogIdentityCell({
       }
     >
       <span className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${HUE_SOFT_BASE} ${HUE_TILE[hueForIconName(primary)]}`}
-        >
-          {initial}
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <Avatar name={avatarSeed} size={28} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
           <span className={`truncate text-sm font-medium ${primary === DASH ? "text-ink-4" : "text-ink"}`}>
@@ -220,9 +216,9 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
         <span className="block max-w-[22rem]">
           <span className="mb-1 block text-xs font-semibold">{t("request_logs.user_agent")}</span>
           {row.userAgent ? (
-            <span className="block break-all font-mono text-2xs text-canvas/80">{row.userAgent}</span>
+            <span className="block break-all font-mono text-2xs opacity-80">{row.userAgent}</span>
           ) : (
-            <span className="block text-2xs text-canvas/70">{t("request_logs.user_agent_missing")}</span>
+            <span className="block text-2xs opacity-70">{t("request_logs.user_agent_missing")}</span>
           )}
         </span>
       }
@@ -495,34 +491,32 @@ export function RequestLogStatusCell({
   const { t } = useTranslation();
   if (!row.failed) {
     return (
-      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-2">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+      <StatusTag size="sm" tone="ok">
         {t("request_logs.status_success")}
-      </span>
+      </StatusTag>
     );
   }
   const loop = Boolean(row.guardKind);
   const label = t(loop ? "request_logs.status_loop_stopped" : "request_logs.status_failed");
-  const tone = loop
-    ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:bg-amber-400/15 dark:text-amber-300 dark:hover:bg-amber-400/25"
-    : "bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 dark:bg-rose-400/15 dark:text-rose-300 dark:hover:bg-rose-400/25";
-  const dot = loop ? "bg-amber-500" : "bg-rose-500";
   const hint = loop ? loopStoppedExplanation(t, row.guardKind) : t("request_logs.view_error");
-  const pill = (
-    <>
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
-      {label}
-    </>
-  );
-  const className = `inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium transition-colors ${tone}`;
+  const tagClassName = [
+    "sn-tag sn-sm",
+    loop ? "sn-warn" : "sn-bad",
+    onOpenError ? "cursor-pointer transition-opacity hover:opacity-80" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <GridCellTooltip content={<span className="block max-w-[18rem] text-xs">{hint}</span>}>
       {onOpenError ? (
-        <button type="button" onClick={() => onOpenError(row)} className={className}>
-          {pill}
+        <button type="button" onClick={() => onOpenError(row)} className={tagClassName}>
+          <i aria-hidden="true" />
+          {label}
         </button>
       ) : (
-        <span className={className}>{pill}</span>
+        <StatusTag size="sm" tone={loop ? "warn" : "bad"}>
+          {label}
+        </StatusTag>
       )}
     </GridCellTooltip>
   );

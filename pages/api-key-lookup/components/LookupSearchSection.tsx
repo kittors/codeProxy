@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";

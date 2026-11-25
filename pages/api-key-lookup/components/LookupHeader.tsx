@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import { Check, ChevronRight, Key, KeyRound, LogOut, UserPlus, Users } from "lucide-react";
+import { Check, ChevronRight, Key, KeyRound, LogOut, UserPlus, Users } from "@code-proxy/ui/icons";
 import type { EndUser, SavedPortalAccount } from "@code-proxy/api-client";
 import { DropdownMenu, LanguageSelector, ThemeToggleButton } from "@code-proxy/ui";
 import { LandingButton } from "./landing/LandingButton";

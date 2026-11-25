@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Pencil, Search, Trash2 } from "@code-proxy/ui/icons";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
   Button,

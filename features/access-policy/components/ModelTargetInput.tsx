@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Bot } from "lucide-react";
+import { Bot } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { HUE_GLYPH, TextInput, cn, floatingPanelSurface } from "@code-proxy/ui";
 import type { ModelOption } from "./ModelPatternInput";

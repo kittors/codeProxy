@@ -1,4 +1,4 @@
-import { Boxes, CircleDollarSign, Info } from "lucide-react";
+import { Boxes, CircleDollarSign, Info } from "@code-proxy/ui/icons";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Clock, ExternalLink, RefreshCw, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, ExternalLink, RefreshCw, XCircle } from "@code-proxy/ui/icons";
 import type { BillingOrder } from "@code-proxy/api-client";
 import { Button, Modal, surface } from "@code-proxy/ui";
 import { formatYuan, orderStatusMeta } from "./billingFormat";

@@ -13,19 +13,19 @@ import {
   Trash2,
   Unlock,
   Wallet,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { AccessFreeze, ApiKeyPermissionProfile, EndUser } from "@code-proxy/api-client";
 import {
+  Avatar,
   GRID_WIDTH,
-  HUES,
   HUE_GLYPH,
   HUE_SOFT,
   HoverTooltip,
   GRID_ROW_ACTIONS_COLUMN,
   GridRowActions,
+  StatusTag,
   cn,
   type DataGridColumn,
-  type Hue,
 } from "@code-proxy/ui";
 import { maskSensitiveIdentity } from "@code-proxy/domain";
 import { AccessFreezeChips } from "@features/access-freeze";
@@ -37,14 +37,6 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 // 表格直接放在页面上（外壳内容区 canvas），冻结列的底色跟着它走；用 surface 的话深色下是一条亮一档的竖条。
 const CHIP = "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
 const NEUTRAL = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
-
-/** 头像底色按账号 id 散列到一个稳定的色相，避开偏「危险 / 警告」的玫红与琥珀。 */
-const AVATAR_HUES = HUES.filter((hue) => hue !== "rose" && hue !== "amber" && hue !== "orange");
-const avatarHue = (id: string): Hue => {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return AVATAR_HUES[hash % AVATAR_HUES.length];
-};
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ["year", 365 * 24 * 3600],
@@ -77,20 +69,16 @@ function ExpiryTag({ expiresAt, t }: { expiresAt?: string | null; t: Translate }
   const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
   return (
     <HoverTooltip content={new Date(ms).toLocaleString()}>
-      <span
-        className={cn(
-          "shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums",
-          expired
-            ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
-            : soon
-              ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
-              : NEUTRAL,
-        )}
+      <StatusTag
+        size="sm"
+        tone={expired ? "bad" : soon ? "warn" : "neutral"}
+        dot={expired || soon}
+        className="shrink-0 tabular-nums"
       >
         {expired
           ? t("billing.expiry_expired")
           : t("billing.expiry_remaining_days", { days })}
-      </span>
+      </StatusTag>
     </HoverTooltip>
   );
 }
@@ -98,25 +86,18 @@ function ExpiryTag({ expiresAt, t }: { expiresAt?: string | null; t: Translate }
 function AccountCell({ row, masked, t }: { row: EndUser; masked: boolean; t: Translate }) {
   const displayName = masked ? maskSensitiveIdentity(row.display_name) : row.display_name;
   const username = masked ? maskSensitiveIdentity(row.username) : row.username;
-  const initial = (row.display_name || row.username || "?").trim().charAt(0).toUpperCase();
+  const avatarSeed = masked ? "masked-account" : (row.display_name || row.username || row.id);
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <span
-        aria-hidden="true"
-        className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-          NEUTRAL,
-          HUE_SOFT[avatarHue(row.id)],
-        )}
-      >
-        {masked ? "•" : initial}
+      <span aria-hidden="true" className="inline-flex shrink-0">
+        <Avatar name={avatarSeed} size={32} decorative />
       </span>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate font-medium text-ink">{displayName}</span>
-          <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium tabular-nums text-ink-2 dark:bg-white/[0.07]">
+          <StatusTag size="sm" tone="neutral" dot={false} className="shrink-0 tabular-nums">
             {t("access_policy.key_count", { count: row.api_key_count ?? 0 })}
-          </span>
+          </StatusTag>
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="truncate text-xs text-ink-3">{username}</span>
@@ -258,16 +239,9 @@ export function getEndUserColumns({
         const upstreamFreezes = accessFreezes?.get(row.id) ?? [];
         return (
           <div className="flex flex-col items-center gap-1">
-            <span
-              className={cn(
-                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-                active
-                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-              )}
-            >
+            <StatusTag size="sm" tone={active ? "ok" : "warn"}>
               {active ? t("end_users.status_active") : t("end_users.status_frozen")}
-            </span>
+            </StatusTag>
             {onViewAccessFreezes ? (
               <AccessFreezeChips freezes={upstreamFreezes} onOpen={() => onViewAccessFreezes(row)} />
             ) : null}

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronRight, Key, KeyRound, LogOut, Wallet } from "lucide-react";
+import { CalendarClock, ChevronRight, Key, KeyRound, LogOut, Wallet } from "@code-proxy/ui/icons";
 import {
   apiKeyBillingApi,
   isApiClientError,

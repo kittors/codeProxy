@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "lucide-react";
+import { Loader2, Pencil, Plus, Route, Trash2, TriangleAlert, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { ChannelGroupChannelDetail } from "@code-proxy/api-client/endpoints/channel-groups";
 import { NO_ROUTING_CONFIG_SUPPORT, type RoutingConfigSupport } from "@code-proxy/api-client/endpoints/routing-config";

@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { CircleCheck, Hourglass } from "lucide-react";
+import { CircleCheck, Hourglass } from "@code-proxy/ui/icons";
 import {
   MONITOR_IN_FLIGHT_STAGES,
   type MonitorInFlight,

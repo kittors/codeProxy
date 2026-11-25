@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "@code-proxy/ui/icons";
 import { Select, TextInput, Textarea } from "@code-proxy/ui";
 import type { ModelTestMode, ModelTestModeInfo, ModelTestOptions } from "@code-proxy/api-client";
 import {

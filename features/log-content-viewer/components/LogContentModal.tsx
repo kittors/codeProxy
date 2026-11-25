@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Code2, Download, Eye, FileInput, FileOutput, Info, Loader2 } from "lucide-react";
+import { Code2, Download, Eye, FileInput, FileOutput, Info, Loader2 } from "@code-proxy/ui/icons";
 import { AnimatePresence, motion } from "framer-motion";
 import { usageApi, type UsageLogEgressResponse } from "@code-proxy/api-client";
 import {

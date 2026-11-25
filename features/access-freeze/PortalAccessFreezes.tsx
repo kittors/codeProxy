@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { Lock } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { portalAccessFreezesApi, type PortalAccessFreeze } from "@code-proxy/api-client";
 import { Callout, ProviderTag } from "@code-proxy/ui";

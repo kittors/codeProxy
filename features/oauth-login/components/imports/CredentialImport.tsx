@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { useMemo, useState, type ComponentProps } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";

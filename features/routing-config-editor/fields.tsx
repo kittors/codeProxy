@@ -1,4 +1,4 @@
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@code-proxy/ui/icons";
 import { HoverTooltip } from "@code-proxy/ui";
 
 export function Field({

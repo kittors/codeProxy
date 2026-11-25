@@ -38,11 +38,11 @@ function ModelComparisonRow({
 }) {
   return (
     <span className="flex items-baseline gap-2 whitespace-nowrap">
-      <span className="shrink-0 text-canvas/60">{label}</span>
+      <span className="shrink-0 opacity-70">{label}</span>
       <span
         className={
-          // 气泡在浅色模式是深底、深色模式反转成浅底，红字的深浅也要跟着反过来。
-          emphasized ? "font-semibold text-rose-300 dark:text-rose-600" : "text-canvas"
+          // Satin Tooltip 浅深主题下均为深色高对比气泡（--sn-tip-bg / --sn-tip-fg），强调色取亮红、正文继承 --sn-tip-fg。
+          emphasized ? "font-semibold text-rose-300" : "text-[var(--sn-tip-fg)]"
         }
       >
         {value || "--"}

@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@code-proxy/ui/icons";
 import { WORD_SCAN_SCOPES, type WordPolicyView, type WordScanScope } from "@code-proxy/api-client";
 import { Select, SettingGroup, SettingRow, ToggleSwitch } from "@code-proxy/ui";
 import type { WordPolicyDraft } from "./wordPolicyModel";

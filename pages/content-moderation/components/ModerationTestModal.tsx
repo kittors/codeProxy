@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
+import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   type ContentModerationDecision,

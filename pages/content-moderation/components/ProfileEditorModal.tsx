@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, Bot, ListFilter, Server, ShieldCheck, Sparkles } from "lucide-react";
+import { Ban, Bot, ListFilter, Server, ShieldCheck, Sparkles } from "@code-proxy/ui/icons";
 import {
   NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
   type ContentModerationBackend,

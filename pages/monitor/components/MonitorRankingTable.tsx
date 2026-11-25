@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@code-proxy/ui/icons";
 import type { MonitorBreakdownRow } from "@code-proxy/api-client";
 import { Button, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { useMediaQuery } from "../hooks/useMediaQuery";

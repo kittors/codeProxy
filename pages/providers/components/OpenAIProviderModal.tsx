@@ -1,6 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Check, Plug } from "lucide-react";
+import { AlertCircle, Check, Plug } from "@code-proxy/ui/icons";
 import type { OpenAIDraft } from "../providers-helpers";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";

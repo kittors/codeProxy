@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link2 } from "lucide-react";
+import { Link2 } from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   extractApiErrorCode,

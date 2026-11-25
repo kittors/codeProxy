@@ -1,0 +1,14 @@
+/* Satin 的页面级重置（可选）：* 清零外边距和内边距、html / body 的底色和字体、中英文自动留空、换主题时整页交叉淡化。
+   组件不依赖它（组件内部需要的清零已经写在各自的样式里）；整页都用 Satin 时再引入。 */
+/* ———— 2. 文档框架（只属于设计稿） ———— */
+@layer satin {
+* { box-sizing: border-box; margin: 0; padding: 0; }
+/* 中英文、数字之间自动留空（09 号 §9），文案里不手动加空格 */
+:lang(zh) { text-autospace: normal; }
+/* 文件名、代码这类整体字符串不插空：Chrome 会在"第三集"和".mp4"之间也留空 */
+code, kbd { text-autospace: no-autospace; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; overflow-x: clip; }
+body { background: var(--sn-canvas); color: var(--sn-label); font: calc(14px * var(--sn-font-scale, 1))/calc(22px * var(--sn-font-scale, 1)) var(--sn-sans); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+/* 换主题：整页旧画面和新画面交叉淡化（View Transitions），在合成线程上播；不要给每个元素加颜色过渡 */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .3s; animation-timing-function: var(--sn-ease-in-out); }
+}

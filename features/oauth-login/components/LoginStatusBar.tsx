@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw } from "@code-proxy/ui/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, KeyRound } from "lucide-react";
+import { ArrowLeft, KeyRound } from "@code-proxy/ui/icons";
 import {
   apiKeyEntriesApi,
   wordPolicyApi,

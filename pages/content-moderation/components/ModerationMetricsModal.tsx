@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, AlertTriangle, CheckCircle2, Clock3, ScanSearch, ShieldX } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock3, ScanSearch, ShieldX } from "@code-proxy/ui/icons";
 import { contentModerationApi, type ContentModerationMetrics } from "@code-proxy/api-client";
 import { AnimatedNumber, Callout, Modal, Skeleton, surface, iconHueClass } from "@code-proxy/ui";
 

@@ -1,4 +1,4 @@
-import { Tag } from "lucide-react";
+import { Tag } from "@code-proxy/ui/icons";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {

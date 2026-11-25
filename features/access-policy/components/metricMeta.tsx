@@ -1,4 +1,4 @@
-import { Activity, Binary, CircleDollarSign, type LucideIcon } from "lucide-react";
+import { Activity, Binary, CircleDollarSign, type SatinIconComponent } from "@code-proxy/ui/icons";
 import type { QuotaMetric } from "@code-proxy/api-client";
 import { HUE_GLYPH, HUE_SOFT, HUE_TILE, type Hue } from "@code-proxy/ui";
 
@@ -7,7 +7,7 @@ import { HUE_GLYPH, HUE_SOFT, HUE_TILE, type Hue } from "@code-proxy/ui";
  * 花费琥珀（钱，与全站「额度与费用」同色），请求翠绿（流量脉搏），Token 紫罗兰（模型产出）。
  * 色相只在多彩外观下生效，简约 / 单色时落回调用方的中性基础类。
  */
-export const METRIC_META: Record<QuotaMetric, { icon: LucideIcon; hue: Hue }> = {
+export const METRIC_META: Record<QuotaMetric, { icon: SatinIconComponent; hue: Hue }> = {
   cost: { icon: CircleDollarSign, hue: "amber" },
   requests: { icon: Activity, hue: "emerald" },
   tokens: { icon: Binary, hue: "violet" },

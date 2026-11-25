@@ -39,27 +39,31 @@ export function planKindLabel(kind: BillingPlanKind, t: Translate): string {
 export function orderStatusMeta(
   status: BillingOrderStatus,
   t: Translate,
-): { label: string; className: string } {
+): { label: string; className: string; tagTone: string } {
   switch (status) {
     case "fulfilled":
       return {
         label: t("billing.order_status.fulfilled"),
         className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+        tagTone: "sn-ok",
       };
     case "paid":
       return {
         label: t("billing.order_status.paid"),
         className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+        tagTone: "sn-need",
       };
     case "pending":
       return {
         label: t("billing.order_status.pending"),
         className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+        tagTone: "sn-warn",
       };
     case "failed":
       return {
         label: t("billing.order_status.failed"),
         className: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
+        tagTone: "sn-bad",
       };
     case "expired":
     case "closed":
@@ -67,6 +71,7 @@ export function orderStatusMeta(
       return {
         label: t(`billing.order_status.${status}`),
         className: "bg-ink/[0.06] text-ink-3 dark:bg-white/[0.08]",
+        tagTone: "",
       };
   }
 }

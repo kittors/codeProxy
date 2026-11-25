@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, Copy, Download, ExternalLink, Inbox } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Inbox } from "@code-proxy/ui/icons";
 import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
 import {
   normalizeCcSwitchImportConfigs,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { Pencil, Plus, ShieldCheck, Trash2 } from "@code-proxy/ui/icons";
 import {
   ipAccessApi,
   type IpAccessEffect,

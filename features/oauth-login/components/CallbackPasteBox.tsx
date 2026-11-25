@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, Check, Circle, ClipboardPaste, CornerDownLeft, X } from "lucide-react";
+import { AlertTriangle, Check, Circle, ClipboardPaste, CornerDownLeft, X } from "@code-proxy/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";

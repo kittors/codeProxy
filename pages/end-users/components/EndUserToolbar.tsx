@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw, Search } from "@code-proxy/ui/icons";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import { Button, Select, TextInput } from "@code-proxy/ui";
 

@@ -1,0 +1,42 @@
+/* Satin：无限列表（从 content.css 拆出的独立样式分片）。 */
+@layer satin {
+.sn-vl-wrap { position: relative; border-radius: var(--sn-r-lg); border: 1px solid var(--sn-line); background: var(--sn-raised); overflow: hidden; }
+.sn-vl { height: 420px; position: relative; }
+.sn-vl-space { position: relative; }
+.sn-vl-row { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 12px; contain: layout paint; }
+.sn-vl-row + .sn-vl-row, .sn-vl-row { }
+@media (hover: hover) {
+.sn-vl-row:hover { background: var(--sn-fill-hover); } }
+.sn-vl-row .sn-th { width: 56px; height: 34px; flex: none; border-radius: var(--sn-r-sm); background: var(--sn-g); }
+.sn-vl-row .sn-tx { flex: 1; min-width: 0; display: grid; }
+.sn-vl-row .sn-tx b { font: 500 calc(13px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sn-vl-row .sn-tx span { font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+.sn-vl-row .sn-no { width: 44px; text-align: right; font: 400 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+/* 加载中的骨架行：尺寸和真行一模一样（缩略图 56×34；标题行 20px 里一根 12px 的条，副标题行 18px 里一根 10px 的条；右边编号一根短条），
+   内容垂直居中，和真行逐像素对齐。三行越往下越淡（暗示后面还有），呼吸从上往下依次传；不画分隔线，免得看着像几行坏掉的空数据 */
+.sn-vl-row.sn-sk-row { box-shadow: none; opacity: calc(1 - var(--sn-sk-i, 0) * .3); animation: sn-sk-in .24s var(--sn-ease-out) both; }
+@media (hover: hover) {
+.sn-vl-row.sn-sk-row:hover { background: none; } }
+.sn-vl-row.sn-sk-row .sn-tx { gap: 0; }
+.sn-vl-row.sn-sk-row .sn-ln { display: flex; align-items: center; height: 20px; }
+.sn-vl-row.sn-sk-row .sn-ln.sn-sm { height: 18px; }
+.sn-vl-row .sn-sk { display: block; height: 12px; border-radius: 6px; background: var(--sn-fill-subtle); animation: sn-sk-pulse 1.6s ease-in-out calc(var(--sn-sk-i, 0) * .14s) infinite; }
+.sn-vl-row .sn-ln.sn-sm .sn-sk { height: 10px; border-radius: 5px; }
+.sn-vl-row .sn-th.sn-sk { width: 56px; height: 34px; border-radius: var(--sn-r-sm); }
+.sn-vl-row .sn-no .sn-sk { width: 36px; height: 10px; margin-left: auto; }
+@keyframes sn-sk-pulse { 50% { opacity: .45; } }
+@keyframes sn-sk-in { from { opacity: 0; } }
+.sn-vl-row.sn-end, .sn-vl-row.sn-err { justify-content: center; gap: 10px; color: var(--sn-label3); font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); box-shadow: none; }
+@media (hover: hover) {
+.sn-vl-row.sn-end:hover, .sn-vl-row.sn-err:hover { background: none; } }
+.sn-vl-row.sn-err { color: var(--sn-danger); }
+.sn-vl-top { position: absolute; right: 16px; bottom: 16px; z-index: 7; box-shadow: var(--sn-e1); --sn-bg: var(--sn-overlay); opacity: 0; translate: 0 8px; pointer-events: none; transition: opacity .18s var(--sn-ease-out), translate .24s var(--sn-ease-out-strong); }
+.sn-vl-top.sn-on { opacity: 1; translate: 0; pointer-events: auto; }
+.sn-vl-in { animation: sn-vl-in .24s var(--sn-ease-out) both; }
+@keyframes sn-vl-in { from { opacity: 0; } }
+
+
+/* 无限列表的表头一行：窄的时候计数单独占一行，从一开始就是两行——计数从“已加载 0 条”变成“已加载 40 条 · 共 10,000 条”变长了，
+   原来会在加载以后才折成两行，框高跳一下（2026-11-20 巡检：768 宽时 28 → 60） */
+@container demo (max-width: 520px) { .sn-vl-head #vlCount { flex-basis: 100%; } }
+}

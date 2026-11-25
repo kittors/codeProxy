@@ -20,7 +20,23 @@ npm install satin-ui
 
 ## Quick Start
 
-### 1. Import Styles
+### 1. Import Styles (Automatic On-Demand Supported)
+
+- **Recommended (Vite Auto On-Demand CSS)**: Automatically injects only the minimal CSS slices needed by imported components:
+
+```ts
+// vite.config.ts
+import satin from "satin-ui/vite";
+export default defineConfig({ plugins: [react(), satin({ css: "auto" })] });
+```
+
+- **Non-Vite Projects (Next.js / Nuxt / Webpack / Angular)**: Generate a minimal on-demand CSS manifest from your source imports:
+
+```bash
+pnpm dlx satin-cli css --write src/satin-on-demand.css
+```
+
+- **Full Stylesheet Import**:
 
 ```ts
 // Full-page Satin app (minimal reset + all component styles)
@@ -29,14 +45,13 @@ import "satin-ui/css/page.css";
 // Embed in an existing project (no global reset)
 // import "satin-ui/css";
 
-// Single-file minified CSS (~72.7 KB gzip)
+// Single-file minified CSS
 // import "satin-ui/css/page.min.css";
 ```
 
 ### 2. React / Next.js
 
 ```tsx
-import "satin-ui/css/page.css";
 import en from "satin-ui/locales/en";
 import { SatinProvider, Button, Segmented, Loader, Progress, toast } from "satin-ui/react";
 import { AreaChart } from "satin-ui/react/charts";
@@ -55,64 +70,83 @@ export default function App() {
 }
 ```
 
-### 3. Vue 3 / Nuxt
+### 3. Vue 3 / Nuxt (Tree-Shakeable Recommended)
+
+Use `createSatin()` for global theme, locale, and `setup()` without globally registering 30+ components:
 
 ```ts
 import { createApp } from "vue";
-import "satin-ui/css/page.css";
-import Satin from "satin-ui/vue";
+import { createSatin } from "satin-ui/vue";
 import en from "satin-ui/locales/en";
 import App from "./App.vue";
 
 createApp(App)
-  .use(Satin, { mode: "auto", locale: "en", messages: en, theme: { accent: "ink", radius: "pill" } })
+  .use(createSatin({ mode: "auto", locale: "en", messages: en, theme: { accent: "ink", radius: "pill" } }))
   .mount("#app");
 ```
 
-Use `<SnButton>`, `<SnSegmented v-model="view" />`, `<SnLoader variant="matrix" />`, `<SnProgress :value="0.68" :segments="8" />`, `<SnThemeScope mode="dark">` in templates, and import heavy components on demand:
+Import components by name, or pair with `unplugin-vue-components` + `satinResolver()` to auto-import `<SnButton>`, `<SnDataGrid>`, `<SnAreaChart>`, `<SnChat>` and their minimal CSS slices:
 
 ```ts
-import { AreaChart, BarChart, DonutChart, Chart3D } from "satin-ui/vue/charts";
-import { Chat, ThreadRail } from "satin-ui/vue/chat";
-import { DataGrid } from "satin-ui/vue/grid";
+// vite.config.ts
+import Components from "unplugin-vue-components/vite";
+import AutoImport from "unplugin-auto-import/vite";
+import { satinResolver, satinDirectiveResolver, satinAutoImportPreset } from "satin-ui/resolver";
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    Components({ resolvers: [satinResolver(), satinDirectiveResolver()] }),
+    AutoImport({ imports: [satinAutoImportPreset()] }),
+  ],
+});
 ```
 
-### 4. Vanilla HTML / Web Components
+(Global full registration remains supported via `import Satin from "satin-ui/vue"; app.use(Satin, options)`.)
+
+### 4. Vanilla HTML / Web Components (Per-Element Registration)
 
 ```html
 <sn-segmented items='["Overview","Shots"]' value="Overview"></sn-segmented>
 <sn-loader variant="matrix" size="lg"></sn-loader>
-<button class="sn-btn sn-primary">Save changes</button>
 <script type="module">
-  import { setup, enhance, setLocale } from "satin-ui";
-  import en from "satin-ui/locales/en";
-  import { defineElements } from "satin-ui/elements";
-  setLocale("en", en);
-  setup();
-  defineElements();
-  enhance();
+  // Register only the elements you use (tree-shakes unused components)
+  import { defineSegmented, defineLoader } from "satin-ui/elements";
+  defineSegmented();
+  defineLoader();
+  // Full registration remains available: import { defineElements } from "satin-ui/elements";
 </script>
 ```
 
-### 5. Zero-Flash Theme Boot
+### 5. Tree-Shakeable Single Icons (0.3 KB gzip)
 
-- **Vite**: `import satin from "satin-ui/vite"` → `plugins: [satin()]`.
+```ts
+import { plus, search } from "satin-ui/icons/paths";
+import { svg } from "satin-ui/svg";
+const html = svg(plus, 16) + svg(search, 16);
+```
+
+### 6. Zero-Flash Theme Boot
+
+- **Vite**: `import satin from "satin-ui/vite"` → `plugins: [satin({ css: "auto" })]`.
 - **Next.js / Nuxt**: Inline `import themeBoot from "satin-ui/theme-boot-script"` inside `<head>`.
-- **Static HTML**: Add `<script src="…/satin-ui/src/theme-boot.js"></script>` at the top of `<head>`.
+- **Static HTML**: Add `<script src="…/satin-ui/src/foundation/theme-boot.js"></script>` at the top of `<head>`.
 
 ## Exports Reference
 
 | Subpath | Description |
 | --- | --- |
 | `satin-ui` | `setup()`, `enhance()`, lightweight component factories, markup helpers, overlays, feedback, icons, i18n |
-| `satin-ui/react`, `satin-ui/vue` | React 18+ / Vue 3.3+ components, `SatinProvider` / `ThemeScope` / `useTheme` / `useLocale`, `Loader`, `Progress`, `toast`, `notify` |
+| `satin-ui/react`, `satin-ui/vue` | React 18+ / Vue 3.3+ components, `SatinProvider` / `createSatin` / `ThemeScope` / `useTheme` / `useLocale` |
 | `satin-ui/react/charts`, `satin-ui/vue/charts` | `AreaChart`, `BarChart`, `DonutChart`, `Chart3D`, `Sparkline`, `Icon3D` |
 | `satin-ui/react/chat`, `satin-ui/vue/chat` | `Chat`, `ThreadRail` |
 | `satin-ui/react/grid`, `satin-ui/react/canvas-grid` | `DataGrid` (100K rows) & `CanvasGrid` (1M rows); Vue equivalents at `satin-ui/vue/*` |
-| `satin-ui/react/flow`, `satin-ui/react/markdown` | `Flow` & `Markdown`; Vue equivalents at `satin-ui/vue/*` |
-| `satin-ui/elements`, `satin-ui/svelte/*.svelte` | Light-DOM Custom Elements & Svelte 5 components |
+| `satin-ui/react/flow`, `satin-ui/react/markdown`, `satin-ui/react/tree` | `Flow`, `Markdown`, `Tree`, `FileExplorer`; Vue equivalents at `satin-ui/vue/*` |
+| `satin-ui/elements`, `satin-ui/svelte/*.svelte` | Per-element tree-shakeable Light-DOM Custom Elements & Svelte 5 components |
+| `satin-ui/vite`, `satin-ui/resolver`, `satin-ui/style-map` | Auto on-demand CSS Vite plugin, `unplugin-vue-components` / `unplugin-auto-import` resolvers, component→CSS map |
+| `satin-ui/icons/paths`, `satin-ui/svg`, `satin-ui/icons` | Per-icon tree-shakeable SVG paths (`0.3 KB` gzip), SVG wrapper, and full icon lookup table |
 | `satin-ui/theme`, `satin-ui/theme-panel` | Theme engine (`setMode`, `set`, `applyTheme`) & visual Theme Panel with custom color picker |
-| `satin-ui/css`, `satin-ui/css/page.css`, `satin-ui/css/min`, `satin-ui/css/page.min.css` | Modular source stylesheets and single-file minified CSS bundles |
+| `satin-ui/css/*`, `satin-ui/css/page.css`, `satin-ui/css/min` | Fine-grained CSS slices (`buttons.css`, `form.css`, `table.css`, `nav.css`, `chat.css`, `flow.css`, …) & minified bundles |
 | `satin-ui/tokens/*`, `satin-ui/locales/en`, `satin-ui/locales/zh-CN` | W3C DTCG design token JSONs & bilingual locale packs |
 
 ## CLI & AI Coding Skills

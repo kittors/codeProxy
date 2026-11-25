@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Minus, X } from "lucide-react";
+import { Check, Minus, X } from "@code-proxy/ui/icons";
 import type {
   RoutingSimulationCredential,
   RoutingSimulationError,

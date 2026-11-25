@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { AudioLines, Eye, ImagePlus, MessageSquareText, Video } from "lucide-react";
+import { AudioLines, Eye, ImagePlus, MessageSquareText, Video } from "@code-proxy/ui/icons";
 import {
   resolveModelCapabilities,
   type ModelCapabilityKey,

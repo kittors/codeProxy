@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Flame, Repeat, Search, UserMinus } from "lucide-react";
+import { CalendarClock, Flame, Repeat, Search, UserMinus } from "@code-proxy/ui/icons";
 import {
   Button,
   Callout,

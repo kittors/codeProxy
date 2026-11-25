@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Trash2 } from "lucide-react";
+import { Sparkles, Trash2 } from "@code-proxy/ui/icons";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@code-proxy/api-client/endpoints/config-file";
 import {

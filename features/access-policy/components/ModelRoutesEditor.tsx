@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowRight, ArrowUp, Plus, Route, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Plus, Route, Trash2 } from "@code-proxy/ui/icons";
 import { Button, EmptyState, HUE_GLYPH, cn } from "@code-proxy/ui";
 import { emptyRouteDraft, type ModelRouteDraft } from "../model/policyDraft";
 import { MAX_MODEL_ROUTES, hasIssueUnder, type PolicyIssues } from "../model/policyValidation";

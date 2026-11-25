@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Code2, ScrollText, Workflow } from "lucide-react";
+import { Code2, ScrollText, Workflow } from "@code-proxy/ui/icons";
 import type { AuditLogIdentity } from "@code-proxy/api-client";
 import { DetailList, FormSection, Modal, SkeletonLines, surface } from "@code-proxy/ui";
 import { asCallChain, formatActor, formatWhatHappened, resultBadge } from "./auditLogFormat";

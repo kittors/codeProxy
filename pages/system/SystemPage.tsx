@@ -8,7 +8,7 @@ import {
   MonitorSmartphone,
   KeyRound,
   Server,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { Icon as SatinIcon } from "satin-ui/react";
 import { useAuth } from "@app/providers/AuthProvider";
 import { Card, iconHueClass } from "@code-proxy/ui";

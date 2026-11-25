@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { StatusTag, type StatusTagTone } from "@code-proxy/ui";
+import type { SatinIconComponent } from "@code-proxy/ui/icons";
 
 /**
  * 监控类页面共享的视觉零件（仪表盘的系统监控、运行观测的监控中心）：占用配色、指标图标、
@@ -129,12 +130,18 @@ export const USAGE_LEVEL_LABEL_KEY: Record<UsageLevel, string> = {
   critical: "system_monitor.status_critical",
 };
 
-/** 正常态：简约风格是中性的灰标签（「一切正常」不是需要注意的消息），多彩风格是绿色。 */
+/** 正常态：简约风格是中性底配绿点，多彩风格叠加绿色文字与淡底；对齐 Satin `.sn-tag`。 */
 const LEVEL_PILL: Record<UsageLevel, string> = {
   normal:
-    "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:bg-emerald-400/15 colorful:dark:text-emerald-300",
-  warn: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
-  critical: "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
+    "text-ink-2 colorful:!bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:!bg-emerald-400/15 colorful:dark:text-emerald-300",
+  warn: "!bg-amber-500/10 text-amber-700 dark:!bg-amber-400/15 dark:text-amber-300",
+  critical: "!bg-rose-500/10 text-rose-700 dark:!bg-rose-400/15 dark:text-rose-300",
+};
+
+const LEVEL_TAG_TONE: Record<UsageLevel, StatusTagTone> = {
+  normal: "ok",
+  warn: "warn",
+  critical: "bad",
 };
 
 const LEVEL_DOT: Record<UsageLevel, string> = {
@@ -145,9 +152,9 @@ const LEVEL_DOT: Record<UsageLevel, string> = {
 
 export function LevelPill({ level, children }: { level: UsageLevel; children: ReactNode }) {
   return (
-    <span className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${LEVEL_PILL[level]}`}>
+    <StatusTag size="sm" tone={LEVEL_TAG_TONE[level]} className={LEVEL_PILL[level]}>
       {children}
-    </span>
+    </StatusTag>
   );
 }
 
@@ -171,7 +178,7 @@ export function LevelDot({ level, label }: { level: UsageLevel; label: string })
  * 内边距），和卡片角同一个圆心；单色时只有线性图标，不再垫底块。两种形态都渲染，由
  * <html data-icons> 决定显示哪个，切换外观不需要重新渲染。
  */
-export function MetricIcon({ icon: Icon, hue }: { icon: LucideIcon; hue?: MonitorHue }) {
+export function MetricIcon({ icon: Icon, hue }: { icon: SatinIconComponent; hue?: MonitorHue }) {
   if (!hue) return <Icon size={16} className="shrink-0 text-ink-3" aria-hidden="true" />;
   const style = MONITOR_HUES[hue];
   return (

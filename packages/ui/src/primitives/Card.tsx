@@ -86,7 +86,7 @@ export function Card({
       </div>
       {loading ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-[var(--sn-raised)]/72 backdrop-blur-[2px] motion-safe:transition-colors motion-safe:duration-200 motion-safe:ease-out">
-          <div className="inline-flex items-center gap-2 rounded-lg bg-[var(--sn-overlay)] px-3.5 py-2 text-xs font-medium text-[var(--sn-label2)] shadow-[var(--sn-e1)]">
+          <div className="inline-flex items-center gap-2 rounded-[var(--sn-btn-r)] bg-[var(--sn-overlay)] px-3.5 py-2 text-xs font-medium text-[var(--sn-label2)] shadow-[var(--sn-e1)]">
             <Loader variant="arc" size={16} label={t("common.loading_ellipsis")} />
             {t("common.loading_ellipsis")}
           </div>

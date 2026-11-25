@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "framer-motion";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@code-proxy/ui/icons";
 import { DialogIcon, NavList, useScrollFade, type NavListGroup } from "@code-proxy/ui";
 
 export interface PolicyEditorSection {

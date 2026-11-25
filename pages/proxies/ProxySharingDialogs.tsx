@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft } from "@code-proxy/ui/icons";
 import { Callout, ConfirmModal } from "@code-proxy/ui";
 import { ResourceSharingModal } from "@features/resource-sharing";
 import type { ProxySharingState } from "./useProxySharing";

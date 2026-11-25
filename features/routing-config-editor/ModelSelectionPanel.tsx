@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "@code-proxy/ui/icons";
 import { Button, GRID_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";

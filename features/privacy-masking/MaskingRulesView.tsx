@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import { SettingGroup, SettingRow } from "@code-proxy/ui";
 import {
   privacyMaskingPortalApi,

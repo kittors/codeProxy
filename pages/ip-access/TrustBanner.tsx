@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ShieldAlert, TriangleAlert } from "lucide-react";
+import { ShieldAlert, TriangleAlert } from "@code-proxy/ui/icons";
 import type { IpAccessStatus } from "@code-proxy/api-client";
 import { HoverTooltip, OverflowTooltip } from "@code-proxy/ui";
 import type { ReactNode } from "react";

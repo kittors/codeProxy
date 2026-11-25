@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Lock, ShieldCheck, UserX } from "lucide-react";
+import { KeyRound, Lock, ShieldCheck, UserX } from "@code-proxy/ui/icons";
 import type { UserIdentity } from "@code-proxy/api-client";
 import {
   Button,

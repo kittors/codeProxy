@@ -18,8 +18,8 @@ import {
   type DialogInitialFocus,
 } from "./useDialogBehavior";
 
-/** Satin 弹窗关闭按钮：无底色 8px 圆角图标按钮，带物理按压微缩放与 Esc 快捷键提示。 */
-const CLOSE_BUTTON_CLASS = "sn-btn sn-ghost sn-sm sn-ibtn shrink-0";
+/** Satin 弹窗关闭按钮：无底色圆形图标按钮，带物理按压微缩放与 Esc 快捷键提示。 */
+const CLOSE_BUTTON_CLASS = "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
@@ -205,7 +205,7 @@ export function Modal({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-2xl bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl`,
+          `sn-dlg relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-[var(--sn-r-xl)] bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[var(--sn-r-xl)]`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
           panelClassName,

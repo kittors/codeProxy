@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Check, Coins, RotateCcw, Sparkles, Wallet } from "lucide-react";
+import { CalendarClock, Check, Coins, RotateCcw, Sparkles, Wallet } from "@code-proxy/ui/icons";
 import type { PortalBillingPlan, PortalBillingTarget } from "@code-proxy/api-client";
 import { Button, TextInput, cn, surface } from "@code-proxy/ui";
 import { describePlanBenefits, formatYuan, planKindLabel } from "./billingFormat";

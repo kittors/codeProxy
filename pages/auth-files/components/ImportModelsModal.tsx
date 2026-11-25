@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ListPlus, Search } from "lucide-react";
+import { Check, ListPlus, Search } from "@code-proxy/ui/icons";
 import { Button, Checkbox, EmptyState, Modal, ScrollFade, Skeleton, TextInput } from "@code-proxy/ui";
 import type { AuthFileModelItem } from "@code-proxy/domain";
 

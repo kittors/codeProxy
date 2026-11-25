@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronDown, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Loader2 } from "@code-proxy/ui/icons";
 import { useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";

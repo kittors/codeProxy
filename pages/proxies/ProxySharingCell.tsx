@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "@code-proxy/ui/icons";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { SharingStatusBadge, TenantRefsBadge } from "@features/resource-sharing";
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "lucide-react";
+import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DialogIcon, iconHueClass, type Hue } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";

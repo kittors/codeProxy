@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { imageGenerationApi } from "@code-proxy/api-client";
 import { useToast, type SearchableSelectOption } from "@code-proxy/ui";

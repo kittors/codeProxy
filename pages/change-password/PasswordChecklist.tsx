@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import { IDENTITY_PASSWORD_MIN_LENGTH, passwordRuleStatus } from "@code-proxy/domain";
 import { passwordPolicyMessage, type PasswordPolicyTranslate } from "@features/password-policy";
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, Building2, CalendarClock } from "lucide-react";
+import { Ban, Building2, CalendarClock } from "@code-proxy/ui/icons";
 import type { TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@code-proxy/ui/icons";
 import type { UsageLogEgressResponse } from "@code-proxy/api-client";
 import { DetailBadge } from "./detailBadge";
 import { parseJsonObject } from "./parsers";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, ListFilter, ShieldCheck } from "lucide-react";
+import { Ban, ListFilter, ShieldCheck } from "@code-proxy/ui/icons";
 import { ipAccessApi, type AuthAttemptWindow, type AuthSourceSummary } from "@code-proxy/api-client";
 import {
   GRID_WIDTH,

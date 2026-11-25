@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, RefreshCw, Save } from "lucide-react";
+import { Check, RefreshCw, Save } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 
 type SaveBarStatus = "saved" | "dirty" | "saving" | "loading" | "error" | "offline";

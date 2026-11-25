@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, UserCog } from "lucide-react";
+import { Building2, UserCog } from "@code-proxy/ui/icons";
 import {
   Button,
   DateTimePicker,

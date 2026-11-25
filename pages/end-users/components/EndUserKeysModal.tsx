@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, KeyRound, Plus, QrCode, RefreshCw, RotateCw, Trash2 } from "lucide-react";
+import { CalendarClock, KeyRound, Plus, QrCode, RefreshCw, RotateCw, Trash2 } from "@code-proxy/ui/icons";
 import {
   endUsersApi,
   quotaMatrixEquals,

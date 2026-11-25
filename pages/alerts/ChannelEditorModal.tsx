@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send } from "lucide-react";
+import { Send } from "@code-proxy/ui/icons";
 import type { AlertChannelKind } from "@code-proxy/api-client";
 import {
   Button,

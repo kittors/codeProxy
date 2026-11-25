@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "@code-proxy/ui/icons";
 import { portalApi, type PortalAttempt } from "@code-proxy/api-client";
 import { Card } from "@code-proxy/ui";
 

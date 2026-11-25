@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronDown, ChevronUp, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, ShieldAlert, ShieldCheck } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, Drawer, SegmentedControl } from "@code-proxy/ui";
 import type { MaskRecord, MaskRecordDetail, MaskValueHit } from "@code-proxy/api-client";

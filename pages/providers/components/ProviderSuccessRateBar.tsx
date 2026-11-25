@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Activity } from "lucide-react";
+import { Activity } from "@code-proxy/ui/icons";
 import { HoverTooltip } from "@code-proxy/ui";
 import type { StatusBarData } from "@code-proxy/domain";
 import { QuotaBar } from "@features/quota-preview/QuotaBar";

@@ -1,9 +1,9 @@
 import { VendorIcon } from "@code-proxy/assets";
 import {
+  Avatar,
   GridCellTooltip,
   GridTooltipRows,
-  HUE_SOFT_BASE,
-  HUE_TILE,
+  StatusTag,
   formatClock,
   formatCompactNumber,
   formatDateTime,
@@ -56,7 +56,6 @@ export function TimeCell({ row, now }: { row: LabLogRow; now: number }) {
 }
 
 export function UserCell({ row }: { row: LabLogRow }) {
-  const initial = Array.from(row.user.name)[0]?.toUpperCase() ?? "?";
   return (
     <GridCellTooltip
       content={
@@ -68,11 +67,8 @@ export function UserCell({ row }: { row: LabLogRow }) {
       }
     >
       <span className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${HUE_SOFT_BASE} ${HUE_TILE[row.user.hue]}`}
-        >
-          {initial}
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <Avatar name={row.user.name} size={28} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm font-medium text-ink">{row.user.name}</span>
@@ -408,25 +404,20 @@ export function StatusCell({ row, onOpenError }: { row: LabLogRow; onOpenError: 
         <button
           type="button"
           onClick={onOpenError}
-          className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-rose-500/10 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-500/15 dark:bg-rose-400/15 dark:text-rose-300 dark:hover:bg-rose-400/25"
+          className="sn-tag sn-sm sn-bad cursor-pointer transition-opacity hover:opacity-80"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true" />
+          <i aria-hidden="true" />
           {STATUS_LABEL.failed}
         </button>
       </GridCellTooltip>
     );
   }
-  const dot =
-    row.status === "success"
-      ? "bg-emerald-500"
-      : row.status === "retried"
-        ? "bg-amber-500"
-        : "bg-ink-4";
+  const tone =
+    row.status === "success" ? "ok" : row.status === "retried" ? "warn" : "neutral";
   const label = (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-2">
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+    <StatusTag size="sm" tone={tone}>
       {STATUS_LABEL[row.status]}
-    </span>
+    </StatusTag>
   );
   if (row.status === "success") return label;
   return (

@@ -1,4 +1,4 @@
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { EndUser } from "@code-proxy/api-client";
 import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";

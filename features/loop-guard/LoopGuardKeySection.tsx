@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Repeat } from "lucide-react";
+import { Repeat } from "@code-proxy/ui/icons";
 import { Button, Callout, FormSection } from "@code-proxy/ui";
 import { LoopGuardFields } from "./LoopGuardFields";
 import type { LoopGuardKeyOverride } from "./useLoopGuardKey";

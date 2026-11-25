@@ -8,7 +8,7 @@ import {
   Loader2,
   RotateCcw,
   Search,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi, readConfigCapabilities } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";

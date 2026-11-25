@@ -1,0 +1,186 @@
+/* Satin：日期、时间、地址选择器。
+   触发框和下拉选择同一个样子；面板和菜单同一种开合（第一帧就不透明，只放大 140ms，收起 100ms 淡出）。只动 transform 和 opacity。 */
+/* ———— 触发框 ———— */
+@layer satin {
+.sn-pk { position: relative; display: inline-block; min-width: 220px; }
+.sn-pk-trigger { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 6px; width: 100%; height: 32px; padding: 0 3px 0 12px; border-radius: var(--sn-btn-r); /* sp-ok: 右 3 + 1px 边框 = 4px，与 24×24 尾部圆钮上下 4px 构成严格同心等距 */
+  font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label); cursor: pointer; background: var(--sn-field); border: 1px solid var(--sn-line-control); box-shadow: var(--sn-field-inset);
+  transition: border-color .15s var(--sn-ease-out), box-shadow .15s var(--sn-ease-out); }
+:is([data-radius="pill"], :where(:root:not([data-radius]))) .sn-pk-trigger { padding: 0 3px 0 14px; }
+@media (hover: hover) {
+.sn-pk-trigger:hover { border-color: var(--sn-line-control-hover); } }
+.sn-pk-trigger:focus-visible, .sn-pk.sn-open > .sn-pk-trigger { border-color: var(--sn-focus); box-shadow: var(--sn-field-inset), 0 0 0 3px var(--sn-ring); }
+.sn-pk-trigger .sn-val { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.sn-pk-trigger .sn-val.sn-ph { color: var(--sn-label3); }
+.sn-pk-trigger .sn-end { position: relative; width: 24px; height: 24px; flex: none; color: var(--sn-label3); }
+.sn-pk-trigger .sn-end .sn-ic { width: 15px; height: 15px; }
+.sn-pk-trigger .sn-end > .sn-a { width: 24px; height: 24px; pointer-events: none; }
+/* 有值时悬停：右边的图标换成清除（×），24×24 同心圆钮（上=下=右=4px）+ 14×14 居中叉号 + 覆盖右侧末端的扩展热区 */
+.sn-pk-trigger .sn-end > .sn-b { position: relative; width: 24px; height: 24px; border-radius: max(0px, calc(var(--sn-btn-r) - 4px)); cursor: pointer; pointer-events: none; }
+.sn-pk-trigger .sn-end > .sn-b .sn-ic { width: 14px; height: 14px; }
+.sn-pk-trigger .sn-end > .sn-b::after { content: ""; position: absolute; inset: -4px; }
+.sn-pk.sn-has > .sn-pk-trigger .sn-end > .sn-b { pointer-events: auto; }
+@media (hover: hover) {
+.sn-pk-trigger .sn-end > .sn-b:hover { color: var(--sn-label); background: var(--sn-fill-hover); } }
+@media (hover: hover) {
+.sn-pk.sn-has:hover > .sn-pk-trigger .sn-end > .sn-a { opacity: 0; transform: scale(.6) rotate(-12deg); } }
+@media (hover: hover) {
+.sn-pk.sn-has:hover > .sn-pk-trigger .sn-end > .sn-b { opacity: 1; transform: none; } }
+
+/* ———— 面板（与下拉菜单统一双向微动效） ———— */
+.sn-pk-panel { position: absolute; z-index: 30; left: 0; top: calc(100% + 6px); padding: 12px; border-radius: var(--sn-r-xl); background: var(--sn-menu-bg); box-shadow: var(--sn-menu-shadow);
+  transform-origin: top left; opacity: 0; scale: .96; translate: var(--sn-pk-dx, 0px) calc(var(--sn-pk-dy, 0px) - 6px); pointer-events: none; visibility: hidden;
+  transition: opacity .16s var(--sn-ease-in), scale .16s var(--sn-ease-in), translate .16s var(--sn-ease-in), visibility 0s linear .16s; }
+.sn-pk-panel.sn-up { top: auto; bottom: calc(100% + 6px); transform-origin: bottom left; translate: var(--sn-pk-dx, 0px) calc(var(--sn-pk-dy, 0px) + 6px); }
+.sn-pk-panel.sn-end { left: auto; right: 0; transform-origin: top right; }
+.sn-pk-panel.sn-up.sn-end { transform-origin: bottom right; }
+.sn-pk.sn-open > .sn-pk-panel { opacity: 1; scale: 1; translate: var(--sn-pk-dx, 0px) var(--sn-pk-dy, 0px); pointer-events: auto; visibility: visible;
+  transition: opacity .16s var(--sn-ease-out), scale .22s var(--sn-ease-out-strong), translate .22s var(--sn-ease-out-strong), visibility 0s; }
+.sn-pk-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; }
+.sn-pk-foot .sn-grow { flex: 1; }
+.sn-pk-foot .sn-note { font: 400 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+.sn-pk-foot .sn-note.sn-bad { color: var(--sn-danger); }
+.sn-pk-foot .sn-note { transition: color .12s; } .sn-pk-foot .sn-note.sn-pv { color: var(--sn-label3); opacity: .8; }
+.sn-pk-foot .sn-note:not(.sn-pv):not(.sn-bad) { color: var(--sn-label2); }
+
+/* ———— 日历 ———— */
+.sn-cal { width: 252px; user-select: none; }
+.sn-cal-hd { display: flex; align-items: center; gap: 2px; height: 32px; margin-bottom: 6px; }
+.sn-cal-hd .sn-grow { flex: 1; }
+.sn-cal-title { all: unset; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 6px 0 8px; border-radius: var(--sn-r-md); font: 600 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label); cursor: pointer; font-variant-numeric: tabular-nums; transition: background-color .12s; }
+@media (hover: hover) {
+.sn-cal-title:hover { background: var(--sn-b-ghost-hover); } }
+.sn-cal-title:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-cal-title .sn-ic { width: 14px; height: 14px; color: var(--sn-label3); transition: rotate .2s var(--sn-ease-out-strong); }
+.sn-cal.sn-months .sn-cal-title .sn-ic { rotate: 180deg; }
+.sn-cal-wk { display: grid; grid-template-columns: repeat(7, 36px); height: 28px; align-items: center; text-align: center; font: 400 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); transition: opacity .12s var(--sn-ease-out); }
+.sn-cal.sn-months .sn-cal-wk { opacity: 0; }
+.sn-cal-vp { position: relative; height: 216px; overflow: hidden; }
+.sn-cal-grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, 36px); grid-auto-rows: 36px; }
+/* 一格 36px，里面一个 32px 的圆。范围内是一条连续的浅色带，起止两天是实心圆、带子只铺半边 */
+.sn-cal-grid .sn-d { all: unset; position: relative; display: grid; place-items: center; font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label); cursor: pointer; font-variant-numeric: tabular-nums; }
+.sn-cal-grid .sn-d::before { content: ""; position: absolute; inset: 2px; border-radius: 50%; transition: background-color .12s var(--sn-ease-out), scale .18s var(--sn-ease-out-strong); }
+.sn-cal-grid .sn-d > span { position: relative; }
+@media (hover: hover) {
+.sn-cal-grid .sn-d:hover::before { background: var(--sn-b-ghost-hover); } }
+.sn-cal-grid .sn-d.sn-out { color: var(--sn-label3); }
+.sn-cal-grid .sn-d.sn-today > span::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: currentColor; } /* sp-ok: 3px 圆点用负外边距居中 */
+.sn-cal-grid .sn-d.sn-dis { color: var(--sn-label-off); cursor: not-allowed; }
+@media (hover: hover) {
+.sn-cal-grid .sn-d.sn-dis:hover::before { background: none; } }
+/* 范围带：32px 高（和圆一样高），行与行之间留 4px 缝；行首行尾不收圆角，平平地接到下一行。起止两天只铺半边，和实心圆接上 */
+.sn-cal-grid .sn-d { isolation: isolate; }
+.sn-cal-grid .sn-d::after { content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: 2px; bottom: 2px; background: var(--sn-fill-subtle); opacity: 0; }
+.sn-cal-grid .sn-d.sn-in::after { opacity: 1; }
+.sn-cal-grid .sn-d.sn-a::after { left: 50%; opacity: 1; }
+.sn-cal-grid .sn-d.sn-b::after { right: 50%; opacity: 1; }
+.sn-cal-grid .sn-d.sn-a.sn-b::after { opacity: 0; }
+@media (hover: hover) {
+.sn-cal-grid .sn-d.sn-in:hover::before { background: color-mix(in srgb, var(--sn-label) 9%, transparent); } }
+/* 还没选结束：半透明预览，跟着鼠标走，不加过渡（加了会拖一串淡入淡出的尾巴）。
+   点下结束日期：预览补成实色，120ms；重置：120ms 淡掉。只有这两个时刻有过渡，别的时候都是直接变 */
+.sn-cal.sn-pv .sn-cal-grid .sn-d.sn-in::after, .sn-cal.sn-pv .sn-cal-grid .sn-d.sn-a::after, .sn-cal.sn-pv .sn-cal-grid .sn-d.sn-b::after { opacity: .5; }
+.sn-cal.sn-settle .sn-cal-grid .sn-d::after { transition: opacity .12s var(--sn-ease-out); }
+/* 两个月并排：每个月自己一行标题，左边那个带"上个月"，右边那个带"下个月"；不显示别的月份的日子，免得两边重复 */
+.sn-cal.sn-multi { width: auto; }
+.sn-cal-body { display: flex; gap: 24px; }
+.sn-cal-pane { width: 252px; }
+.sn-cal-ph { display: grid; grid-template-columns: 28px 1fr 28px; align-items: center; height: 32px; margin-bottom: 6px; }
+.sn-cal-ph .sn-cal-t { text-align: center; font: 600 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); font-variant-numeric: tabular-nums; }
+.sn-cal.sn-multi .sn-cal-grid .sn-d.sn-out { visibility: hidden; pointer-events: none; }
+.sn-cal-grid .sn-d.sn-sel { color: var(--sn-raised); }
+/* 实心圆、描边圆都用内阴影画，不用背景：背景有 120ms 过渡（留给悬停的浅灰圆），文字颜色却是一下就变——
+   用背景画的话，选中那几帧是白底白字、取消时是黑底黑字，数字会闪没；预览日挪走时还会留一个白圆慢慢淡掉。内阴影不过渡，和文字同一帧到位 */
+.sn-cal-grid .sn-d.sn-sel::before { box-shadow: inset 0 0 0 20px var(--sn-label); }
+/* 选中：圆从 92% 轻轻放大到原大，150ms，只是一个"按下去了"的回应，不弹 */
+.sn-cal-grid .sn-d.sn-sel.sn-d-pop::before { animation: sn-d-pop .15s var(--sn-ease-out); }
+/* 预览中的结束日：一圈 1.5px 描边，圆里填面板底色盖住半边带子；点下去一帧填成实心，再轻轻放大 */
+.sn-cal-grid .sn-d.sn-hv::before { box-shadow: inset 0 0 0 1.5px var(--sn-label), inset 0 0 0 20px var(--sn-menu-bg); }
+@keyframes sn-d-pop { from { scale: .92; } }
+.sn-cal-grid .sn-d:focus-visible::before { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-cal-grid .sn-d.sn-sel:focus-visible::before { box-shadow: inset 0 0 0 20px var(--sn-label), 0 0 0 2px var(--sn-focus); }
+.sn-cal-grid .sn-d.sn-hv:focus-visible::before { box-shadow: inset 0 0 0 1.5px var(--sn-label), inset 0 0 0 20px var(--sn-menu-bg), 0 0 0 2px var(--sn-focus); }
+/* 月份视图：点标题切过去，3 列 4 行 */
+.sn-cal-mv { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 6px; padding: 4px 0; background: var(--sn-menu-bg); opacity: 0; scale: .96; pointer-events: none; transition: opacity .12s var(--sn-ease-in), scale 0s linear .12s; }
+.sn-cal.sn-months .sn-cal-mv { opacity: 1; scale: 1; pointer-events: auto; transition: opacity .16s var(--sn-ease-out), scale .22s var(--sn-ease-out-strong); }
+.sn-cal-mv button { all: unset; display: grid; place-items: center; border-radius: var(--sn-r-md); font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label); cursor: pointer; transition: background-color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-cal-mv button:hover { background: var(--sn-b-ghost-hover); } }
+.sn-cal-mv button.sn-cur { background: var(--sn-accent); color: var(--sn-on-primary); }
+.sn-cal-mv button.sn-now { box-shadow: inset 0 0 0 1px var(--sn-line-control); }
+.sn-cal-mv button:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+
+/* 范围选择：左边一列快捷项 */
+.sn-pk-range { display: flex; gap: 12px; }
+.sn-pk-presets { display: grid; align-content: start; gap: 2px; width: 104px; padding-right: 12px; }
+.sn-pk-presets button { all: unset; height: 30px; padding: 0 10px; border-radius: var(--sn-r-md); font: 400 calc(13px * var(--sn-font-scale, 1))/calc(30px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); cursor: pointer; transition: background-color .12s, color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-pk-presets button:hover { background: var(--sn-b-ghost-hover); color: var(--sn-label); } }
+.sn-pk-presets button.sn-on { background: var(--sn-fill-active); color: var(--sn-label); font-weight: 500; }
+
+/* ———— 时间：时、分两列，滚动吸附，中间一条选中带 ———— */
+.sn-tcols { position: relative; display: flex; align-items: stretch; gap: 4px; height: 224px; }
+.sn-tcols .sn-tband { position: absolute; left: 0; right: 0; top: 96px; height: 32px; border-radius: var(--sn-r-md); background: var(--sn-fill-active); pointer-events: none; }
+.sn-tcol { position: relative; width: 56px; height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; overscroll-behavior: contain; outline: none; border-radius: var(--sn-r-md);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 28%, #000 72%, transparent); }
+.sn-tcol::-webkit-scrollbar { display: none; }
+.sn-tcol:focus-visible { box-shadow: inset 0 0 0 2px var(--sn-focus); }
+.sn-tcol .sn-tpad { height: 96px; }
+.sn-tcol .sn-t { all: unset; display: grid; place-items: center; width: 100%; height: 32px; scroll-snap-align: center; font: 400 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .12s, font-weight .12s; }
+@media (hover: hover) {
+.sn-tcol .sn-t:hover { color: var(--sn-label2); } }
+.sn-tcol .sn-t.sn-on { color: var(--sn-label); font-weight: 600; }
+.sn-tcol .sn-t.sn-dis { color: var(--sn-label-off); }
+.sn-tsep { display: grid; place-items: center; width: 8px; font: 600 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); position: relative; }
+.sn-pk-dt { display: flex; gap: 16px; }
+.sn-pk-dt .sn-tside { display: grid; align-content: start; gap: 6px; padding-left: 16px; }
+.sn-pk-dt .sn-tside .sn-cap { height: 32px; display: flex; align-items: center; margin-bottom: 6px; font: 600 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); }
+
+/* ———— 地址：搜索 + 常用 + 省市区三级标签 ———— */
+.sn-pk-panel.sn-rg { width: 352px; }
+.sn-rg-hot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 8px; font: 400 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); }
+.sn-rg-hot button { all: unset; height: 24px; padding: 0 10px; border-radius: var(--sn-r-full); font: 400 calc(12px * var(--sn-font-scale, 1))/calc(24px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); background: var(--sn-fill-subtle); cursor: pointer; transition: background-color .12s, color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-rg-hot button:hover { background: var(--sn-fill-active); color: var(--sn-label); } }
+.sn-rg-tabs { position: relative; display: flex; gap: 4px; height: 34px; }
+.sn-rg-tabs button { all: unset; position: relative; max-width: 110px; padding: 0 8px; font: 500 calc(13px * var(--sn-font-scale, 1))/calc(34px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label); cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: color .12s; }
+.sn-rg-tabs button.sn-ph { color: var(--sn-label3); font-weight: 400; }
+.sn-rg-tabs button:focus-visible { box-shadow: inset 0 0 0 2px var(--sn-focus); border-radius: var(--sn-r-sm); }
+.sn-rg-tabs .sn-ink { position: absolute; left: 0; bottom: 0; width: 1px; height: 2px; border-radius: 1px; background: var(--sn-accent); transform-origin: 0 0; transition: transform .26s var(--sn-ease-out-strong); }
+.sn-rg-vp { position: relative; height: 232px; margin-top: 6px; overflow: hidden; }
+.sn-rg-list { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; display: grid; grid-template-columns: repeat(3, 1fr); align-content: start; gap: 2px; }
+.sn-rg-list::-webkit-scrollbar { display: none; }
+.sn-rg-list button { all: unset; display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px; border-radius: var(--sn-r-md); font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label2); cursor: pointer; white-space: nowrap; transition: background-color .12s, color .12s; }
+.sn-rg-list button.sn-hl { background: var(--sn-b-ghost-hover); color: var(--sn-label); }
+@media (hover: hover) {
+.sn-rg-list button:hover { background: var(--sn-b-ghost-hover); color: var(--sn-label); } }
+.sn-rg-list button.sn-on { color: var(--sn-label); font-weight: 600; }
+.sn-rg-list button.sn-on::after { content: ""; width: 5px; height: 5px; margin-left: auto; border-radius: 50%; background: var(--sn-accent); }
+.sn-rg-res { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; display: grid; align-content: start; gap: 2px; }
+.sn-rg-res button { all: unset; display: flex; align-items: baseline; gap: 8px; height: 34px; padding: 0 10px; border-radius: var(--sn-r-md); font: 400 calc(13px * var(--sn-font-scale, 1))/calc(34px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label); cursor: pointer; }
+.sn-rg-res button b { font-weight: 400; }
+.sn-rg-res button span { font-size: calc(12px * var(--sn-font-scale, 1)); color: var(--sn-label3); }
+.sn-rg-res button mark { background: none; color: var(--sn-label); font-weight: 600; text-decoration: underline; text-decoration-color: var(--sn-line-control-hover); text-underline-offset: 3px; }
+.sn-rg-res button.sn-hl { background: var(--sn-b-ghost-hover); }
+@media (hover: hover) {
+.sn-rg-res button:hover { background: var(--sn-b-ghost-hover); } }
+.sn-rg-res .sn-none { padding: 24px 10px; text-align: center; font: 400 calc(13px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+
+/* 选择器里的滚动列表包了滚动区域：外面那一层占原来列表的位置（时间列撑满高度；地址的列表、搜索结果铺满可视区） */
+.sn-tcols > .sn-sa { flex: none; }
+.sn-rg-vp > .sn-sa { position: absolute; inset: 0; }
+
+/* 窄的时候（窗口比面板窄：手机、窄的嵌入框）：面板不能比窗口宽——
+   范围选择两个月上下排、快捷项排成一行；日期加时间的时间列放到日历下面 */
+@media (max-width: 720px) {
+  .sn-pk-range { flex-direction: column; gap: 8px; }
+  .sn-pk-presets { width: auto; padding-right: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .sn-cal-body { flex-direction: column; gap: 12px; }
+}
+@media (max-width: 480px) {
+  .sn-pk-dt { flex-direction: column; gap: 8px; }
+  .sn-pk-dt .sn-tside { padding-left: 0; }
+}
+/* 触屏没有悬停：有值时直接显示清除按钮（代替箭头） */
+@media (hover: none) { .sn-pk.sn-has > .sn-pk-trigger .sn-end > .sn-a { opacity: 0; transform: scale(.6) rotate(-12deg); } .sn-pk.sn-has > .sn-pk-trigger .sn-end > .sn-b { opacity: 1; transform: none; } }
+}

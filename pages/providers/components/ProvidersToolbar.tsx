@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckSquare, Download, Plus, RefreshCw, Upload } from "lucide-react";
+import { CheckSquare, Download, Plus, RefreshCw, Upload } from "@code-proxy/ui/icons";
 import { Button, DropdownMenu } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 

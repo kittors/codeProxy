@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Plus, Save, Trash2, Undo2 } from "lucide-react";
+import { Check, Plus, Save, Trash2, Undo2 } from "@code-proxy/ui/icons";
 import {
   Button,
   Callout,

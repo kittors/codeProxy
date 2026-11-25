@@ -10,7 +10,7 @@ import {
   RefreshCw,
   UserRound,
   Wallet,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import {
   publicBillingApi,
   type BillingOrder,

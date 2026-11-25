@@ -1,4 +1,4 @@
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, ResultPanel } from "@code-proxy/ui";

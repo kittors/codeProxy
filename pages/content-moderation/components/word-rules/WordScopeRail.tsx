@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Globe2, KeyRound, Lock, UsersRound } from "lucide-react";
+import { Building2, Globe2, KeyRound, Lock, UsersRound } from "@code-proxy/ui/icons";
 import type { WordPolicyBrief, WordPolicyOverview } from "@code-proxy/api-client";
 import { HUE_GLYPH, hueForIcon } from "@code-proxy/ui";
 

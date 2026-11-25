@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import { hasPeriodSpendingLimits, normalizePeriodSpendingLimits } from "@code-proxy/api-client";
 import { PeriodSpendingCell } from "@features/period-spending";

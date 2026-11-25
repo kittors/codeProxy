@@ -5,7 +5,7 @@ import {
   EntityCardSkeleton,
   HoverTooltip,
 } from "@code-proxy/ui";
-import { Ellipsis, Power, Settings2, Trash2 } from "lucide-react";
+import { Ellipsis, Power, Settings2, Trash2 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 
 export interface ProviderCardProps {

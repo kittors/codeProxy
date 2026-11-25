@@ -1,12 +1,45 @@
+export type { SatinIconComponent, SatinIconProps } from "./icons";
 export { AnimatedNumber } from "./feedback/AnimatedNumber";
 export { EmptyState } from "./feedback/EmptyState";
 export { PageLoader } from "./feedback/PageLoader";
 export { Skeleton, SkeletonLines } from "./feedback/Skeleton";
 export type { PageLoaderVariant } from "./feedback/PageLoader";
 export { Reveal } from "./feedback/Reveal";
+export { StatusTag } from "./feedback/StatusTag";
+export type { StatusTagProps, StatusTagTone } from "./feedback/StatusTag";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 export { toast } from "./feedback/toastStore";
 export type { ToastAction, ToastOptions } from "./feedback/toastStore";
+
+/* 原生 Satin React 组件统一转出，供全站业务页按需直接使用 */
+export {
+  Avatar,
+  Chip,
+  Collapse,
+  ContextMenu as SatinContextMenu,
+  DatePicker as SatinDatePicker,
+  EmptyArt,
+  Icon,
+  Lightbox as SatinLightbox,
+  Loader,
+  Menu as SatinMenu,
+  NumberFlow,
+  Otp as SatinOtp,
+  Pager as SatinPager,
+  Popconfirm,
+  Popover,
+  Progress,
+  Segmented as SatinSegmented,
+  Slider,
+  Spinner,
+  Stepper,
+  Steps as SatinSteps,
+  Table as SatinTable,
+  Tabs as SatinTabs,
+  TagInput,
+  Text as SatinText,
+  Upload,
+} from "satin-ui/react";
 
 export * from "./data-grid";
 
@@ -144,6 +177,7 @@ export {
   ACCENT_PRESETS,
   APPEARANCE_STORAGE_KEY,
   BAR_THICKNESS_RANGE,
+  CONTROL_RADIUS_OPTIONS,
   DEFAULT_APPEARANCE,
   DEFAULT_STATUS_HEX,
   STYLE_PRESETS,
@@ -166,6 +200,7 @@ export type {
   AppearanceSettings,
   BarStyle,
   ChartStyle,
+  ControlRadius,
   IconStyle,
   PaletteStyle,
   StatusRole,

@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { Coins, Gauge, Hash, Wallet } from "lucide-react";
+import { Coins, Gauge, Hash, Wallet } from "@code-proxy/ui/icons";
 import { KpiCard } from "@features/monitor-widgets";
 import type { PublicQuotaScope, PublicUsageLimits } from "../types";
 import { formatQuotaCount, formatQuotaUsd, kpiValueSizeClass } from "./kpiValueSize";

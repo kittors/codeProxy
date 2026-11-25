@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { LayoutDashboard, Server } from "lucide-react";
+import { LayoutDashboard, Server } from "@code-proxy/ui/icons";
 import { ThemeProvider } from "@code-proxy/ui";
 import type { NavSection } from "./navModel";
 import type { RouteNavigation } from "./useRouteNavigation";

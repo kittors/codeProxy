@@ -8,7 +8,6 @@ import {
   type GridFilters,
   type UseGridPreferencesResult,
 } from "@code-proxy/ui";
-import { ScrollText, SearchX } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { RequestLogDetailPanel } from "./RequestLogDetailPanel";
@@ -103,7 +102,7 @@ export function RequestLogGrid({
   const hasFilters = activeLabels.length > 0;
   const empty: GridEmptyState = hasFilters
     ? {
-        icon: <SearchX aria-hidden="true" />,
+        scene: "search",
         title: t("request_logs.no_match_title"),
         description: t("request_logs.no_match_desc"),
         details: (
@@ -112,10 +111,7 @@ export function RequestLogGrid({
             aria-label={t("request_logs.active_filters")}
           >
             {activeLabels.map((text) => (
-              <li
-                key={text}
-                className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
-              >
+              <li key={text} className="sn-chip sn-tag !h-6 !px-2.5 !text-xs">
                 {text}
               </li>
             ))}
@@ -128,7 +124,7 @@ export function RequestLogGrid({
         ),
       }
     : {
-        icon: <ScrollText aria-hidden="true" />,
+        scene: "inbox",
         title: noDataTitle ?? t("request_logs.no_data_title"),
         description: t("request_logs.no_data_hint"),
       };
@@ -159,6 +155,7 @@ export function RequestLogGrid({
       onRetry={onRetry}
       empty={empty}
       density={prefs.density}
+      lines={prefs.lines}
       hiddenColumnIds={prefs.hiddenColumnIds}
       onHiddenColumnIdsChange={prefs.setHiddenColumnIds}
       filters={filters}

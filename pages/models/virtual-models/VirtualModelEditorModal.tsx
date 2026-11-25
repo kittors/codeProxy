@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Shuffle, Trash2 } from "lucide-react";
+import { Plus, Shuffle, Trash2 } from "@code-proxy/ui/icons";
 import type { RoutingVirtualModel } from "@code-proxy/api-client/endpoints/routing-config";
 import {
   Button,

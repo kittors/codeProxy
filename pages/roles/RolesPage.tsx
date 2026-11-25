@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, Trash2, UserRoundCog } from "lucide-react";
+import { ShieldCheck, Trash2, UserRoundCog } from "@code-proxy/ui/icons";
 import {
   identityApi,
   type PermissionIdentity,

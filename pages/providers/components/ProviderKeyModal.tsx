@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Check } from "lucide-react";
+import { AlertCircle, Check } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import {
   apiCallApi,

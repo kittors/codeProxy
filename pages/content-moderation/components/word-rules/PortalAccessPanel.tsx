@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Search } from "lucide-react";
+import { ListChecks, Search } from "@code-proxy/ui/icons";
 import { wordPolicyApi, type WordPortalUser, type WordPortalView } from "@code-proxy/api-client";
 import {
   Button,

@@ -4,7 +4,7 @@
 //   <Flow nodes={[{ id: "a", x: 40, y: 60, t: "剧本", ic: "file-text" }, …]} edges={[["a", "b"]]} label="生成流程" />
 // 节点、连线只在创建时用（之后由用户在图上拖、连）：要换一张图就换 key。ref 拿到实例：nodes、edges
 import { createElement as h, forwardRef } from "react";
-import { createFlow } from "../src/flow.js";
+import { createFlow } from "../src/data/flow.js";
 import { wrap } from "./wrap.js";
 
 const Base = /* @__PURE__ */ wrap(createFlow, { events: [], displayName: "FlowInstance" });

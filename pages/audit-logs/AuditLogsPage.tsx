@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "@code-proxy/ui/icons";
 import { identityApi, type AuditLogIdentity } from "@code-proxy/api-client";
 import {
   Button,

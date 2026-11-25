@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "@code-proxy/ui/icons";
 import { LogoMark } from "@code-proxy/assets";
 import { Callout, FormField, TextInput, rules, useFormValidation } from "@code-proxy/ui";
 import {

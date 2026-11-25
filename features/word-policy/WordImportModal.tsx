@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileUp } from "lucide-react";
+import { FileUp } from "@code-proxy/ui/icons";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
   Button,

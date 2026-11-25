@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { History } from "lucide-react";
+import { History } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { DataGrid, GRID_WIDTH, Modal, type DataGridColumn } from "@code-proxy/ui";
 import { formatQuotaUsdAmount } from "./PeriodSpendingCell";

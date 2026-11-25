@@ -32,17 +32,17 @@ export const selectTriggerBase = getSelectTriggerBase();
  */
 export const selectTriggerState = (open: boolean) => (open ? "open" : "closed");
 
-/** 紧凑型触发器（分页条的每页条数等）：小号 8px 圆角，白底细描边，对齐 Satin 按钮轮廓。 */
+/** 紧凑型触发器（分页条的每页条数等）：跟随 Satin 控件圆角令牌，白底细描边。 */
 export const selectTriggerChip = [
-  "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg bg-surface px-2.5 shadow-control",
+  "inline-flex h-7 items-center justify-center gap-1.5 rounded-[var(--sn-btn-r)] bg-surface px-3 shadow-control",
   "text-xs font-medium text-ink-2 outline-none transition-[color,background-color,box-shadow] duration-150 ease-soft",
   "hover:text-ink hover:shadow-control-hover data-[state=open]:text-ink data-[state=open]:shadow-control-hover",
   "disabled:cursor-not-allowed disabled:text-ink-4 disabled:hover:shadow-control disabled:hover:text-ink-4",
 ].join(" ");
 
-/** 幽灵触发器（顶栏里的切换租户）：无边框无底色，悬停与展开共用同一层浅灰。 */
+/** 幽灵触发器（顶栏里的切换租户）：无边框无底色，跟随 Satin 控件圆角，悬停与展开共用一层浅灰。 */
 export const selectTriggerGhost = [
-  "inline-flex h-8 min-w-0 items-center justify-between gap-1.5 rounded-lg border-0 bg-transparent px-2.5",
+  "inline-flex h-8 min-w-0 items-center justify-between gap-1.5 rounded-[var(--sn-btn-r)] border-0 bg-transparent px-3",
   "text-sm font-medium text-ink-2 outline-none transition-colors duration-150 ease-soft",
   "hover:bg-hover hover:text-ink data-[state=open]:bg-hover data-[state=open]:text-ink",
   "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
@@ -55,7 +55,7 @@ export const selectChevron =
  * 所有浮层（下拉、菜单、日期面板）共用的 Satin 表面：--sn-menu-bg / --sn-menu-shadow / --sn-r-lg。
  */
 export const floatingPanelSurface =
-  "code-proxy-floating-surface rounded-xl bg-[var(--sn-menu-bg,var(--sn-overlay))] text-[var(--sn-label)] shadow-[var(--sn-menu-shadow,var(--sn-e1))]";
+  "code-proxy-floating-surface rounded-[var(--sn-r-lg)] bg-[var(--sn-menu-bg,var(--sn-overlay))] text-[var(--sn-label)] shadow-[var(--sn-menu-shadow,var(--sn-e1))]";
 
 export const selectPanel = `fixed z-[9999] overflow-hidden p-1.5 ${floatingPanelSurface}`;
 
@@ -68,7 +68,7 @@ export const selectSearchInput =
 
 /** 选项：对齐 Satin `.sn-item`（圆角行 + --sn-b-ghost-hover 悬停 + 按压反馈）。 */
 export const selectOptionBase =
-  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-[var(--sn-label)] outline-none transition-colors duration-100 hover:bg-[var(--sn-b-ghost-hover)] focus-visible:bg-[var(--sn-b-ghost-hover)]";
+  "flex w-full items-center gap-2.5 rounded-[var(--sn-r-md)] px-2.5 py-2 text-left text-sm text-[var(--sn-label)] outline-none transition-colors duration-100 hover:bg-[var(--sn-b-ghost-hover)] focus-visible:bg-[var(--sn-b-ghost-hover)]";
 
 export const selectOptionSelected = "font-medium text-[var(--sn-label)]";
 

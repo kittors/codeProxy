@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
+import { Check, Edit3, FlaskConical, Power, Trash2 } from "@code-proxy/ui/icons";
 import {
   GRID_ROW_ACTIONS_COLUMN,
   GRID_WIDTH,

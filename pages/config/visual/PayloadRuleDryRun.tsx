@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Play } from "lucide-react";
+import { Play } from "@code-proxy/ui/icons";
 import { payloadRulesApi, type PayloadRulesDryRunResult } from "@code-proxy/api-client";
 import {
   payloadRulesDraft,

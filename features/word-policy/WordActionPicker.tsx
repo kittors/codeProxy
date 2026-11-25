@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eraser, ListChecks, ShieldX, Undo2 } from "lucide-react";
+import { Eraser, ListChecks, ShieldX, Undo2 } from "@code-proxy/ui/icons";
 import type { WordAction, WordPolicyLimits, WordPolicyView } from "@code-proxy/api-client";
 import { ChoiceCards, FormField, TextInput, type ChoiceCardOption } from "@code-proxy/ui";
 import type { WordPolicyDraft } from "./wordPolicyModel";

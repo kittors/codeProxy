@@ -262,7 +262,7 @@ export function DataGridBody<T>({
                 title={t("common.reorder_row", { index: rowIndex + 1 })}
                 onPointerDown={(event) => rowGrip.onPointerDown(key, event)}
                 onKeyDown={(event) => rowGrip.onKeyDown(key, event)}
-                className="inline-flex h-7 w-6 cursor-grab touch-none items-center justify-center rounded-md text-ink-4 transition-colors hover:bg-hover hover:text-ink-2 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                className="sn-grip disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Icon name="grip-vertical" size={14} />
               </button>
@@ -312,13 +312,9 @@ export function DataGridBody<T>({
                   event.stopPropagation();
                   onToggleExpand(key);
                 }}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                className="sn-disc"
               >
-                <Icon
-                  name="chevron-right"
-                  size={14}
-                  className={`transition-[rotate] duration-200 ease-pop ${expanded ? "rotate-90" : ""}`}
-                />
+                <Icon name="chevron-right" size={14} />
               </button>
             </div>
           )}
@@ -364,7 +360,8 @@ export function DataGridBody<T>({
               {status === "error" ? (
                 <div role="alert">
                   <EmptyState
-                    icon={<Icon name="triangle-alert" size={20} />}
+                    scene="error"
+                    compact={stateHeight < 240}
                     title={t("data_grid.error_title")}
                     description={error ?? undefined}
                     action={
@@ -379,6 +376,8 @@ export function DataGridBody<T>({
               ) : (
                 <EmptyState
                   icon={empty?.icon}
+                  scene={empty?.scene}
+                  compact={stateHeight < 240}
                   title={empty?.title ?? t("data_grid.empty_title")}
                   description={empty?.description}
                   action={

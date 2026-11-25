@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Unlock } from "lucide-react";
+import { Unlock } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { accessFreezesApi, type AccessFreeze } from "@code-proxy/api-client";
 import { Callout, ConfirmModal, FormField, ProviderTag, Textarea, useToast } from "@code-proxy/ui";

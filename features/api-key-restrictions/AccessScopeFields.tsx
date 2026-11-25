@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import {
   FormField,
   SettingGroup,

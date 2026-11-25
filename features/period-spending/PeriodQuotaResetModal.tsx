@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   PERIOD_SPENDING_PERIODS,

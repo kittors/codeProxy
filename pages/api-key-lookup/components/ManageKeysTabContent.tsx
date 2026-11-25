@@ -1,4 +1,4 @@
-import { CalendarClock, Plus, RefreshCw } from "lucide-react";
+import { CalendarClock, Plus, RefreshCw } from "@code-proxy/ui/icons";
 import type { EndUser, EndUserAPIKey } from "@code-proxy/api-client";
 import { Button, Card, surface, type DataGridColumn } from "@code-proxy/ui";
 import { PolicyBadges, QuotaUsageCell, resettableWindows } from "@features/access-policy";

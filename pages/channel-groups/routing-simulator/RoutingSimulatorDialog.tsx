@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Play, Route } from "lucide-react";
+import { Play, Route } from "@code-proxy/ui/icons";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import { modelsApi } from "@code-proxy/api-client/endpoints/models";
 import {

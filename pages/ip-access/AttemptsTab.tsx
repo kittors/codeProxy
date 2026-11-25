@@ -5,7 +5,7 @@ import {
   type AuthAttempt,
   type AuthAttemptWindow,
 } from "@code-proxy/api-client";
-import { Download } from "lucide-react";
+import { Download } from "@code-proxy/ui/icons";
 import {
   Button,
   GRID_WIDTH,

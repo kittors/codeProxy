@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, Copy, Info, Lock, MonitorX } from "lucide-react";
+import { ArrowUp, Copy, Info, Lock, MonitorX } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 
 const EASE = [0.2, 0.8, 0.2, 1] as const;

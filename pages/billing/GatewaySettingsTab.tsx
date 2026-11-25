@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, PlugZap, Save, Undo2, XCircle } from "lucide-react";
+import { CheckCircle2, PlugZap, Save, Undo2, XCircle } from "@code-proxy/ui/icons";
 import {
   billingAdminApi,
   type BillingSettings,

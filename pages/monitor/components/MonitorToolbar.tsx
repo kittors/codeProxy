@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, KeyRound, RefreshCw, Timer, UserRound, X } from "lucide-react";
+import { Activity, KeyRound, RefreshCw, Timer, UserRound, X } from "@code-proxy/ui/icons";
 import {
   MONITOR_RANGE_KEYS,
   type MonitorFilterOption,
@@ -327,7 +327,7 @@ function ActiveFilterChips({
         query[dimension].map((value) => (
           <span
             key={`${dimension}:${value}`}
-            className="inline-flex max-w-72 items-center gap-1 rounded-md border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] py-0.5 pr-1 pl-2.5 text-xs text-[var(--sn-label)]"
+            className="sn-chip sn-tag !h-6 max-w-72 gap-1 !pr-1 !pl-2.5 !text-xs"
           >
             <span className="shrink-0 text-[var(--sn-label3)]">{t(`monitor_center.filter.${dimension}`)}</span>
             <span className="truncate font-medium">{labelFor(dimension, value)}</span>
@@ -335,9 +335,9 @@ function ActiveFilterChips({
               type="button"
               onClick={() => onRemove(dimension, value)}
               aria-label={t("monitor_center.filter.remove", { value: labelFor(dimension, value) })}
-              className="grid size-5 shrink-0 place-items-center rounded text-[var(--sn-label3)] transition-colors hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
+              className="sn-x"
             >
-              <X size={14} aria-hidden="true" />
+              <X size={12} aria-hidden="true" />
             </button>
           </span>
         )),

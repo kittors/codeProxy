@@ -11,7 +11,6 @@
         "echarts-for-react": "^3.0.6",
         "framer-motion": "^12.34.3",
         "i18next": "^25.7.1",
-        "lucide-react": "0.563.0",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "react-i18next": "^16.4.0",
@@ -53,7 +52,6 @@
         "echarts-for-react": "^3.0.6",
         "framer-motion": "^12.34.3",
         "i18next": "^25.7.1",
-        "lucide-react": "0.563.0",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "react-i18next": "^16.4.0",
@@ -125,7 +123,6 @@
         "echarts": "^6.1.0",
         "echarts-for-react": "^3.0.6",
         "framer-motion": "^12.34.3",
-        "lucide-react": "0.563.0",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "react-i18next": "^16.4.0",
@@ -752,8 +749,6 @@
     "lightningcss-win32-x64-msvc": ["lightningcss-win32-x64-msvc@1.30.2", "", { "os": "win32", "cpu": "x64" }, "sha512-5g1yc73p+iAkid5phb4oVFMB45417DkRevRbt/El/gKXJk4jid+vPFF/AXbxn05Aky8PapwzZrdJShv5C0avjw=="],
 
     "lru-cache": ["lru-cache@11.2.6", "", {}, "sha512-ESL2CrkS/2wTPfuend7Zhkzo2u0daGJ/A2VucJOgQ/C48S/zB8MMeMHSGKYpXhIjbPxfuezITkaBH1wqv00DDQ=="],
-
-    "lucide-react": ["lucide-react@0.563.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-8dXPB2GI4dI8jV4MgUDGBeLdGk8ekfqVZ0BdLcrRzocGgG75ltNEmWS+gE7uokKF/0oSUuczNDT+g9hFJ23FkA=="],
 
     "lz-string": ["lz-string@1.5.0", "", { "bin": { "lz-string": "bin/bin.js" } }, "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ=="],
 

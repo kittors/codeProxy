@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleCheck, FileWarning, OctagonAlert } from "lucide-react";
+import { CircleCheck, FileWarning, OctagonAlert } from "@code-proxy/ui/icons";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
 import { Button, Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ErrorDetailModal } from "@features/log-content-viewer";

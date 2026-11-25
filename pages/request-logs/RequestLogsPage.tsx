@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, ScrollText, Trash2 } from "lucide-react";
+import { RefreshCw, ScrollText, Trash2 } from "@code-proxy/ui/icons";
 import { configApi, usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,

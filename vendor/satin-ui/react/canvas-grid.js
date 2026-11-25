@@ -5,7 +5,7 @@
 // 选项、事件和 DataGrid 一样（见 satin-ui/react/grid）；画布上画不了任意节点：格子的文字用 format（render 只在 DataGrid 里有效）。
 // 列的 key 变了换一张新表（React 的 key）；ref 拿到实例
 import { createElement as h, forwardRef, useRef } from "react";
-import { createCanvasGrid } from "../src/canvas-grid.js";
+import { createCanvasGrid } from "../src/data/canvas-grid.js";
 import { wrap } from "./wrap.js";
 
 const EVENTS = ["rowClick", "sortChange", "filterChange", "selectionChange", "columnResize", "columnReorder", "cellEdit", "scrollEnd", "rowAction", "retry"];

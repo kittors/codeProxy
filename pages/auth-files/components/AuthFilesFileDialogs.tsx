@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { FileJson, Layers, Loader2, Upload } from "lucide-react";
+import { FileJson, Layers, Loader2, Upload } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   Button,

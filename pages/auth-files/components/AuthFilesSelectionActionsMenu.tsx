@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ListChecks } from "lucide-react";
+import { ListChecks } from "@code-proxy/ui/icons";
 import { DropdownMenu, buttonClassName } from "@code-proxy/ui";
 import type { TFunction } from "i18next";
 

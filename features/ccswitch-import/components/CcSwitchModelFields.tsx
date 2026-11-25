@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowRight, LoaderCircle, Trash2 } from "@code-proxy/ui/icons";
 import {
   Button,
   FormField,

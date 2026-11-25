@@ -5,8 +5,8 @@ import {
   CircleDashed,
   CircleX,
   HeartPulse,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import { AnimatedNumber, Card } from "@code-proxy/ui";
 import { MeterRing, meterTone, type MeterTone } from "@features/monitor-widgets/monitorVisuals";
 import type {
@@ -48,7 +48,7 @@ const LEVEL_STYLE: Record<MonitorHealthLevel, { pill: string; ring: MeterTone; g
   idle: { pill: "bg-hover text-ink-3", ring: meterTone("normal", "sky"), glow: "" },
 };
 
-const CHECK_ICON: Record<MonitorCheckLevel, { icon: LucideIcon; className: string }> = {
+const CHECK_ICON: Record<MonitorCheckLevel, { icon: SatinIconComponent; className: string }> = {
   ok: { icon: CircleCheck, className: "text-emerald-600 dark:text-emerald-300" },
   warn: { icon: CircleAlert, className: "text-amber-600 dark:text-amber-300" },
   critical: { icon: CircleX, className: "text-rose-600 dark:text-rose-300" },

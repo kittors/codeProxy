@@ -7,7 +7,7 @@ import {
   formatUsd,
 } from "@code-proxy/ui";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Check, Copy } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy } from "@code-proxy/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { STATUS_LABEL } from "./LabCells";
 import { labCacheRatio, maskLabKey, type LabLogRow } from "./labData";

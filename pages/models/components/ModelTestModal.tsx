@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, Timer } from "lucide-react";
+import { FlaskConical, Timer } from "@code-proxy/ui/icons";
 import { Button, Callout, Modal } from "@code-proxy/ui";
 import type { ModelTestMode, ModelTestOptions, ModelTestResult } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";

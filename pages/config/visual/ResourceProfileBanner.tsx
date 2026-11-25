@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ChevronDown, Gauge, Leaf } from "lucide-react";
+import { ArrowRight, ChevronDown, Gauge, Leaf } from "@code-proxy/ui/icons";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { VisualConfigValues } from "@features/visual-config-editor";

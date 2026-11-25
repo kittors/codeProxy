@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRightLeft, CheckCircle2, Pencil, Plus, RefreshCw, Share2, Trash2 } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Pencil, Plus, RefreshCw, Share2, Trash2 } from "@code-proxy/ui/icons";
 import {
   NO_SHARING_CAPABILITY,
   type ResourceSharingCapability,

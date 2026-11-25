@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BAR_THICKNESS_RANGE,
+  CONTROL_RADIUS_OPTIONS,
+  DEFAULT_APPEARANCE,
   DEFAULT_STATUS_HEX,
   SegmentedControl,
   SettingGroup,
@@ -14,6 +16,7 @@ import {
   useAppearance,
   useTheme,
   type AppearanceSettings as AppearanceSettingsValue,
+  type ControlRadius,
   type StatusRole,
   type ThemePreference,
 } from "@code-proxy/ui";
@@ -38,6 +41,13 @@ const WEIGHT_KEYS: Record<(typeof WEIGHT_SHIFTS)[number], string> = {
   0: "appearance.weight_regular",
   50: "appearance.weight_medium",
   100: "appearance.weight_bold",
+};
+
+const RADIUS_KEYS: Record<ControlRadius, string> = {
+  pill: "appearance.radius_pill",
+  "10": "appearance.radius_10",
+  "8": "appearance.radius_8",
+  "6": "appearance.radius_6",
 };
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
@@ -210,6 +220,26 @@ export function AppearanceSettings() {
 
       <Section title={t("appearance.sizes_title")}>
         <SettingGroup flat>
+          <SettingRow
+            label={t("appearance.control_radius")}
+            description={t("appearance.control_radius_description")}
+            controlWidth="full"
+            modified={settings.controlRadius !== DEFAULT_APPEARANCE.controlRadius}
+            onReset={() => update({ controlRadius: DEFAULT_APPEARANCE.controlRadius })}
+            control={
+              <SegmentedControl<ControlRadius>
+                ariaLabel={t("appearance.control_radius")}
+                size="sm"
+                className="w-full"
+                value={settings.controlRadius}
+                onChange={(controlRadius) => update({ controlRadius })}
+                options={CONTROL_RADIUS_OPTIONS.map((radius) => ({
+                  value: radius,
+                  label: t(RADIUS_KEYS[radius]),
+                }))}
+              />
+            }
+          />
           <SettingRow
             label={t("appearance.bar_thickness")}
             description={t("appearance.bar_thickness_description")}

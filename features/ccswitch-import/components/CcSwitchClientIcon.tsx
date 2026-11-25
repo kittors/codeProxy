@@ -1,4 +1,4 @@
-import { Feather, Shrimp } from "lucide-react";
+import { Feather, Shrimp } from "@code-proxy/ui/icons";
 import { cn, iconHueClass } from "@code-proxy/ui";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";

@@ -71,11 +71,14 @@ const controlFieldStates = [
   controlDisabled,
 ].join(" ");
 
-/** 单行输入框：Satin 原生 8px 圆角，与按钮、下拉触发器放在同一条工具栏里轮廓一致。 */
-export const controlSurface = ["rounded-lg", controlFieldStates].join(" ");
+/** 单行输入框：跟随 Satin 控件圆角令牌（默认胶囊 pill，支持 6/8/10/pill 实时切换）。 */
+export const controlSurface = ["rounded-[var(--sn-btn-r)]", controlFieldStates].join(" ");
 
-/** 多行输入框：Satin 12px 圆角，其余状态与单行一致。 */
-export const controlMultilineSurface = ["rounded-xl", controlFieldStates].join(" ");
+/** 多行输入框：Satin 限制最大 14px 圆角，其余状态与单行一致。 */
+export const controlMultilineSurface = [
+  "rounded-[min(var(--sn-btn-r),14px)]",
+  controlFieldStates,
+].join(" ");
 
 /**
  * 触发器类控件（下拉、日期选择器等 button）的统一表面。
@@ -98,7 +101,10 @@ const controlTriggerStates = [
   controlDisabled,
 ].join(" ");
 
-export const controlSurfaceTrigger = ["rounded-lg", controlTriggerStates].join(" ");
+export const controlSurfaceTrigger = ["rounded-[var(--sn-btn-r)]", controlTriggerStates].join(" ");
 
-/** 会随已选标签换行长高的触发器（MultiSelect）：改用 Satin 12px 圆角。 */
-export const controlMultilineSurfaceTrigger = ["rounded-xl", controlTriggerStates].join(" ");
+/** 会随已选标签换行长高的触发器（MultiSelect）：对齐 Satin 多行控件圆角上限。 */
+export const controlMultilineSurfaceTrigger = [
+  "rounded-[min(var(--sn-btn-r),14px)]",
+  controlTriggerStates,
+].join(" ");

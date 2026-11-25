@@ -100,12 +100,12 @@ export function GridTooltipRows({
       <span className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
         {rows.map(([label, value], index) => (
           <span key={index} className="contents">
-            <span className="whitespace-nowrap text-canvas/60">{label}</span>
+            <span className="whitespace-nowrap opacity-70">{label}</span>
             <span className="whitespace-nowrap text-right tabular-nums">{value}</span>
           </span>
         ))}
       </span>
-      {footnote ? <span className="mt-1.5 block text-2xs text-canvas/55">{footnote}</span> : null}
+      {footnote ? <span className="mt-1.5 block text-2xs opacity-65">{footnote}</span> : null}
     </span>
   );
 }

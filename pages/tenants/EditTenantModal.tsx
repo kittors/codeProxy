@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, CirclePause, CircleCheck, Ban, Power, Timer } from "lucide-react";
+import { Building2, CirclePause, CircleCheck, Ban, Power, Timer } from "@code-proxy/ui/icons";
 import type { TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,

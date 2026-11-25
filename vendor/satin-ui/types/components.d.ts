@@ -175,6 +175,32 @@ export const createUpload: SatinFactory<{ list?: HTMLElement; accept?: RegExp; m
 export interface ReorderOptions { row?: string; onReorder?(e: { from: number; to: number; row: HTMLElement }): void }
 /** 行由库直接挪（DOM 顺序就是新顺序）；rows() 按现在的顺序返回行 */
 export const createReorder: SatinFactory<ReorderOptions, { rows(): HTMLElement[] }>;
+/** 顶栏（.sn-header）：默认 position: fixed 锚定视口顶部并配合 overscroll-behavior-y: none 杜绝滚动/触顶回弹弹跳 */
+export interface HeaderLink { key?: string; label: string; href?: string }
+export interface HeaderOptions {
+  brand?: string;
+  sub?: string;
+  href?: string;
+  links?: (string | HeaderLink)[];
+  active?: string;
+  actions?: string;
+  size?: "sm" | "md" | "lg";
+  width?: "default" | "wide" | "fluid";
+  solid?: boolean;
+  /** 局部/内嵌模式：用于文档预览框或独立分栏内部 */
+  static?: boolean;
+  scrollTarget?: Window | HTMLElement | null;
+  threshold?: number;
+  onNavigate?(key: string, el: HTMLElement): void;
+}
+export interface HeaderApi {
+  readonly active: string | null;
+  setActive(key: string): void;
+  syncScroll(): void;
+}
+export function headerHTML(o?: HeaderOptions): string;
+export function mountHeader(el: HTMLElement, o?: HeaderOptions): HeaderApi & { el: HTMLElement; destroy(): void };
+export const createHeader: SatinFactory<HeaderOptions, HeaderApi>;
 /** 侧栏布局（.sn-app）：选中切换、收起 / 展开（⌘\\）。collapseBelow：布局窄于这个宽度时自动收成图标栏（手机上用，比如 720） */
 export const createSidebar: SatinFactory<{ onNavigate?(link: HTMLElement): void; collapseBelow?: number }, { toggle(): void; select(link: HTMLElement): void; setFx(fx: "slide" | "bar" | "fade" | "text"): void }>;
 export const createInfiniteList: SatinFactory<{ loadPage(offset: number, size: number): Promise<unknown[]>; /** 把一行画出来：row 是行元素（会复用，子元素可以缓存在 row._d 上），item 是这一行的数据 */ renderRow(row: HTMLElement, item: any, index: number): void; rowHeight?: number; total?: number; pageSize?: number; /** 数量变了调：loaded 已加载的条数；total 总数（mountInfiniteList 会给；createInfiniteList 现在只转第一个参数，total 是 undefined） */ onCount?(loaded: number, total?: number): void }, { reload(): void; scrollTop(): void; readonly count: number }>;

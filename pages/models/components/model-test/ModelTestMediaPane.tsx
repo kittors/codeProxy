@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ShieldCheck } from "lucide-react";
+import { Download, ShieldCheck } from "@code-proxy/ui/icons";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type { ModelTestImage, ModelTestResult } from "@code-proxy/api-client";
 import { ImageResultCanvas, type CanvasState } from "@features/image-result-canvas";

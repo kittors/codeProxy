@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { PanelRightOpen, type LucideIcon } from "lucide-react";
-import { HoverTooltip, surface } from "@code-proxy/ui";
+import { PanelRightOpen, type SatinIconComponent } from "@code-proxy/ui/icons";
+import { HoverTooltip, StatusTag, surface } from "@code-proxy/ui";
 import {
   LevelPill,
   MetricIcon,
@@ -55,7 +55,7 @@ export function CardShell({
       aria-label={label}
       data-testid={testId}
       className={[
-        surface({ tone: "card", radius: "3xl" }),
+        surface({ tone: "card", radius: "2xl" }),
         "row-span-5 grid min-w-0 grid-rows-subgrid gap-y-3 p-4 [--cp-inner-radius:var(--radius-lg)]",
       ].join(" ")}
     >
@@ -73,7 +73,7 @@ export function CardHeader({
   subtitle,
   issues,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   title: string;
   tags?: ReactNode;
@@ -244,7 +244,7 @@ export function ChipRow({ children, dimmed }: { children: ReactNode; dimmed?: bo
   );
 }
 
-/** 依赖与状态的小胶囊：圆点 + 文字；出问题时整块换成琥珀 / 红淡底。 */
+/** 依赖与状态的小胶囊：使用 Satin 原生 `.sn-tag.sn-sm`（圆点 + 文字）。 */
 export function Chip({
   level = "normal",
   children,
@@ -256,23 +256,18 @@ export function Chip({
   title?: string;
   testId?: string;
 }) {
-  const tone =
-    level === "critical"
-      ? "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300"
-      : level === "warn"
-        ? "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
-        : "bg-ink/[0.04] text-ink-2 dark:bg-white/[0.06]";
-  const dot = level === "critical" ? "bg-rose-500" : level === "warn" ? "bg-amber-500" : "bg-emerald-500";
+  const tone = level === "critical" ? "bad" : level === "warn" ? "warn" : "ok";
   return (
-    <span
+    <StatusTag
+      size="sm"
+      tone={tone}
       data-testid={testId}
       data-level={level}
       title={title}
-      className={`inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-2xs font-medium tabular-nums ${tone}`}
+      className="min-w-0 max-w-full tabular-nums"
     >
-      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${dot}`} />
       <span className="truncate">{children}</span>
-    </span>
+    </StatusTag>
   );
 }
 
@@ -300,10 +295,10 @@ export function CardFooter({
           aria-haspopup="dialog"
           aria-label={detailsLabel}
           onClick={onOpenDetails}
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-ink-2 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:hover:bg-white/[0.07]"
+          className="sn-btn sn-ghost sn-xs shrink-0 text-[var(--sn-label2)]"
         >
           {t("cluster_nodes.details")}
-          <PanelRightOpen size={14} aria-hidden="true" />
+          <PanelRightOpen size={13} aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -347,11 +342,11 @@ export function CpuSplitBar({ cpu }: { cpu: NodeCpuView }) {
   );
 }
 
-/** 小标签：Leader、当前节点、主机名。中性灰，不和状态抢颜色。 */
+/** 小标签：Leader、当前节点、主机名。使用 Satin 中性胶囊，不和状态抢颜色。 */
 export function Tag({ children }: { children: ReactNode }) {
   return (
-    <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-px text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+    <StatusTag size="sm" tone="neutral" dot={false} className="shrink-0">
       {children}
-    </span>
+    </StatusTag>
   );
 }

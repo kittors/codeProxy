@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Coins, Pencil, Plus, RotateCcw, Sparkles, Trash2, Wallet } from "lucide-react";
+import { CalendarClock, Coins, Pencil, Plus, RotateCcw, Sparkles, Trash2, Wallet } from "@code-proxy/ui/icons";
 import {
   billingAdminApi,
   type ApiKeyPermissionProfile,

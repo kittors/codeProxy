@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@code-proxy/ui/icons";
 import { Button, Card } from "@code-proxy/ui";
 import { useOnlineUpdateContext } from "./OnlineUpdateProvider";
 

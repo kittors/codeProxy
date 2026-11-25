@@ -60,6 +60,14 @@ export const vEnhance: import("vue").ObjectDirective<HTMLElement>;
 export function toast(o: ToastOptions): ToastHandle;
 export function notify(o: NotifyOptions): import("./components").NotifyHandle;
 export interface SatinPluginOptions { mode?: "auto" | "light" | "dark"; theme?: Partial<ThemeChoice>; locale?: string; messages?: Record<string, string>; persist?: boolean }
+export interface SatinCreateOptions extends SatinPluginOptions {
+  /** 可选：仅按需全局注册指定的组件（键名会自动补 Sn 前缀），不传则不全局注册任何组件 */
+  components?: Record<string, import("vue").Component>;
+  /** 可选：按需注册自定义指令，如 `{ enhance: vEnhance }` */
+  directives?: Record<string, import("vue").Directive>;
+}
+/** 轻量按需 Vue 插件：只做 setup()、全局主题与多语言初始化，不注册全量 30+ 全局组件，彻底保留 Tree-Shaking */
+export function createSatin(options?: SatinCreateOptions): Plugin<[SatinCreateOptions?]>;
 declare const plugin: Plugin<[SatinPluginOptions?]>;
 export default plugin;
 

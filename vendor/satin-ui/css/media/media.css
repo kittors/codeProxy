@@ -1,0 +1,169 @@
+/* Satin：图片、看图（Lightbox）、玻璃控制条、播放器与上传（从 data.css 拆出的独立样式分片）。 */
+@layer satin {
+/* ———— 图片：占位 → 从模糊淡入；失败给图标和重试；放大预览沿原路开合 ———— */
+.sn-img-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: 120px; gap: 12px; }
+.sn-img-grid .sn-im:first-child { grid-row: span 2; }
+.sn-im { position: relative; border-radius: var(--sn-r-md); overflow: hidden; background: var(--sn-fill-subtle); cursor: zoom-in; outline: none; }
+.sn-im:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-im > .sn-ph { position: absolute; inset: 0; border-radius: 0; }
+.sn-im > .sn-pic { position: absolute; inset: 0; background: var(--sn-g); background-size: cover; opacity: 0; filter: blur(8px); scale: 1.02; transition: opacity .3s var(--sn-ease-out), filter .3s var(--sn-ease-out), scale .4s var(--sn-ease-out); }
+.sn-im.sn-loaded > .sn-pic { opacity: 1; filter: none; scale: 1; }
+.sn-im.sn-loaded > .sn-ph { opacity: 0; transition: opacity .3s .1s; }
+.sn-im > .sn-err { position: absolute; inset: 0; display: none; place-content: center; justify-items: center; gap: 6px; color: var(--sn-label3); font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); cursor: default; }
+.sn-im.sn-failed { cursor: default; } .sn-im.sn-failed > .sn-err { display: grid; } .sn-im.sn-failed > .sn-ph { display: none; }
+.sn-im > .sn-err .sn-ic { width: 20px; height: 20px; }
+.sn-im .sn-tag-ratio { position: absolute; left: 8px; bottom: 8px; padding: 0 6px; border-radius: 4px; background: rgba(0, 0, 0, .5); color: #fff; font: 500 calc(11px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); opacity: 0; transition: opacity .15s; }
+@media (hover: hover) {
+.sn-im.sn-loaded:hover .sn-tag-ratio { opacity: 1; } }
+/* ———— 看图（kit-lightbox.js）：遮罩 + 舞台（铺满窗口，接拖动、滚轮、捏合）+ 框（从缩略图长出来）+ 图（缩放、平移、旋转）+ 工具条 ———— */
+.sn-lightbox-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .8); opacity: 0; pointer-events: none; transition: opacity .26s var(--sn-ease-out); }
+.sn-lightbox-scrim.sn-on { opacity: 1; }
+.sn-lb-stage { position: fixed; inset: 0; z-index: 61; overflow: hidden; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
+.sn-lightbox { position: absolute; transform-origin: 0 0; }
+.sn-lb-img { position: absolute; inset: 0; border-radius: var(--sn-r-md); background: var(--sn-g0, rgb(255 255 255 / .06)); background-size: cover; background-position: center; background-repeat: no-repeat; box-shadow: 0 30px 80px rgba(0, 0, 0, .4); transform-origin: 50% 50%; cursor: zoom-in; }
+.sn-lb-img::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sn-g); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity .3s var(--sn-ease-out); }
+.sn-lb-img.sn-loading::before, .sn-lb-img.sn-failed::before { opacity: 0; }
+.sn-lightbox .sn-lb-spin { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-width: 2px; border-color: rgba(255, 255, 255, .22); border-top-color: #fff; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .2s; } /* 深色遮罩上：白色的圈 */
+.sn-lightbox:has(.sn-lb-img.sn-slow) .sn-lb-spin { opacity: 1; }
+.sn-lightbox .sn-lb-err { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 1; padding: 6px 12px; border-radius: var(--sn-r-md); background: rgb(20 20 24 / .6); color: rgba(255, 255, 255, .9); font: 500 calc(13px * var(--sn-font-scale, 1))/1.4 var(--sn-sans); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.sn-lightbox:has(.sn-lb-img.sn-failed) .sn-lb-err { opacity: 1; }
+.sn-lightbox .sn-lb-err.sn-top { top: 16px; translate: -50% 0; }
+.sn-lb-stage.sn-zoomed .sn-lb-img { cursor: zoom-out; } /* 放大了：点一下回到适应窗口；按住拖动查看时换成抓手（.dragging） */
+.sn-lb-stage.sn-dragging .sn-lb-img { cursor: grabbing; }
+.sn-lightbox .sn-player { position: absolute; inset: 0; max-width: none; aspect-ratio: auto; border-radius: var(--sn-r-md); box-shadow: 0 30px 80px rgba(0, 0, 0, .4); }
+.sn-lightbox .sn-player .sn-frame { object-fit: contain; }
+.sn-lb-ghost { pointer-events: none; }
+.sn-lb-bar { position: fixed; z-index: 62; left: 50%; bottom: 24px; translate: -50% 8px; display: flex; align-items: center; gap: 10px; padding: 4px; border-radius: var(--sn-r-lg); opacity: 0; pointer-events: none; transition: opacity .15s var(--sn-ease-in), translate .18s var(--sn-ease-in); }
+.sn-lb-bar.sn-on { opacity: 1; translate: -50% 0; pointer-events: auto; transition: opacity .22s var(--sn-ease-out) .1s, translate .28s var(--sn-ease-out-strong) .1s; }
+.sn-lb-g { display: flex; align-items: center; gap: 2px; }
+.sn-lb-g[hidden] { display: none; }
+.sn-lb-bar .sn-t, .sn-lb-bar .sn-z { padding: 0 6px; min-width: 44px; text-align: center; font: 500 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: rgba(255, 255, 255, .9); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sn-lb-bar .sn-pb[aria-disabled="true"] { opacity: .32; cursor: default; }
+/* 窄屏（手机竖屏）：四组按钮一排要 400px 左右，390 宽的屏幕两头各被截掉一截（2026-11-20 巡检 390 宽抓到）——
+   组间距收到 2px、按钮 28px、数字最窄 34px，一排 330px 以内，360 宽也放得下 */
+@media (max-width: 440px) {
+  .sn-lb-bar { gap: 2px; bottom: 16px; }
+  .sn-lb-bar .sn-pb { width: 28px; height: 28px; }
+  .sn-lb-bar .sn-t, .sn-lb-bar .sn-z { min-width: 34px; padding: 0 2px; }
+}
+@media (hover: hover) {
+.sn-lb-bar .sn-pb[aria-disabled="true"]:hover { background: none; } }
+.sn-lb-bar .sn-pb[aria-disabled="true"]:active { transform: none; }
+
+/* ———— 玻璃（09 号 §10）：只用在叠在画面上的控制条 ———— */
+.sn-glass { background: rgb(20 20 24 / .38); -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(.8); backdrop-filter: blur(20px) saturate(160%) brightness(.8);
+  box-shadow: inset .5px .5px 1px -0.5px rgba(255, 255, 255, .35), inset 0 0 0 .5px rgba(255, 255, 255, .12), 0 0 0 .5px rgba(0, 0, 0, .3), 0 6px 24px rgba(0, 0, 0, .3); color: rgba(255, 255, 255, .94); }
+.sn-glass .sn-pb { all: unset; box-sizing: border-box; width: 32px; height: 32px; border-radius: var(--sn-r-md); display: grid; place-items: center; cursor: pointer; transition: background-color .12s, transform .1s; }
+@media (hover: hover) {
+.sn-glass .sn-pb:hover { background: rgba(255, 255, 255, .14); } }
+.sn-glass .sn-pb:active { transform: scale(var(--sn-press-icon)); }
+.sn-glass .sn-pb:focus-visible { box-shadow: 0 0 0 2px rgba(255, 255, 255, .6); }
+.sn-glass .sn-pb .sn-ic { width: 18px; height: 18px; }
+
+/* ———— 播放器 ———— */
+.sn-player { position: relative; aspect-ratio: 16 / 9; max-width: 720px; border-radius: var(--sn-r-lg); overflow: hidden; background: #000; outline: none; color: #fff; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; } /* 连续点画面切播放暂停时不选中时间文字 */
+.sn-player:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-player .sn-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+/* 全屏：铺满屏幕，画面完整显示（上下或左右留黑），控制条离边远一点 */
+.sn-player.sn-fs { max-width: none; width: 100vw; height: 100vh; aspect-ratio: auto; border-radius: 0; }
+.sn-player.sn-fs .sn-frame { object-fit: contain; }
+.sn-player.sn-fs .sn-ctrl { left: 24px; right: 24px; bottom: 24px; }
+.sn-player .sn-big-play { all: unset; position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: opacity .2s, scale .2s var(--sn-ease-out-strong); }
+.sn-player .sn-big-play.sn-glass { background: rgb(20 20 24 / .38); -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(.8); backdrop-filter: blur(20px) saturate(160%) brightness(.8); box-shadow: inset .5px .5px 1px -0.5px rgba(255, 255, 255, .35), inset 0 0 0 .5px rgba(255, 255, 255, .12), 0 0 0 .5px rgba(0, 0, 0, .3), 0 6px 24px rgba(0, 0, 0, .3); color: rgba(255, 255, 255, .94); } /* 上面的 all: unset 把玻璃底也清掉了：画面亮的时候白色三角就看不见，这里补回来 */
+.sn-player .sn-big-play .sn-ic { width: 26px; height: 26px; margin-left: 3px; } /* sp-ok: 三角形重心偏左，往右挪 3px 才看着居中 */
+@media (hover: hover) {
+.sn-player .sn-big-play:hover { scale: 1.06; } }
+.sn-player.sn-playing .sn-big-play, .sn-player.sn-in-pip .sn-big-play { opacity: 0; scale: .9; pointer-events: none; }
+.sn-player .sn-ctrl { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 6px; border-radius: var(--sn-r-lg); transition: opacity .3s var(--sn-ease-out), translate .3s var(--sn-ease-out); }
+.sn-player.sn-idle .sn-ctrl { opacity: 0; translate: 0 6px; }
+.sn-player.sn-idle { cursor: none; }
+.sn-player .sn-time { padding: 0 8px; font: 500 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 进度条：填充、缓冲用 scaleX，圆点用 translate（100cqi = 进度条自己的宽度），每帧只改一个变量，不触发布局 */
+.sn-scrub { position: relative; flex: 1; height: 24px; cursor: pointer; touch-action: none; container-type: inline-size; --sn-p: 0; --sn-b: 0; }
+.sn-scrub::before, .sn-scrub .sn-buf, .sn-scrub .sn-fill { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; transform-origin: left center; transition: height .15s var(--sn-ease-out), margin .15s var(--sn-ease-out); }
+.sn-scrub::before { background: rgba(255, 255, 255, .22); }
+.sn-scrub .sn-buf { scale: var(--sn-b) 1; background: rgba(255, 255, 255, .32); }
+.sn-scrub .sn-fill { scale: var(--sn-p) 1; background: #fff; }
+.sn-scrub.sn-drag::before, .sn-scrub.sn-drag .sn-buf, .sn-scrub.sn-drag .sn-fill { height: 6px; margin-top: -3px; }
+@media (hover: hover) {
+.sn-scrub:hover::before, .sn-scrub:hover .sn-buf, .sn-scrub:hover .sn-fill { height: 6px; margin-top: -3px; } } /* sp-ok: 6px 高的线用负外边距居中 */
+.sn-scrub .sn-knob { position: absolute; top: 50%; left: 0; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff; translate: calc(var(--sn-p) * 100cqi) 0; scale: 0; transition: scale .15s var(--sn-ease-out-strong); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.sn-scrub.sn-drag .sn-knob { scale: 1; }
+@media (hover: hover) {
+.sn-scrub:hover .sn-knob { scale: 1; } }
+.sn-scrub .sn-hover-t { position: absolute; bottom: 26px; left: 0; translate: -50% 4px; padding: 4px 6px; border-radius: 6px; background: rgba(0, 0, 0, .7); font: 500 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-sans); font-variant-numeric: tabular-nums; opacity: 0; pointer-events: none; transition: opacity .12s, translate .15s var(--sn-ease-out); }
+.sn-scrub.sn-drag .sn-hover-t { opacity: 1; translate: -50% 0; }
+@media (hover: hover) {
+.sn-scrub:hover .sn-hover-t { opacity: 1; translate: -50% 0; } }
+/* 音量：悬停喇叭向右展开一条 64px 的音量条（只有控制条里几个元素重新排，开销很小）；喇叭的两道声波按音量淡入淡出，静音换叉号 */
+.sn-player .sn-vol { display: flex; flex-direction: row-reverse; align-items: center; --sn-v: .8; } /* 音量条长在静音按钮左边：右边的画中画、全屏贴着右边，条往右长会把静音按钮往左推，指针落到音量条上，"静音"的提示就出不来；读屏和 Tab 的顺序照旧（先静音再音量） */
+.sn-player .sn-vs { position: relative; width: 0; height: 24px; overflow: hidden; cursor: pointer; touch-action: none; outline: none; transition: width .2s var(--sn-ease-out), margin .2s var(--sn-ease-out); }
+.sn-player .sn-vol:focus-within .sn-vs, .sn-player .sn-vs.sn-drag { width: 64px; margin-right: 4px; }
+@media (hover: hover) {
+.sn-player .sn-vol:hover .sn-vs { width: 64px; margin-right: 4px; } }
+.sn-player .sn-vs::before, .sn-player .sn-vs .sn-fill { content: ""; position: absolute; left: 6px; width: 52px; top: 50%; height: 3px; margin-top: -1.5px; border-radius: 2px; background: rgba(255, 255, 255, .25); } /* sp-ok: 3px 高的线用负外边距居中 */
+.sn-player .sn-vs .sn-fill { background: #fff; transform-origin: left center; scale: var(--sn-v) 1; }
+.sn-player .sn-vs .sn-knob { position: absolute; left: 6px; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; translate: calc(var(--sn-v) * 52px) 0; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); } /* sp-ok: 10px 圆点用负外边距居中 */
+.sn-player .sn-vs:focus-visible::before { box-shadow: 0 0 0 2px rgba(255, 255, 255, .6); }
+.sn-vol-ic .sn-w1, .sn-vol-ic .sn-w2, .sn-vol-ic .sn-x { transform-box: fill-box; transition: opacity .16s var(--sn-ease-out), scale .2s var(--sn-ease-out-strong); }
+.sn-vol-ic .sn-w1, .sn-vol-ic .sn-w2 { transform-origin: left center; }
+.sn-vol-ic .sn-x { transform-origin: center; opacity: 0; scale: .5; }
+.sn-vol[data-lv="1"] .sn-vol-ic .sn-w2, .sn-vol[data-lv="0"] .sn-vol-ic .sn-w1, .sn-vol[data-lv="0"] .sn-vol-ic .sn-w2 { opacity: 0; scale: .6; }
+.sn-vol[data-lv="0"] .sn-vol-ic .sn-x { opacity: 1; scale: 1; }
+/* 键盘调音量、快进快退时画面中间的小提示 */
+.sn-player .sn-hud { position: absolute; left: 50%; top: 50%; translate: -50% -50%; padding: 8px 14px; border-radius: 10px; background: rgba(0, 0, 0, .55); font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; scale: .96; pointer-events: none; transition: opacity .16s var(--sn-ease-out), scale .16s var(--sn-ease-out); }
+.sn-player .sn-hud.sn-on { opacity: 1; scale: 1; transition-duration: .08s; }
+/* 画中画中：原地压暗，写一句，给一个收回按钮 */
+.sn-player .sn-pip-note { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; background: rgba(10, 12, 16, .82); font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); opacity: 0; visibility: hidden; transition: opacity .2s var(--sn-ease-out), visibility 0s .2s; }
+.sn-player .sn-pip-note .sn-ic { width: 28px; height: 28px; opacity: .8; }
+.sn-player.sn-in-pip .sn-pip-note { opacity: 1; visibility: visible; transition-delay: 0s; }
+.sn-player.sn-in-pip .sn-frame { opacity: 0; } /* 画中画时 <video> 原地会画浏览器自己的占位字，藏掉；画中画窗口不受影响 */
+.sn-audio-row { display: flex; align-items: center; gap: 12px; max-width: 720px; margin-top: 16px; padding: 10px 14px 10px 10px; border-radius: var(--sn-r-lg); border: 1px solid var(--sn-line); }
+.sn-audio-row .sn-play { all: unset; width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--sn-accent); color: var(--sn-on-primary); cursor: pointer; transition: transform .1s, background-color .15s; }
+.sn-audio-row .sn-play:active { transform: scale(var(--sn-press-icon)); }
+.sn-audio-row .sn-play .sn-ic { width: 16px; height: 16px; }
+.sn-audio-row .sn-who { display: grid; min-width: 0; flex: 0 1 auto; max-width: 40%; } .sn-audio-row .sn-who b, .sn-audio-row .sn-who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .sn-audio-row .sn-who b { font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); } .sn-audio-row .sn-who span { font: 400 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+/* 波形：三层叠放（底层、悬停预览、播放过），后两层按进度用 clip-path 裁出来，连续地亮过去 */
+.sn-wave { position: relative; flex: 1; min-width: 64px; overflow: hidden; height: 32px; cursor: pointer; touch-action: none; outline: none; border-radius: 4px; --sn-p: 0; --sn-h: 0; }
+.sn-wave:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-wave .sn-wv { position: absolute; inset: 0; display: flex; align-items: center; gap: 2px; pointer-events: none; }
+.sn-wave .sn-wv i { flex: 1; min-width: 2px; border-radius: 1px; background: var(--sn-fill-active); }
+.sn-wave .sn-wv.sn-pv { clip-path: inset(0 calc((1 - var(--sn-h)) * 100%) 0 0); }
+.sn-wave .sn-wv.sn-pv i { background: color-mix(in srgb, var(--sn-label) 32%, var(--sn-fill-active)); }
+.sn-wave .sn-wv.sn-lit { clip-path: inset(0 calc((1 - var(--sn-p)) * 100%) 0 0); }
+.sn-wave .sn-wv.sn-lit i { background: var(--sn-accent); }
+.sn-audio-row .sn-time { min-width: 30px; text-align: right; font: 400 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+
+/* ———— 上传 ———— */
+.sn-drop { display: grid; justify-items: center; gap: 6px; padding: 28px 24px; border-radius: var(--sn-r-lg); border: 1px dashed var(--sn-line-control-hover); background: var(--sn-fill-hover); text-align: center; cursor: pointer; outline: none;
+  transition: border-color .15s var(--sn-ease-out), background-color .15s var(--sn-ease-out), box-shadow .15s; }
+@media (hover: hover) {
+.sn-drop:hover { border-color: var(--sn-label3); } }
+.sn-drop:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-drop.sn-over { border-style: solid; border-color: var(--sn-label); background: var(--sn-fill-active); }
+.sn-drop .sn-art { width: 40px; height: 40px; margin-bottom: 4px; border-radius: 12px; display: grid; place-items: center; background: var(--sn-raised); color: var(--sn-label2); box-shadow: var(--sn-card-shadow), inset 0 0 0 1px var(--sn-line); transition: translate .25s var(--sn-ease-out-strong), scale .25s var(--sn-ease-out-strong); }
+.sn-drop .sn-art .sn-ic { width: 20px; height: 20px; }
+.sn-drop.sn-over .sn-art { translate: 0 -3px; scale: 1.06; }
+.sn-drop b { font: 500 calc(13px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans); } .sn-drop b u { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--sn-line-control); }
+.sn-drop .sn-hint { font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+.sn-files { display: grid; position: relative; }
+.sn-file { display: flex; align-items: center; gap: 12px; padding: 10px 6px 10px 4px; }
+.sn-file + .sn-file { }
+.sn-file .sn-fi { width: 32px; height: 32px; flex: none; border-radius: var(--sn-r-sm); display: grid; place-items: center; background: var(--sn-fill-subtle); color: var(--sn-label2); }
+.sn-file .sn-fi .sn-ic { width: 16px; height: 16px; }
+.sn-file .sn-fm { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.sn-file .sn-fm b { font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sn-file .sn-fm .sn-st { display: flex; gap: 6px; font: 400 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); font-variant-numeric: tabular-nums; }
+.sn-file .sn-fm .sn-pbar { height: 3px; transition: opacity .2s, height .25s var(--sn-ease-in-out), margin .25s var(--sn-ease-in-out); }
+.sn-file.sn-done .sn-fm .sn-pbar, .sn-file.sn-bad .sn-fm .sn-pbar { opacity: 0; height: 0; margin-top: -4px; }
+.sn-file.sn-done .sn-fi { color: var(--sn-success); }
+.sn-file.sn-bad .sn-fm .sn-st { color: var(--sn-danger); } .sn-file.sn-bad .sn-fi { color: var(--sn-danger); }
+.sn-upl-grid { display: grid; grid-template-columns: repeat(auto-fill, 88px); gap: 10px; }
+.sn-upl { position: relative; width: 88px; height: 88px; border-radius: var(--sn-r-md); overflow: hidden; background: var(--sn-g); }
+.sn-upl .sn-ov { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .35); transition: opacity .3s; }
+.sn-upl.sn-done .sn-ov { opacity: 0; }
+.sn-upl .sn-pring { --sn-s: 28px; background: conic-gradient(#fff calc(var(--sn-p) * 1turn), rgba(255, 255, 255, .25) 0); }
+.sn-upl-add { all: unset; box-sizing: border-box; width: 88px; height: 88px; border-radius: var(--sn-r-md); border: 1px dashed var(--sn-line-control-hover); display: grid; place-items: center; color: var(--sn-label3); cursor: pointer; transition: border-color .15s, color .15s, background-color .15s; }
+@media (hover: hover) {
+.sn-upl-add:hover { border-color: var(--sn-label3); color: var(--sn-label); background: var(--sn-fill-hover); } }
+}

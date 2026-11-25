@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import { Search, SearchX, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { isDatabaseSetting, type VisualConfigValues } from "@features/visual-config-editor";
 import { Callout, DialogIcon, HUE_GLYPH, SettingGroup, TextInput, useScrollFade } from "@code-proxy/ui";

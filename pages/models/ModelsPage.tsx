@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Search, Trash2 } from "@code-proxy/ui/icons";
 import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { ConfirmModal, TextInput } from "@code-proxy/ui";

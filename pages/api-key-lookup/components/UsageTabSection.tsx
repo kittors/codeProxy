@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { Activity, CalendarClock, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
+import { Activity, CalendarClock, Coins, MessagesSquare, ShieldCheck, Sigma } from "@code-proxy/ui/icons";
 import { AnimatedNumber, Button, ScrollFade, cn, surface } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
@@ -94,7 +94,7 @@ function HeatmapTooltip({
           <span className="text-right">${(point?.cost ?? 0).toFixed(4)}</span>
         </span>
       ) : (
-        <span className="block text-canvas/60">
+        <span className="block opacity-70">
           {t("apikey_lookup.no_usage_on_day")}
         </span>
       )}

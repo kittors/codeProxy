@@ -1,4 +1,4 @@
-import { Network } from "lucide-react";
+import { Network } from "@code-proxy/ui/icons";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Plus } from "@code-proxy/ui/icons";
 import type { OpenAIProvider } from "@code-proxy/api-client";
 import { Button, ScrollFade } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";

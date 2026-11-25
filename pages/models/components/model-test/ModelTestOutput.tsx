@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Download, ShieldAlert, ShieldCheck } from "@code-proxy/ui/icons";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type { ModelTestImage, ModelTestPayload, ModelTestResult } from "@code-proxy/api-client";
 import { formatBytes } from "./modelTestModes";

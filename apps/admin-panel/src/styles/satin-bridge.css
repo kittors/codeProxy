@@ -11,12 +11,16 @@
 @import "satin-ui/css/buttons.css";
 @import "satin-ui/css/form.css";
 @import "satin-ui/css/input.css";
+@import "satin-ui/css/picker.css";
 @import "satin-ui/css/overlay.css";
 @import "satin-ui/css/feedback.css";
 @import "satin-ui/css/data.css";
+@import "satin-ui/css/list.css";
 @import "satin-ui/css/scroll.css";
 @import "satin-ui/css/number.css";
 @import "satin-ui/css/shell.css";
+@import "satin-ui/css/header.css";
+@import "satin-ui/css/charts.css";
 
 @layer base {
   /* Satin 排版细节：中英文与数字自动留空，文件名与代码不插空。 */
@@ -41,27 +45,27 @@
 
 /*
  * 双向令牌桥接（浅色与深色）：
- * 1) 默认采用 Satin 原生 8px 利落控件圆角（覆盖 tokens.css 中无 data-radius 时的 pill 回退），
+ * 1) 默认遵循 Satin 官方 DEFAULTS.radius = "pill"（胶囊按钮/搜索框/分段器 + 圆形分页页码），
  *    同时完整兼容 [data-radius="6"|"8"|"10"|"pill"] 切换；
  * 2) 把外观设置（--cp-pref-* / --color-*）同步喂给 Satin 令牌（--sn-accent / --sn-on-primary /
  *    --sn-font-scale / --sn-success / --sn-warning / --sn-danger），让全部 Satin 组件随外观设置联动；
  * 3) 同时支持 .dark 与 [data-theme="dark"]，确保单测或旧入口只加 .dark 类时 Satin 同样进入深色模式。
  */
 :root:not([data-radius]),
-[data-radius="8"] {
-  --sn-btn-r: 8px;
+[data-radius="pill"] {
+  --sn-btn-r: var(--sn-r-full);
 }
 
 [data-radius="6"] {
   --sn-btn-r: 6px;
 }
 
-[data-radius="10"] {
-  --sn-btn-r: 10px;
+[data-radius="8"] {
+  --sn-btn-r: 8px;
 }
 
-[data-radius="pill"] {
-  --sn-btn-r: var(--sn-r-full);
+[data-radius="10"] {
+  --sn-btn-r: 10px;
 }
 
 :root,
@@ -235,23 +239,41 @@
     --sn-px: 13px;
     font-size: calc(0.9375rem * var(--sn-font-scale, 1));
   }
-  [data-radius="pill"] .sn-input:not(textarea) {
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-input:not(textarea) {
     --sn-px: 14px;
   }
-  [data-radius="pill"] .sn-input.sn-sm:not(textarea) {
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-input.sn-sm:not(textarea) {
     --sn-px: 12px;
   }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-btn:not(.sn-ibtn) {
+    --sn-px: 1rem;
+  }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-btn.sn-sm:not(.sn-ibtn) {
+    --sn-px: 0.875rem;
+  }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-btn.sn-xs:not(.sn-ibtn) {
+    --sn-px: 0.625rem;
+  }
 
-  /* 输入框前后缀：对齐 Satin 8px 圆角同心间距，非胶囊态更紧凑利落。 */
+  /* 输入框前后缀：对齐 Satin 圆角同心间距；胶囊态自动让开左侧半圆弧线。 */
   .sn-ib > .sn-pre {
     left: 11px;
   }
-  [data-radius="pill"] .sn-ib > .sn-pre {
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-ib > .sn-pre {
     left: 13px;
+  }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-ib.sn-has-pre > .sn-input {
+    padding-left: 36px;
+  }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-ib.sn-has-pre > .sn-input.sn-sm {
+    padding-left: 34px;
   }
   /* 非按钮类后置图标/单位文本与前置图标左右光学对称，按钮保留 right: 4px 严格同心圆。 */
   .sn-ib > .sn-post:not(:has(button)) {
     right: 11px;
+  }
+  :is([data-radius="pill"], :root:not([data-radius])) .sn-ib > .sn-post:not(:has(button)) {
+    right: 13px;
   }
   .sn-ib.sn-has-pre > .sn-input {
     padding-left: 34px;

@@ -1,4 +1,4 @@
-import { FileDown } from "lucide-react";
+import { FileDown } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, ConfirmModal, Modal } from "@code-proxy/ui";
 import type { ProviderImportDiff } from "../provider-import-export";

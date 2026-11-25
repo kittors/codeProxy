@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "@code-proxy/ui/icons";
 import { Button, TextInput } from "@code-proxy/ui";
 import type { SecretDraft } from "./model";
 

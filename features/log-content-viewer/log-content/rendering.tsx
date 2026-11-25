@@ -13,7 +13,7 @@ import {
   User,
   Wrench,
   Zap,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { Modal, surface, useScrollFade } from "@code-proxy/ui";
 
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;

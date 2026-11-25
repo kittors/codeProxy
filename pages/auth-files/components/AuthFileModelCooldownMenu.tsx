@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, RotateCw, Timer } from "lucide-react";
+import { ChevronDown, Loader2, RotateCw, Timer } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@code-proxy/ui";
 import {

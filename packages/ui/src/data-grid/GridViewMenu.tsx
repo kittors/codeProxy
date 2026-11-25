@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
 import { GridPopover } from "./GridPopover";
-import type { DataGridColumn, GridDensity } from "./types";
+import type { DataGridColumn, GridDensity, GridLines } from "./types";
 
 const DENSITIES: readonly GridDensity[] = ["compact", "default", "comfortable"];
+const LINES_OPTIONS: readonly GridLines[] = ["row", "grid"];
 
 /** 三条横线的间距示意三档密度，比文字更快认出来。 */
 function DensityGlyph({ density }: { density: GridDensity }) {
@@ -36,6 +37,8 @@ export function GridViewMenu<T>({
   columns,
   density,
   onDensityChange,
+  lines,
+  onLinesChange,
   hiddenColumnIds,
   onHiddenColumnIdsChange,
   onReset,
@@ -43,6 +46,9 @@ export function GridViewMenu<T>({
   columns: readonly DataGridColumn<T>[];
   density: GridDensity;
   onDensityChange: (density: GridDensity) => void;
+  /** Satin 表格线型（行线 / 网格）；传入后在视图菜单中提供分段切换。 */
+  lines?: GridLines;
+  onLinesChange?: (lines: GridLines) => void;
   hiddenColumnIds: ReadonlySet<string>;
   onHiddenColumnIdsChange: (ids: Set<string>) => void;
   onReset: () => void;
@@ -82,12 +88,13 @@ export function GridViewMenu<T>({
         align="end"
         label={t("data_grid.view")}
       >
-        <div className="flex w-64 flex-col p-2">
-          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold text-ink">
+        <div className="flex w-64 flex-col p-2.5">
+          <p className="px-1.5 pb-1.5 pt-0.5 text-xs font-semibold text-[var(--sn-label)]">
             {t("data_grid.density")}
           </p>
           <div
-            className="grid grid-cols-3 gap-1 rounded-[var(--sn-btn-r)] bg-track p-1"
+            className="sn-seg sn-sm !grid w-full"
+            data-ssr=""
             role="radiogroup"
             aria-label={t("data_grid.density")}
           >
@@ -99,14 +106,10 @@ export function GridViewMenu<T>({
                   type="button"
                   role="radio"
                   aria-checked={active}
+                  aria-selected={active}
                   data-autofocus={active ? "" : undefined}
                   onClick={() => onDensityChange(item)}
-                  className={[
-                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
-                    active
-                      ? "bg-surface text-ink shadow-control"
-                      : "text-ink-2 hover:bg-hover hover:text-ink",
-                  ].join(" ")}
+                  className="!inline-flex items-center justify-center gap-1 !px-2"
                 >
                   <DensityGlyph density={item} />
                   {t(`data_grid.density_${item}`)}
@@ -115,7 +118,39 @@ export function GridViewMenu<T>({
             })}
           </div>
 
-          <p className="mt-3 border-t border-line px-2 pb-1 pt-3 text-xs font-semibold text-ink">
+          {lines && onLinesChange ? (
+            <>
+              <p className="mt-3 border-t border-[var(--sn-line)] px-1.5 pb-1.5 pt-3 text-xs font-semibold text-[var(--sn-label)]">
+                {t("data_grid.lines")}
+              </p>
+              <div
+                className="sn-seg sn-sm !grid w-full"
+                data-ssr=""
+                role="radiogroup"
+                aria-label={t("data_grid.lines")}
+              >
+                {LINES_OPTIONS.map((item) => {
+                  const active = item === lines;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      aria-selected={active}
+                      onClick={() => onLinesChange(item)}
+                      className="!inline-flex items-center justify-center gap-1.5 !px-2"
+                    >
+                      <Icon name={item === "grid" ? "layout-grid" : "rows-3"} size={13} />
+                      {t(`data_grid.lines_${item}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+
+          <p className="mt-3 border-t border-[var(--sn-line)] px-1.5 pb-1 pt-3 text-xs font-semibold text-[var(--sn-label)]">
             {t("data_grid.columns")}
           </p>
           <div

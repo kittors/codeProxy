@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Zap } from "@code-proxy/ui/icons";
 import { Loader } from "satin-ui/react";
 import { formatLatency } from "@features/provider-latency";
 

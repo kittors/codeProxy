@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowLeftRight, ArrowRight, Tags } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Tags } from "@code-proxy/ui/icons";
 import type {
   ContentModerationBindingOperation,
   ContentModerationChannelView,

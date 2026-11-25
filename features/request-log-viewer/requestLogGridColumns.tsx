@@ -8,7 +8,7 @@ import {
   type DataGridColumn,
   type GridFilterOption,
 } from "@code-proxy/ui";
-import { AlertTriangle, Copy, FileInput, FileOutput, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, Copy, FileInput, FileOutput, MoreHorizontal } from "@code-proxy/ui/icons";
 import type { TFunction } from "i18next";
 import {
   RequestLogAgentCell,

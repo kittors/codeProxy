@@ -85,7 +85,7 @@ function HeaderLabel({
         content={
           <span className="block max-w-[18rem]">
             <span className="mb-0.5 block text-xs font-semibold">{header}</span>
-            <span className="block text-xs text-canvas/75">{hint}</span>
+            <span className="block text-xs opacity-75">{hint}</span>
           </span>
         }
       >
@@ -270,7 +270,7 @@ export function DataGridHeader<T>({
                   title={t("common.reorder_column", { column: column.header })}
                   onPointerDown={(event) => columnGrip?.onPointerDown(column, event, true)}
                   onKeyDown={(event) => columnGrip?.onKeyDown(column, event)}
-                  className="absolute left-1/2 top-0 z-[2] inline-flex h-3 w-7 -translate-x-1/2 cursor-grab touch-none items-center justify-center rounded-b-md text-ink-4 opacity-0 transition-[opacity,color] duration-150 ease-soft hover:text-ink-2 focus-visible:opacity-100 group-hover/head:opacity-100 active:cursor-grabbing"
+                  className="sn-grip absolute left-1/2 top-0 z-[2] !h-3 !w-7 -translate-x-1/2 rounded-b-md opacity-0 focus-visible:opacity-100 group-hover/head:opacity-100"
                 >
                   <Icon name="grip-vertical" size={12} className="rotate-90" />
                 </button>
@@ -295,11 +295,13 @@ export function DataGridHeader<T>({
                     aria-describedby={hintId}
                     onClick={() => onSortClick?.(column)}
                     className={[
-                      "group/sort relative inline-flex min-w-0 max-w-full items-center rounded-md text-xs font-medium transition-colors",
-                      direction
-                        ? "text-[var(--sn-label)]"
-                        : "text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
-                    ].join(" ")}
+                      "sn-sort group/sort relative min-w-0 max-w-full",
+                      direction ? "sn-on" : "",
+                      direction === "desc" ? "sn-desc" : "",
+                      reverse ? "flex-row-reverse" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
                     <HeaderLabel header={column.header} hint={column.headerHint} />
                     <SortGlyph direction={direction} reverse={reverse} />
@@ -335,18 +337,18 @@ export function DataGridHeader<T>({
                     data-active={filterActive ? "true" : undefined}
                     onClick={(event) => onOpenMenu(column, event.currentTarget)}
                     className={[
-                      "absolute top-1/2 z-[1] inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md transition-[opacity,background-color,color] duration-150 ease-soft",
+                      "sn-btn sn-ghost sn-sm sn-ibtn sn-round absolute top-1/2 z-[1] !h-6 !w-6 -translate-y-1/2",
                       reverse ? "left-0.5" : "right-1",
                       filterActive || menuOpen
-                        ? "bg-accent-soft text-accent-ink opacity-100"
-                        : "bg-[var(--grid-head-bg)] text-ink-3 opacity-0 hover:bg-hover hover:text-ink group-hover/head:opacity-100 focus-visible:opacity-100",
+                        ? "sn-selected opacity-100"
+                        : "opacity-0 group-hover/head:opacity-100 focus-visible:opacity-100",
                     ].join(" ")}
                   >
                     <Icon name="list-filter" size={13} />
                     {filterActive ? (
                       <span
                         aria-hidden="true"
-                        className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--cp-focus)]"
+                        className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--sn-accent)]"
                       />
                     ) : null}
                   </button>

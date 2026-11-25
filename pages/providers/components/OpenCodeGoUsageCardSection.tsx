@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Gauge, RefreshCcw } from "lucide-react";
+import { Gauge, RefreshCcw } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
 import { QuotaBar } from "@features/quota-preview/QuotaBar";

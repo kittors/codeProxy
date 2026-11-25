@@ -63,13 +63,9 @@ export function GridColumnMenu<T>({
       <button
         type="button"
         aria-pressed={active}
+        aria-selected={active}
         onClick={() => chooseSort(direction)}
-        className={[
-          "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
-          active
-            ? "bg-surface text-ink shadow-control"
-            : "text-ink-2 hover:bg-hover hover:text-ink",
-        ].join(" ")}
+        className="!inline-flex items-center justify-center gap-1.5 !px-2"
       >
         <Icon name={direction === "asc" ? "arrow-up" : "arrow-down"} size={13} />
         {direction === "asc" ? t("data_grid.sort_asc") : t("data_grid.sort_desc")}
@@ -78,9 +74,9 @@ export function GridColumnMenu<T>({
   };
 
   return (
-    <div className="flex w-[18.5rem] max-w-[calc(100vw-2rem)] flex-col p-2">
-      <div className="flex min-h-7 items-center justify-between gap-2 px-2 pb-1.5">
-        <span className="truncate text-xs font-semibold text-ink">{column.header}</span>
+    <div className="flex w-[18.5rem] max-w-[calc(100vw-2rem)] flex-col p-2.5">
+      <div className="flex min-h-7 items-center justify-between gap-2 px-1.5 pb-1.5">
+        <span className="truncate text-xs font-semibold text-[var(--sn-label)]">{column.header}</span>
         {onHide ? (
           <button
             type="button"
@@ -88,7 +84,7 @@ export function GridColumnMenu<T>({
               onHide();
               onClose();
             }}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md text-xs text-ink-3 transition-colors hover:text-ink"
+            className="sn-textbtn sn-quiet !h-6 !text-xs"
           >
             <Icon name="eye-off" size={12} />
             {t("data_grid.hide_column")}
@@ -98,7 +94,8 @@ export function GridColumnMenu<T>({
 
       {canSort ? (
         <div
-          className="grid grid-cols-2 gap-1 rounded-[var(--sn-btn-r)] bg-track p-1"
+          className="sn-seg sn-sm !grid w-full"
+          data-ssr=""
           role="group"
           aria-label={t("data_grid.sort")}
         >

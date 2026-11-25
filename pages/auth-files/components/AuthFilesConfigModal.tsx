@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { EyeOff, Replace } from "lucide-react";
+import { EyeOff, Replace } from "@code-proxy/ui/icons";
 import { Button, Modal, ScrollFade, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import type { AuthFilesConfigModalTab } from "../AuthFilesPage";
 import type { TFunction } from "i18next";

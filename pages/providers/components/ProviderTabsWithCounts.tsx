@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Cloud, SquareTerminal } from "lucide-react";
+import { Cloud, SquareTerminal } from "@code-proxy/ui/icons";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";

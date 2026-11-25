@@ -305,15 +305,14 @@ export function TooltipBubble({
 /**
  * 提示气泡里成组展示的小标签（模型名、渠道名、路由路径）。
  *
- * 气泡是墨色实心、深色模式下反转成浅色，所以标签的底、边、字都取 canvas 的透明度——跟着气泡
- * 一起反转，任何主题下都是「气泡上浅浅一层」。不要在气泡内容里写 text-slate-* / dark:text-white
- * 这类固定颜色：深色模式下气泡是浅色的，白字会直接看不见。
+ * 对齐 Satin Tooltip（浅色 #1d1d1f / 深色 #3a3a3c，均为深底 + 亮白字 --sn-tip-fg），
+ * 小标签始终在深色气泡上透出一层柔和微白底色与高对比亮字。
  */
 export function TooltipChip({ children, mono = false }: { children: ReactNode; mono?: boolean }) {
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-md bg-canvas/12 px-2 py-0.5 text-xs text-canvas",
+        "inline-flex items-center gap-1 rounded-md bg-white/14 px-2 py-0.5 text-xs text-[var(--sn-tip-fg)]",
         mono ? "font-mono" : "",
       ].join(" ")}
     >

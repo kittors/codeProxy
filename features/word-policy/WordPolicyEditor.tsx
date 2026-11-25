@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, RotateCcw, Save, Trash2 } from "lucide-react";
+import { FlaskConical, RotateCcw, Save, Trash2 } from "@code-proxy/ui/icons";
 import type {
   WordPolicyInput,
   WordPolicyLimits,
