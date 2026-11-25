@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Asterisk, Plus, X } from "lucide-react";
+import { Asterisk, Plus, X } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { HUE_GLYPH, HUE_SOFT, cn, controlMultilineSurface, floatingPanelSurface } from "@code-proxy/ui";
 import { isWildcardPattern, matchingCatalogModels, modelPatternMatches, normalizeModelPattern } from "../model/modelMatch";

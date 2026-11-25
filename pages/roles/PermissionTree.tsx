@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, FileKey2, Folder, PanelTop } from "lucide-react";
+import { ChevronRight, FileKey2, Folder, PanelTop } from "@code-proxy/ui/icons";
 import { Button, Checkbox, iconHueClass } from "@code-proxy/ui";
 import type { MenuIdentity, PermissionIdentity } from "@code-proxy/api-client";
 

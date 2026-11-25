@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, RefreshCw, ShieldCheck } from "lucide-react";
+import { Download, RefreshCw, ShieldCheck } from "@code-proxy/ui/icons";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
 import type {
   AuthFileItem,

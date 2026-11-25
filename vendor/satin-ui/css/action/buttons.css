@@ -1,0 +1,201 @@
+/* ———— 按钮：6 种，按强弱排 ———— */
+@layer satin {
+.sn-btn { --sn-h: 32px; --sn-px: 12px; --sn-r: var(--sn-btn-r); --sn-fs: 13px; --sn-icon: 16px; --sn-bg: transparent; --sn-fg: var(--sn-label); --sn-line: transparent;
+  all: unset; box-sizing: border-box; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: var(--sn-h); padding: 0 var(--sn-px); border-radius: var(--sn-r); font: 500 calc(var(--sn-fs) * var(--sn-font-scale, 1))/1 var(--sn-sans); white-space: nowrap; cursor: pointer; user-select: none;
+  color: var(--sn-fg); background: var(--sn-bg); box-shadow: inset 0 0 0 var(--sn-bw-ctrl, 1px) var(--sn-line), var(--sn-b-lift-on, 0 0 0 0 transparent);
+  transition: transform calc(100ms * var(--sn-motion-scale, 1)) var(--sn-ease-out), background-color var(--sn-dur-fast, 120ms) var(--sn-ease-out), color var(--sn-dur-fast, 120ms) var(--sn-ease-out), box-shadow var(--sn-dur-fast, 120ms) var(--sn-ease-out), opacity var(--sn-dur-fast, 120ms) var(--sn-ease-out); }
+.sn-btn.sn-sm { --sn-h: 28px; --sn-px: 10px; --sn-r: max(4px, calc(var(--sn-btn-r) - 2px)); --sn-fs: 12px; --sn-icon: 14px; }
+.sn-btn.sn-lg { --sn-h: 40px; --sn-px: 16px; --sn-r: calc(var(--sn-btn-r) + 2px); --sn-fs: 14px; }
+.sn-btn .sn-ic { width: var(--sn-icon); height: var(--sn-icon); transition: transform calc(160ms * var(--sn-motion-scale, 1)) var(--sn-ease-out); }
+.sn-btn .sn-ic.sn-after { margin-right: -2px; }
+@media (hover: hover) {
+.sn-btn:hover .sn-ic.sn-after { transform: translateX(2.5px); }
+.sn-btn:not(.sn-ibtn):hover .sn-ic:not(.sn-after):not(.sn-caret) { transform: scale(1.06); } }
+.sn-btn .sn-ic.sn-caret { width: 12px; height: 12px; opacity: .6; margin-right: -3px; transition: transform .2s var(--sn-ease-out-strong); } /* sp-ok: 箭头图标自带留白，往右贴近边缘的视觉补偿 */
+
+.sn-primary { --sn-bg: var(--sn-b-primary); --sn-fg: var(--sn-b-on-primary); }
+.sn-primary.sn-is-hover { --sn-bg: var(--sn-b-primary-hover); }
+@media (hover: hover) {
+.sn-primary:hover { --sn-bg: var(--sn-b-primary-hover); } }
+.sn-primary:active, .sn-primary.sn-is-active { --sn-bg: var(--sn-b-primary-active); }
+.sn-secondary { --sn-bg: var(--sn-b-outline); --sn-line: var(--sn-b-outline-line); --sn-b-lift-on: var(--sn-b-lift); }
+.sn-secondary.sn-is-hover { --sn-bg: var(--sn-b-outline-hover); --sn-line: var(--sn-b-outline-line-hover); }
+@media (hover: hover) {
+.sn-secondary:hover { --sn-bg: var(--sn-b-outline-hover); --sn-line: var(--sn-b-outline-line-hover); } }
+.sn-secondary:active, .sn-secondary.sn-is-active { --sn-bg: var(--sn-b-outline-active); }
+.sn-tertiary { --sn-bg: var(--sn-b-soft); }
+.sn-tertiary.sn-is-hover { --sn-bg: var(--sn-b-soft-hover); }
+@media (hover: hover) {
+.sn-tertiary:hover { --sn-bg: var(--sn-b-soft-hover); } }
+.sn-tertiary:active, .sn-tertiary.sn-is-active { --sn-bg: var(--sn-b-soft-active); }
+.sn-ghost { --sn-fg: var(--sn-label2); }
+.sn-ghost.sn-is-hover { --sn-bg: var(--sn-b-ghost-hover); --sn-fg: var(--sn-label); }
+@media (hover: hover) {
+.sn-ghost:hover { --sn-bg: var(--sn-b-ghost-hover); --sn-fg: var(--sn-label); } }
+.sn-ghost:active, .sn-ghost.sn-is-active { --sn-bg: var(--sn-b-ghost-active); --sn-fg: var(--sn-label); }
+.sn-danger { --sn-bg: var(--sn-b-danger); --sn-fg: #fff; }
+.sn-danger.sn-is-hover { --sn-bg: var(--sn-b-danger-hover); }
+@media (hover: hover) {
+.sn-danger:hover { --sn-bg: var(--sn-b-danger-hover); } }
+.sn-danger:active, .sn-danger.sn-is-active { --sn-bg: var(--sn-b-danger-active); }
+/* 浅红底上的红字：浅色主题用深一档的红（#b42318，在这层底上对比度约 5.7）；原来用 --sn-danger 只有 4.28，不到 4.5 */
+.sn-danger-soft { --sn-bg: var(--sn-b-danger-soft); --sn-fg: var(--sn-b-danger-active); }
+:where([data-theme="dark"]) .sn-danger-soft { --sn-fg: var(--sn-danger); }
+@media (prefers-color-scheme: dark) { :where(:root:not([data-theme])) .sn-danger-soft { --sn-fg: var(--sn-danger); } }
+.sn-danger-soft.sn-is-hover { --sn-bg: var(--sn-b-danger-soft-hover); }
+@media (hover: hover) {
+.sn-danger-soft:hover { --sn-bg: var(--sn-b-danger-soft-hover); } }
+.sn-danger-soft:active, .sn-danger-soft.sn-is-active { --sn-bg: var(--sn-b-danger-soft-active); }
+
+.sn-btn:active, .sn-btn.sn-is-active { transform: scale(var(--sn-press)); }
+.sn-btn:focus-visible, .sn-btn.sn-is-focus { outline: 2px solid var(--sn-focus); outline-offset: 2px; }
+.sn-btn:disabled, .sn-btn[aria-disabled="true"], .sn-btn.sn-is-disabled { opacity: .4; cursor: not-allowed; transform: none; } /* 原生 disabled 也算：不能点就不是手型 */
+
+/* 等待和成功：普通宽度的按钮文字淡出、转圈或对勾在正中，宽度不变；整行宽的按钮图标贴在文字左边 */
+.sn-btn .sn-label { position: relative; font-variant-numeric: tabular-nums; }
+.sn-btn .sn-txt { display: inline-flex; align-items: center; gap: 6px; transition: opacity .14s var(--sn-ease-out); } /* 等待按钮里带图标：图标和文字一行（prepBusy 把图标也包进来了） */
+.sn-btn .sn-spin, .sn-btn .sn-tick { position: absolute; right: calc(100% + 7px); top: 50%; width: 13px; height: 13px; margin-top: -6.5px; opacity: 0; pointer-events: none; } /* sp-ok: 13px 的转圈用负外边距居中 */
+.sn-btn:not(.sn-block) .sn-spin, .sn-btn:not(.sn-block) .sn-tick { right: auto; left: 50%; margin-left: -6.5px; } /* sp-ok: 13px 的转圈用负外边距居中 */
+.sn-btn:not(.sn-block).sn-busy .sn-txt, .sn-btn:not(.sn-block).sn-ok .sn-txt { opacity: 0; }
+.sn-btn .sn-spin { border-radius: 50%; border: 1.6px solid color-mix(in srgb, currentColor 22%, transparent); border-top-color: currentColor; border-right-color: currentColor; animation: sn-spin .78s cubic-bezier(.55, .15, .45, .85) infinite; transition: opacity .16s var(--sn-ease-out), transform .18s var(--sn-ease-out); transform: scale(.78); }
+.sn-btn.sn-busy .sn-spin { opacity: .92; transform: scale(1); }
+.sn-btn .sn-tick { transform: scale(.4); transition: opacity .12s var(--sn-ease-out), transform .26s var(--sn-ease-overshoot); }
+.sn-btn.sn-ok .sn-tick { opacity: 1; transform: none; }
+.sn-btn.sn-busy, .sn-btn.sn-ok { pointer-events: none; }
+.sn-btn .sn-sheen { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.sn-btn .sn-sheen::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 42%; transform: translateX(-130%) skewX(-14deg);
+  background: var(--sn-grad-sheen, linear-gradient(90deg, transparent, rgba(255, 255, 255, .28), transparent)); }
+/* 深色主题的主按钮是浅底，白色光泽扫过去看不见，所以不扫，成功只靠对勾和文字变化 */
+[data-theme="dark"] .sn-primary .sn-sheen { display: none; }
+.sn-btn.sn-ok .sn-sheen::after { animation: sn-sheen .7s var(--sn-ease-in-out) .06s; }
+@keyframes sn-sheen { to { transform: translateX(340%) skewX(-14deg); } }
+@keyframes sn-spin { to { transform: rotate(1turn); } }
+
+/* ———— 纯图标按钮：默认无面，悬停出现底色、图标变深；按下缩到 0.92 ———— */
+.sn-ibtn { --sn-h: 32px; --sn-icon: 18px; width: var(--sn-h); padding: 0; }
+.sn-ibtn.sn-sm { --sn-h: 28px; --sn-icon: 16px; }
+.sn-ibtn.sn-round { --sn-r: 999px; }
+.sn-ibtn:active, .sn-ibtn.sn-is-active { transform: scale(var(--sn-press-icon)); }
+.sn-ibtn.sn-selected { --sn-bg: var(--sn-b-soft-active); --sn-fg: var(--sn-label); }
+.sn-ibtn .sn-count { position: absolute; top: -4px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--sn-accent); color: var(--sn-on-primary);
+  font: 600 calc(10px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); font-variant-numeric: tabular-nums; text-align: center; box-shadow: 0 0 0 2px var(--sn-raised); animation: sn-pop .26s var(--sn-ease-overshoot); }
+.sn-ibtn .sn-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--sn-accent); box-shadow: 0 0 0 2px var(--sn-raised); }
+@keyframes sn-pop { from { transform: scale(.4); opacity: 0; } }
+.sn-swap { position: relative; display: grid; place-items: center; }
+.sn-swap > * { grid-area: 1 / 1; display: grid; place-items: center; transition: opacity .14s var(--sn-ease-out), transform .22s var(--sn-ease-out-strong); }
+.sn-swap > .sn-b, .sn-swap.sn-on > .sn-a { opacity: 0; transform: scale(.6) rotate(-12deg); }
+.sn-swap.sn-on > .sn-b { opacity: 1; transform: none; }
+
+/* ———— 纯文字 ———— */
+/* 行内链接：放在句子里，一条淡下划线，悬停时变实 */
+.sn-link { all: unset; cursor: pointer; color: var(--sn-label); text-decoration: underline 1px; text-decoration-color: var(--sn-line-control); text-underline-offset: 3px;
+  transition: text-decoration-color .12s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-link:hover { text-decoration-color: currentColor; } }
+.sn-link:focus-visible { outline: 2px solid var(--sn-focus); outline-offset: 2px; border-radius: 2px; }
+/* 文字按钮：独立的纯文字操作（查看全部、忘记密码、取消），悬停时出现一层底色，按下再深一档 */
+.sn-textbtn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 6px; margin: 0 -6px;
+  border-radius: max(4px, calc(var(--sn-btn-r) - 2px)); font: 500 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label); white-space: nowrap;
+  transition: background-color .12s var(--sn-ease-out), color .12s var(--sn-ease-out), transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-textbtn:hover { background: var(--sn-b-ghost-hover); } }
+.sn-textbtn:active { background: var(--sn-b-ghost-active); transform: scale(var(--sn-press)); }
+.sn-textbtn.sn-quiet { color: var(--sn-label2); font-weight: 400; }
+@media (hover: hover) {
+.sn-textbtn.sn-quiet:hover { color: var(--sn-label); } }
+.sn-textbtn.sn-danger-text { color: var(--sn-danger); }
+@media (hover: hover) {
+.sn-textbtn.sn-danger-text:hover { background: var(--sn-b-danger-soft); } }
+.sn-textbtn .sn-ic { width: 14px; height: 14px; transition: transform .15s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-textbtn:hover .sn-ic.sn-after { transform: translateX(2px); } }
+.sn-textbtn:focus-visible { outline: 2px solid var(--sn-focus); outline-offset: 0; }
+
+/* ———— 组合：按钮组、分裂按钮、菜单按钮 ———— */
+.sn-group { display: inline-flex; }
+.sn-group.sn-select { display: inline-flex; min-width: 0; }
+.sn-group > .sn-btn { border-radius: 0; }
+.sn-group > .sn-btn:not(.sn-btn ~ .sn-btn) { border-top-left-radius: var(--sn-r); border-bottom-left-radius: var(--sn-r); }
+.sn-group > .sn-btn:not(:has(~ .sn-btn)) { border-top-right-radius: var(--sn-r); border-bottom-right-radius: var(--sn-r); }
+.sn-group > .sn-secondary + .sn-secondary { margin-left: -1px; }
+.sn-group > .sn-btn:focus-visible { z-index: 1; }
+@media (hover: hover) {
+.sn-group > .sn-btn:hover { z-index: 1; } }
+.sn-group > .sn-btn:active, .sn-group > .sn-btn.sn-is-active { transform: none; }
+.sn-split > .sn-btn.sn-more { width: 30px; padding: 0; }
+.sn-split > .sn-btn.sn-more::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 1px; background: var(--sn-split-line, transparent); }
+.sn-split > .sn-primary.sn-more { --sn-split-line: rgba(255, 255, 255, .24); }
+[data-theme="dark"] .sn-split > .sn-primary.sn-more { --sn-split-line: rgba(0, 0, 0, .18); }
+/* 菜单或弹出面板打开时，触发它的按钮保持按下的底色，箭头转过来，和面板连成一体（.is-open 给浮在屏幕上的菜单和 Popover 用） */
+.sn-select.sn-open > [data-menubtn].sn-secondary, .sn-btn.sn-is-open.sn-secondary { --sn-bg: var(--sn-b-outline-active); --sn-line: var(--sn-b-outline-line-hover); }
+.sn-select.sn-open > [data-menubtn].sn-ghost, .sn-select.sn-open > [data-menubtn].sn-tertiary, .sn-btn.sn-is-open.sn-ghost, .sn-btn.sn-is-open.sn-tertiary { --sn-bg: var(--sn-b-soft-active); --sn-fg: var(--sn-label); }
+.sn-select.sn-open > [data-menubtn].sn-primary, .sn-btn.sn-is-open.sn-primary { --sn-bg: var(--sn-b-primary-active); }
+/* 分段按钮（主操作 + 箭头）展开时两半保持同一个颜色：只把箭头那半边压深，换成鲜艳的主色时会变成一深一浅两块。展开靠箭头转过来和下面接上的菜单表示 */
+.sn-split.sn-select.sn-open > .sn-btn.sn-more.sn-primary, .sn-split.sn-open > .sn-btn.sn-more.sn-primary, .sn-split > .sn-btn.sn-more.sn-primary.sn-is-open { --sn-bg: var(--sn-b-primary); }
+.sn-btn.sn-is-open.sn-danger-soft { --sn-bg: var(--sn-b-danger-soft-active); }
+.sn-select.sn-open > [data-menubtn] .sn-ic.sn-caret, .sn-select.sn-open > .sn-btn.sn-more .sn-ic, .sn-btn.sn-is-open .sn-ic.sn-caret { transform: rotate(180deg); }
+.sn-btn.sn-more .sn-ic { transition: transform .2s var(--sn-ease-out-strong); }
+
+/* ———— 芯片 ———— */
+.sn-chip { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 0; height: 28px; padding: 0 12px; border-radius: var(--sn-r-full); cursor: pointer; white-space: nowrap; /* 标签、筛选片不折行（AI 味清单"换行"） */
+  font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label2); box-shadow: inset 0 0 0 1px var(--sn-b-outline-line);
+  transition: background-color .14s var(--sn-ease-out), color .14s var(--sn-ease-out), box-shadow .14s var(--sn-ease-out), gap .2s var(--sn-ease-out-strong), transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-chip:hover { color: var(--sn-label); background: var(--sn-b-ghost-hover); } }
+.sn-chip:active { transform: scale(var(--sn-press)); }
+.sn-chip:focus-visible { outline: 2px solid var(--sn-focus); outline-offset: 2px; }
+.sn-chip .sn-ic { width: 0; height: 14px; opacity: 0; transition: width .2s var(--sn-ease-out-strong), opacity .14s var(--sn-ease-out); }
+.sn-chip.sn-on { color: var(--sn-label); background: var(--sn-b-soft-active); box-shadow: inset 0 0 0 1px transparent; gap: 6px; }
+.sn-chip.sn-on .sn-ic { width: 14px; opacity: 1; }
+.sn-chip.sn-tag { cursor: default; }
+.sn-chip.sn-tag:active { transform: none; }
+.sn-chip .sn-x { all: unset; box-sizing: border-box; cursor: pointer; width: 16px; height: 16px; margin-right: -6px; margin-left: 1px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--sn-label3); transition: color .12s, background-color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-chip .sn-x:hover { color: var(--sn-label); background: var(--sn-b-ghost-active); } }
+.sn-chip .sn-x .sn-ic { width: 10px; height: 10px; opacity: 1; }
+
+/* ———— Tooltip：浅色深底，深色主题用深灰（不反成白块）；可以带快捷键；限定排除 Markdown 的 .sn-md-callout.sn-tip ———— */
+.sn-tip:not(.sn-md-callout) { position: fixed; z-index: 90; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 4px 8px; min-height: 28px; border-radius: 6px;
+  background: var(--sn-tip-bg); color: var(--sn-tip-fg); box-shadow: var(--sn-tip-shadow); font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); white-space: nowrap;
+  opacity: 0; transform: translateY(4px) scale(.96); transition: opacity .13s var(--sn-ease-in), transform .13s var(--sn-ease-in); }
+.sn-tip:not(.sn-md-callout).sn-below { transform: translateY(-4px) scale(.96); }
+.sn-tip:not(.sn-md-callout).sn-right { transform: translateX(-4px) scale(.96); }
+.sn-tip:not(.sn-md-callout).sn-left { transform: translateX(4px) scale(.96); }
+.sn-tip:not(.sn-md-callout).sn-on { opacity: 1; transform: none; transition: opacity .14s var(--sn-ease-out), transform .2s var(--sn-ease-out-strong); }
+.sn-tip:not(.sn-md-callout) kbd { font: 500 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-sans); opacity: .55; }
+/* Tooltip 放在顶层（popover），弹窗打开时也能盖在上面；@starting-style 让它第一次出现也有过渡 */
+#sn-tip[popover] { inset: auto; margin: 0; border: 0; overflow: visible; }
+@starting-style { .sn-tip:not(.sn-md-callout).sn-on { opacity: 0; transform: translateY(4px) scale(.96); } .sn-tip:not(.sn-md-callout).sn-below.sn-on { opacity: 0; transform: translateY(-4px) scale(.96); } .sn-tip:not(.sn-md-callout).sn-right.sn-on { opacity: 0; transform: translateX(-4px) scale(.96); } .sn-tip:not(.sn-md-callout).sn-left.sn-on { opacity: 0; transform: translateX(4px) scale(.96); } }
+
+/* Tooltip 的静态展示（只用于设计稿）和两行说明 */
+.sn-tip:not(.sn-md-callout).sn-static { position: relative; z-index: auto; opacity: 1; transform: none; }
+.sn-tip:not(.sn-md-callout).sn-wrap { white-space: normal; max-width: 240px; align-items: flex-start; }
+
+/* ———— 工具条：一组纯图标按钮装在一个浮起的条里，组内用细竖线分段 ———— */
+.sn-toolbar { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 2px; padding: 4px; border-radius: calc(var(--sn-btn-r) + 4px); background: var(--sn-raised); box-shadow: var(--sn-e1); }
+.sn-toolbar .sn-vr { width: 1px; height: 16px; margin: 0 4px; background: var(--sn-line); }
+
+/* ———— 小控件（整个组件库共用一份：数据表格、简单表格、重排列表都用这里的） ————
+   把手：平时淡色，悬停出底、变深，按住是"抓着"的手；尺寸用 --grip-w / --grip-h / --grip-ic 调。
+   展开箭头：悬停出底；展开时（aria-expanded="true"）转 90°。 */
+.sn-grip { all: unset; box-sizing: border-box; flex: none; display: inline-grid; place-items: center; width: var(--sn-grip-w, 18px); height: var(--sn-grip-h, 24px); border-radius: var(--sn-r-xs); color: var(--sn-label3); cursor: grab; touch-action: none; transition: opacity .12s var(--sn-ease-out), background-color .12s var(--sn-ease-out), color .12s var(--sn-ease-out); }
+.sn-grip .sn-ic { width: var(--sn-grip-ic, 14px); height: var(--sn-grip-ic, 14px); }
+@media (hover: hover) {
+.sn-grip:hover { background: var(--sn-b-ghost-hover); color: var(--sn-label); } }
+.sn-grip:active { cursor: grabbing; }
+.sn-grip:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-disc { all: unset; box-sizing: border-box; flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--sn-r-sm); color: var(--sn-label3); cursor: pointer; transition: background-color .12s var(--sn-ease-out), color .12s var(--sn-ease-out), transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-disc:hover { background: var(--sn-fill-hover); color: var(--sn-label); } }
+.sn-disc:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
+.sn-disc .sn-ic { width: 14px; height: 14px; transition: rotate .2s var(--sn-ease-out); }
+.sn-disc[aria-expanded="true"] .sn-ic { rotate: 90deg; }
+
+/* ———— 按下的手感补齐：原来各组件各写各的（有的 90%、94%、96%，有的没有），统一用上面两个令牌 ———— */
+.sn-chip .sn-x:active, .sn-disc:active, .sn-notif .sn-x:active, .sn-cm-file .sn-x:active, .sn-md-code-btn:active, .sn-md-code-more:active, .sn-g-fb:active, .sn-pager .sn-pg:active, .sn-cal-mv button:active, .sn-chat-jump:active { transform: scale(var(--sn-press-icon)); }
+@media (hover: hover) {
+.sn-cm-file.sn-tile:hover .sn-x:active { transform: scale(var(--sn-press-icon)); } }
+.sn-tbl th .sn-sort:active, .sn-pk-presets button:active, .sn-rg-hot button:active { transform: scale(var(--sn-press)); }
+}

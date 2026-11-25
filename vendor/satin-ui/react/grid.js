@@ -10,7 +10,7 @@
 // · 服务端输出和第一帧一样的标记（工具条、表头、空表体），挂上以后才有行；ref 拿到实例：merge、reload、selectedKeys……
 import { createElement as h, forwardRef, useMemo, useRef, useEffect, isValidElement } from "react";
 import { createRoot } from "react-dom/client";
-import { createDataGrid } from "../src/grid.js";
+import { createDataGrid } from "../src/data/grid.js";
 import { wrap } from "./wrap.js";
 
 const EVENTS = ["rowClick", "sortChange", "filterChange", "selectionChange", "columnResize", "columnReorder", "cellEdit", "scrollEnd", "rowAction", "retry"];

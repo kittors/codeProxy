@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Gauge } from "lucide-react";
+import { Gauge } from "@code-proxy/ui/icons";
 import { QuotaBarSkeletonList } from "@features/quota-preview/QuotaBar";
 import type { QuotaProvider } from "@features/quota-preview/quota-fetch";
 import { expectedQuotaSlotCount, type QuotaCardSlot } from "../hooks/quotaCardSlots";

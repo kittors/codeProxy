@@ -3,14 +3,14 @@
 //   带 aria-disabled 的按钮点了不触发）、浮层栈（Esc 关最上面那层、点外面关）、右键菜单、看图键盘、输入框计数抖动、主题（深浅切换后重新上色）、手机软键盘让位（--sn-kb）。
 // 导入这些模块本身没有副作用（Node、SSR 里 import 不报错）；这些行为要在浏览器里调 setup() 才装上。React / Vue 封装在第一次挂载组件时自动调。
 // 重复调用没有影响；返回撤销函数（引用计数，最后一个调用者撤销时才真正撤掉）。
-import { installTooltips } from "./core.js";
-import { installForms } from "./form.js";
-import { installOverlays } from "./overlay.js";
-import { installLightbox } from "./lightbox.js";
-import { installInputs } from "./input.js";
-import { installTheme, setMode, getMode } from "./theme.js";
-import { installViewport } from "./viewport.js";
-import { useShared } from "./lifecycle.js";
+import { installTooltips } from "./core/core.js";
+import { installForms } from "./form/form.js";
+import { installOverlays } from "./overlay/overlay.js";
+import { installLightbox } from "./media/lightbox.js";
+import { installInputs } from "./form/input.js";
+import { installTheme, setMode, getMode } from "./foundation/theme.js";
+import { installViewport } from "./core/viewport.js";
+import { useShared } from "./core/lifecycle.js";
 
 export function setup() {
   if (typeof document === "undefined") return () => {};

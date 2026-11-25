@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { Wallet } from "lucide-react";
+import { Wallet } from "@code-proxy/ui/icons";
 import {
   apiKeyPermissionProfilesApi,
   billingAdminApi,

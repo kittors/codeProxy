@@ -60,6 +60,10 @@
                   root.setAttribute("data-" + names[i], attrs[names[i]]);
                 }
               }
+              var radius = appearance.settings && appearance.settings.controlRadius;
+              if (typeof radius === "string" && /^(pill|6|8|10)$/.test(radius)) {
+                root.setAttribute("data-radius", radius);
+              }
               var vars = appearance.vars || {};
               for (var name in vars) {
                 if (

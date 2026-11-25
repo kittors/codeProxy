@@ -10,7 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Trash2,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,

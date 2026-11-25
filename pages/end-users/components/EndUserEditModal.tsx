@@ -10,7 +10,7 @@ import {
   SlidersHorizontal,
   UserCog,
   UserRound,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import {
   LEGACY_ACCOUNT_CELLS,
   type AccessPolicyCapabilities,

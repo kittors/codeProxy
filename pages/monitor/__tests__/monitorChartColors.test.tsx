@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { Timer, Waypoints } from "lucide-react";
+import { Timer, Waypoints } from "@code-proxy/ui/icons";
 import { describe, expect, test } from "vitest";
 import { normalizeMonitorOverview, normalizeMonitorRealtime } from "@code-proxy/api-client";
 import { chartGradient, chartPalette } from "@code-proxy/ui";

@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Tags,
   Zap,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";

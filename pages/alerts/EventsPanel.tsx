@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, RefreshCw, X, type LucideIcon } from "lucide-react";
+import { Check, RefreshCw, X, type SatinIconComponent } from "@code-proxy/ui/icons";
 import type {
   AlertDeliveryStatus,
   AlertEvent,
@@ -17,7 +17,7 @@ const SEVERITY_TONE: Record<AlertSeverity, string> = {
   critical: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
-const DELIVERY_TONE: Record<AlertDeliveryStatus, { chip: string; icon: LucideIcon }> = {
+const DELIVERY_TONE: Record<AlertDeliveryStatus, { chip: string; icon: SatinIconComponent }> = {
   sent: { chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", icon: Check },
   failed: { chip: "bg-rose-500/10 text-rose-700 dark:text-rose-300", icon: X },
 };

@@ -96,8 +96,8 @@ export function Drawer({
         tabIndex={-1}
         style={backdropMotion.style}
         className={[
-          // 与 Modal 用同一套 Satin 遮罩令牌：只压暗、不模糊。
-          "absolute inset-0 cursor-default bg-[var(--sn-scrim)]",
+          // 对齐 Satin .sn-drawer-scrim：轻度压暗，背后页面保持清晰可见。
+          "absolute inset-0 cursor-default bg-black/15 dark:bg-black/45",
           backdropMotion.className,
         ].join(" ")}
       />
@@ -114,7 +114,7 @@ export function Drawer({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-w-[calc(100vw-1rem)] sm:rounded-2xl`,
+          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-w-[calc(100vw-1rem)] sm:rounded-[var(--sn-r-xl)]`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
         ].join(" ")}
@@ -139,7 +139,7 @@ export function Drawer({
             onClick={onClose}
             disabled={!open}
             data-kbd="Esc"
-            className="sn-btn sn-ghost sn-sm sn-ibtn shrink-0"
+            className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0"
             aria-label={t("common.close")}
           >
             <Icon name="x" size={16} />

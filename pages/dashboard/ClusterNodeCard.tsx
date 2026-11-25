@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Server } from "lucide-react";
+import { Server } from "@code-proxy/ui/icons";
 import type { ClusterNode } from "@code-proxy/api-client";
 import { MeterBar, meterTone, type UsageLevel } from "@features/monitor-widgets/monitorVisuals";
 import { formatBytes, formatRate } from "./systemFormat";

@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { SatinIconComponent } from "@code-proxy/ui/icons";
 import type { ReactNode } from "react";
 import { HUE_GLYPH, dialogToneClass, iconHueClass, type Hue } from "@code-proxy/ui";
 
@@ -15,7 +15,7 @@ export function MonitorCardTitle({
   label,
   note,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue?: Hue;
   label: string;
   note?: ReactNode;
@@ -45,7 +45,7 @@ export function MonitorInlineNotice({
   description,
   className = "py-10",
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   title: string;
   description?: string;
   className?: string;

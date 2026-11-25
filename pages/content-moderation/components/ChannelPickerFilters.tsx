@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Loader2, Search, Tags, X } from "lucide-react";
+import { Loader2, Search, Tags, X } from "@code-proxy/ui/icons";
 import type { ContentModerationTagMode } from "@code-proxy/api-client";
 import { Button, Select, TextInput, surface, iconHueClass } from "@code-proxy/ui";
 

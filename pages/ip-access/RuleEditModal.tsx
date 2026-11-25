@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Lock } from "lucide-react";
+import { ListChecks, Lock } from "@code-proxy/ui/icons";
 import { ipAccessApi, type IpAccessRule } from "@code-proxy/api-client";
 import {
   Button,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Clapperboard, Loader2 } from "lucide-react";
+import { Clapperboard, Loader2 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   videoGenerationApi,

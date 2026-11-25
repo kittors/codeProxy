@@ -54,13 +54,13 @@ import {
   UsersRound,
   Wrench,
   X,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
 
 
-type IconOption = { name: string; icon: LucideIcon };
+type IconOption = { name: string; icon: SatinIconComponent };
 
 const PICKER_ICONS: IconOption[] = [
   { name: "layout-dashboard", icon: LayoutDashboard },

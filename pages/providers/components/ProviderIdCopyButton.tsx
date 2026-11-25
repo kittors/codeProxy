@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Hash } from "lucide-react";
+import { Hash } from "@code-proxy/ui/icons";
 import { Icon as SatinIcon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { HoverTooltip, copyTextToClipboard } from "@code-proxy/ui";

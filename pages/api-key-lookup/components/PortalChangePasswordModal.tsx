@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "@code-proxy/ui/icons";
 import {
   Button,
   Callout,

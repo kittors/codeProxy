@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Boxes, Gauge, ListFilter, Route, ShieldCheck, SlidersHorizontal, Tag } from "lucide-react";
+import { Boxes, Gauge, ListFilter, Route, ShieldCheck, SlidersHorizontal, Tag } from "@code-proxy/ui/icons";
 import {
   LEGACY_PROFILE_CELLS,
   QUOTA_METRICS,

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Share2 } from "lucide-react";
+import { Share2 } from "@code-proxy/ui/icons";
 import type { ResourceSharing, TenantRef } from "@code-proxy/api-client";
 import { HoverTooltip } from "@code-proxy/ui";
 import { resolveTenantNames } from "./sharingTenants";

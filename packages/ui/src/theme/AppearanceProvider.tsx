@@ -54,6 +54,7 @@ export function applyAppearanceToDom(settings: AppearanceSettings): void {
   root.setAttribute("data-palette", attrs.palette);
   root.setAttribute("data-icons", attrs.icons);
   root.setAttribute("data-bars", attrs.bars);
+  root.setAttribute("data-radius", settings.controlRadius);
   const vars = appearanceVars(settings);
   for (const name of APPEARANCE_VAR_NAMES) {
     const value = vars[name];

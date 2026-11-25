@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { CalendarCheck, CalendarClock } from "lucide-react";
+import { CalendarCheck, CalendarClock } from "@code-proxy/ui/icons";
 import { HoverTooltip } from "@code-proxy/ui";
 import type { AuthFileSubscriptionStatus } from "@code-proxy/domain";
 import { SUBSCRIPTION_TONE_CLASSES } from "../hooks/presentationStyles";

@@ -1,4 +1,4 @@
-import { Check, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Check, ShieldCheck, TriangleAlert } from "@code-proxy/ui/icons";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { oauthApi, type ProxyPoolEntry } from "@code-proxy/api-client";

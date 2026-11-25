@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Infinity as InfinityIcon, Minus, Plus } from "lucide-react";
+import { CalendarClock, Infinity as InfinityIcon, Minus, Plus } from "@code-proxy/ui/icons";
 import { billingAdminApi, type BillingBinding } from "@code-proxy/api-client";
 import { Button, FormField, Modal, SegmentedControl, TextInput, surface, useToast } from "@code-proxy/ui";
 import { formatExpiryRemaining } from "@features/portal-billing";

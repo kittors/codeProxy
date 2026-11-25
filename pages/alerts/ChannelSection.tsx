@@ -7,8 +7,8 @@ import {
   Send,
   Trash2,
   Webhook,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import type { AlertChannelKind } from "@code-proxy/api-client";
 import { Button, EmptyState, ToggleSwitch, surface } from "@code-proxy/ui";
 import { ChannelEditorModal } from "./ChannelEditorModal";
@@ -18,7 +18,7 @@ import type { TestOutcome } from "./useChannelTest";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
-const KIND_ICON: Record<AlertChannelKind, LucideIcon> = {
+const KIND_ICON: Record<AlertChannelKind, SatinIconComponent> = {
   webhook: Webhook,
   feishu: MessageSquareText,
   telegram: Send,

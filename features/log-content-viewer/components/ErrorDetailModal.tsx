@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, FileQuestion } from "lucide-react";
+import { AlertTriangle, FileQuestion } from "@code-proxy/ui/icons";
 import { Button, Callout, CopyButton, EmptyState, Modal, Skeleton, SkeletonLines } from "@code-proxy/ui";
 import {
   answeredByGateway,

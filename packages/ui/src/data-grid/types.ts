@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { EmptyStateScene } from "../feedback/EmptyState";
 
 /**
  * DataGrid 的公开类型。
@@ -15,6 +16,7 @@ import type { ReactNode } from "react";
 export type GridAlign = "start" | "center" | "end";
 export type GridPin = "start" | "end";
 export type GridDensity = "compact" | "default" | "comfortable";
+export type GridLines = "row" | "grid";
 export type GridSortDirection = "asc" | "desc";
 export type GridRowTone = "danger" | "warning" | "muted";
 
@@ -123,8 +125,10 @@ export interface DataGridColumn<T> {
 }
 
 export interface GridEmptyState {
-  /** 不传用默认图标，传 null 不要图标。 */
+  /** 不传则展示 Satin 场景 SVG 插画，传 null 不要图标。 */
   icon?: ReactNode | null;
+  /** 显式指定 Satin EmptyArt 场景插画（仅 icon 未传时生效）。 */
+  scene?: EmptyStateScene;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -159,6 +163,8 @@ export interface DataGridProps<T> {
   empty?: GridEmptyState;
 
   density?: GridDensity;
+  /** Satin 表格线型：row（清爽行线，默认）或 grid（单元格网格线）。 */
+  lines?: GridLines;
   /** 隐藏的列（受控）。 */
   hiddenColumnIds?: ReadonlySet<string>;
   /** 传了才在列菜单里出现「隐藏此列」。 */

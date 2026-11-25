@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button, surface } from "@code-proxy/ui";
 

@@ -82,15 +82,16 @@ export function GridSearchInput({
   return (
     <div
       className={[
-        "group/search relative flex h-8 min-w-[12rem] items-center rounded-[var(--sn-btn-r)] bg-field shadow-control transition-shadow duration-150 ease-soft hover:shadow-control-hover focus-within:shadow-control-focus",
+        "sn-ib sn-has-pre sn-has-post min-w-[12rem]",
+        value ? "sn-filled" : "",
         className ?? "",
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <Icon
-        name="search"
-        size={14}
-        className="pointer-events-none absolute left-2.5 text-ink-3"
-      />
+      <span className="sn-pre flex items-center justify-center" aria-hidden="true">
+        <Icon name="search" size={14} />
+      </span>
       <input
         ref={inputRef}
         type="search"
@@ -106,28 +107,27 @@ export function GridSearchInput({
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-full w-full min-w-0 rounded-[var(--sn-btn-r)] bg-transparent pl-8 pr-9 text-xs text-ink outline-none placeholder:text-ink-3 [&::-webkit-search-cancel-button]:hidden"
+        className="sn-input sn-sm !h-8 [&::-webkit-search-cancel-button]:hidden"
       />
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange("");
-            inputRef.current?.focus();
-          }}
-          aria-label={t("data_grid.clear_search")}
-          className="absolute right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
-        >
-          <Icon name="x" size={12} />
-        </button>
-      ) : focused ? null : (
-        <kbd
-          aria-hidden="true"
-          className="pointer-events-none absolute right-2 rounded bg-ink/[0.06] px-1.5 font-mono text-2xs text-ink-3 dark:bg-white/[0.08]"
-        >
-          /
-        </kbd>
-      )}
+      <span className="sn-post">
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              inputRef.current?.focus();
+            }}
+            aria-label={t("data_grid.clear_search")}
+            className="sn-clear"
+          >
+            <Icon name="x" size={12} />
+          </button>
+        ) : focused ? null : (
+          <kbd aria-hidden="true" className="sn-kbd">
+            /
+          </kbd>
+        )}
+      </span>
     </div>
   );
 }
@@ -190,13 +190,14 @@ export function GridFacetFilter({
           setAnchor(event.currentTarget);
         }}
         className={[
-          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--sn-btn-r)] pl-3 pr-2 text-xs font-medium transition-[background-color,box-shadow,color,scale] duration-150 ease-soft active:scale-[0.97]",
-          active
-            ? "bg-accent-soft text-ink shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-focus)_35%,transparent)]"
-            : "bg-surface text-ink-2 shadow-control hover:bg-surface-hover hover:text-ink hover:shadow-control-hover",
-        ].join(" ")}
+          "sn-btn sn-secondary sn-sm !h-8 shrink-0 !pl-3.5 !pr-2.5",
+          open ? "sn-is-open" : "",
+          active ? "!bg-[var(--sn-fill-active)] !text-[var(--sn-label)]" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
-        {icon ? <span className="flex shrink-0 items-center text-ink-3">{icon}</span> : null}
+        {icon ? <span className="flex shrink-0 items-center text-[var(--sn-label3)]">{icon}</span> : null}
         <span className="shrink-0">{label}</span>
         {/* 箭头与个数徽标共用一个固定宽度的位置：没筛时是箭头，筛了以后换成个数，按钮宽度不变。 */}
         <span className="relative inline-flex h-4 w-[1.375rem] shrink-0 items-center justify-center">
@@ -204,7 +205,7 @@ export function GridFacetFilter({
             name="chevron-down"
             size={13}
             className={[
-              "text-ink-3 transition-[rotate,opacity,scale] duration-200 ease-pop",
+              "text-[var(--sn-label3)] transition-[rotate,opacity,scale] duration-200 ease-pop",
               open ? "rotate-180" : "",
               active ? "scale-75 opacity-0" : "opacity-100",
             ].join(" ")}
@@ -213,7 +214,9 @@ export function GridFacetFilter({
             aria-hidden={active ? undefined : true}
             className={[
               "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-pop",
-              active ? "bg-[var(--cp-focus)] text-white opacity-100" : "scale-75 opacity-0",
+              active
+                ? "bg-[var(--sn-accent)] text-[var(--sn-on-primary)] opacity-100"
+                : "scale-75 opacity-0",
             ].join(" ")}
           >
             {active ? (values.length > 99 ? "99+" : values.length) : null}
@@ -313,16 +316,16 @@ export function GridFilterChips<T>({
               animate={{ opacity: 1, scale: 1 }}
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.18, ease: EASE_POP }}
-              className="inline-flex h-7 max-w-[22rem] shrink-0 items-center gap-1 rounded-[var(--sn-btn-r)] border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] pl-2.5 pr-1 text-xs text-ink-2"
+              className="sn-chip sn-tag !h-7 max-w-[22rem] shrink-0 !gap-1.5 !text-xs"
             >
               <span className="min-w-0 truncate">{chip.label}</span>
               <button
                 type="button"
                 onClick={chip.onRemove}
                 aria-label={t("data_grid.remove_filter", { filter: chip.label })}
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                className="sn-x"
               >
-                <Icon name="x" size={12} />
+                <Icon name="x" size={11} />
               </button>
             </motion.li>
           ))}
@@ -342,7 +345,7 @@ export function GridFilterChips<T>({
                   onFiltersChange({});
                   for (const chip of extra ?? []) chip.onRemove();
                 }}
-                className="h-7 whitespace-nowrap rounded-[var(--sn-btn-r)] px-2 text-xs font-medium text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                className="sn-btn sn-ghost sn-sm !h-7 whitespace-nowrap"
               >
                 {t("data_grid.clear_all_filters")}
               </button>

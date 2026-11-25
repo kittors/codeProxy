@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, Infinity as InfinityIcon } from "lucide-react";
+import { AlertCircle, AlertTriangle, Infinity as InfinityIcon } from "@code-proxy/ui/icons";
 import type {
   PeriodSpendingItem,
   PeriodSpendingLimits,

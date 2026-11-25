@@ -82,12 +82,28 @@ export default defineConfig({
           // drag it into every page's modulepreload list.
           if (id.includes("vite/preload-helper")) return "vendor-react";
           if (id.includes("/vendor/satin-ui/")) {
-            if (id.includes("/src/charts.js") || id.includes("/react/charts.js")) return "vendor-satin-charts";
-            if (id.includes("/src/grid.js") || id.includes("/src/canvas-grid.js") || id.includes("/react/grid.js")) return "vendor-satin-grid";
+            if (
+              id.includes("/src/charts.js") ||
+              id.includes("/src/data/charts.js") ||
+              id.includes("/react/charts.js")
+            ) {
+              return "vendor-satin-charts";
+            }
+            if (
+              id.includes("/src/grid.js") ||
+              id.includes("/src/data/grid.js") ||
+              id.includes("/src/canvas-grid.js") ||
+              id.includes("/src/data/canvas-grid.js") ||
+              id.includes("/react/grid.js")
+            ) {
+              return "vendor-satin-grid";
+            }
             if (
               id.includes("/src/markdown.js") ||
+              id.includes("/src/data/markdown.js") ||
               id.includes("/react/markdown.js") ||
-              id.includes("/css/md.css")
+              id.includes("/css/md.css") ||
+              id.includes("/css/data/md.css")
             ) {
               return "vendor-satin-markdown";
             }

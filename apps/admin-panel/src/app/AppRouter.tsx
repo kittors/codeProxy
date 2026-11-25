@@ -199,9 +199,9 @@ function AuthenticatedRoutes() {
   );
 }
 
-// 控制台采用 Satin 原生 8px 利落控件圆角体系；persist 同步写入内部状态，避免切换深浅主题时
-// Satin 的 MutationObserver 将 data-radius 重绘回内置默认的 pill。
-const SATIN_NATIVE_THEME = { radius: "8" } as const;
+// 遵循 Satin 官方默认视觉语言（DEFAULTS.radius = "pill"）：胶囊按钮、胶囊搜索框、
+// 胶囊分段器、圆形页码与 12px/16px 清晰细描边表格/卡片；用户仍可在外观面板按需切换圆角档位。
+const SATIN_NATIVE_THEME = { radius: "pill" } as const;
 
 export function AppRouter() {
   const routes = pageRoutes;

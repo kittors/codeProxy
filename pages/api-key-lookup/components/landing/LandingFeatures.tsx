@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { BarChart3, GaugeCircle, Layers, Repeat, ScrollText, Store } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { BarChart3, GaugeCircle, Layers, Repeat, ScrollText, Store } from "@code-proxy/ui/icons";
+import type { SatinIconComponent } from "@code-proxy/ui/icons";
 import { useLandingFade } from "./landingMotion";
 import { LandingRelayDiagram } from "./LandingRelayDiagram";
 import { LandingSectionHead } from "./LandingSectionHead";
@@ -20,7 +20,7 @@ function FeatureCard({
   className,
 }: {
   copy: LandingFeatureCopy;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   delay: number;
   className?: string;
 }) {

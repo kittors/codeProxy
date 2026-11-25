@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { RadioTower } from "lucide-react";
+import { RadioTower } from "@code-proxy/ui/icons";
 import type { MonitorRealtime } from "@code-proxy/api-client";
 import { AnimatedNumber, Card, EChart, Skeleton } from "@code-proxy/ui";
 import { createRealtimeOption } from "../charts/realtimeOption";

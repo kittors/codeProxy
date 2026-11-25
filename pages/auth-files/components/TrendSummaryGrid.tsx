@@ -9,7 +9,7 @@ import {
   Gauge,
   History,
   Sparkles,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { AuthFileTrendResponse } from "@code-proxy/api-client/endpoints/usage";
 import { DialogIcon, type Hue } from "@code-proxy/ui";
 import { QUOTA_HUE } from "../helpers/quotaSeriesColors";

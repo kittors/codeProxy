@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ArrowUpCircle, CheckCircle2, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, CheckCircle2, RefreshCw, TriangleAlert } from "@code-proxy/ui/icons";
 import type {
   UpdateCheckResponse,
   UpdateProgressResponse,

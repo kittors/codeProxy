@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, ArrowRight, Boxes, Route } from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, Route } from "@code-proxy/ui/icons";
 import {
   QUOTA_METRICS,
   QUOTA_WINDOWS,

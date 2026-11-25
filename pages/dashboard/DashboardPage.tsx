@@ -210,9 +210,9 @@ export function DashboardPage() {
 
       {error ? (
         <EmptyState
+          scene="error"
           title={t("dashboard.load_failed")}
           description={error}
-          icon={<Icon name="triangle-alert" size={18} />}
           action={
             <Button
               variant="secondary"

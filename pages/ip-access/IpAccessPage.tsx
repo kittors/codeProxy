@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ShieldBan } from "lucide-react";
+import { RefreshCw, ShieldBan } from "@code-proxy/ui/icons";
 import { ipAccessApi, type IpAccessEffect, type IpAccessStatus } from "@code-proxy/api-client";
 import {
   Button,

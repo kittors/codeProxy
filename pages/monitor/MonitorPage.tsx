@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleAlert, Info, RefreshCw } from "lucide-react";
+import { CircleAlert, Info, RefreshCw } from "@code-proxy/ui/icons";
 import { Button, Skeleton, surface, useChartAppearanceKey, useTheme } from "@code-proxy/ui";
 import { useAuth } from "@app/providers/AuthProvider";
 import { ActivityHeatmapCard, FlowSankeyCard } from "./components/FlowHeatmapCards";

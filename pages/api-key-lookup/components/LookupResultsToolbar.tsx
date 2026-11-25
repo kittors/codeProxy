@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@code-proxy/ui/icons";
 import { HoverTooltip, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { TimeRangeSelector } from "@features/monitor-widgets";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";

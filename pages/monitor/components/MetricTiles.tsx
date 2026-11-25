@@ -7,8 +7,8 @@ import {
   ShieldCheck,
   Sparkles,
   Timer,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import type { MonitorOverview } from "@code-proxy/api-client";
 import { AnimatedNumber, chartPalette, chartUsesIdentityColors, surface } from "@code-proxy/ui";
 import { MetricIcon, type MonitorHue } from "@features/monitor-widgets/monitorVisuals";
@@ -33,7 +33,7 @@ interface TileSpec {
   /** 比率与耗时从序列最小值起画（见 MonitorSparkline）。 */
   sparkBaseline?: "zero" | "auto";
   label: string;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   /** 图标块的分类色（图标着色为多彩时显示）。 */
   hue: MonitorHue;
   /**

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Shield, Trash2 } from "lucide-react";
+import { KeyRound, Shield, Trash2 } from "@code-proxy/ui/icons";
 import { identityApi, type RoleIdentity, type UserIdentity } from "@code-proxy/api-client";
 import {
+  Avatar,
   Button,
   GRID_WIDTH,
   DataGrid,
   SecretRevealModal,
   GRID_ROW_ACTIONS_COLUMN,
   GridRowActions,
+  StatusTag,
   ToggleSwitch,
   useToast,
   type DataGridColumn,
@@ -171,9 +173,14 @@ export function UsersPage() {
         header: t("identity_admin.user"),
         width: GRID_WIDTH.name,
         cell: (user) => (
-          <div className="min-w-0">
-            <div className="truncate font-medium text-ink">{userName(user)}</div>
-            <div className="truncate text-xs text-ink-3">{user.username}</div>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span aria-hidden="true" className="inline-flex shrink-0">
+              <Avatar name={userName(user) || user.username} size={28} decorative />
+            </span>
+            <div className="min-w-0">
+              <div className="truncate font-medium text-ink">{userName(user)}</div>
+              <div className="truncate text-xs text-ink-3">{user.username}</div>
+            </div>
           </div>
         ),
       },
@@ -229,12 +236,9 @@ export function UsersPage() {
           return (
             <div className="flex flex-wrap gap-1.5">
               {(labels.length ? labels : (user.role_codes ?? [])).map((label) => (
-                <span
-                  key={label}
-                  className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
-                >
+                <StatusTag key={label} size="sm" tone="neutral" dot={false}>
                   {label}
-                </span>
+                </StatusTag>
               ))}
               {!labels.length && !user.role_codes?.length ? (
                 <span className="text-ink-3">{t("identity_admin.no_role")}</span>

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { FileJson, ShieldCheck, X } from "lucide-react";
+import { FileJson, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { vertexApi, type ProxyPoolEntry } from "@code-proxy/api-client";

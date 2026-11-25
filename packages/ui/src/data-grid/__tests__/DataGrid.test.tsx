@@ -255,12 +255,15 @@ describe("DataGrid states", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  test("默认是四边封闭的圆角外框，嵌入小表可以关掉", () => {
+  test("默认是 Satin .sn-tbl-wrap 封闭圆角外框并支持网格线切换，嵌入小表可以关掉", () => {
     const { container, rerender } = render(<Harness />);
     const root = container.querySelector(".cp-grid");
-    expect(root).toHaveClass("cp-grid-frame", "cp-edge", "rounded-xl", "overflow-hidden");
+    expect(root).toHaveClass("sn-tbl-wrap", "cp-grid-frame", "overflow-hidden");
+    expect(root).toHaveAttribute("data-lines", "row");
+    rerender(<Harness lines="grid" />);
+    expect(container.querySelector(".cp-grid")).toHaveAttribute("data-lines", "grid");
     rerender(<Harness frame={false} />);
-    expect(container.querySelector(".cp-grid")).not.toHaveClass("cp-grid-frame");
+    expect(container.querySelector(".cp-grid")).not.toHaveClass("cp-grid-frame", "sn-tbl-wrap");
   });
 
   test("空态可以在标题和操作之间写出补充内容（例如生效的筛选条件）", () => {

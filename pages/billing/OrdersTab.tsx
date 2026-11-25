@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  CheckCircle2,
-  Clock,
-  Coins,
-  Plus,
-  RefreshCw,
-  Search,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   billingAdminApi,
   type BillingManualExtendMode,
@@ -22,13 +13,13 @@ import {
 } from "@code-proxy/api-client";
 import {
   Button,
-  Card,
+  DataGridPagination,
   EmptyState,
   FormField,
+  GridSearchInput,
   Modal,
   Select,
   TextInput,
-  cn,
   surface,
   useToast,
 } from "@code-proxy/ui";
@@ -204,7 +195,7 @@ export function OrdersTab({
 
   const summary = data?.summary;
   const items = data?.items ?? [];
-  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 20));
+  const totalOrders = data?.total ?? 0;
 
   return (
     <div className="space-y-4">
@@ -213,55 +204,48 @@ export function OrdersTab({
           {
             label: t("billing_admin.kpi_today_revenue"),
             value: formatYuan(summary?.today_amount_cents ?? 0),
-            icon: Coins,
+            iconName: "receipt",
           },
           {
             label: t("billing_admin.kpi_month_revenue"),
             value: formatYuan(summary?.month_amount_cents ?? 0),
-            icon: TrendingUp,
+            iconName: "chart-column",
           },
           {
             label: t("billing_admin.kpi_paid_orders"),
             value: String(summary?.paid_count ?? 0),
-            icon: CheckCircle2,
+            iconName: "circle-check",
           },
           {
             label: t("billing_admin.kpi_pending_orders"),
             value: `${summary?.pending_count ?? 0} / ${summary?.failed_count ?? 0}`,
-            icon: Clock,
+            iconName: "clock",
           },
         ].map((kpi) => (
           <div key={kpi.label} className={`${surface({ tone: "card", radius: "2xl" })} p-4`}>
-            <div className="flex items-center justify-between text-xs text-ink-3">
+            <div className="flex items-center justify-between text-xs text-[var(--sn-label3)]">
               <span>{kpi.label}</span>
-              <kpi.icon size={15} />
+              <Icon name={kpi.iconName} size={15} />
             </div>
-            <div className="mt-2 font-mono text-2xl font-bold tabular-nums text-ink">
+            <div className="mt-2 font-mono text-2xl font-bold tabular-nums text-[var(--sn-label)]">
               {kpi.value}
             </div>
           </div>
         ))}
       </div>
 
-      <Card>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-60">
-              <Search
-                size={14}
-                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3"
-              />
-              <TextInput
-                size="sm"
-                className="pl-8"
-                value={search}
-                placeholder={t("billing_admin.order_search_placeholder")}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <GridSearchInput
+            className="w-64"
+            value={search}
+            placeholder={t("billing_admin.order_search_placeholder")}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+          />
+          <div className="w-36">
             <Select
               size="sm"
               value={statusFilter}
@@ -278,96 +262,102 @@ export function OrdersTab({
               ]}
             />
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={() => void loadOrders()} disabled={loading}>
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              {t("common.refresh")}
-            </Button>
-            {canWrite ? (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={openManualModal}
-                disabled={plans.length === 0}
-              >
-                <Plus size={14} />
-                {t("billing_admin.record_manual_order")}
-              </Button>
-            ) : null}
-          </div>
         </div>
 
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => void loadOrders()} disabled={loading}>
+            <Icon name="refresh-cw" size={14} className={loading ? "animate-spin" : ""} />
+            {t("common.refresh")}
+          </Button>
+          {canWrite ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={openManualModal}
+              disabled={plans.length === 0}
+            >
+              <Icon name="plus" size={14} />
+              {t("billing_admin.record_manual_order")}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="sn-tbl-wrap">
         {items.length === 0 ? (
           <EmptyState
-            icon={<Wallet size={24} />}
+            scene="inbox"
             title={t("billing.no_orders_title")}
             description={t("billing_admin.no_orders_desc")}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-xs">
+          <div className="sn-tbl-sc">
+            <table className="sn-tbl min-w-[820px]">
               <thead>
-                <tr className="border-b border-ink/10 text-ink-3 dark:border-white/10">
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_order_no")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing.col_target")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing.col_plan")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_channel")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing.col_amount")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing.col_status")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing.col_time")}</th>
-                  <th className="py-2 text-right font-medium">{t("billing.col_action")}</th>
+                <tr>
+                  <th>{t("billing_admin.col_order_no")}</th>
+                  <th>{t("billing.col_target")}</th>
+                  <th>{t("billing.col_plan")}</th>
+                  <th>{t("billing_admin.col_channel")}</th>
+                  <th className="sn-r">{t("billing.col_amount")}</th>
+                  <th>{t("billing.col_status")}</th>
+                  <th>{t("billing.col_time")}</th>
+                  <th className="sn-r">{t("billing.col_action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink/[0.06] dark:divide-white/[0.06]">
+              <tbody>
                 {items.map((o) => {
                   const status = orderStatusMeta(o.status, t);
                   const busy = busyOrderNo === o.order_no;
                   return (
-                    <tr key={o.id} className="text-ink-2">
-                      <td className="py-2.5 pr-3">
-                        <div className="font-mono font-medium text-ink">{o.order_no}</div>
-                        {o.provider_order_id ? (
-                          <div className="font-mono text-2xs text-ink-3">{o.provider_order_id}</div>
-                        ) : null}
+                    <tr key={o.id}>
+                      <td>
+                        <div className="py-1.5">
+                          <div className="font-mono font-medium text-[var(--sn-label)]">{o.order_no}</div>
+                          {o.provider_order_id ? (
+                            <div className="font-mono text-2xs text-[var(--sn-label3)]">
+                              {o.provider_order_id}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
-                      <td className="py-2.5 pr-3 font-medium text-ink">{o.target_label}</td>
-                      <td className="py-2.5 pr-3">
-                        <div>{o.plan_name}</div>
-                        {o.fulfillment_summary ? (
-                          <div className="text-2xs text-emerald-600 dark:text-emerald-400">
-                            {o.fulfillment_summary}
-                          </div>
-                        ) : o.fulfillment_error ? (
-                          <div className="text-2xs text-rose-500">{o.fulfillment_error}</div>
-                        ) : null}
+                      <td className="font-medium text-[var(--sn-label)]">{o.target_label}</td>
+                      <td>
+                        <div className="py-1.5">
+                          <div>{o.plan_name}</div>
+                          {o.fulfillment_summary ? (
+                            <div className="text-2xs text-[var(--sn-success)]">
+                              {o.fulfillment_summary}
+                            </div>
+                          ) : o.fulfillment_error ? (
+                            <div className="text-2xs text-[var(--sn-danger)]">
+                              {o.fulfillment_error}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
-                      <td className="py-2.5 pr-3">
+                      <td className="text-[var(--sn-label2)]">
                         {o.pay_channel === "wechat"
                           ? t("billing.channel_wechat")
                           : o.pay_channel === "alipay"
                             ? t("billing.channel_alipay")
                             : t("billing_admin.channel_manual")}
                       </td>
-                      <td className="py-2.5 pr-3 font-mono font-semibold tabular-nums text-ink">
+                      <td className="sn-r sn-num font-mono font-semibold text-[var(--sn-label)]">
                         {formatYuan(o.amount_cents)}
                       </td>
-                      <td className="py-2.5 pr-3">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2 py-0.5 text-2xs font-medium",
-                            status.className,
-                          )}
-                        >
+                      <td>
+                        <span className={`sn-tag sn-sm ${status.tagTone}`}>
+                          <i />
                           {status.label}
                         </span>
                       </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap tabular-nums">
+                      <td className="sn-num text-[var(--sn-label3)]">
                         {new Date(o.paid_at || o.created_at).toLocaleString()}
                       </td>
-                      <td className="py-2.5 text-right">
+                      <td className="sn-r">
                         {canWrite && o.status !== "fulfilled" && o.status !== "closed" ? (
-                          <div className="inline-flex items-center gap-1">
+                          <div className="inline-flex items-center justify-end gap-1">
                             {o.provider === "xunhupay" ? (
                               <Button
                                 size="sm"
@@ -397,30 +387,18 @@ export function OrdersTab({
           </div>
         )}
 
-        {totalPages > 1 ? (
-          <div className="mt-4 flex items-center justify-end gap-2 text-xs text-ink-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              {t("common.previous")}
-            </Button>
-            <span className="tabular-nums">
-              {page} / {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              {t("common.next")}
-            </Button>
+        {totalOrders > 0 ? (
+          <div className="cp-grid-footer px-4 py-2.5">
+            <DataGridPagination
+              page={page}
+              pageSize={20}
+              total={totalOrders}
+              pending={loading && !data}
+              onPageChange={setPage}
+            />
           </div>
         ) : null}
-      </Card>
+      </div>
 
       <Modal
         open={manualOpen}

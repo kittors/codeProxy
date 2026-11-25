@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 

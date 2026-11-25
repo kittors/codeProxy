@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { CircleOff, Columns3, Download, Ellipsis, Eye, Gauge, Power, RefreshCw, Search, Settings2, Share2, SlidersHorizontal, Tags } from "lucide-react";
+import { CircleOff, Columns3, Download, Ellipsis, Eye, Gauge, Power, RefreshCw, Search, Settings2, Share2, SlidersHorizontal, Tags } from "@code-proxy/ui/icons";
 import { Loader } from "satin-ui/react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";

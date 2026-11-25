@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { HoverTooltip } from "@code-proxy/ui";
+import { HoverTooltip, StatusTag } from "@code-proxy/ui";
 import type { ProxyEgressStatus } from "@code-proxy/api-client/endpoints/proxies";
 
 /** 表格里只要能对上时间线的「14:03」，悬停时再给带日期的完整时间。时区跟随浏览器。 */
@@ -38,7 +38,11 @@ export function ProxyEgressCell({
     return <span className="text-xs text-ink-3">--</span>;
   }
   if (!status) {
-    return <span className="text-xs text-ink-2">{t("proxies.egress_ok")}</span>;
+    return (
+      <StatusTag size="sm" tone="ok">
+        {t("proxies.egress_ok")}
+      </StatusTag>
+    );
   }
 
   const locale = i18n.language;
@@ -67,9 +71,9 @@ export function ProxyEgressCell({
   return (
     <HoverTooltip content={tooltip} className="max-w-full">
       <div className="min-w-0" data-testid="proxy-egress-open">
-        <span className="inline-flex max-w-full rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-300">
+        <StatusTag size="sm" tone="bad" className="max-w-full">
           <span className="truncate">{t("proxies.egress_open", { reason })}</span>
-        </span>
+        </StatusTag>
         <p className="mt-1 truncate text-xs text-ink-3">
           {t("proxies.egress_since", { time: formatTime(status.since, locale) })} · {next}
         </p>

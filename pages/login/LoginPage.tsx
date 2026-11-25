@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBigUpDash } from "lucide-react";
+import { ArrowBigUpDash } from "@code-proxy/ui/icons";
 import { Icon } from "satin-ui/react";
 import { detectApiBaseFromLocation } from "@code-proxy/api-client";
 import { useAuth } from "@app/providers/AuthProvider";

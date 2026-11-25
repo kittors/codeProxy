@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { ShieldCheck, UserPlus } from "lucide-react";
+import { ShieldCheck, UserPlus } from "@code-proxy/ui/icons";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import {
   Button,

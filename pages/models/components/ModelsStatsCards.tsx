@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Activity, Check, Cpu } from "lucide-react";
+import { Activity, Check, Cpu } from "@code-proxy/ui/icons";
 import { Card, DialogIcon } from "@code-proxy/ui";
 
 interface ModelsStatsCardsProps {

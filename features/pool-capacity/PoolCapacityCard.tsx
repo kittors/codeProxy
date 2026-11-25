@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, RefreshCw } from "lucide-react";
+import { Gauge, RefreshCw } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, Skeleton, surface } from "@code-proxy/ui";
 import {

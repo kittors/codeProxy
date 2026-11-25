@@ -1,0 +1,146 @@
+/* Satin · 布局组件 · 顶栏（Header）：
+   页面顶部固定锚定（position: fixed），配合 overscroll-behavior-y: none 彻底避免 macOS/iOS 滚动或触顶回弹时顶栏跟着弹跳。
+   静态在页顶时不画多余底线；页面滚离顶部后通过 .sn-scrolled 柔和浮出 1px 分界线。
+   主导航选中态只靠字色层级（--sn-label3 → --sn-label）克制区分，常驻透明无多余灰底块、绝不变字重、绝不加彩色竖条。 */
+@layer satin {
+:root { --sn-header-h: 56px; }
+html:has(.sn-header:not(.sn-static)) {
+  overscroll-behavior-y: none;
+  scroll-padding-top: calc(var(--sn-header-h, 56px) + 16px);
+}
+
+.sn-header {
+  --sn-hdr-h: var(--sn-header-h, 56px);
+  --sn-hdr-max: 1200px;
+  --sn-hdr-px: var(--sn-sp-24);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  min-height: var(--sn-hdr-h);
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--sn-canvas) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  backdrop-filter: saturate(1.6) blur(16px);
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: box-shadow .2s var(--sn-ease-out), background-color .2s var(--sn-ease-out);
+}
+.sn-header.sn-scrolled {
+  box-shadow: inset 0 -1px 0 var(--sn-line);
+}
+.sn-header.sn-solid {
+  background: var(--sn-raised);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* 局部/内嵌模式：用于文档演示框或独立分栏内部，保持稳定吸顶而不脱离外层预览框 */
+.sn-header.sn-static {
+  position: sticky;
+  top: 0;
+  left: auto;
+  right: auto;
+  z-index: 10;
+}
+.sn-header.sn-sm { --sn-hdr-h: 48px; }
+.sn-header.sn-lg { --sn-hdr-h: 64px; }
+.sn-header.sn-wide { --sn-hdr-max: 1360px; }
+.sn-header.sn-fluid { --sn-hdr-max: none; }
+
+/* 搭配固定顶栏的页面容器：顶部预留与顶栏等高空间，永不遮挡首屏 */
+.sn-has-header { padding-top: calc(var(--sn-header-h, 56px) + env(safe-area-inset-top, 0px)); }
+.sn-has-header.sn-header-sm { padding-top: calc(48px + env(safe-area-inset-top, 0px)); }
+.sn-has-header.sn-header-lg { padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+
+.sn-header-in {
+  box-sizing: border-box;
+  width: min(100%, var(--sn-hdr-max));
+  height: var(--sn-hdr-h);
+  margin-inline: auto;
+  padding-inline: var(--sn-hdr-px);
+  display: flex;
+  align-items: center;
+  gap: var(--sn-sp-20);
+}
+
+.sn-header-brand {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sn-sp-8);
+  font: 600 calc(15px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  letter-spacing: -.015em;
+  color: var(--sn-label);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sn-header-brand svg,
+.sn-header-brand img { width: 20px; height: 20px; flex: none; }
+.sn-header-brand small {
+  font: 400 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  color: var(--sn-label3);
+  margin-left: var(--sn-sp-2);
+}
+
+.sn-header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sn-sp-4);
+  min-width: 0;
+}
+.sn-header-nav a,
+.sn-header-nav button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sn-sp-6);
+  height: 32px;
+  padding: 0 var(--sn-sp-10);
+  border-radius: var(--sn-r-md);
+  font: 500 calc(13.5px * var(--sn-font-scale, 1))/1 var(--sn-sans);
+  color: var(--sn-label3);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s var(--sn-ease-out);
+}
+@media (hover: hover) {
+  .sn-header-nav a:hover,
+  .sn-header-nav button:hover {
+    color: var(--sn-label);
+  }
+}
+.sn-header-nav a[aria-current="page"],
+.sn-header-nav a.sn-on,
+.sn-header-nav button[aria-current="page"],
+.sn-header-nav button.sn-on {
+  color: var(--sn-label);
+  background: transparent;
+}
+.sn-header-nav a:focus-visible,
+.sn-header-nav button:focus-visible {
+  outline: 2px solid var(--sn-focus);
+  outline-offset: 2px;
+}
+
+.sn-header-end {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sn-sp-8);
+}
+
+.sn-header-burger { display: none; }
+
+@media (max-width: 720px) {
+  .sn-header { --sn-hdr-px: var(--sn-sp-16); }
+  .sn-header-in { gap: var(--sn-sp-12); }
+  .sn-header-nav { display: none; }
+  .sn-header-burger { display: inline-flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-header, .sn-header-nav a, .sn-header-nav button { transition: none; }
+}
+}

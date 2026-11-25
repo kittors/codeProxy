@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
-import { Bot, Code2, SquareTerminal } from "lucide-react";
+import { Bot, Code2, SquareTerminal } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import "./loginNetwork.css";
 

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Network } from "lucide-react";
+import { Network } from "@code-proxy/ui/icons";
 import type { ProxyPoolEntry } from "@code-proxy/api-client/endpoints/proxies";
 import { Select, type SelectOption } from "@code-proxy/ui";
 import {

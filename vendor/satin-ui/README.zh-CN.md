@@ -19,7 +19,23 @@ pnpm add satin-ui
 
 ## 快速上手
 
-### 1. 引入样式
+### 1. 引入样式（支持全自动按需加载）
+
+- **推荐（Vite 自动按需 CSS）**：无需手动引入整包 CSS，插件自动分析你导入的组件并只注入最小 CSS 分片：
+
+```ts
+// vite.config.ts
+import satin from "satin-ui/vite";
+export default defineConfig({ plugins: [react(), satin({ css: "auto" })] });
+```
+
+- **非 Vite 项目（Next.js / Nuxt / Webpack / Angular）**：可用命令行按项目实际引用一键生成最小样式清单：
+
+```bash
+pnpm dlx satin-cli css --write src/satin-on-demand.css
+```
+
+- **整包引入**（适合快速原型或全套组件使用）：
 
 ```ts
 // 整页使用 Satin（包含轻量化 reset 与全部组件样式）
@@ -28,14 +44,13 @@ import "satin-ui/css/page.css";
 // 嵌入已有项目（不含全局 reset，不干扰现有页面）
 // import "satin-ui/css";
 
-// 单文件压缩版（约 72.7 KB gzip，适合 CDN 或静态页直引）
+// 单文件压缩版（适合 CDN 或静态页直引）
 // import "satin-ui/css/page.min.css";
 ```
 
 ### 2. React / Next.js
 
 ```tsx
-import "satin-ui/css/page.css";
 import en from "satin-ui/locales/en";
 import { SatinProvider, Button, Segmented, Loader, Progress, toast } from "satin-ui/react";
 import { AreaChart } from "satin-ui/react/charts";
@@ -54,47 +69,68 @@ export default function App() {
 }
 ```
 
-### 3. Vue 3 / Nuxt
+### 3. Vue 3 / Nuxt（按需推荐）
+
+使用轻量插件 `createSatin()` 初始化全局主题与多语言，**不全局注册 30+ 组件**，彻底保留 Tree-Shaking：
 
 ```ts
+// main.ts
 import { createApp } from "vue";
-import "satin-ui/css/page.css";
-import Satin from "satin-ui/vue";
+import { createSatin } from "satin-ui/vue";
 import App from "./App.vue";
 
 createApp(App)
-  .use(Satin, { mode: "auto", locale: "zh-CN", theme: { accent: "ink", radius: "pill" } })
+  .use(createSatin({ mode: "auto", locale: "zh-CN", theme: { accent: "ink", radius: "pill" } }))
   .mount("#app");
 ```
 
-模板中直接使用 `<SnButton>`、`<SnSegmented v-model="view" />`、`<SnLoader variant="matrix" />`、`<SnProgress :value="0.68" :segments="8" />`、`<SnThemeScope mode="dark">`；重组件按需引入：
+组件按需具名导入，或配合 `unplugin-vue-components` + `satinResolver()` 在模板里直接写 `<SnButton>`、`<SnDataGrid>`、`<SnAreaChart>`、`<SnChat>` 自动按需导入 JS 与最小 CSS：
 
 ```ts
-import { AreaChart, BarChart, DonutChart, Chart3D } from "satin-ui/vue/charts";
-import { Chat, ThreadRail } from "satin-ui/vue/chat";
-import { DataGrid } from "satin-ui/vue/grid";
+// vite.config.ts（零配置自动按需导入组件与样式）
+import Components from "unplugin-vue-components/vite";
+import AutoImport from "unplugin-auto-import/vite";
+import { satinResolver, satinDirectiveResolver, satinAutoImportPreset } from "satin-ui/resolver";
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    Components({ resolvers: [satinResolver(), satinDirectiveResolver()] }),
+    AutoImport({ imports: [satinAutoImportPreset()] }),
+  ],
+});
 ```
 
-### 4. 纯 HTML / Web Components
+（若追求零构建配置全量注册，仍支持 `import Satin from "satin-ui/vue"; app.use(Satin, options)`。）
+
+### 4. 纯 HTML / Web Components（支持按需单注册）
 
 ```html
 <sn-segmented items='["概览","分镜"]' value="概览"></sn-segmented>
 <sn-loader variant="matrix" size="lg"></sn-loader>
-<button class="sn-btn sn-primary">保存修改</button>
 <script type="module">
-  import { setup, enhance, setLocale } from "satin-ui";
-  import { defineElements } from "satin-ui/elements";
-  setup();
-  defineElements();
-  enhance();
+  // 推荐：只注册用到的元素，打包器自动摇掉其余 11 个组件
+  import { defineSegmented, defineLoader } from "satin-ui/elements";
+  defineSegmented();
+  defineLoader();
+  // 全量注册仍保留：import { defineElements } from "satin-ui/elements"; defineElements();
 </script>
 ```
 
-### 5. 首帧防闪深浅主题
+### 5. 单图标按需引入（0.3 KB gzip）
 
-- **Vite**：在 `vite.config.ts` 加入 `import satin from "satin-ui/vite"; plugins: [satin()]`。
+```ts
+// 只打包用到的图标，不引入 148 个全量图标表
+import { plus, search } from "satin-ui/icons/paths";
+import { svg } from "satin-ui/svg";
+const html = svg(plus, 16) + svg(search, 16);
+```
+
+### 6. 首帧防闪深浅主题
+
+- **Vite**：在 `vite.config.ts` 加入 `import satin from "satin-ui/vite"; plugins: [satin({ css: "auto" })]`（同时自动防闪 + 按需 CSS）。
 - **Next.js / Nuxt**：导入 `import themeBoot from "satin-ui/theme-boot-script"` 并内联进 `<head>`。
-- **纯 HTML**：在 `<head>` 顶部引入 `<script src="…/satin-ui/src/theme-boot.js"></script>`。
+- **纯 HTML**：在 `<head>` 顶部引入 `<script src="…/satin-ui/src/foundation/theme-boot.js"></script>`。
 
 ## 多语言（中 / 英）
 

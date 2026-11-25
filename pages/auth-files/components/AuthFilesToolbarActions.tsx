@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Upload,
   Zap,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { Button, HoverTooltip, MaskToggleButton, Select } from "@code-proxy/ui";
 import { AuthFilesQuotaSortMenu } from "./AuthFilesQuotaSortMenu";
 

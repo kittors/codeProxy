@@ -338,7 +338,7 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.previousMonth}
                   onClick={() => moveMonth(-1)}
-                  className="sn-btn sn-ghost sn-sm sn-ibtn"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
                 >
                   <Icon name="chevron-left" size={16} />
                 </button>
@@ -347,7 +347,7 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.nextMonth}
                   onClick={() => moveMonth(1)}
-                  className="sn-btn sn-ghost sn-sm sn-ibtn"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
                 >
                   <Icon name="chevron-right" size={16} />
                 </button>

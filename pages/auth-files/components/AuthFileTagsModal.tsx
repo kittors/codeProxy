@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Plus, Tags, X } from "lucide-react";
+import { Eye, Plus, Tags, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { Button, Checkbox, FormSection, Modal, TextInput } from "@code-proxy/ui";

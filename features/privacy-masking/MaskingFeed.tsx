@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Ban, Boxes, ChevronRight, ShieldAlert, TerminalSquare, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, Ban, Boxes, ChevronRight, ShieldAlert, TerminalSquare, X, type SatinIconComponent } from "@code-proxy/ui/icons";
 import { Loader } from "satin-ui/react";
 import { VendorIcon, hasVendorIcon } from "@code-proxy/assets";
 import { Button, SegmentedControl, surface } from "@code-proxy/ui";
@@ -205,7 +205,7 @@ function RowGlyph({
   fallbackClassName = "text-ink-3",
 }: {
   vendor?: string;
-  fallback: LucideIcon;
+  fallback: SatinIconComponent;
   fallbackClassName?: string;
 }) {
   return (

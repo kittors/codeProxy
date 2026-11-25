@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ScrollText } from "lucide-react";
+import { RefreshCw, ScrollText } from "@code-proxy/ui/icons";
 import { useMemo } from "react";
 import {
   Button,

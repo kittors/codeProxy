@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Waypoints } from "lucide-react";
+import { CalendarClock, Waypoints } from "@code-proxy/ui/icons";
 import type { MonitorOverview } from "@code-proxy/api-client";
 import { Card, EChart } from "@code-proxy/ui";
 import { withAlpha } from "../charts/chartBase";

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Route } from "lucide-react";
+import { Route } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 import type { SimulatorPathRoute } from "./RoutingSimulatorDialog";
 

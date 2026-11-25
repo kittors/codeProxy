@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Hourglass, Timer } from "lucide-react";
+import { Hourglass, Timer } from "@code-proxy/ui/icons";
 import type { MonitorOverview } from "@code-proxy/api-client";
 import { Card, EChart, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { createLatencyOption } from "../charts/latencyOption";

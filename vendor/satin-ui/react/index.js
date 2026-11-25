@@ -9,16 +9,18 @@ import { createElement as h, forwardRef, useEffect, useRef, useState, useId, use
 import { createRoot } from "react-dom/client";
 import * as S from "../src/components.js";
 import { setup } from "../src/setup.js";
-import { get as getTheme, set as setThemeChoice, reset as resetThemeChoice, paint as paintTheme, applyTheme, onChange as onThemeChange, getMode, setMode, DEFAULTS as THEME_DEFAULTS } from "../src/theme.js";
-import { openDialog, closeDialog, wireDialog, openDrawer } from "../src/overlay.js";
-import { initSeg } from "../src/core.js";
-import { ICONS } from "../src/icons.js";
-import { emptyArtSvg } from "../src/empty-art.js";
-import { CHECK, removeChip, shakeInput } from "../src/form.js";
-import { scoped, setLocale as setI18nLocale, getLocale as getI18nLocale, onLocaleChange } from "../src/i18n.js";
-import I18N_COMPONENTS from "../src/locales/zh-CN/components.js";
+import { get as getTheme, set as setThemeChoice, reset as resetThemeChoice, paint as paintTheme, applyTheme, onChange as onThemeChange, getMode, setMode, DEFAULTS as THEME_DEFAULTS } from "../src/foundation/theme.js";
+import { openDialog, closeDialog, wireDialog, openDrawer } from "../src/overlay/overlay.js";
+import { initSeg } from "../src/core/core.js";
+import { ICONS } from "../src/foundation/icons.js";
+import { check as IC_CHECK, x as IC_X } from "../src/foundation/icons/index.js";
+import { emptyArtSvg } from "../src/feedback/empty-art.js";
+import { CHECK, removeChip, shakeInput } from "../src/form/form.js";
+import { scoped, setLocale as setI18nLocale, getLocale as getI18nLocale, onLocaleChange } from "../src/foundation/i18n.js";
+import I18N_COMPONENTS from "../src/foundation/locales/zh-CN/components.js";
 import { wrap, useIso, cx } from "./wrap.js";
 const tt = /* @__PURE__ */ scoped(I18N_COMPONENTS);
+const icSvg = (paths, name, size = 16, className) => h("svg", { className: cx("sn-ic", className), "data-icon": name, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", dangerouslySetInnerHTML: { __html: paths } });
 
 // 自己包：重组件（对话、Markdown、流程图、数据表格……，各自单独引入）或别的 createXxx 也能变成 React 组件，用法和下面这些一样。
 //   import { createChat } from "satin-ui/chat";  const Chat = wrapSatin(createChat, { events: [] });  <Chat title="助手" respond={respond} />
@@ -110,8 +112,8 @@ export const Button = /* @__PURE__ */ forwardRef(function Button({ variant = "se
     : [lead, children, tail]), badgeOf(badge));
 });
 // 图标：satin-ui/icons 里的名字。直接渲染 <svg class="sn-ic">（和 icon() 生成的一模一样，按钮里 .sn-btn > .sn-ic 这类选择器照样命中）
-export function Icon({ name, size = 16, className }) {
-  return h("svg", { className: cx("sn-ic", className), "data-icon": name, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", dangerouslySetInnerHTML: { __html: ICONS[name] || "" } });
+export function Icon({ name, size = 16, className, style, ...rest }) {
+  return h("svg", { ...rest, style, className: cx("sn-ic", className), "data-icon": name, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": rest["aria-label"] ? undefined : (rest["aria-hidden"] ?? "true"), dangerouslySetInnerHTML: { __html: ICONS[name] || "" } });
 }
 // 空状态场景插画：<EmptyArt name="projects" />（projects / search / error / inbox / folder / lock），纯中性语义令牌 SVG，SSR 零闪烁直出
 export function EmptyArt({ name = "projects", label, className, style, id } = {}) {
@@ -151,11 +153,11 @@ export const Chip = /* @__PURE__ */ forwardRef(function Chip({ selected, default
   if (removable) {
     const label = removeLabel ?? `${tt("components.remove")} ${typeof children === "string" ? children : ""}`.trim();
     return h("span", { ...rest, ref: setRefs, className: cx("sn-chip", "sn-tag", on && "sn-on", className) }, children,
-      h("button", { type: "button", className: "sn-x", "aria-label": label, onClick: () => removeChip(own.current, { keep: true, onRemoved: () => onRemove?.() }) }, h(Icon, { name: "x" })));
+      h("button", { type: "button", className: "sn-x", "aria-label": label, onClick: () => removeChip(own.current, { keep: true, onRemoved: () => onRemove?.() }) }, icSvg(IC_X, "x")));
   }
   if (defaultSelected !== undefined || onChange) {
     return h("button", { type: "button", ...rest, ref: setRefs, className: cx("sn-chip", on && "sn-on", className), "aria-pressed": on,
-      onClick: (e) => { onClick?.(e); if (e.defaultPrevented) return; const v = !on; if (selected === undefined) setInner(v); onChange?.(v); } }, h(Icon, { name: "check" }), children);
+      onClick: (e) => { onClick?.(e); if (e.defaultPrevented) return; const v = !on; if (selected === undefined) setInner(v); onChange?.(v); } }, icSvg(IC_CHECK, "check"), children);
   }
   return h("span", { ...rest, ref: setRefs, className: cx("sn-chip", on && "sn-on", className) }, children);
 });
@@ -234,7 +236,7 @@ export function Drawer({ open, onClose, title, children, footer, className }) {
   const ref = useRef(null), layer = useRef(null), tid = useId(); // 标题的 id：抽屉 aria-labelledby 指向它，读屏读得出这是什么抽屉
   useIso(() => { if (open && !layer.current) layer.current = openDrawer(ref.current, { trigger: document.activeElement, onClose: () => { layer.current = null; onClose?.(); } }); else if (!open && layer.current) { layer.current.close(true); layer.current = null; } }, [open]);
   return h("aside", { ref, className: cx("sn-drawer", className), role: "dialog", "aria-modal": "true", "aria-labelledby": title ? tid : undefined, tabIndex: -1 },
-    h("div", { className: "sn-hd" }, h("h3", { id: tid }, title), h("button", { type: "button", className: "sn-btn sn-ghost sn-sm sn-ibtn", "data-x": "", "aria-label": tt("components.close"), "data-tip": tt("components.close"), "data-kbd": "Esc" }, h(Icon, { name: "x", size: 16 }))),
+    h("div", { className: "sn-hd" }, h("h3", { id: tid }, title), h("button", { type: "button", className: "sn-btn sn-ghost sn-sm sn-ibtn", "data-x": "", "aria-label": tt("components.close"), "data-tip": tt("components.close"), "data-kbd": "Esc" }, icSvg(IC_X, "x", 16))),
     h("div", { className: "sn-bd" }, children), footer ? h("div", { className: "sn-ft" }, footer) : null);
 }
 

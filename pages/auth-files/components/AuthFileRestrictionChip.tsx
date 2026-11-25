@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "@code-proxy/ui/icons";
 import { HoverTooltip } from "@code-proxy/ui";
 import type { AuthFileRestrictionBadge } from "@code-proxy/domain";
 import { RESTRICTION_TONE_CLASSES } from "../hooks/presentationStyles";

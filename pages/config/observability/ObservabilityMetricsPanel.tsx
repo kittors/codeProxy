@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy, RefreshCw } from "@code-proxy/ui/icons";
 import {
   detectApiBaseFromLocation,
   observabilityApi,

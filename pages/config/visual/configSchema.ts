@@ -19,8 +19,8 @@ import {
   Waves,
   Workflow,
   Wrench,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import type { VisualConfigValues } from "@features/visual-config-editor";
 import type { Hue, SettingControlWidth } from "@code-proxy/ui";
 import { parseProxyUrl, validateProxyParts } from "@features/proxy-pool";
@@ -56,7 +56,7 @@ export type ConfigNavGroupId = "basics" | "behavior" | "data" | "advanced";
 export interface ConfigSectionDef {
   id: ConfigSectionId;
   group: ConfigNavGroupId;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   /**
    * 分区的色相：同一组里相邻分区颜色分得开。图标着色多彩时用于分区标题的图标块与胶囊图标，
    * 配色风格多彩时用于选中胶囊的淡底；都关掉时是中性线性图标 + 强调色选中态。
@@ -70,7 +70,7 @@ export const CONFIG_NAV_GROUPS: readonly ConfigNavGroupId[] = ["basics", "behavi
 
 export interface ConfigGroupDef {
   id: ConfigNavGroupId;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: Hue;
 }
 

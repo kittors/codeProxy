@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Boxes, ShieldCheck, TerminalSquare } from "lucide-react";
+import { Boxes, ShieldCheck, TerminalSquare } from "@code-proxy/ui/icons";
 import { VendorIcon, hasVendorIcon } from "@code-proxy/assets";
 import type { MaskCount } from "@code-proxy/api-client";
 import { formatCompact } from "./format";

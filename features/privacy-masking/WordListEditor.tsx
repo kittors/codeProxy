@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Eye, EyeOff, Plus, Upload, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Plus, Upload, X } from "@code-proxy/ui/icons";
 import { Button, Textarea, TextInput } from "@code-proxy/ui";
 
 /** 一次粘贴进来的多个词：按行或逗号（中英文）分开，去掉空的。 */

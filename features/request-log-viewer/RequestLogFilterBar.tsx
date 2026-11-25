@@ -67,6 +67,8 @@ export function RequestLogFilterBar({
               columns={columns}
               density={prefs.density}
               onDensityChange={prefs.setDensity}
+              lines={prefs.lines}
+              onLinesChange={prefs.setLines}
               hiddenColumnIds={prefs.hiddenColumnIds}
               onHiddenColumnIdsChange={prefs.setHiddenColumnIds}
               onReset={prefs.resetView}

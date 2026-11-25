@@ -1,6 +1,23 @@
 // satin-ui/elements：不带 Shadow DOM 的自定义元素，放进页面就自动挂载，移出页面自动销毁
-/** 注册 <sn-avatar>、<sn-segmented>、<sn-select>、<sn-tabs>……这 11 个组件元素，以及 <sn-enhance>（包住一段写在标记上的组件：放进页面自动接上交互，移出页面自动撤掉）。prefix 改前缀 */
+/** 注册全部 13 个内置组件元素以及 <sn-enhance>；prefix 改前缀。按需打包请使用单组件注册函数（defineSelect、defineSegmented……） */
 export function defineElements(prefix?: string): void;
+/** 注册单个自定义元素（可用于内置或任意 createXxx 工厂） */
+export function defineElement(name: string, create: import("./components").SatinFactory<any, any>, props?: string[], prefix?: string): void;
+/** 仅注册 <sn-enhance>（包住一段写在标记上的组件：放进页面自动接上交互，移出页面自动撤掉） */
+export function defineEnhance(prefix?: string): void;
+export function defineSegmented(prefix?: string): void;
+export function defineAvatar(prefix?: string): void;
+export function defineEmptyArt(prefix?: string): void;
+export function defineLoader(prefix?: string): void;
+export function defineSlider(prefix?: string): void;
+export function defineSelect(prefix?: string): void;
+export function defineOtp(prefix?: string): void;
+export function defineTabs(prefix?: string): void;
+export function definePager(prefix?: string): void;
+export function defineCollapse(prefix?: string): void;
+export function defineTagInput(prefix?: string): void;
+export function defineStepper(prefix?: string): void;
+export function defineNumberFlow(prefix?: string): void;
 
 /** 自定义元素通用属性（支持 React / Preact / Solid / Svelte 等 TSX 项目零报错编写 <sn-xxx>） */
 export interface SatinCustomElementProps {

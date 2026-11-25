@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "@code-proxy/ui/icons";
 import { HoverTooltip } from "@code-proxy/ui";
 import { formatDelta, type MonitorDelta } from "../model/monitorDelta";
 

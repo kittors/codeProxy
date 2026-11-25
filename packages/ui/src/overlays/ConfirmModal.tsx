@@ -119,9 +119,7 @@ export function ConfirmModal({
             <ul
               className={[
                 "space-y-1.5 text-sm",
-                variant === "danger"
-                  ? "rounded-lg bg-[var(--sn-b-danger-soft)] px-3.5 py-2.5 text-[var(--sn-label)]"
-                  : "text-ink-2",
+                variant === "danger" ? "sn-impact !list-none !ml-0" : "text-ink-2",
               ].join(" ")}
             >
               {consequences.map((item, index) => (

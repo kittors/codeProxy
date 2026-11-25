@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Boxes, KeyRound, Network, UserRound, Users } from "lucide-react";
+import { Boxes, KeyRound, Network, UserRound, Users } from "@code-proxy/ui/icons";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
 import { Card, chartUsesIdentityColors, iconHueClass } from "@code-proxy/ui";

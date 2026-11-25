@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronRight, ShieldCheck } from "@code-proxy/ui/icons";
 import { surface } from "@code-proxy/ui";
 
 /**

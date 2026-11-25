@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Layers, RefreshCw, Search, Store } from "lucide-react";
+import { Check, Copy, Layers, RefreshCw, Search, Store } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import {
   Card,

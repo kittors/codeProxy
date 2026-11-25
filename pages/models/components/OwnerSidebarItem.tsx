@@ -1,4 +1,4 @@
-import { Edit3, Trash2 } from "lucide-react";
+import { Edit3, Trash2 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";
 import { ModelVendorTile, modelVendorBrand } from "@features/model-tags";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Check, ChevronDown, CircleAlert, Loader, Minus, Terminal, WifiOff } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Loader, Minus, Terminal, WifiOff } from "@code-proxy/ui/icons";
 import type { UpdateProgressResponse } from "@code-proxy/api-client/endpoints/update";
 import { Button } from "@code-proxy/ui";
 import type { UpdateLinkState } from "../progress/progressStream";

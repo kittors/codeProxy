@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BellOff, Save, Undo2 } from "lucide-react";
+import { BellOff, Save, Undo2 } from "@code-proxy/ui/icons";
 import {
   Button,
   Callout,

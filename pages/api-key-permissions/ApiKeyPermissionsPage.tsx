@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, MessageSquareText, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, Users } from "lucide-react";
+import { Copy, MessageSquareText, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, Users } from "@code-proxy/ui/icons";
 import { endUsersApi, type EndUser } from "@code-proxy/api-client/endpoints/end-users";
 import {
   apiKeyPermissionProfilesApi,

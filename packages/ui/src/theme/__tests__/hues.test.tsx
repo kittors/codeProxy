@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { KeyRound, Trash2 } from "lucide-react";
+import { KeyRound, Trash2 } from "@code-proxy/ui/icons";
 import { Icon } from "satin-ui/react";
 import { describe, expect, test } from "vitest";
 import { PlanBadge, ProviderTag } from "../../brand/BrandBadges";

@@ -4,30 +4,31 @@
 // · destroy() 撤掉挂载时加的监听、观察器、定时器；el 是空的时候渲染的标记也一并清掉
 // · createXxx.html(options) 是纯字符串函数：Node / SSR 里也能调，生成和展示页一模一样的标记
 // 导入本身没有副作用。
-import { defineComponent, track } from "./lifecycle.js";
-import { initSeg, injectIcons, reduced as reducedMotion } from "./core.js";
-import { icon } from "./icons.js";
-import { svg } from "./svg.js";
-import { check, chevronDown, chevronLeft, chevronRight, minus, plus, x } from "./icons/index.js";
-import { initSlider, mountSelect, mountOtp, otpEyeHTML, BOX, busy, succeed, copied, removeChip } from "./form.js";
-import { mountTabs, mountPager, setStep, mountUpload, mountReorder, mountSidebar } from "./nav.js";
-import { mountCollapse } from "./data.js";
-import { mountTagInput, mountStepper, mountPassword, mountEmail, mountSearch, mountCount, mountLongText, mountComposer, cmContextHTML, cmModeHTML, cmModelsHTML, syncComposerParts } from "./input.js";
-import { numberFlow } from "./number.js";
-import { scrollArea } from "./scroll.js";
-import { mountProgress, toast, notify } from "./feedback.js";
-import { bindPickers, pickerHTML } from "./picker.js";
-import { mountInfiniteList } from "./list.js";
-import { mountPlayer, mountAudio, playerHTML, audioHTML } from "./media.js";
-import { openPopover, popoverOf, openDialog, closeDialog, openDrawer, closeDrawer, mountCmdk, openMenu, closeMenu } from "./overlay.js";
-import { openLightbox, closeLightbox } from "./lightbox.js";
-import { tableHTML, mountTable, sortRows } from "./table.js";
-import { browserTabsHTML, mountBrowserTabs } from "./browser-tabs.js";
-import { carouselHTML, mountCarousel, bindVolumetric } from "./carousel.js";
-import { presetAvatar } from "./avatar-presets.js";
-export { presetAvatar, avatarSvg, AVATAR_IDS } from "./avatar-presets.js";
-import { emptyArtSvg, emptyArtHTML, EMPTY_ART_IDS } from "./empty-art.js";
-export { emptyArtSvg, emptyArtHTML, EMPTY_ART_IDS };
+import { defineComponent, track } from "./core/lifecycle.js";
+import { initSeg, injectIcons, reduced as reducedMotion } from "./core/core.js";
+import { icon } from "./foundation/icons.js";
+import { svg } from "./foundation/svg.js";
+import { check, chevronDown, chevronLeft, chevronRight, minus, plus, x } from "./foundation/icons/index.js";
+import { initSlider, mountSelect, mountOtp, otpEyeHTML, BOX, busy, succeed, copied, removeChip } from "./form/form.js";
+import { mountTabs, mountPager, setStep, mountUpload, mountReorder, mountSidebar } from "./navigation/nav.js";
+import { mountCollapse } from "./data/data.js";
+import { mountTagInput, mountStepper, mountPassword, mountEmail, mountSearch, mountCount, mountLongText, mountComposer, cmContextHTML, cmModeHTML, cmModelsHTML, syncComposerParts } from "./form/input.js";
+import { numberFlow } from "./feedback/number.js";
+import { scrollArea } from "./layout/scroll.js";
+import { mountProgress, toast, notify } from "./feedback/feedback.js";
+import { bindPickers, pickerHTML } from "./form/picker.js";
+import { mountInfiniteList } from "./data/list.js";
+import { mountPlayer, mountAudio, playerHTML, audioHTML } from "./media/media.js";
+import { openPopover, popoverOf, openDialog, closeDialog, openDrawer, closeDrawer, mountCmdk, openMenu, closeMenu } from "./overlay/overlay.js";
+import { openLightbox, closeLightbox } from "./media/lightbox.js";
+import { tableHTML, mountTable, sortRows } from "./data/table.js";
+import { browserTabsHTML, mountBrowserTabs } from "./layout/browser-tabs.js";
+import { headerHTML, mountHeader } from "./layout/header.js";
+import { carouselHTML, mountCarousel, bindVolumetric } from "./media/carousel.js";
+import { presetAvatar } from "./data/avatar-presets.js";
+export { presetAvatar, avatarSvg, AVATAR_IDS } from "./data/avatar-presets.js";
+import { emptyArtSvg, emptyArtHTML, EMPTY_ART_IDS } from "./feedback/empty-art.js";
+export { emptyArtSvg, emptyArtHTML, EMPTY_ART_IDS, headerHTML, mountHeader };
 
 // 给内层实例补几个方法（destroy……）：按属性描述符合并，getter（value、tags……）不会变成快照
 // 合并实例：more 的同名属性盖过 base 的，只有 destroy 两边都有时先后都调（原来直接盖掉，mountXxx 自己的 destroy 就丢了）
@@ -213,9 +214,9 @@ export const createSelect = /* @__PURE__ */ defineComponent({
     };
   },
 });
-import { forgetSelect as selectsRelease } from "./form.js";
-import { scoped } from "./i18n.js";
-import I18N_DEFAULTS from "./locales/zh-CN/components.js";
+import { forgetSelect as selectsRelease } from "./form/form.js";
+import { scoped } from "./foundation/i18n.js";
+import I18N_DEFAULTS from "./foundation/locales/zh-CN/components.js";
 const tt = /* @__PURE__ */ scoped(I18N_DEFAULTS);
 
 // ———— 验证码 ————
@@ -428,22 +429,22 @@ export function createCommandPalette(groups, o) {
   let alive = true;
   return Object.assign(api, { destroy() { if (!alive) return; alive = false; if (panel.classList.contains("sn-open")) api.close(); dispose(); for (const c of added) c.remove(); if (!had) { panel.remove(); scrim?.remove(); } } });
 }
-export { wireDialog } from "./overlay.js";
-export { icon } from "./icons.js";
+export { wireDialog } from "./overlay/overlay.js";
+export { icon } from "./foundation/icons.js";
 
 // ———— 其余公开函数（设计稿和文档里用到的，原来只在各模块里导出）————
 // 表单校验：validateForm(form) 逐个查 required / pattern / 自定义校验，把错误写到字段下面；setFieldError / clearFieldError 单独设、清
-export { validateForm, setFieldError, clearFieldError, prepBusy, initSlider, mountSelect, bindSelects } from "./form.js";
+export { validateForm, setFieldError, clearFieldError, prepBusy, initSlider, mountSelect, bindSelects } from "./form/form.js";
 // 列表增删的动画（FLIP）、乐观更新（先改界面、失败再退回）
-export { insertWithFlip, removeWithFlip, flipSnapshot, optimistic } from "./nav.js";
+export { insertWithFlip, removeWithFlip, flipSnapshot, optimistic } from "./navigation/nav.js";
 // 骨架屏占位到真内容的过渡；Toast 的位置（右下、顶部居中……）
-export { loadWithSkeleton, setToastPos, mountProgress } from "./feedback.js";
+export { loadWithSkeleton, setToastPos, mountProgress } from "./feedback/feedback.js";
 // 在任意位置开浮层（右键菜单、表格单元格里的编辑器）；在一段已有标记里把浮层的触发器接上
-export { openPopover, bindOverlays } from "./overlay.js";
+export { openPopover, bindOverlays } from "./overlay/overlay.js";
 // 在一段已有标记里接上折叠面板、输入框（密码、邮箱、搜索、计数、长文本）、日期选择器
-export { bindCollapses } from "./data.js";
-export { bindInputs } from "./input.js";
-export { bindPickers } from "./picker.js";
+export { bindCollapses } from "./data/data.js";
+export { bindInputs } from "./form/input.js";
+export { bindPickers } from "./form/picker.js";
 
 // ———— Chrome 浏览器式平滑弧形页标签（工作台顶栏） ————
 export const createBrowserTabs = /* @__PURE__ */ defineComponent({
@@ -472,9 +473,9 @@ export const createTable = /* @__PURE__ */ defineComponent({
   mount: (el, o, api) => mountTable(el, o, api.emit),
 });
 export { tableHTML, sortRows };
-export { bindForms } from "./form.js";
-export { bindBanners, closeBanner } from "./feedback.js";
-export { autoGrow, longCount } from "./input.js";
+export { bindForms } from "./form/form.js";
+export { bindBanners, closeBanner } from "./feedback/feedback.js";
+export { autoGrow, longCount } from "./form/input.js";
 
 // 一行接上整段标记：照设计稿写好的标记（下拉、复制按钮、筛选芯片、清除按钮、显示密码、自动长高、滑块、验证码、
 // 搜索 / 密码 / 邮箱 / 计数输入框、折叠面板、日期选择器、浮层触发器、横幅的关闭），在 root 里一次全部接上交互，并把 data-i 换成图标。
@@ -483,11 +484,18 @@ export { autoGrow, longCount } from "./input.js";
 // （React 的 useEffect 直接 return 它；StrictMode 开发时会接、撤、再接一遍）。
 // wire(root)：可选，自己的接线（createXxx、addEventListener……）放在同一个作用域里跑，撤销时一起撤：
 //   useEffect(() => enhance(ref.current, (root) => { createSegmented(root.querySelector(".sn-seg")); }), []);
-import { bindForms as _bindForms } from "./form.js";
-import { bindInputs as _bindInputs } from "./input.js";
-import { bindCollapses as _bindCollapses } from "./data.js";
-import { bindOverlays as _bindOverlays } from "./overlay.js";
-import { bindBanners as _bindBanners } from "./feedback.js";
+import { bindForms as _bindForms } from "./form/form.js";
+import { bindInputs as _bindInputs } from "./form/input.js";
+import { bindCollapses as _bindCollapses } from "./data/data.js";
+import { bindOverlays as _bindOverlays } from "./overlay/overlay.js";
+import { bindBanners as _bindBanners } from "./feedback/feedback.js";
+export const createHeader = /* @__PURE__ */ defineComponent({
+  name: "header",
+  defaults: { brand: "Satin", links: [], size: "md", width: "default", solid: false, static: false },
+  html: (o) => headerHTML(o),
+  mount: (el, o, api) => mountHeader(el, { ...o, onNavigate: (key, item) => { o.onNavigate?.(key, item); api.emit("navigate", { key, item }); } }),
+});
+
 export function enhance(root = typeof document !== "undefined" ? document : null, wire) {
   if (!root) return () => {};
   const scope = root.nodeType === 9 ? root.documentElement : root;
@@ -506,6 +514,8 @@ export function enhance(root = typeof document !== "undefined" ? document : null
     injectIcons(root);
     for (const art of root.querySelectorAll("[data-art]")) { const k = art.dataset.art; art.removeAttribute("data-art"); art.innerHTML = emptyArtSvg(k); }
     _bindForms(root); _bindInputs(root); _bindCollapses(root); bindPickers(root); _bindOverlays(root); _bindBanners(root); bindVolumetric(root);
+    // 布局组件 · 顶栏：为非静态顶栏自动同步滚动底线与导航选中态
+    for (const hdr of [...(root.matches?.(".sn-header") ? [root] : []), ...root.querySelectorAll(".sn-header:not(.sn-static)")]) mountHeader(hdr);
     // 侧栏布局：接上选中滑块、收起按钮、⌘\；窄于 720（手机、竖着的平板）自动收成图标栏（data-collapse-below 可改，0 不收）
     for (const app of [...(root.matches?.(".sn-app") ? [root] : []), ...root.querySelectorAll(".sn-app")]) if (app.querySelector(".sn-side-nav")) mountSidebar(app, { collapseBelow: +(app.dataset.collapseBelow ?? 720) });
     wire?.(root);

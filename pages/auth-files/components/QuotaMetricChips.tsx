@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock } from "lucide-react";
+import { Clock } from "@code-proxy/ui/icons";
 import { Skeleton } from "@code-proxy/ui";
 import { type QuotaItem } from "@features/quota-preview/quota-helpers";
 import { useQuotaWindowSpendText } from "@features/quota-preview/quota-spend";

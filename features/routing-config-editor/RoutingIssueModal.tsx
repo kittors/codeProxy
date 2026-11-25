@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, Modal, OverflowTooltip } from "@code-proxy/ui";
 

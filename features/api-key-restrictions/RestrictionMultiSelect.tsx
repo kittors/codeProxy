@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@code-proxy/ui/icons";
 import {
   floatingPanelSurface,
   getSelectTriggerBase,

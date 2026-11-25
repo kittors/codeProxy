@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge } from "lucide-react";
+import { Gauge } from "@code-proxy/ui/icons";
 import { FormSection, TextInput, type Rule } from "@code-proxy/ui";
 
 export const THRESHOLD_CATEGORIES = [

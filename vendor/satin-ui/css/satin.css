@@ -1,21 +1,28 @@
-/* satin-ui/css：全部组件样式，一行引入。不含页面级重置：嵌进已有页面时用这个（不改页面其他元素）；整页都用 Satin 时改引 satin-ui/css/page.css（多一份 reset.css）。
-   只用几个组件时也可以按文件单引：tokens.css、base.css 必需，其余按组件挑。 */
-@import "./tokens.css";
-@import "./base.css";
-@import "./buttons.css";
-@import "./form.css";
-@import "./input.css";
-@import "./overlay.css";
-@import "./feedback.css";
-@import "./data.css";
-@import "./scroll.css";
-@import "./content.css";
-@import "./picker.css";
-@import "./number.css";
-@import "./grid.css";
-@import "./charts.css";
-@import "./md.css";
-@import "./tree.css";
-@import "./volumetric.css";
-@import "./carousel.css";
-@import "./shell.css";
+/* satin-ui/css：全部组件样式，一行引入（按组件分类组织）。不含页面级重置：嵌进已有页面时用这个；整页都用 Satin 时改引 satin-ui/css/page.css（多一份 reset.css）。
+   只用几个组件时可按分类或按名引入（如 satin-ui/css/layout/header.css 或 satin-ui/css/header.css）。 */
+@import "./foundation/tokens.css";
+@import "./foundation/base.css";
+@import "./action/buttons.css";
+@import "./form/form.css";
+@import "./form/input.css";
+@import "./overlay/overlay.css";
+@import "./feedback/feedback.css";
+@import "./data/table.css";
+@import "./data/display.css";
+@import "./media/media.css";
+@import "./navigation/nav.css";
+@import "./layout/scroll.css";
+@import "./data/list.css";
+@import "./data/chat.css";
+@import "./data/flow.css";
+@import "./data/editorial.css";
+@import "./form/picker.css";
+@import "./feedback/number.css";
+@import "./data/grid.css";
+@import "./data/charts.css";
+@import "./data/md.css";
+@import "./data/tree.css";
+@import "./media/volumetric.css";
+@import "./media/carousel.css";
+@import "./layout/header.css";
+@import "./layout/shell.css";

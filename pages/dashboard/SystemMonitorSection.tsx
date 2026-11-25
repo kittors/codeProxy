@@ -14,9 +14,9 @@ import {
   Network,
   Wifi,
   Zap,
-  type LucideIcon,
-} from "lucide-react";
-import { AnimatedNumber, Card } from "@code-proxy/ui";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
+import { AnimatedNumber, Card, StatusTag } from "@code-proxy/ui";
 import type { SystemStats } from "./useSystemStats";
 import { formatBytes, formatMs, formatRate, formatUptime } from "./systemFormat";
 import {
@@ -81,7 +81,7 @@ function MetricHeader({
   label,
   children,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   label: string;
   children?: ReactNode;
@@ -194,7 +194,7 @@ function ResourceBar({
   pct,
   detail,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   label: string;
   value: string;
@@ -230,7 +230,7 @@ function MiniKpi({
 }: {
   label: string;
   value: string;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   sublabel?: string;
 }) {
@@ -370,28 +370,15 @@ function SkeletonLayout() {
    ═══════════════════════════════════════════════════════════ */
 
 /**
- * 右上角的数据通道状态：实时推送是一颗绿色呼吸点，退回轮询时点是灰色。简约风格下胶囊保持
- * 中性、颜色只在那颗点上；多彩风格下实时推送时整块是绿色淡底。
+ * 右上角的数据通道状态：统一采用 Satin 原生 `.sn-tag` 状态胶囊，实时推送呈脉冲态 `.sn-run`，
+ * 退回轮询时为中性灰胶囊。
  */
 function LiveIndicator({ connected }: { connected: boolean }) {
   const { t } = useTranslation();
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07]",
-        connected
-          ? "text-ink-2 colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:bg-emerald-400/15 colorful:dark:text-emerald-300"
-          : "text-ink-3",
-      ].join(" ")}
-    >
-      <span className="relative flex size-2">
-        {connected ? (
-          <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-60 motion-safe:animate-ping" />
-        ) : null}
-        <span className={`relative size-2 rounded-full ${connected ? "bg-emerald-500" : "bg-ink-4"}`} />
-      </span>
+    <StatusTag size="sm" tone={connected ? "run" : "neutral"}>
       {connected ? t("system_monitor.live") : t("system_monitor.polling")}
-    </span>
+    </StatusTag>
   );
 }
 
@@ -412,10 +399,9 @@ export function SystemMonitorSection({
         flat
         title={t("system_monitor.title")}
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-hover px-2.5 py-1 text-xs font-medium text-ink-3">
-            <span className="size-2 rounded-full bg-ink-4 motion-safe:animate-pulse" />
+          <StatusTag size="sm" tone="run">
             {t("system_monitor.connecting")}
-          </span>
+          </StatusTag>
         }
       >
         <SkeletonLayout />

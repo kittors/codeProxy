@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { brandVars, cn } from "@code-proxy/ui";
 

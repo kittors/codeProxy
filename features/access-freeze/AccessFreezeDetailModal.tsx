@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Lock, RefreshCw, Unlock } from "lucide-react";
+import { Lock, RefreshCw, Unlock } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   accessFreezesApi,

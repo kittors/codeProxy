@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChartNoAxesCombined, ChartSpline } from "lucide-react";
+import { ChartNoAxesCombined, ChartSpline } from "@code-proxy/ui/icons";
 import type { MonitorOverview } from "@code-proxy/api-client";
 import { Card, ChartLegend, EChart, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BarChart3, Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "lucide-react";
+import { BarChart3, Copy, History, KeyRound, Pencil, Power, RotateCcw, Trash2 } from "@code-proxy/ui/icons";
 import {
   hasPeriodSpendingLimits,
   normalizePeriodSpendingLimits,

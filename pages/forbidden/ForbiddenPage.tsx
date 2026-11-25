@@ -1,4 +1,4 @@
-import { ShieldX } from "lucide-react";
+import { ShieldX } from "@code-proxy/ui/icons";
 import { Link } from "react-router-dom";
 import { buttonClassName } from "@code-proxy/ui";
 

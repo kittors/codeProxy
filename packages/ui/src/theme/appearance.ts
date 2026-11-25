@@ -28,6 +28,9 @@ export type BarStyle = "semantic" | "accent";
 export type ChartStyle = "colorful" | "accent";
 export type StatusRole = "success" | "warning" | "danger";
 export type StylePresetId = "colorful" | "quiet";
+export type ControlRadius = "pill" | "10" | "8" | "6";
+
+export const CONTROL_RADIUS_OPTIONS: readonly ControlRadius[] = ["pill", "10", "8", "6"];
 
 export interface AppearanceSettings {
   /** 页面里的语义色与装饰色：成功 / 信息标签、指标身份色、监控分类色、徽章光效。 */
@@ -42,6 +45,8 @@ export interface AppearanceSettings {
   accent: string;
   /** 状态色：null 表示用内置色板，否则是 #rrggbb（会替换整套色阶）。 */
   status: Record<StatusRole, string | null>;
+  /** Satin 控件圆角档位：默认胶囊 pill，支持 10 / 8 / 6 像素档位实时切换。 */
+  controlRadius: ControlRadius;
   /** 进度条粗细，按 100% 缩放计的像素。 */
   barThickness: number;
   /** 整体缩放（间距、控件、文字一起）；null 表示按平台自动：Windows 100%，其它 90%。 */
@@ -111,6 +116,7 @@ export const STYLE_PRESETS: Record<
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   ...STYLE_PRESETS.colorful,
   status: { success: null, warning: null, danger: null },
+  controlRadius: "pill",
   barThickness: BAR_THICKNESS_RANGE.default,
   uiScale: null,
   textScale: TEXT_SCALE_RANGE.default,
@@ -167,6 +173,7 @@ export function normalizeAppearance(raw: unknown): AppearanceSettings {
       warning: normalizeStatusColor(status.warning),
       danger: normalizeStatusColor(status.danger),
     },
+    controlRadius: pick(source.controlRadius, CONTROL_RADIUS_OPTIONS, DEFAULT_APPEARANCE.controlRadius),
     barThickness: Math.round(
       clampNumber(
         source.barThickness,

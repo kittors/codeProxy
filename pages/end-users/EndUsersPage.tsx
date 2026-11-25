@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "@code-proxy/ui/icons";
 import {
   NO_ACCESS_POLICY_CAPABILITIES,
   apiKeyEntriesApi,

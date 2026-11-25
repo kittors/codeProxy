@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save, ShieldAlert, Wand2, X } from "lucide-react";
+import { Save, ShieldAlert, Wand2, X } from "@code-proxy/ui/icons";
 import {
   ipAccessApi,
   type AutoBanMode,

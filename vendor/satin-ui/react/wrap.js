@@ -46,7 +46,7 @@ export function wrap(create, { valueKey = "value", events = ["change"], stateKey
     useIso(() => { const o = optsOf(props); if (props[valueKey] === undefined) delete o[valueKey]; inst.current?.update(o); });
     useImperativeHandle(ref, () => inst.current, []);
     // React 19 在 dangerouslySetInnerHTML 对象引用变化时会直接重写 domElement.innerHTML，
-    // 导致挂载后由 Satin 写入的子 DOM（如 NumberFlow 数位、Avatar 等）在二次渲染时被清空；
+    // 导致挂载后由 Satin 写入的子 DOM（如 NumberFlow 数位、Avatar、Pager 等）在二次渲染时被清空；
     // 固定 initialHtml 引用，确保 React 仅在首次挂载时写入初始标记。
     return h("div", { ref: host, id: passId ? undefined : id, className: cx("sn-host", className), style: { display: "contents", ...style }, dangerouslySetInnerHTML: initialHtml, suppressHydrationWarning: true });
   });

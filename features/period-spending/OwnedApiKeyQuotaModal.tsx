@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Gauge, KeyRound, Tag } from "lucide-react";
+import { Gauge, KeyRound, Tag } from "@code-proxy/ui/icons";
 import type { PeriodSpendingLimits, PeriodSpendingPeriod } from "@code-proxy/api-client";
 import {
   Button,

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Infinity as InfinityIcon } from "lucide-react";
+import { Infinity as InfinityIcon } from "@code-proxy/ui/icons";
 import {
   QUOTA_METRICS,
   QUOTA_WINDOWS,

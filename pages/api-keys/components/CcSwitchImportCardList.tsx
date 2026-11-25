@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Import } from "lucide-react";
+import { Check, Copy, Import } from "@code-proxy/ui/icons";
 import { Button, EmptyState, Modal, surface } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { getCcSwitchClientConfig } from "@code-proxy/domain/ccswitch/ccswitchClients";

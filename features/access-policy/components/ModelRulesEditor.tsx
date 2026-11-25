@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Boxes, CornerDownRight, Plus, Trash2 } from "lucide-react";
+import { Boxes, CornerDownRight, Plus, Trash2 } from "@code-proxy/ui/icons";
 import type { QuotaUsageView } from "@code-proxy/api-client";
 import { Button, EmptyState, HUE_GLYPH, TextInput, cn } from "@code-proxy/ui";
 import { emptyRuleDraft, type ModelRuleDraft } from "../model/policyDraft";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit3, Plus, RefreshCw, Search, Shuffle, Trash2 } from "lucide-react";
+import { Edit3, Plus, RefreshCw, Search, Shuffle, Trash2 } from "@code-proxy/ui/icons";
 import {
   apiClient,
   channelGroupsApi,

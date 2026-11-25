@@ -5,7 +5,7 @@ import {
   type DataGridColumn,
   type GridFilterOption,
 } from "@code-proxy/ui";
-import { Copy, Eye, FileInput, FileOutput, MoreHorizontal } from "lucide-react";
+import { Copy, Eye, FileInput, FileOutput, MoreHorizontal } from "@code-proxy/ui/icons";
 import {
   CacheCell,
   ChannelCell,

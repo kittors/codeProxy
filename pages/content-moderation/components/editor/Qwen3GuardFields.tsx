@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Layers, ShieldAlert } from "lucide-react";
+import { Layers, ShieldAlert } from "@code-proxy/ui/icons";
 import {
   CONTENT_MODERATION_SCANNERS,
   type ContentModerationControversialAction,

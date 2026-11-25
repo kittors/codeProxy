@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Share2 } from "lucide-react";
+import { Copy, Share2 } from "@code-proxy/ui/icons";
 import {
   authFileSharingId,
   authFilesApi,

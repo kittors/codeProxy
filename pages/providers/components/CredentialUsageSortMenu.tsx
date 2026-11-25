@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, ListOrdered } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, ListOrdered } from "@code-proxy/ui/icons";
 import { Button, DropdownMenu } from "@code-proxy/ui";
 import {
   CREDENTIAL_USAGE_SORT_MODES,

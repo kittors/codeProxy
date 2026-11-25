@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "@code-proxy/ui/icons";
 import type { ModelRoute, ModelRule, QuotaMatrix } from "@code-proxy/api-client";
 import { HUE_SOLID, HUE_TILE, cn } from "@code-proxy/ui";
 import { summarizePolicy } from "../model/policySummary";

@@ -1,39 +1,83 @@
 /*
- * DataGrid 的结构样式：冻结列、吸顶表头、行状态底色、滚动阴影、进场动效。
+ * DataGrid 的 Satin 原生表格结构样式：
+ * 基于 Satin `.sn-tbl-wrap` / `.sn-tbl` 视觉语言（纯净 `--sn-raised` 表面、清晰 `1px var(--sn-line)`
+ * 边线、清爽行线 / 精致单元格网格线 `data-lines="grid"`、固定列平滑阴影、吸顶表头与 live 推合动效）。
  *
- * 这些规则都依赖「表格自己的滚动状态」（data-x-scrolled / data-y-scrolled 等写在根节点上的属性），
- * 滚动时只改属性、不触发 React 渲染；写成工具类要给每个单元格挂一长串 group-data-* 变体，不如集中在这里。
- *
- * 文件随组件加载、不在 Tailwind 的 @layer 里，未分层规则会压过工具类。所以这里只写调用方
- * 不会再用工具类改的东西（定位、底色变量、伪元素），尺寸与排版留给组件上的类。
- *
- * 冻结格必须是不透明的：行底色全部走 --grid-cell-bg，由「当前所在底色」--cp-backdrop
- * 混出悬停、选中色（同 index.css 的 bg-backdrop-hover），放在内容区、卡片、弹窗里都对得上。
+ * 文件随组件加载、不在 Tailwind 的 @layer 里，只承载定位、变量、滚动阴影、网格线与进出场动效。
  */
 .cp-grid {
-  --grid-bg: var(--cp-backdrop, var(--sn-raised));
-  /* 对齐 Satin .sn-tbl-wrap.sn-tbl-fill 表头微灰分层，使表头与表体一眼区分 */
-  --grid-head-bg: color-mix(in srgb, var(--sn-label) 2.5%, var(--sn-raised));
+  --grid-bg: var(--sn-raised, #ffffff);
+  /* 对齐 Satin .sn-tbl-wrap 纯净轻盈表头，与表体形成克制清晰的分层 */
+  --grid-head-bg: color-mix(in srgb, var(--sn-label) 2.2%, var(--sn-raised));
   --grid-row-hover: var(--sn-fill-hover-solid);
   --grid-row-selected: var(--sn-fill-active-solid);
   --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 92%, var(--sn-accent));
   --grid-row-expanded: color-mix(in srgb, var(--sn-label) 2%, var(--grid-bg));
-  --grid-sorted-tint: rgb(0 0 0 / 0.014);
-  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(15 23 42 / 0.12));
+  --grid-sorted-tint: rgb(0 0 0 / 0.012);
+  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(0 0 0 / 0.08));
   --grid-head-shadow: rgb(0 0 0 / 0.05);
   --grid-row-line: var(--sn-line);
 }
 
 .dark .cp-grid,
 [data-theme="dark"] .cp-grid {
-  --grid-head-bg: color-mix(in srgb, #fff 3%, var(--sn-raised));
+  --grid-bg: var(--sn-raised, #1c1c1e);
+  --grid-head-bg: color-mix(in srgb, #fff 3.2%, var(--sn-raised));
   --grid-row-hover: var(--sn-fill-hover-solid);
   --grid-row-selected: var(--sn-fill-active-solid);
   --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 90%, var(--sn-accent));
   --grid-row-expanded: color-mix(in srgb, #fff 2.4%, var(--grid-bg));
   --grid-sorted-tint: rgb(255 255 255 / 0.02);
-  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(0 0 0 / 0.58));
+  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(0 0 0 / 0.52));
   --grid-head-shadow: rgb(0 0 0 / 0.42);
+}
+
+/* Satin .sn-tbl-wrap 卡片外框与内嵌小表样式统一 */
+.cp-grid.sn-tbl-wrap {
+  border-radius: var(--sn-r-xl, 16px);
+  border: 1px solid var(--sn-line);
+  background: var(--grid-bg);
+}
+
+/* 兼容 Satin 表格网格线模式（data-lines="grid"）：每个单元格补齐细腻右竖线 */
+.cp-grid[data-lines="grid"] .cp-grid-head-cell:not(:last-child) {
+  box-shadow:
+    inset -1px 0 0 var(--sn-line),
+    inset 0 -1px 0 var(--sn-line);
+}
+
+.cp-grid[data-lines="grid"][data-y-scrolled="true"] .cp-grid-head-cell:not(:last-child) {
+  box-shadow:
+    inset -1px 0 0 var(--sn-line),
+    inset 0 -1px 0 var(--sn-line),
+    0 6px 10px -8px var(--grid-head-shadow);
+}
+
+.cp-grid[data-lines="grid"] .cp-grid-cell:not(:last-child) {
+  box-shadow:
+    inset -1px 0 0 var(--grid-row-line),
+    inset 0 -1px 0 var(--grid-row-line);
+}
+
+.cp-grid[data-lines="grid"] .cp-grid-row:last-child > .cp-grid-cell:not(:last-child) {
+  box-shadow: inset -1px 0 0 var(--grid-row-line);
+}
+
+/* 表格排序按钮：对齐 Satin .sn-sort，悬停未排序列时也淡现箭头作为可排序提示 */
+@media (hover: hover) {
+  .cp-grid .sn-tbl th .sn-sort:not(.sn-on):hover .sn-ic {
+    opacity: 0.55;
+  }
+}
+
+.cp-grid .sn-tbl th .sn-sort:not(.sn-on):focus-visible .sn-ic {
+  opacity: 0.55;
+}
+
+/* 表格 footer 区域采用 Satin 清爽顶分割线与柔和底色 */
+.cp-grid-footer {
+  border-top: 1px solid var(--sn-line);
+  background: var(--grid-bg);
 }
 
 /*
@@ -164,9 +208,9 @@
   bottom: 6px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background-color: var(--cp-focus);
+  background-color: var(--sn-accent);
   transform: scaleY(0);
-  transition: transform 180ms var(--ease-pop);
+  transition: transform 180ms var(--sn-ease-open, var(--ease-pop));
   pointer-events: none;
 }
 

@@ -27,10 +27,9 @@ export interface DataGridPaginationProps {
 }
 
 const ARROW_BUTTON =
-  "sn-btn sn-ghost sn-sm sn-ibtn shrink-0 text-[var(--sn-label2)]";
+  "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 text-[var(--sn-label2)]";
 
-const PAGE_BUTTON =
-  "sn-btn sn-ghost sn-sm relative z-[1] min-w-8 !px-2 tabular-nums text-[var(--sn-label2)]";
+const PAGE_BUTTON = "sn-pg";
 
 /** 首尾页双箭头：复用 Satin Solar chevron 曲线与 .sn-ic-d 双色调层，避免额外引入 lucide。 */
 function DoubleChevron({ direction }: { direction: "left" | "right" }) {
@@ -118,7 +117,7 @@ export function DataGridPagination({
           {info}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="sn-pager">
           <button
             type="button"
             className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
@@ -145,18 +144,18 @@ export function DataGridPagination({
           </span>
           <span
             ref={pagesHostRef}
-            className="group/pages relative hidden items-center gap-1 @xl:flex"
+            className="sn-pages group/pages hidden @xl:flex"
           >
             <span
               ref={thumbRef}
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 left-0 h-8 origin-left rounded-[var(--sn-btn-r)] bg-[var(--sn-accent)] opacity-0 will-change-transform"
+              className="sn-cur pointer-events-none origin-left opacity-0 will-change-transform"
             />
             {items.map((item, index) =>
               item === "..." ? (
                 <span
                   key={`gap-${index}`}
-                  className="inline-flex h-8 w-6 items-center justify-center text-xs text-[var(--sn-label-off)] select-none"
+                  className="sn-pg sn-gap select-none text-xs text-[var(--sn-label-off)]"
                   aria-hidden="true"
                 >
                   …
@@ -171,7 +170,7 @@ export function DataGridPagination({
                   className={[
                     PAGE_BUTTON,
                     item === current
-                      ? "bg-[var(--sn-accent)] font-semibold !text-[var(--sn-on-primary)] hover:!bg-transparent hover:!text-[var(--sn-on-primary)] group-data-[thumb-ready=true]/pages:!bg-transparent"
+                      ? "sn-on font-semibold !bg-[var(--sn-accent)] !text-[var(--sn-on-primary)] hover:!bg-transparent hover:!text-[var(--sn-on-primary)] group-data-[thumb-ready=true]/pages:!bg-transparent"
                       : null,
                   ]
                     .filter(Boolean)

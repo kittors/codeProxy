@@ -2,7 +2,7 @@
 // satin-ui/react/tree：高性能树形控件（Tree）与文件管理/拟物文件夹（FileExplorer）包成的 React 组件。
 //   import { Tree, FileExplorer } from "satin-ui/react/tree";
 import { createElement as h, forwardRef } from "react";
-import { createTree, createFileExplorer } from "../src/tree.js";
+import { createTree, createFileExplorer } from "../src/data/tree.js";
 import { wrap } from "./wrap.js";
 
 const TreeBase = /* @__PURE__ */ wrap(createTree, {

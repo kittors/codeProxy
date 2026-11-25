@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Lock, Search, ShieldCheck, ShieldPlus, UserRoundCog } from "lucide-react";
+import { Lock, Search, ShieldCheck, ShieldPlus, UserRoundCog } from "@code-proxy/ui/icons";
 import type { RoleIdentity, UserIdentity } from "@code-proxy/api-client";
 import {
   Button,

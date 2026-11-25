@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe2, Lock, Share2, Users } from "lucide-react";
+import { Globe2, Lock, Share2, Users } from "@code-proxy/ui/icons";
 import type { ResourceSharing, ResourceSharingInput } from "@code-proxy/api-client";
 import {
   Button,

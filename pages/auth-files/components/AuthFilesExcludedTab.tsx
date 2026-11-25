@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { FileJson, Plus, RefreshCw } from "lucide-react";
+import { FileJson, Plus, RefreshCw } from "@code-proxy/ui/icons";
 import { Button, EmptyState, ProviderTag, Textarea, TextInput, surface, iconHueClass } from "@code-proxy/ui";
 
 interface AuthFilesExcludedTabProps {

@@ -12,7 +12,7 @@ import {
   type DataGridColumn,
   type GridSort,
 } from "@code-proxy/ui";
-import { KeyRound, Power, PowerOff, Trash2 } from "lucide-react";
+import { KeyRound, Power, PowerOff, Trash2 } from "@code-proxy/ui/icons";
 import { useMemo, useState, type ReactNode } from "react";
 import { LAB_USERS, maskLabKey } from "./labData";
 

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@code-proxy/ui/icons";
 import type { ModelTestC2PA, ModelTestResult } from "@code-proxy/api-client";
 
 /**

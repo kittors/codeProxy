@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Database } from "lucide-react";
+import { Database } from "@code-proxy/ui/icons";
 import { MeterBar, meterTone, type UsageLevel } from "@features/monitor-widgets/monitorVisuals";
 import { formatBytes } from "./systemFormat";
 import { formatFillTime } from "./clusterDiskView";

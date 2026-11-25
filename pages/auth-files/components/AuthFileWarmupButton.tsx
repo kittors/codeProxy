@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Zap, Loader2 } from "lucide-react";
+import { Zap, Loader2 } from "@code-proxy/ui/icons";
 import { Button, HoverTooltip, toast } from "@code-proxy/ui";
 import { authFilesApi } from "@code-proxy/api-client";
 import type { AuthFileItem } from "@code-proxy/domain";

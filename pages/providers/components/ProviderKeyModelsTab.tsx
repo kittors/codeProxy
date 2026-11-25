@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@code-proxy/ui/icons";
 import { Button, GRID_WIDTH } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { DataGrid, type DataGridColumn } from "@code-proxy/ui";

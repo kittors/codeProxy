@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { CircleCheck, CircleX, Loader2 } from "lucide-react";
+import { CircleCheck, CircleX, Loader2 } from "@code-proxy/ui/icons";
 import type { TestOutcome } from "./useChannelTest";
 
 /** 测试发送的结果，列表行和编辑弹窗共用。后端的失败原因很短、不含地址和令牌，原样显示。 */

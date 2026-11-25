@@ -8,7 +8,7 @@ import {
   formatInteger,
 } from "@code-proxy/ui";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Check, Copy, FileInput, FileOutput } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy, FileInput, FileOutput } from "@code-proxy/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { formatTokensPerSecondValue } from "./RequestLogGridCells";

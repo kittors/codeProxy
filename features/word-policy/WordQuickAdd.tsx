@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { FileUp, Plus, Regex } from "lucide-react";
+import { FileUp, Plus, Regex } from "@code-proxy/ui/icons";
 import type { WordPolicyLimits } from "@code-proxy/api-client";
 import { Button, Textarea } from "@code-proxy/ui";
 import { planQuickAdd, type DraftRule, type QuickAddPlan } from "./wordPolicyModel";

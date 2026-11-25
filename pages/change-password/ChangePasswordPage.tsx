@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBigUpDash, ArrowLeft, Check, Shield, ShieldCheck, X } from "lucide-react";
+import { ArrowBigUpDash, ArrowLeft, Check, Shield, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { passwordRuleStatus } from "@code-proxy/domain";
 import { identityApi } from "@code-proxy/api-client";
 import {

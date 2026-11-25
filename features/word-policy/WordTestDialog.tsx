@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical } from "@code-proxy/ui/icons";
 import type { WordTestResult as WordTestOutcome } from "@code-proxy/api-client";
 import { Button, Callout, FormField, Modal, Textarea } from "@code-proxy/ui";
 import { WordTestResult } from "./WordTestResult";

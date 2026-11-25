@@ -4,17 +4,17 @@
 // · 浮在页面上的东西（菜单、Popover 面板）挂载以后才渲染到 <body>（createPortal）：服务端不输出，关着的时候本来也看不见；
 //   放在 <body> 下，祖先元素有 transform、overflow: hidden 也不会把它裁掉或定歪
 // · 触发器就是子元素（一个按钮、一张卡片）：<Menu items={…}><Button>更多</Button></Menu>，子元素自己的 ref、onClick 照常生效
-import { createElement as h, Fragment, forwardRef, useRef, useState, useId, useImperativeHandle, cloneElement, Children, version } from "react";
+import { createElement as h, Fragment, forwardRef, useMemo, useRef, useState, useId, useImperativeHandle, cloneElement, Children, version } from "react";
 import { createPortal, flushSync } from "react-dom";
 import * as S from "../src/components.js";
 import { setup } from "../src/setup.js";
-import { openMenu, closeMenu, menuOpenFor, openPopover, popoverOf, mountCmdk } from "../src/overlay.js";
-import { openLightbox } from "../src/lightbox.js";
-import { track } from "../src/lifecycle.js";
-import { menuHTML, findItem, uploadHTML, acceptRe, sidebarHTML } from "../src/markup.js";
-import { ICONS } from "../src/icons.js";
-import { scoped } from "../src/i18n.js";
-import I18N_COMPONENTS from "../src/locales/zh-CN/components.js";
+import { openMenu, closeMenu, menuOpenFor, openPopover, popoverOf, mountCmdk } from "../src/overlay/overlay.js";
+import { openLightbox } from "../src/media/lightbox.js";
+import { track } from "../src/core/lifecycle.js";
+import { menuHTML, findItem, uploadHTML, acceptRe, sidebarHTML } from "../src/core/markup.js";
+import { ICONS } from "../src/foundation/icons.js";
+import { scoped } from "../src/foundation/i18n.js";
+import I18N_COMPONENTS from "../src/foundation/locales/zh-CN/components.js";
 const tt = /* @__PURE__ */ scoped(I18N_COMPONENTS);
 // 图标（和主入口的 <Icon> 同一份标记）：这里直接画，免得和主入口互相导入
 const Ic = (name) => h("svg", { className: "sn-ic", "data-icon": name, width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", dangerouslySetInnerHTML: { __html: ICONS[name] || "" } });
@@ -39,7 +39,8 @@ function useLatest(v) { const r = useRef(v); r.current = v; return r; }
 function useFloatMenu(items, label, surface) {
   const uid = domId(useId()), box = useRef(null), mounted = useMounted();
   const html = menuHTML(items, uid, label, surface);
-  const portal = mounted ? createPortal(h("div", { ref: box, style: { display: "contents" }, dangerouslySetInnerHTML: { __html: html } }), document.body) : null;
+  const markup = useMemo(() => ({ __html: html }), [html]);
+  const portal = mounted ? createPortal(h("div", { ref: box, style: { display: "contents" }, dangerouslySetInnerHTML: markup }), document.body) : null;
   // 卸载时菜单正开着：先关上（库里还记着这套菜单）
   useIso(() => () => { const root = box.current?.firstElementChild; if (root?.classList.contains("sn-open")) closeMenu(false); }, []);
   return [box, portal];
@@ -189,14 +190,14 @@ export function Lightbox({ items = [], index = null, onClose, thumbOf, enabled }
 // accept：".txt,.docx" 这种扩展名列表或正则；maxSize：字节；upload(file, progress) 返回 Promise（不给就是演示用的模拟上传）
 export const Upload = /* @__PURE__ */ forwardRef(function Upload({ accept, maxSize, upload, title, pick, hint, label, multiple = true, badType, tooBig, className, style, id }, ref) {
   const host = useRef(null), inst = useRef(null), latest = useLatest({ upload });
-  const [html] = useState(() => uploadHTML({ title, pick, hint, label, multiple, accept }));
+  const [initialHtml] = useState(() => ({ __html: uploadHTML({ title, pick, hint, label, multiple, accept }) }));
   useIso(() => {
     const unsetup = setup(), drop = host.current.firstElementChild;
     inst.current = S.createUpload(drop, { list: drop.nextElementSibling, accept: acceptRe(accept), maxSize, badType, tooBig, upload: latest.current.upload ? (f, p) => latest.current.upload(f, p) : undefined });
     return () => { inst.current?.destroy(); inst.current = null; unsetup(); };
   }, []);
   useImperativeHandle(ref, () => inst.current, []);
-  return h("div", { ref: host, id, className: cx("sn-host", className), style: { display: "contents", ...style }, dangerouslySetInnerHTML: { __html: html }, suppressHydrationWarning: true });
+  return h("div", { ref: host, id, className: cx("sn-host", className), style: { display: "contents", ...style }, dangerouslySetInnerHTML: initialHtml, suppressHydrationWarning: true });
 });
 
 // ———— 侧栏布局：左边侧栏（选中切换、收起成图标栏 ⌘\），右边主区放 children ————

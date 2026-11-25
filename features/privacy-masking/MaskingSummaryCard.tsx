@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, ShieldOff } from "lucide-react";
+import { ShieldCheck, ShieldOff } from "@code-proxy/ui/icons";
 import { AnimatedNumber, Button, SegmentedControl, Skeleton, surface } from "@code-proxy/ui";
 import type { MaskSummary } from "@code-proxy/api-client";
 import { formatCompact } from "./format";

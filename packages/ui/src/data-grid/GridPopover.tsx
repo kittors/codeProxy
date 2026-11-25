@@ -145,8 +145,8 @@ export function GridPopover({
               : { opacity: 0, scale: 0.98, y: -2, transition: popoverExitTransition }
           }
           className={[
-            "fixed z-[1000] rounded-xl border border-[var(--sn-line)] bg-elevated text-ink shadow-pop",
-            "[--cp-backdrop:var(--cp-elevated)]",
+            "fixed z-[1000] rounded-[var(--sn-r-lg)] border border-[var(--sn-line)] bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e1)]",
+            "[--cp-backdrop:var(--sn-overlay)]",
             className,
           ]
             .filter(Boolean)

@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Pencil, Plus, Trash2, TriangleAlert } from "@code-proxy/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { detectApiBaseFromLocation, modelsApi } from "@code-proxy/api-client";

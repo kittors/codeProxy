@@ -4,7 +4,7 @@
 //   <Markdown source={text} />   或   <Markdown>{"# 标题\n正文"}</Markdown>
 // source 变了只更新变了的那几块（流式输出时一段段追加也不闪）；codeMax、imgH、tableMax 变了直接生效
 import { createElement as h, forwardRef, Children } from "react";
-import { createMarkdown } from "../src/markdown.js";
+import { createMarkdown } from "../src/data/markdown.js";
 import { wrap } from "./wrap.js";
 
 const Base = /* @__PURE__ */ wrap(createMarkdown, { valueKey: "source", events: [], displayName: "MarkdownInstance" });

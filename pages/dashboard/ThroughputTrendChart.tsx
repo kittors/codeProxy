@@ -5,7 +5,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@code-proxy/ui/icons";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type {
   DashboardTenantThroughputItem,
@@ -18,6 +18,7 @@ import {
   EChart,
   HoverTooltip,
   type Hue,
+  StatusTag,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -299,19 +300,13 @@ export function ThroughputTrendChart({
               </TabsList>
             </Tabs>
           ) : null}
-          {/* 简约风格是中性胶囊、颜色只在那颗点上；多彩风格整块绿色淡底（与系统监控的数据通道状态一致）。 */}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07] ${
-              connected
-                ? "text-ink-2 colorful:bg-emerald-50 colorful:text-emerald-600 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300"
-                : "text-ink-3"
-            }`}
+          {/* Satin 原生状态胶囊：实时活跃用 .sn-run 呼吸脉冲点，空闲连接用 .sn-ok，轮询用中性灰。 */}
+          <StatusTag
+            size="sm"
+            tone={connected ? (active ? "run" : "ok") : "neutral"}
           >
-            <span
-              className={`h-2 w-2 rounded-full ${active ? "animate-pulse bg-emerald-500" : "bg-ink-4"}`}
-            />
             {connected ? t("system_monitor.live") : t("system_monitor.polling")}
-          </div>
+          </StatusTag>
         </div>
       }
     >

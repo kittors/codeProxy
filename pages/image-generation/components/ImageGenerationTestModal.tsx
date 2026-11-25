@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImagePlay } from "lucide-react";
+import { ImagePlay } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   Button,

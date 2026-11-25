@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Plus, RefreshCw, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { Button, Checkbox, EmptyState, ProviderTag, TextInput, surface } from "@code-proxy/ui";
 import type { AliasRow } from "@code-proxy/domain";
 

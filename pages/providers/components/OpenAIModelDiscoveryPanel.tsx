@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Check, RefreshCw } from "lucide-react";
+import { Check, RefreshCw } from "@code-proxy/ui/icons";
 import { Button, Checkbox, TextInput, useScrollFade } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 

@@ -8,7 +8,7 @@
 // 底部输入框：context（onContextChange、onContextClick）、mode（onModeChange）、models / model（onModelChange 里改 model）
 import { createElement as h, forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { createChat, createThreadRail } from "../src/chat.js";
+import { createChat, createThreadRail } from "../src/data/chat.js";
 import { wrap, useIso } from "./wrap.js";
 
 const Base = /* @__PURE__ */ wrap(createChat, { events: ["modelChange", "modeChange", "contextChange", "contextClick", "menu", "newChat"], displayName: "ChatInstance" });

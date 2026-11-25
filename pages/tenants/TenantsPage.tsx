@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, CalendarClock, Eye, Pencil } from "lucide-react";
+import { Ban, CalendarClock, Eye, Pencil } from "@code-proxy/ui/icons";
 import { identityApi, type TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -8,6 +8,7 @@ import {
   GRID_ROW_ACTIONS_COLUMN,
   GRID_WIDTH,
   GridRowActions,
+  StatusTag,
   useToast,
   type DataGridColumn,
 } from "@code-proxy/ui";
@@ -132,18 +133,18 @@ export function TenantsPage() {
         header: t("identity_admin.status"),
         width: GRID_WIDTH.compact,
         cell: (item) => (
-          <span
-            className={[
-              "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+          <StatusTag
+            size="sm"
+            tone={
               item.effective_status === "active"
-                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                ? "ok"
                 : item.effective_status === "expired"
-                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                  : "bg-rose-500/10 text-rose-700 dark:text-rose-300",
-            ].join(" ")}
+                  ? "warn"
+                  : "bad"
+            }
           >
             {statusLabel(item.effective_status)}
-          </span>
+          </StatusTag>
         ),
       },
       {

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, RefreshCw } from "lucide-react";
+import { CheckCircle2, RefreshCw } from "@code-proxy/ui/icons";
 import {
   egressStatusFor,
   type ProxyEgressListing,

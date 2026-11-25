@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical } from "@code-proxy/ui/icons";
 import { HUE_TILE, cn } from "@code-proxy/ui";
 import { matchesAnyModelPattern } from "../model/modelMatch";
 import type { ModelOption } from "./ModelPatternInput";

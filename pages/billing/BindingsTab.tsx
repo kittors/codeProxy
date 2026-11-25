@@ -1,17 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  CalendarClock,
-  Download,
-  ExternalLink,
-  KeyRound,
-  Pencil,
-  Plus,
-  QrCode,
-  RefreshCw,
-  Trash2,
-  UserRound,
-} from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   billingAdminApi,
   type BillingBinding,
@@ -278,7 +267,7 @@ export function BindingsTab({
         <p className="text-xs text-ink-3">{t("billing_admin.bindings_intro")}</p>
         {canWrite ? (
           <Button size="sm" variant="primary" onClick={openCreate} disabled={plans.length === 0}>
-            <Plus size={14} />
+            <Icon name="plus" size={14} />
             {t("billing_admin.create_binding")}
           </Button>
         ) : null}
@@ -287,13 +276,13 @@ export function BindingsTab({
       {bindings.length === 0 ? (
         <Card>
           <EmptyState
-            icon={<QrCode size={28} />}
+            scene="projects"
             title={t("billing_admin.no_bindings_title")}
             description={t("billing_admin.no_bindings_desc")}
             action={
               canWrite && plans.length > 0 ? (
                 <Button size="sm" variant="primary" onClick={openCreate}>
-                  <Plus size={14} />
+                  <Icon name="plus" size={14} />
                   {t("billing_admin.create_binding")}
                 </Button>
               ) : undefined
@@ -301,58 +290,52 @@ export function BindingsTab({
           />
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-xs">
+        <div className="sn-tbl-wrap">
+          <div className="sn-tbl-sc">
+            <table className="sn-tbl min-w-[760px]">
               <thead>
-                <tr className="border-b border-ink/10 text-ink-3 dark:border-white/10">
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_target")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_bound_plans")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_expiry_quota")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("billing_admin.col_public_qr")}</th>
-                  <th className="py-2 text-right font-medium">{t("billing.col_action")}</th>
+                <tr>
+                  <th>{t("billing_admin.col_target")}</th>
+                  <th>{t("billing_admin.col_bound_plans")}</th>
+                  <th>{t("billing_admin.col_expiry_quota")}</th>
+                  <th>{t("billing_admin.col_public_qr")}</th>
+                  <th className="sn-r">{t("billing.col_action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink/[0.06] dark:divide-white/[0.06]">
+              <tbody>
                 {bindings.map((b) => {
                   const exp = formatExpiryRemaining(b.expires_at, t);
                   return (
-                    <tr key={b.id} className="text-ink-2">
-                      <td className="py-3 pr-3">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
-                            {b.target_kind === "api_key" ? (
-                              <KeyRound size={14} />
-                            ) : (
-                              <UserRound size={14} />
-                            )}
+                    <tr key={b.id}>
+                      <td>
+                        <div className="flex items-center gap-2.5 py-2">
+                          <span className="inline-flex shrink-0 items-center text-[var(--sn-label3)]">
+                            <Icon name={b.target_kind === "api_key" ? "key-round" : "user"} size={16} />
                           </span>
                           <div className="min-w-0">
-                            <div className="font-medium text-ink">
-                              {b.target_label || b.target_id}
+                            <div className="flex items-center gap-1.5 font-medium text-[var(--sn-label)]">
+                              <span className="truncate">{b.target_label || b.target_id}</span>
                               {!b.enabled ? (
-                                <span className="ml-1.5 rounded-full bg-ink/[0.07] px-1.5 py-0.5 text-2xs text-ink-3">
+                                <span className="sn-tag sn-sm">
+                                  <i />
                                   {t("common.disabled")}
                                 </span>
                               ) : null}
                             </div>
-                            <div className="font-mono text-2xs text-ink-3">
+                            <div className="font-mono text-2xs text-[var(--sn-label3)]">
                               {b.target_subtitle ? `${b.target_subtitle} · ` : ""}
                               {b.key_masked || t(`billing_admin.target_kind.${b.target_kind}`)}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 pr-3">
-                        <div className="flex flex-wrap gap-1">
+                      <td>
+                        <div className="flex flex-wrap gap-1 py-1.5">
                           {b.plan_ids.map((pid) => {
                             const p = planById.get(pid);
                             const override = b.price_overrides?.[pid];
                             return (
-                              <span
-                                key={pid}
-                                className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs text-ink-2 dark:bg-white/[0.07]"
-                              >
+                              <span key={pid} className="sn-tag sn-sm">
                                 {p ? p.name : pid}
                                 {override ? ` (${formatYuan(override)})` : ""}
                               </span>
@@ -360,22 +343,22 @@ export function BindingsTab({
                           })}
                         </div>
                       </td>
-                      <td className="py-3 pr-3">
-                        <div className="space-y-0.5">
+                      <td>
+                        <div className="space-y-0.5 py-1.5">
                           <div
                             className={cn(
-                              "inline-flex items-center gap-1",
+                              "inline-flex items-center gap-1.5 text-xs",
                               exp?.expired
-                                ? "text-rose-600 dark:text-rose-400"
+                                ? "text-[var(--sn-danger)]"
                                 : exp?.soon
-                                  ? "text-amber-600 dark:text-amber-400"
-                                  : "text-ink-2",
+                                  ? "text-[var(--sn-warning)]"
+                                  : "text-[var(--sn-label2)]",
                             )}
                           >
-                            <CalendarClock size={12} />
+                            <Icon name="calendar" size={13} />
                             <span>{exp ? exp.text : t("billing.no_expiry_limit")}</span>
                           </div>
-                          <div className="font-mono text-2xs text-ink-3">
+                          <div className="font-mono text-2xs text-[var(--sn-label3)]">
                             {b.lifetime_limit_usd > 0
                               ? t("billing_admin.lifetime_cap", {
                                   usd: b.lifetime_limit_usd.toFixed(2),
@@ -384,32 +367,42 @@ export function BindingsTab({
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 pr-3">
+                      <td>
                         {b.allow_public_pay && b.public_code ? (
                           <Button size="sm" variant="secondary" onClick={() => setQrTarget(b)}>
-                            <QrCode size={13} />
+                            <Icon name="scan" size={13} />
                             {t("billing_admin.view_qr_code")}
                           </Button>
                         ) : (
-                          <span className="text-ink-3">{t("billing_admin.portal_only")}</span>
+                          <span className="text-xs text-[var(--sn-label3)]">{t("billing_admin.portal_only")}</span>
                         )}
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="sn-r">
                         {canWrite ? (
-                          <div className="inline-flex items-center gap-1">
+                          <div className="inline-flex items-center justify-end gap-1">
                             <Button
                               size="sm"
                               variant="secondary"
                               onClick={() => setAdjustTarget(b)}
                             >
-                              <CalendarClock size={13} />
+                              <Icon name="calendar" size={13} />
                               {t("billing_admin.adjust_expiry_btn")}
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => openEditBinding(b)}>
-                              <Pencil size={14} />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEditBinding(b)}
+                              aria-label={t("common.edit")}
+                            >
+                              <Icon name="pencil" size={14} />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(b)}>
-                              <Trash2 size={14} />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeleteTarget(b)}
+                              aria-label={t("common.delete")}
+                            >
+                              <Icon name="trash-2" size={14} />
                             </Button>
                           </div>
                         ) : null}
@@ -420,7 +413,7 @@ export function BindingsTab({
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
 
       <Modal
@@ -626,16 +619,16 @@ export function BindingsTab({
                   downloadQrPng(resolvePublicUrl(qrTarget), `pay-${qrTarget.public_code}.png`)
                 }
               >
-                <Download size={14} />
+                <Icon name="download" size={14} />
                 {t("billing_admin.download_qr_png")}
               </Button>
               <a
                 href={resolvePublicUrl(qrTarget)}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-ink/[0.06] px-3 text-xs font-medium text-ink transition hover:bg-ink/[0.1] dark:bg-white/[0.08]"
+                className="sn-btn sn-tertiary sn-sm"
               >
-                <ExternalLink size={13} />
+                <Icon name="external-link" size={13} />
                 {t("billing_admin.open_pay_page")}
               </a>
               {canWrite ? (
@@ -645,7 +638,7 @@ export function BindingsTab({
                   disabled={rotating}
                   onClick={() => void handleRotateCode(qrTarget)}
                 >
-                  <RefreshCw size={13} className={rotating ? "animate-spin" : ""} />
+                  <Icon name="refresh-cw" size={13} className={rotating ? "animate-spin" : ""} />
                   {t("billing_admin.rotate_qr_code")}
                 </Button>
               ) : null}

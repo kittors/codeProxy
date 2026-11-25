@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Repeat } from "lucide-react";
+import { Repeat } from "@code-proxy/ui/icons";
 import { LoopGuardKeySection, isLoopGuardKeyShown } from "./LoopGuardKeySection";
 import { hasLoopGuardErrors } from "./loopGuardDraft";
 import type { LoopGuardKeyOverride } from "./useLoopGuardKey";

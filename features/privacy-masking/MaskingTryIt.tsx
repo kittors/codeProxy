@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "@code-proxy/ui/icons";
 import { Textarea } from "@code-proxy/ui";
 import { privacyMaskingApi, type PrivacyMaskPolicy, type PrivacyMaskPreview } from "@code-proxy/api-client";
 import { kindStyle } from "./maskKinds";

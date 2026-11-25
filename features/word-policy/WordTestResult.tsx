@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldAlert, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldX, TriangleAlert } from "@code-proxy/ui/icons";
 import type { WordTestResult as WordTestOutcome } from "@code-proxy/api-client";
 import { Callout, DataGrid, surface, type DataGridColumn } from "@code-proxy/ui";
 import { highlightSegments } from "./wordPolicyModel";

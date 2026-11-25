@@ -11,8 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { Progress } from "satin-ui/react";
 import { Button } from "../primitives/Button";
-import { surface } from "../primitives/Surface";
 import { popoverEnterTransition, popoverExitTransition } from "../utils/motion";
 import "./DataGrid.css";
 import { DataGridBody } from "./DataGridBody";
@@ -20,6 +20,7 @@ import { DataGridHeader } from "./DataGridHeader";
 import { GridColumnMenu } from "./GridColumnMenu";
 import { GridPopover } from "./GridPopover";
 import { GridScrollbar } from "./GridScrollbar";
+import { useGridLines } from "./gridStorage";
 import {
   GRID_EXPAND_COLUMN_ID,
   GRID_REORDER_COLUMN_ID,
@@ -72,6 +73,7 @@ export function DataGrid<T>({
   fitColumns = false,
   empty,
   density = "default",
+  lines,
   hiddenColumnIds,
   onHiddenColumnIdsChange,
   sort,
@@ -491,6 +493,7 @@ export function DataGrid<T>({
     (layout.startOffsets[GRID_SELECT_COLUMN_ID] ?? 0) + (layout.widths[GRID_SELECT_COLUMN_ID] ?? 0);
   const interactive = selectable || expandable || Boolean(onRowClick) || Boolean(rowReorder);
   const columnDrag = columnOrder.drag;
+  const resolvedLines = useGridLines(id, lines);
 
   const viewportStyle: CSSProperties = {
     ["--grid-head-h" as string]: `${viewport.headerHeight}px`,
@@ -502,16 +505,17 @@ export function DataGrid<T>({
       ref={rootRef}
       className={[
         "cp-grid group/grid relative flex min-w-0 flex-col",
-        // 外框与 Satin .sn-tbl-wrap / .sn-panel 同一套：12px（xl）圆角 + 1px 伪元素细边；
-        // overflow-hidden 让表头底色、选中行、冻结列阴影、滚动条都被圆角裁住。
-        frame
-          ? `${surface({ tone: "card", radius: "xl" })} cp-grid-frame isolate overflow-hidden`
-          : "",
-        fill ? "h-full min-h-0 flex-1" : "",
+        // 外框使用 Satin 原生 .sn-tbl-wrap（16px 大圆角 + 1px 细边 + 纯净 raised 表面）
+        frame ? "sn-tbl-wrap cp-grid-frame isolate overflow-hidden" : "",
+        density === "compact" ? "sn-compact" : "",
+        fill ? "sn-tbl-fill h-full min-h-0 flex-1" : "",
         className ?? "",
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-fill={fill ? "true" : "false"}
       data-density={density}
+      data-lines={resolvedLines}
     >
       <div
         ref={areaRef}
@@ -524,7 +528,7 @@ export function DataGrid<T>({
           tabIndex={-1}
         >
           <table
-            className="cp-grid-table"
+            className="sn-tbl cp-grid-table"
             style={{ width: layout.totalWidth || "100%" }}
             role={interactive ? "grid" : undefined}
             aria-label={label}
@@ -616,14 +620,18 @@ export function DataGrid<T>({
           </table>
         </div>
 
-        {/* 已有数据时的加载：表头下沿一条细进度条，行变淡，框和分页都不动。 */}
+        {/* 已有数据时的加载：表头下沿使用 Satin 原生不确定态进度条，行变淡，框和分页都不动。 */}
         {loading && rows.length > 0 ? (
           <div
-            role="progressbar"
-            aria-label={t("data_grid.loading")}
-            className="cp-grid-progress pointer-events-none absolute inset-x-0 z-[8] h-0.5"
-            style={{ top: Math.max(0, viewport.headerHeight - 1) }}
-          />
+            className="pointer-events-none absolute inset-x-0 z-[8]"
+            style={{ top: Math.max(0, viewport.headerHeight - 2) }}
+          >
+            <Progress
+              height={2}
+              label={t("data_grid.loading")}
+              className="!rounded-none !bg-transparent"
+            />
+          </div>
         ) : null}
 
         {/* 有选中行时，表头换成选择条（复选框列留在原位，仍可全选 / 取消）。 */}
@@ -720,11 +728,7 @@ export function DataGrid<T>({
       ) : null}
 
       {footer ? (
-        <div
-          className={
-            frame ? "shrink-0 px-4 py-2.5 shadow-[inset_0_1px_0_var(--sn-line)]" : "shrink-0 pt-2.5"
-          }
-        >
+        <div className={frame ? "cp-grid-footer shrink-0 px-4 py-2.5" : "shrink-0 pt-2.5"}>
           {footer}
         </div>
       ) : null}
