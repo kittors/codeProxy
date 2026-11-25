@@ -97,6 +97,7 @@
     "update": "Update",
     "refresh": "Refresh",
     "close": "Close",
+    "dismiss_notification": "Dismiss notification",
     "success": "Success",
     "error": "Error",
     "info": "Info",

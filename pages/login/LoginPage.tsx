@@ -157,7 +157,7 @@ export function LoginPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute top-6 right-6 z-20">
-        <ThemeToggleButton className="sn-btn sn-secondary sn-ibtn sn-round !h-10 !w-10" />
+        <ThemeToggleButton variant="secondary" size="lg" />
       </div>
       {/* 卡片四周的中继网络：卡片就是网关，线路从两侧接进来。宽屏才出现。 */}
       <LoginNetwork cardRef={cardRef} />
@@ -231,7 +231,7 @@ export function LoginPage() {
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     autoFocus
-                    className="rounded-full px-5"
+                    size="xl"
                     startAdornment={<Icon name="user" size={16} className={FIELD_ICON} />}
                   />
                 </motion.label>
@@ -247,13 +247,13 @@ export function LoginPage() {
                       onBlur={capsLock.onBlur}
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
-                      className="rounded-full px-5"
+                      size="xl"
                       startAdornment={<Icon name="key-round" size={16} className={FIELD_ICON} />}
                       endAdornment={
                         <button
                           type="button"
                           onClick={() => setShowPassword((value) => !value)}
-                          className="sn-btn sn-ghost sn-xs sn-ibtn sn-round"
+                          className="sn-eye"
                           aria-label={showPassword ? t("login.hide_key") : t("login.show_key")}
                         >
                           <span className={showPassword ? "sn-swap sn-swapped" : "sn-swap"}>
@@ -296,7 +296,7 @@ export function LoginPage() {
                     type="button"
                     onClick={() => setShowAdvanced((value) => !value)}
                     aria-expanded={showAdvanced}
-                    className="sn-btn sn-ghost sn-xs !h-7 !-ml-2 !px-2 !text-xs text-[var(--sn-label3)]"
+                    className="sn-btn sn-ghost sn-xs -ml-2 text-[var(--sn-label3)]"
                   >
                     {t("login.advanced_connection", "Advanced connection settings")}
                     <Icon
@@ -313,8 +313,8 @@ export function LoginPage() {
                             value={apiBase}
                             onChange={(event) => setApiBase(event.target.value)}
                             type="url"
+                            size="lg"
                             aria-label={t("login.endpoint_label")}
-                            className="rounded-full px-5"
                           />
                         </div>
                       </motion.div>

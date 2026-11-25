@@ -46,7 +46,7 @@ const BUTTON_VARIANT_MAP: Record<ButtonVariant, string> = {
 };
 
 const BUTTON_SIZE_MAP: Record<ButtonSize, string> = {
-  xs: "sn-sm",
+  xs: "sn-xs",
   sm: "sn-sm",
   md: "",
   lg: "sn-lg",

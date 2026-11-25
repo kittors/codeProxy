@@ -18,7 +18,7 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { AppearanceButton } from "./appearance/AppearanceButton";
 import { tenantDisplayName } from "./navModel";
 
-const TOPBAR_ICON_BUTTON = "sn-btn sn-ghost sn-sm sn-round !h-9 text-[var(--sn-label2)]";
+const TOPBAR_ICON_BUTTON = "sn-btn sn-ghost sn-ibtn sn-round text-[var(--sn-label2)]";
 
 /**
  * 内容区顶栏：左侧是「分区 / 页面」位置提示（手机上多一个打开抽屉的按钮），右侧是切换租户、
@@ -52,7 +52,7 @@ export function ShellTopBar({
           type="button"
           onClick={onToggleMobileNav}
           aria-label={mobileNavOpen ? t("shell.collapse_sidebar") : t("shell.expand_sidebar")}
-          className={`${TOPBAR_ICON_BUTTON} sn-ibtn !w-9`}
+          className={TOPBAR_ICON_BUTTON}
         >
           <Icon name="panel-left" size={18} />
         </button>
@@ -60,17 +60,17 @@ export function ShellTopBar({
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm" aria-hidden="true">
         {sectionLabel && sectionLabel !== pageLabel ? (
           <>
-            <span className="hidden truncate text-ink-3 sm:inline">{sectionLabel}</span>
-            <span className="hidden text-ink-4 sm:inline">/</span>
+            <span className="hidden truncate text-[var(--sn-label3)] sm:inline">{sectionLabel}</span>
+            <span className="hidden text-[var(--sn-label-off)] sm:inline">/</span>
           </>
         ) : null}
-        {pageLabel ? <span className="truncate font-medium text-ink">{pageLabel}</span> : null}
+        {pageLabel ? <span className="truncate font-medium text-[var(--sn-label)]">{pageLabel}</span> : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <TenantSwitcher />
-        <LanguageSelector className={`${TOPBAR_ICON_BUTTON} gap-0.5 px-2.5`} />
-        <ThemeToggleButton className={`${TOPBAR_ICON_BUTTON} w-9`} />
-        <AppearanceButton className={`${TOPBAR_ICON_BUTTON} w-9`} />
+        <LanguageSelector size="md" />
+        <ThemeToggleButton size="md" />
+        <AppearanceButton className={TOPBAR_ICON_BUTTON} />
       </div>
     </header>
   );

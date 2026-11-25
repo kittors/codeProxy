@@ -190,7 +190,25 @@ export const useTheme = (): ThemeContextState => {
   return context;
 };
 
-export function ThemeToggleButton({ className, label }: { className?: string; label?: string }) {
+export interface ThemeToggleButtonProps {
+  className?: string;
+  label?: string;
+  variant?: "ghost" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+const TOGGLE_SIZE_CLASS: Record<NonNullable<ThemeToggleButtonProps["size"]>, string> = {
+  sm: "sn-sm",
+  md: "",
+  lg: "sn-lg",
+};
+
+export function ThemeToggleButton({
+  className,
+  label,
+  variant = "ghost",
+  size = "md",
+}: ThemeToggleButtonProps) {
   const { t } = useTranslation();
   const {
     state: { mode, preference },
@@ -199,7 +217,12 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{ top: number; left: number; side: "bottom" | "top"; ready: boolean }>({
+    top: 0,
+    left: 0,
+    side: "bottom",
+    ready: false,
+  });
 
   const selectedOption = THEME_OPTIONS.find((option) => option.value === preference);
   const triggerIconName = preference === "auto" ? "monitor" : mode === "dark" ? "moon" : "sun";
@@ -210,16 +233,28 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const width = 220;
+    const width = menuRef.current?.offsetWidth || 200;
+    const height = menuRef.current?.offsetHeight || 116;
     const margin = 8;
+    const gap = 6;
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+
     const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const maxLeft = Math.max(margin, vw - width - margin);
     const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-    setPos({ top: rect.bottom + 6, left });
+
+    const openAbove = vh - rect.bottom - gap < height && rect.top - gap > vh - rect.bottom;
+    const rawTop = openAbove ? rect.top - gap - height : rect.bottom + gap;
+    const top = Math.min(Math.max(margin, rawTop), Math.max(margin, vh - height - margin));
+    setPos({ top: Math.round(top), left: Math.round(left), side: openAbove ? "top" : "bottom", ready: true });
   }, []);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      return;
+    }
     reposition();
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
@@ -236,22 +271,47 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
       if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setOpen(false);
     };
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
+        const panel = menuRef.current;
+        if (!panel) return;
+        const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
+        if (items.length === 0) return;
+        event.preventDefault();
+        if (event.key === "Home") {
+          items[0]?.focus();
+          return;
+        }
+        if (event.key === "End") {
+          items[items.length - 1]?.focus();
+          return;
+        }
+        const cur = items.indexOf(document.activeElement as HTMLElement);
+        const nextIdx =
+          event.key === "ArrowDown"
+            ? (cur + 1 + items.length) % items.length
+            : (cur - 1 + items.length) % items.length;
+        items[nextIdx]?.focus();
+      }
     };
+    document.addEventListener("pointerdown", handleClick);
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [open]);
 
   const handleModeChange = (next: ThemePreference) => {
     setMode(next);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
@@ -260,7 +320,19 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={cn("sn-btn sn-ghost sn-ibtn sn-round", open ? "sn-is-open" : null, className)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && !open) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={cn(
+          "sn-btn sn-ibtn sn-round",
+          variant === "secondary" ? "sn-secondary" : "sn-ghost",
+          TOGGLE_SIZE_CLASS[size],
+          open ? "sn-is-open" : null,
+          className,
+        )}
         aria-label={buttonLabel}
         aria-expanded={open}
         aria-haspopup="menu"
@@ -275,10 +347,16 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
               ref={menuRef}
               role="menu"
               data-state="open"
-              data-side="bottom"
+              data-side={pos.side}
               aria-label={buttonLabel}
-              className="sn-menu sn-solid sn-open w-[220px]"
-              style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
+              className="sn-menu sn-solid code-proxy-floating-surface w-48 outline-none"
+              style={{
+                position: "fixed",
+                top: pos.top,
+                left: pos.left,
+                zIndex: 9999,
+                visibility: pos.ready ? undefined : "hidden",
+              }}
             >
               {THEME_OPTIONS.map(({ value, labelKey, icon }) => {
                 const selected = value === preference;
@@ -290,7 +368,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
                     aria-checked={selected}
                     onClick={() => handleModeChange(value)}
                     className={cn(
-                      "sn-item w-full border-0 bg-transparent text-left hover:bg-[var(--sn-b-ghost-hover)]",
+                      "sn-item w-full border-0 bg-transparent text-left outline-none hover:bg-[var(--sn-b-ghost-hover)] focus:bg-[var(--sn-b-ghost-hover)]",
                       selected ? "sn-sel font-medium" : null,
                     )}
                   >

@@ -11,6 +11,7 @@ export interface SegmentedOption<T extends string = string> {
 /**
  * Satin 分段单选（.sn-seg + .sn-thumb + edgeFrames 流体双曲线滑块微动效）：
  * 前缘先到、后缘跟上、落定时纵向轻压回弹，保留 radiogroup 语义与方向键切换。
+ * 传入 `w-full` 时自动走 Satin 原生等宽网格 `grid-auto-columns: 1fr`，否则自适应紧凑排列。
  */
 export function SegmentedControl<T extends string>({
   value,
@@ -33,6 +34,7 @@ export function SegmentedControl<T extends string>({
   const thumbRef = useRef<HTMLSpanElement | null>(null);
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const enabled = options.filter((option) => !option.disabled);
+  const isBlock = Boolean(className && /\bw-full\b/.test(className));
 
   const selector = `[data-seg-value="${CSS.escape(value)}"]`;
   useSatinFluidThumb(containerRef, thumbRef, selector, value);
@@ -56,7 +58,12 @@ export function SegmentedControl<T extends string>({
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
       onKeyDown={onKeyDown}
-      className={cn("sn-seg !inline-flex", size === "sm" ? "sn-sm" : null, className)}
+      className={cn(
+        "sn-seg",
+        isBlock ? "sn-seg-block" : "!inline-flex",
+        size === "sm" ? "sn-sm" : null,
+        className,
+      )}
     >
       <span ref={thumbRef} aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
       {options.map((option) => {
@@ -77,6 +84,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             className={cn(
               "!inline-flex h-full items-center justify-center gap-1.5 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-45",
+              isBlock ? "min-w-0 w-full" : null,
               size === "sm" ? "!px-2.5 !text-xs" : "!px-3.5 !text-sm",
             )}
           >

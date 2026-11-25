@@ -152,12 +152,12 @@ export function ImageResultCanvas({
               {statusDetail ? <p className="mt-2 text-sm text-ink-3">{statusDetail}</p> : null}
             </div>
           ) : state === "error" ? (
-            // 画布保持中性底，错误提示采用 Satin 语义横幅，与全站保持同一语言。
-            <div className="sn-banner sn-err max-h-full max-w-md overflow-auto text-left">
-              <span className="sn-bi" aria-hidden="true">
+            // 画布保持中性底，错误提示采用 Satin 语义横幅（.sn-banner.sn-bad + .sn-ic + .sn-msg），与全站保持同一语言。
+            <div className="sn-banner sn-bad max-h-full max-w-md overflow-auto text-left !items-start !px-3.5 !py-3">
+              <span className="sn-ic mt-0.5 shrink-0" aria-hidden="true">
                 <SatinIcon name="circle-alert" size={16} />
               </span>
-              <p className="sn-bt min-w-0 break-words leading-6">{errorMessage}</p>
+              <p className="sn-msg min-w-0 !py-0 break-words leading-6">{errorMessage}</p>
             </div>
           ) : (
             <div className="flex max-w-xs flex-col items-center text-ink-3">

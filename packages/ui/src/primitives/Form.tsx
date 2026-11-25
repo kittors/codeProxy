@@ -54,7 +54,7 @@ function useFormFieldContext(component: string): FormFieldContextValue {
 export type FormProps = FormHTMLAttributes<HTMLFormElement> & { ref?: Ref<HTMLFormElement> };
 
 function FormRoot({ className, ...props }: FormProps) {
-  return <form data-slot="form" className={cn("sn-form max-w-none space-y-4", className)} {...props} />;
+  return <form data-slot="form" className={cn("space-y-4", className)} {...props} />;
 }
 
 export type FormFieldOrientation = "vertical" | "horizontal";
@@ -127,7 +127,10 @@ function FormField({
 
   const infoRow =
     description || showCount ? (
-      <div data-slot="form-field-info" className="sn-help items-start justify-between">
+      <div
+        data-slot="form-field-info"
+        className="flex items-start justify-between gap-2 text-xs leading-[18px] text-[var(--sn-label3)]"
+      >
         <div className="min-w-0 flex-1">
           {description ? <FormDescription id={descriptionId}>{description}</FormDescription> : null}
         </div>
@@ -135,7 +138,7 @@ function FormField({
           <span
             data-slot="form-field-count"
             id={countId}
-            className={cn("sn-count shrink-0", length > maxLength! ? "sn-over" : null)}
+            className={cn("sn-count shrink-0 tabular-nums", length > maxLength! ? "sn-over text-[var(--sn-danger)]" : null)}
           >
             {length} / {maxLength}
           </span>

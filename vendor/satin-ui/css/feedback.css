@@ -1,37 +1,86 @@
 /* Satin：反馈。数值照 09 号 §6（Toast、通知）、§7（加载与等待）。 */
 /* ———— Toast：和 Tooltip 同一种反色材质，一眼能和页面内容、卡片分开；语义色用深色主题那一套，保证在深底上够亮 ———— */
 @layer satin {
-.sn-toasts { position: fixed; z-index: 49; left: 50%; top: calc(68px + env(safe-area-inset-top, 0px)); width: 0; height: 0; } /* 刘海屏：让开状态栏 */
-.sn-toasts[data-pos="bottom"] { top: auto; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
-.sn-toast { position: absolute; top: 0; left: 0; translate: -50% 0; transition: transform .32s var(--sn-ease-in-out); }
-.sn-toasts[data-pos="bottom"] .sn-toast { top: auto; bottom: 0; }
-.sn-toast-in { position: relative; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px 0 12px; border-radius: var(--sn-r-lg); overflow: hidden;
-  background: var(--sn-tip-bg); color: var(--sn-tip-fg); font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); white-space: nowrap;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .18), 0 2px 6px rgba(0, 0, 0, .08); }
-[data-theme="dark"] .sn-toast-in { box-shadow: 0 10px 30px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .09); }
+.sn-toasts { position: fixed; z-index: 49; left: 50%; top: calc(68px + var(--sn-safe-top, env(safe-area-inset-top, 0px))); width: 0; height: 0; } /* 刘海屏：让开状态栏 */
+.sn-toasts[data-pos="bottom"] { top: auto; bottom: calc(24px + var(--sn-safe-bottom, env(safe-area-inset-bottom, 0px))); }
+.sn-toast { position: absolute; top: 0; left: 0; translate: -50% 0; transform-origin: 50% 0; transition: transform .36s var(--sn-ease-out-strong), opacity .28s var(--sn-ease-out); }
+.sn-toasts[data-pos="bottom"] .sn-toast { top: auto; bottom: 0; transform-origin: 50% 100%; }
+/* Light 下通透亮白液态毛玻璃胶囊，Dark 下深邃炭黑玻璃胶囊：双主题视觉高度和谐 */
+.sn-toast-in {
+  position: relative; display: flex; align-items: center; gap: 9px;
+  width: max-content; max-width: calc(100vw - 32px); height: 42px; padding: 0 16px 0 9px;
+  border-radius: 999px; overflow: hidden; touch-action: none;
+  background: rgba(255, 255, 255, .90);
+  -webkit-backdrop-filter: blur(26px) saturate(185%);
+  backdrop-filter: blur(26px) saturate(185%);
+  color: var(--sn-label);
+  font: 500 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans);
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    0 0 0 1px rgba(15, 23, 42, .07),
+    0 12px 32px -10px rgba(15, 23, 42, .16),
+    0 2px 6px rgba(15, 23, 42, .05);
+}
+[data-theme="dark"] .sn-toast-in {
+  background: rgba(28, 29, 36, .88);
+  color: #f5f5f7;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .15),
+    0 0 0 1px rgba(255, 255, 255, .10),
+    0 16px 38px -10px rgba(0, 0, 0, .74);
+}
 .sn-toast-in.sn-has-act { padding-right: 6px; }
-.sn-toast .sn-ico { width: 16px; height: 16px; flex: none; display: grid; }
+.sn-toast .sn-ico { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--sn-fill-subtle); }
+.sn-toast .sn-ico[data-tone="ok"] { background: rgba(22, 163, 74, .13); }
+.sn-toast .sn-ico[data-tone="danger"] { background: rgba(239, 68, 68, .13); }
+.sn-toast .sn-ico[data-tone="info"] { background: rgba(59, 130, 246, .13); }
+[data-theme="dark"] .sn-toast .sn-ico { background: rgba(255, 255, 255, .09); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="ok"] { background: rgba(48, 209, 88, .18); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="danger"] { background: rgba(255, 105, 97, .18); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="info"] { background: rgba(96, 165, 250, .18); }
 .sn-toast .sn-ico > .sn-glyph { grid-area: 1 / 1; display: grid; place-items: center; }
-.sn-toast .sn-ico .sn-ic { width: 16px; height: 16px; }
-.sn-toast .sn-glyph.sn-ok { color: #30d158; } .sn-toast .sn-glyph.sn-danger { color: #ff6961; } .sn-toast .sn-glyph.sn-info { color: rgba(255, 255, 255, .7); }
-.sn-toast .sn-txt { position: relative; display: grid; }
+.sn-toast .sn-ico .sn-ic { width: 14px; height: 14px; }
+.sn-toast .sn-glyph.sn-ok { color: #16a34a; }
+.sn-toast .sn-glyph.sn-danger { color: #dc2626; }
+.sn-toast .sn-glyph.sn-info { color: #2563eb; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-ok { color: #30d158; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-danger { color: #ff6961; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-info { color: #60a5fa; }
+.sn-toast .sn-txt { position: relative; display: grid; flex: 0 1 auto; }
+.sn-toast .sn-txt > span { overflow: hidden; text-overflow: ellipsis; max-width: calc(100vw - 110px); }
 .sn-toast .sn-txt > .sn-old { position: absolute; left: 0; top: 0; }
-.sn-toast .sn-pct { display: none; min-width: 32px; text-align: right; font-weight: 400; color: rgba(255, 255, 255, .6); }
+.sn-toast-dup { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 19px; min-width: 24px; padding: 0 6px; border-radius: 999px;
+  background: var(--sn-fill-subtle); color: var(--sn-label2); font: 600 11px/1 var(--sn-sans); letter-spacing: -.01em; }
+[data-theme="dark"] .sn-toast-dup { background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .86); }
+.sn-toast-dup[hidden] { display: none; }
+.sn-toast .sn-pct { display: none; min-width: 32px; text-align: right; font-weight: 400; color: var(--sn-label3); }
 .sn-toast-in.sn-has-pct .sn-pct { display: block; }
-.sn-toast .sn-ring { width: 16px; height: 16px; rotate: -90deg; }
+.sn-toast .sn-ring { width: 15px; height: 15px; rotate: -90deg; }
 .sn-toast .sn-ring circle { fill: none; stroke-width: 1.75; }
-.sn-toast .sn-ring .sn-track { stroke: rgba(255, 255, 255, .18); }
+.sn-toast .sn-ring .sn-track { stroke: color-mix(in srgb, var(--sn-label) 16%, transparent); }
+[data-theme="dark"] .sn-toast .sn-ring .sn-track { stroke: rgba(255, 255, 255, .20); }
 .sn-toast .sn-ring .sn-left { stroke: currentColor; stroke-linecap: round; transition: stroke-dashoffset .3s var(--sn-ease-out); }
-.sn-toast .sn-act { all: unset; box-sizing: border-box; height: 28px; padding: 0 10px; margin-left: 2px; border-radius: var(--sn-r-md); font: 600 calc(13px * var(--sn-font-scale, 1))/calc(28px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-tip-fg); cursor: pointer;
-  background: rgba(255, 255, 255, .1); transition: background-color .12s var(--sn-ease-out), transform .1s var(--sn-ease-out); }
+.sn-toast .sn-act { all: unset; box-sizing: border-box; height: 28px; padding: 0 11px; margin-left: 2px; border-radius: 999px; font: 600 calc(12.5px * var(--sn-font-scale, 1))/calc(28px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label); cursor: pointer;
+  background: var(--sn-fill-subtle); transition: background-color .12s var(--sn-ease-out), transform .1s var(--sn-ease-out); }
+[data-theme="dark"] .sn-toast .sn-act { background: rgba(255, 255, 255, .12); color: #ffffff; }
 @media (hover: hover) {
-.sn-toast .sn-act:hover { background: rgba(255, 255, 255, .17); } }
+  .sn-toast .sn-act:hover { background: var(--sn-fill-active); }
+  [data-theme="dark"] .sn-toast .sn-act:hover { background: rgba(255, 255, 255, .20); }
+}
 .sn-toast .sn-act:active { transform: scale(var(--sn-press)); }
-.sn-toast .sn-act:focus-visible { box-shadow: 0 0 0 2px rgba(255, 255, 255, .55); }
+.sn-toast .sn-act:focus-visible { box-shadow: 0 0 0 2px var(--sn-focus); }
 /* 光泽：只在"完成"的那一刻扫过一次 */
 .sn-toast-in::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; pointer-events: none; transform: translateX(-130%) skewX(-14deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); }
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .52), transparent); }
+[data-theme="dark"] .sn-toast-in::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .18), transparent); }
 .sn-toast-in.sn-shine::after { animation: sn-sheen .8s var(--sn-ease-in-out) .22s; }
+
+/* 移动端定位：优雅悬停在灵动岛 / 齐刘海安全区下方 10px */
+@media (max-width: 640px) {
+  .sn-toasts { top: calc(10px + var(--sn-safe-top, env(safe-area-inset-top, 0px))); }
+  .sn-toasts[data-pos="bottom"] { bottom: calc(18px + var(--sn-safe-bottom, env(safe-area-inset-bottom, 0px))); }
+}
 
 /* ———— 通知：右上角堆叠。位置全由 JS 算（收起时后面的卡底边各露出 12px，展开时排成列表） ———— */
 .sn-notifs { position: fixed; z-index: 48; top: calc(68px + env(safe-area-inset-top, 0px)); right: calc(24px + env(safe-area-inset-right, 0px)); width: 360px; height: 0; }

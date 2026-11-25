@@ -314,7 +314,7 @@ export function DateTimePicker({
             type="button"
             aria-label={labels.open}
             onClick={() => setOpen((prev) => !prev)}
-            className="sn-btn sn-ghost sn-xs sn-ibtn sn-round"
+            className="sn-eye"
           >
             <Icon name="calendar" size={15} />
           </button>
@@ -427,14 +427,14 @@ export function DateTimePicker({
                 <button
                   type="button"
                   onClick={() => onChange("")}
-                  className="sn-btn sn-ghost sn-xs"
+                  className="sn-btn sn-ghost sn-sm"
                 >
                   {labels.clear}
                 </button>
                 <button
                   type="button"
                   onClick={setToday}
-                  className="sn-btn sn-secondary sn-xs"
+                  className="sn-btn sn-secondary sn-sm"
                 >
                   {labels.today}
                 </button>

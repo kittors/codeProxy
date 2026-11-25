@@ -70,6 +70,7 @@ export function ChangePasswordPage() {
     Object.values(passwordRuleStatus(newPassword)).every(Boolean) && confirmState === "match";
   const passwordFieldProps = {
     type: showPasswords ? "text" : "password",
+    size: "lg" as const,
     onKeyDown: capsLock.onKeyDown,
     onKeyUp: capsLock.onKeyUp,
     onBlur: capsLock.onBlur,
@@ -130,7 +131,7 @@ export function ChangePasswordPage() {
   return (
     <PageBackground variant="login">
       <div className="absolute right-6 top-6 z-20">
-        <ThemeToggleButton className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface text-ink-2 shadow-control transition-[background-color,box-shadow,color] hover:bg-surface-hover hover:text-ink hover:shadow-control-hover" />
+        <ThemeToggleButton variant="secondary" size="lg" />
       </div>
       <main className="relative flex min-h-[100dvh] items-center justify-center px-6 py-12">
         <motion.div
@@ -148,7 +149,7 @@ export function ChangePasswordPage() {
                 <button
                   type="button"
                   onClick={goBack}
-                  className="absolute top-5 left-5 inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-medium text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="sn-btn sn-ghost sn-sm sn-round !absolute top-5 left-5 text-[var(--sn-label3)]"
                 >
                   <ArrowLeft size={14} aria-hidden="true" />
                   {t("common.back")}

@@ -132,7 +132,7 @@ export function SettingRow({
               <button
                 type="button"
                 onClick={onReset}
-                className="sn-btn sn-ghost sn-xs !h-6 !px-2 !text-xs text-[var(--sn-label3)]"
+                className="sn-btn sn-ghost sn-xs text-[var(--sn-label3)]"
               >
                 <Icon name="rotate-ccw" size={12} />
                 {t("common.revert", { defaultValue: "撤销" })}

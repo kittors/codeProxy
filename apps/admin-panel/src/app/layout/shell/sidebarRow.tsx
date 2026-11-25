@@ -11,29 +11,25 @@ import { ACTIVE_ICON_STROKE } from "./navModel";
  */
 export const sidebarIconClass = (icon: LucideIcon, active: boolean) =>
   [
-    active ? "text-accent-ink" : "text-ink-3",
+    active ? "text-accent-ink" : "text-[var(--sn-label3)]",
     HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")],
   ].join(" ");
 
 /**
- * 侧边栏顶层一行（单页分区的链接、多页分区的标题）共用的外观。
- *
- * 图标固定放在一个 h-9（2.25rem）见方的格子里，格子贴着行的左边：侧边栏收窄成图标栏时，
- * 行宽正好缩到这个格子大小，所以图标在展开 / 收起之间一动不动，只有文字淡出、被裁掉。
- */
-
-/**
- * 选中项：灰底上的一块白色小卡片加堆叠投影；深色模式是卡片色加一道细边（投影在近黑底上
- * 看不见）。都是阴影，不画 border。
+ * 侧边栏选中项卡片（对齐 Satin `--sn-side-active` 与 `--sn-side-active-line`）：
+ * 浅色为灰底上的清透白卡与细微托影，深色为半透明亮面与顶部微高光；
+ * 保留 `bg-surface` 作为浅色基础类（兼容现有单测/E2E 语义检查）。
  */
 export const SIDEBAR_ACTIVE_CARD =
-  "bg-surface text-ink shadow-[0_0_0_1px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.08)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]";
+  "bg-surface text-[var(--sn-label)] shadow-[0_0_0_1px_var(--sn-side-active-line,rgba(0,0,0,0.06)),0_1px_3px_rgba(0,0,0,0.06)] dark:bg-[var(--sn-side-active)] dark:shadow-[inset_0_0_0_1px_var(--sn-side-active-line,rgba(255,255,255,0.06)),inset_0_1px_0_rgba(255,255,255,0.05)]";
 
 export const sidebarRowClass = (active: boolean) =>
   [
     "flex h-9 w-full min-w-0 items-center rounded-xl text-left text-sm whitespace-nowrap outline-none",
-    "transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.98]",
-    active ? `${SIDEBAR_ACTIVE_CARD} font-medium` : "text-ink hover:bg-hover",
+    "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.98]",
+    active
+      ? `${SIDEBAR_ACTIVE_CARD} font-medium`
+      : "text-[var(--sn-label)] hover:bg-[var(--sn-fill-hover)]",
   ].join(" ");
 
 export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
@@ -55,7 +51,7 @@ export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; activ
  */
 export const sidebarFadeClass = (collapsed: boolean) =>
   [
-    "transition-opacity ease-soft motion-reduce:transition-none",
+    "transition-opacity ease-[var(--sn-ease-out)] motion-reduce:transition-none",
     collapsed ? "opacity-0 duration-150" : "opacity-100 delay-100 duration-200",
   ].join(" ");
 

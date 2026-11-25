@@ -136,7 +136,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 <span
                   ref={tabThumbRef}
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 z-0 origin-left rounded-full bg-accent opacity-0 will-change-transform"
+                  className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 z-0 origin-left rounded-full bg-white/15 opacity-0 will-change-transform"
                 />
                 {snippets.map((snippet) => (
                   <button
@@ -160,7 +160,11 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 onClick={handleCopy}
                 className="sn-btn sn-ghost !h-auto ml-auto gap-1.5 !rounded-full !px-3 !py-1.5 font-display !text-xs font-medium !text-white/55 hover:!bg-white/10 hover:!text-white/85"
               >
-                <span className="sn-swap" data-swapped={copied ? "true" : "false"} aria-hidden="true">
+                <span
+                  className={copied ? "sn-swap sn-swapped" : "sn-swap"}
+                  data-swapped={copied ? "true" : "false"}
+                  aria-hidden="true"
+                >
                   <span className="sn-swap-a">
                     <SatinIcon name="copy" size={13} />
                   </span>

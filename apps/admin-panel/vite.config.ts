@@ -84,7 +84,16 @@ export default defineConfig({
           if (id.includes("/vendor/satin-ui/")) {
             if (id.includes("/src/charts.js") || id.includes("/react/charts.js")) return "vendor-satin-charts";
             if (id.includes("/src/grid.js") || id.includes("/src/canvas-grid.js") || id.includes("/react/grid.js")) return "vendor-satin-grid";
-            if (id.includes("/src/markdown.js") || id.includes("/react/markdown.js")) return "vendor-satin-markdown";
+            if (
+              id.includes("/src/markdown.js") ||
+              id.includes("/react/markdown.js") ||
+              id.includes("/css/md.css")
+            ) {
+              return "vendor-satin-markdown";
+            }
+            // CSS 文件不得被强行归入同步预加载的 vendor-satin chunk，否则 Vite 会将其
+            // 提到入口 index.css 之前注入，颠倒 @layer base 与 @layer satin 的级联顺序。
+            if (id.endsWith(".css")) return undefined;
             return "vendor-satin";
           }
           if (!id.includes("node_modules")) return undefined;
