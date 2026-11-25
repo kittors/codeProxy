@@ -1,5 +1,6 @@
+import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Check, KeyRound, ShieldCheck, UsersRound, type LucideIcon } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { cn, type StylePresetId } from "@code-proxy/ui";
 
 /*
@@ -7,7 +8,12 @@ import { cn, type StylePresetId } from "@code-proxy/ui";
  * 两张卡都画出各自的样子，用户才能对比着选。
  */
 
-const SAMPLE_ICONS: readonly LucideIcon[] = [UsersRound, Activity, ShieldCheck, KeyRound];
+const SAMPLE_ICONS: readonly ComponentProps<typeof Icon>["name"][] = [
+  "users",
+  "activity",
+  "shield",
+  "key-round",
+];
 
 const COLORFUL_TILES = [
   "bg-gradient-to-b from-blue-500/[0.14] to-blue-500/[0.06] text-blue-600 dark:from-blue-400/20 dark:to-blue-400/10 dark:text-blue-300",
@@ -21,15 +27,15 @@ function PresetSample({ preset }: { preset: StylePresetId }) {
   return (
     <div aria-hidden="true" className="space-y-3 rounded-xl bg-subtle p-3">
       <div className="flex gap-1.5">
-        {SAMPLE_ICONS.map((Icon, index) => (
+        {SAMPLE_ICONS.map((iconName, index) => (
           <span
-            key={index}
+            key={iconName}
             className={cn(
               "grid size-7 place-items-center rounded-lg",
               colorful ? COLORFUL_TILES[index] : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
             )}
           >
-            <Icon size={14} />
+            <Icon name={iconName} size={14} />
           </span>
         ))}
       </div>
@@ -109,8 +115,8 @@ export function StylePresetCards({
                   {t(`appearance.preset_${preset}`)}
                 </span>
                 {selected ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-fg">
-                    <Check size={11} strokeWidth={3} aria-hidden="true" />
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-accent px-2 py-0.5 text-2xs font-semibold text-accent-fg">
+                    <Icon name="check" size={11} />
                     {t("appearance.preset_current")}
                   </span>
                 ) : null}

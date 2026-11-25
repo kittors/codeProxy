@@ -27,7 +27,7 @@ export function ChartLegend({
           aria-pressed={item.enabled}
           onClick={() => item.onToggle(item.key)}
           className={[
-            "sn-btn sn-ghost sn-xs sn-round !h-7 !px-2.5 !text-xs",
+            "sn-btn sn-ghost sn-xs !h-7 !px-2.5 !text-xs",
             item.enabled
               ? "text-[var(--sn-label2)]"
               : "text-[var(--sn-label3)] line-through opacity-50",

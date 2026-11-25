@@ -163,7 +163,7 @@ function ToastItem({
             type="button"
             onClick={() => dismissToast(record.id)}
             aria-label={t("common.dismiss_notification", { defaultValue: "Dismiss notification" })}
-            className="sn-btn sn-ghost sn-xs sn-ibtn sn-round -mr-1 shrink-0 text-[var(--sn-label3)]"
+            className="sn-btn sn-ghost sn-xs sn-ibtn -mr-1 shrink-0 text-[var(--sn-label3)]"
           >
             <Icon name="x" size={13} />
           </button>

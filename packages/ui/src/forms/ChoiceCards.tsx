@@ -98,10 +98,10 @@ export function ChoiceCards<T extends string>({
             }
             onClick={() => onChange(option.value)}
             className={cn(
-              "group relative flex min-w-0 items-start gap-3 rounded-2xl border bg-[var(--sn-raised)] px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.99]",
+              "group relative flex min-w-0 items-start gap-3 rounded-xl border bg-[var(--sn-raised)] px-3.5 py-3 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.99]",
               selected
                 ? "border-[var(--sn-accent)] shadow-[0_0_0_1px_var(--sn-accent)]"
-                : "border-[var(--sn-line)] shadow-[var(--sn-card-shadow)] hover:border-[var(--sn-line-control-hover)] hover:bg-[var(--sn-fill-hover)]",
+                : "border-[var(--sn-line)] hover:border-[var(--sn-line-control-hover)] hover:bg-[var(--sn-fill-hover)]",
               optionDisabled ? "cursor-not-allowed opacity-50 active:scale-100" : "cursor-pointer",
             )}
           >

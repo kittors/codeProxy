@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2 } from "lucide-react";
 import { Icon } from "satin-ui/react";
 import {
-  iconHueClass,
+  HUE_GLYPH,
   LanguageSelector,
   SearchableSelect,
   ThemeToggleButton,
@@ -157,7 +156,7 @@ function TenantSwitcher() {
         value: tenant.id,
         label,
         searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
-        icon: <Building2 size={16} className={`shrink-0 text-ink-3 ${iconHueClass(Building2)}`} />,
+        icon: <Icon name="house" size={16} className={`shrink-0 text-ink-3 ${HUE_GLYPH.indigo}`} />,
       };
     });
   }, [effectiveTenant, systemTenantLabel, tenants]);

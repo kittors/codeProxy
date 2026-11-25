@@ -315,7 +315,7 @@ export function MultiSelect({
               return (
                 <span
                   key={v}
-                  className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-selected px-2 py-0.5 text-xs text-ink"
+                  className="inline-flex max-w-[180px] items-center gap-1 rounded-md border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] px-2 py-0.5 text-xs text-[var(--sn-label)]"
                 >
                   {opt?.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                   <span className="truncate">{labelMap.get(v) || v}</span>
@@ -325,7 +325,7 @@ export function MultiSelect({
                     <span
                       aria-hidden="true"
                       onClick={(e) => removeTag(v, e)}
-                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded-full p-0.5 text-[var(--sn-label3)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
+                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded p-0.5 text-[var(--sn-label3)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
                     >
                       <Icon name="x" size={10} />
                     </span>

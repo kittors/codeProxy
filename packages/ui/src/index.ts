@@ -31,6 +31,7 @@ export { PageBackground } from "./layout/PageBackground";
 export { NavList } from "./navigation/NavList";
 export type { NavListGroup, NavListItem } from "./navigation/NavList";
 export { resolveMenuIcon } from "./navigation/menuIconMap";
+export type { MenuIconComponent, MenuIconProps } from "./navigation/menuIconMap";
 
 export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";

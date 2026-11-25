@@ -499,7 +499,7 @@ export function SearchableCheckboxMultiSelect({
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
-              <span className="rounded-full bg-selected px-2 py-0.5 text-xs font-medium text-ink">
+              <span className="rounded-md bg-[var(--sn-fill-subtle)] px-1.5 py-0.5 text-xs font-medium text-[var(--sn-label)]">
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
@@ -522,7 +522,7 @@ export function SearchableCheckboxMultiSelect({
             aria-label={clearLabel}
             onClick={handleClear}
             className={cn(
-              "sn-btn sn-ghost sn-xs sn-ibtn sn-round absolute top-1/2 right-2.5 z-10 !h-5 !w-5 -translate-y-1/2",
+              "sn-btn sn-ghost sn-xs sn-ibtn absolute top-1/2 right-2.5 z-10 !h-5 !w-5 -translate-y-1/2",
               "pointer-events-none opacity-0",
               "group-hover/multi-select:pointer-events-auto group-hover/multi-select:opacity-100",
               "group-focus-within/multi-select:pointer-events-auto group-focus-within/multi-select:opacity-100",

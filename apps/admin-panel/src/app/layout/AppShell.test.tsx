@@ -518,7 +518,9 @@ describe("AppShell navigation layout", () => {
     const flyoutItem = within(screen.getByRole("menu", { name: ACCESS })).getByRole("menuitem", {
       name: /Content Moderation|内容审核|Модерация контента/i,
     });
-    expect(flyoutItem.querySelector("svg")).toHaveClass("lucide-shield-alert");
+    const moderationIcon = flyoutItem.querySelector("svg");
+    expect(moderationIcon).toHaveClass("sn-ic");
+    expect(moderationIcon).toHaveAttribute("data-icon", "shield");
     localStorage.removeItem("cli-proxy-sidebar-collapsed");
   });
 

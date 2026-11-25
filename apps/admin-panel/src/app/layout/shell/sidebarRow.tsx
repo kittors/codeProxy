@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { HUE_GLYPH, hueForIconName } from "@code-proxy/ui";
+import { HUE_GLYPH, hueForIconName, type MenuIconComponent } from "@code-proxy/ui";
 import { ACTIVE_ICON_STROKE } from "./navModel";
 
 /**
@@ -9,7 +8,7 @@ import { ACTIVE_ICON_STROKE } from "./navModel";
  *   哪个是哪个；文字保持中性色，选中态靠白色小卡片表达；
  * - 单色：平时是弱化的墨色，只有当前页的图标用强调色，一列图标里只有一个带颜色。
  */
-export const sidebarIconClass = (icon: LucideIcon, active: boolean) =>
+export const sidebarIconClass = (icon: MenuIconComponent, active: boolean) =>
   [
     active ? "text-accent-ink" : "text-[var(--sn-label3)]",
     HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")],
@@ -32,7 +31,7 @@ export const sidebarRowClass = (active: boolean) =>
       : "text-[var(--sn-label)] hover:bg-[var(--sn-fill-hover)]",
   ].join(" ");
 
-export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+export function SidebarRowIcon({ icon: Icon, active }: { icon: MenuIconComponent; active: boolean }) {
   return (
     <span className="grid size-8 shrink-0 place-items-center">
       <Icon

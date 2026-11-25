@@ -1,5 +1,6 @@
+import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Database, KeyRound, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { Button, DialogIcon, PlanBadge, ProviderTag } from "@code-proxy/ui";
 import { QuotaBar } from "@features/quota-preview/QuotaBar";
 import { LevelPill } from "@features/monitor-widgets/monitorVisuals";
@@ -9,7 +10,14 @@ import { LevelPill } from "@features/monitor-widgets/monitorVisuals";
  * 不是示意图——它们和全站一样读 <html> 上的外观开关和变量，改设置时这里同步变化，看到的就是
  * 页面里会出现的样子。抽屉本身已是一层面板，预览只用一块淡底，不再套卡片。
  */
-const PREVIEW_ICONS = [UsersRound, Activity, ShieldCheck, KeyRound, Database, Sparkles] as const;
+const PREVIEW_ICONS: readonly ComponentProps<typeof Icon>["name"][] = [
+  "users",
+  "activity",
+  "shield",
+  "key-round",
+  "server",
+  "sparkles",
+];
 
 export function AppearancePreview() {
   const { t } = useTranslation();
@@ -21,9 +29,9 @@ export function AppearancePreview() {
       className="space-y-4 rounded-xl bg-subtle p-4"
     >
       <div className="flex flex-wrap gap-1.5">
-        {PREVIEW_ICONS.map((Icon, index) => (
-          <DialogIcon key={index} size="sm">
-            <Icon />
+        {PREVIEW_ICONS.map((iconName) => (
+          <DialogIcon key={iconName} size="sm">
+            <Icon name={iconName} />
           </DialogIcon>
         ))}
       </div>

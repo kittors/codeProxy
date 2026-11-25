@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { KeyRound, Trash2 } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { describe, expect, test } from "vitest";
 import { PlanBadge, ProviderTag } from "../../brand/BrandBadges";
 import { chartGradient, withAlpha } from "../../charts/chartTheme";
 import { DialogIcon } from "../../overlays/DialogIcon";
-import { hueHex, isHue } from "../hues";
+import { hueForIcon, hueHex, isHue } from "../hues";
 
 describe("icon tiles", () => {
   test("tiles are neutral at base and take the icon's hue only through the icon-hue variant", () => {
@@ -19,6 +20,17 @@ describe("icon tiles", () => {
     expect(tile()).toHaveClass("text-ink-2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
     // 不描边：盒子的边一律用阴影表达。
     expect(tile().className).not.toMatch(/(^|\s)border(\s|$)|border-/);
+
+    // Satin <Icon name="..." /> 也按语义名解析色相，纯操作图标保持中性。
+    expect(hueForIcon(<Icon name="key-round" />)).toBe("amber");
+    expect(hueForIcon(<Icon name="trash-2" />)).toBe("rose");
+    expect(hueForIcon(<Icon name="chevron-down" />)).toBeNull();
+    rerender(
+      <DialogIcon>
+        <Icon name="key-round" />
+      </DialogIcon>,
+    );
+    expect(tile()).toHaveClass("text-ink-2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
 
     rerender(
       <DialogIcon tone="danger">
@@ -35,7 +47,7 @@ describe("icon tiles", () => {
     );
     expect(tile()).toHaveClass("text-ink-2", "icon-hue:text-violet-600");
 
-    // 明确要中性、或内容不是 lucide 图标（厂商 logo 自带品牌色）时，不叠任何色相。
+    // 明确要中性、或内容不是 lucide/Satin 图标（厂商 logo 自带品牌色）时，不叠任何色相。
     for (const node of [
       <DialogIcon key="neutral" tone="neutral">
         <KeyRound />
@@ -83,7 +95,7 @@ describe("brand badges", () => {
     expect(codex).toHaveClass("bg-[var(--brand-fill)]", "brand-badge-shine");
     expect(codex.className).toContain("colorful:bg-[linear-gradient(115deg");
     expect(codex.className).not.toMatch(/(^|\s)bg-\[linear-gradient/);
-    expect(codex.querySelector("svg.lucide-crown")).not.toBeNull();
+    expect(codex.querySelector('svg[data-icon="crown"]')).not.toBeNull();
 
     const claude = screen.getByText("PLUS").closest("[data-plan-tier]") as HTMLElement;
     expect(claude.style.getPropertyValue("--brand-l")).toBe("#d97757");

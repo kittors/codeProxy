@@ -5,7 +5,7 @@ import { copyTextToClipboard } from "../utils/clipboard";
 import { cn } from "../utils/selectStyles";
 
 /**
- * Satin 复制按钮：使用 `.sn-btn.sn-ghost.sn-xs.sn-ibtn.sn-round` + `.sn-swap`
+ * Satin 复制按钮：使用 `.sn-btn.sn-ghost.sn-xs.sn-ibtn` + `.sn-swap`
  * 实现复制图标到对勾的原地缩放交叉微动效。
  */
 export function CopyButton({
@@ -46,7 +46,7 @@ export function CopyButton({
       aria-label={copied ? t("common.copied", { defaultValue: "已复制" }) : name}
       data-tooltip={copied ? t("common.copied", { defaultValue: "已复制" }) : name}
       className={cn(
-        "sn-btn sn-ghost sn-xs sn-ibtn sn-round shrink-0",
+        "sn-btn sn-ghost sn-xs sn-ibtn shrink-0",
         copied ? "!text-[var(--sn-success)]" : null,
         className,
       )}
