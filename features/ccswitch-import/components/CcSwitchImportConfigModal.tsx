@@ -352,7 +352,7 @@ export function CcSwitchImportConfigModal({
               // Without a group there is no route yet, so an endpoint here would be wrong.
               <p
                 data-testid="ccswitch-import-preview-pending"
-                className="rounded-2xl bg-subtle px-4 py-6 text-center text-sm text-ink-3"
+                className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3"
               >
                 {t("ccswitch.preview_pending_group")}
               </p>

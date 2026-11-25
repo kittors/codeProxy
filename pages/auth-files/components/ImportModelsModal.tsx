@@ -117,7 +117,7 @@ export function ImportModelsModal({
           />
 
           {/* 一层无边淡底装下「全选」行和列表，不再描边、也不再用分隔线切出表头。 */}
-          <div className="overflow-hidden rounded-2xl bg-subtle">
+          <div className="overflow-hidden rounded-xl bg-subtle">
             <div className="flex items-center justify-between gap-3 px-3 pt-2.5 pb-1">
               <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-ink-2">
                 <Checkbox

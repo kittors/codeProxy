@@ -1448,9 +1448,9 @@ describe("ApiKeyLookupPage", () => {
       });
       expect(header.className).toMatch(/-translate-y-full/);
       expect(header.className).toMatch(/opacity-0/);
-      // 吸顶后浮成一张卡片：伪元素细边 + 卡片投影，不画 ring 描边。
+      // 吸顶后浮成一块浮层卡片：伪元素细边 + 浮层投影（卡片常态无脏阴影），不画 ring 描边。
       expect(toolbar.className).toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
-      expect(toolbar.className).toMatch(/(?:^|\s)shadow-card(?:\s|$)/);
+      expect(toolbar.className).toMatch(/(?:^|\s)shadow-pop(?:\s|$)/);
       expect(toolbar.className).not.toMatch(/ring-/);
 
       Object.defineProperty(window, "scrollY", {

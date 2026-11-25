@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
-import type { Activity } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
+import { Icon } from "satin-ui/react";
 import { Card, DialogIcon, EChart, type Hue } from "@code-proxy/ui";
+
+type SatinIconName = ComponentProps<typeof Icon>["name"];
 
 /**
  * 仪表盘上的一格指标：名称、数值、说明、底部一条迷你趋势线。每格是一张独立的卡片
@@ -15,14 +17,14 @@ export function DashboardKpiCard({
   title,
   value,
   hint,
-  icon: Icon,
+  icon,
   hue,
   option,
 }: {
   title: string;
   value: ReactNode;
   hint: ReactNode;
-  icon: typeof Activity;
+  icon: SatinIconName;
   /** 图标块的色相，与趋势线的身份色一致（请求蓝、成功绿、Token 紫、费用琥珀、失败红、缓存青）。 */
   hue: Hue;
   option: ECBasicOption;
@@ -30,10 +32,10 @@ export function DashboardKpiCard({
   return (
     <Card className="h-full" bodyClassName="mt-0 flex h-full min-w-0 flex-col">
       <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
-        <Icon size={16} className="shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
+        <Icon name={icon} size={16} className="shrink-0 text-ink-3 icon-hue:hidden" />
         <span className="hidden icon-hue:contents">
           <DialogIcon tone={hue} size="xs">
-            <Icon />
+            <Icon name={icon} size={13} />
           </DialogIcon>
         </span>
         <span className="min-w-0 truncate">{title}</span>

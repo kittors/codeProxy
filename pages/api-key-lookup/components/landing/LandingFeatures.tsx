@@ -11,7 +11,7 @@ import type { LandingCopy, LandingFeatureCopy } from "./landingCopy";
  * 卡片底色是卡片色：深色下是近黑的卡片色，不再是一层发灰的白色叠层。
  */
 const CARD_CLASS =
-  "cp-edge group relative flex flex-col overflow-hidden rounded-3xl bg-surface p-8 shadow-card transition-shadow duration-200 hover:shadow-lift";
+  "cp-edge group relative flex flex-col overflow-hidden rounded-2xl bg-[var(--sn-raised)] p-8 transition-shadow duration-200 hover:shadow-lift";
 
 function FeatureCard({
   copy,

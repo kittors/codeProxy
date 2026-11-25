@@ -6,15 +6,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Activity,
-  Database,
-  DollarSign,
-  RefreshCw,
-  Sigma,
-  Sparkles,
-  TriangleAlert,
-} from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   usageApi,
   type DashboardSummary,
@@ -210,7 +202,7 @@ export function DashboardPage() {
             onClick={() => void refresh(range)}
             disabled={loading}
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <Icon name="refresh-cw" size={14} className={loading ? "animate-spin" : ""} />
             {t("dashboard.refresh")}
           </Button>
         </div>
@@ -220,7 +212,7 @@ export function DashboardPage() {
         <EmptyState
           title={t("dashboard.load_failed")}
           description={error}
-          icon={<TriangleAlert size={18} />}
+          icon={<Icon name="triangle-alert" size={18} />}
           action={
             <Button
               variant="secondary"
@@ -228,7 +220,7 @@ export function DashboardPage() {
               onClick={() => void refresh(range)}
               disabled={loading}
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <Icon name="refresh-cw" size={14} className={loading ? "animate-spin" : ""} />
               {t("dashboard.retry")}
             </Button>
           }
@@ -248,7 +240,7 @@ export function DashboardPage() {
               ? t("dashboard.total_hint_today")
               : t("dashboard.total_hint_days", { count: range })
           }
-          icon={Activity}
+          icon="activity"
           hue="blue"
           option={totalRequestOption}
         />
@@ -260,7 +252,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="success" value={kpi?.success_requests ?? 0} />,
             <DashboardMetricValue key="failed" value={kpi?.failed_requests ?? 0} />,
           )}
-          icon={Sigma}
+          icon="circle-check"
           hue="emerald"
           option={successRateOption}
         />
@@ -272,7 +264,7 @@ export function DashboardPage() {
             <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
             <DashboardMetricValue key="output" value={kpi?.output_tokens ?? 0} />,
           )}
-          icon={Sparkles}
+          icon="sparkles"
           hue="violet"
           option={totalTokenOption}
         />
@@ -280,7 +272,7 @@ export function DashboardPage() {
           title={t("dashboard.total_cost")}
           value={<DashboardMetricValue value={kpi?.total_cost ?? 0} variant="currency" animated />}
           hint={t("dashboard.total_cost_hint")}
-          icon={DollarSign}
+          icon="credit-card"
           hue="amber"
           option={totalCostOption}
         />
@@ -288,7 +280,7 @@ export function DashboardPage() {
           title={t("dashboard.failed_requests")}
           value={<DashboardMetricValue value={kpi?.failed_requests ?? 0} animated />}
           hint={t("dashboard.failed_hint")}
-          icon={TriangleAlert}
+          icon="triangle-alert"
           hue="rose"
           option={failedRequestOption}
         />
@@ -316,7 +308,7 @@ export function DashboardPage() {
                   <DashboardMetricValue key="input" value={kpi?.input_tokens ?? 0} />,
                 )
           }
-          icon={Database}
+          icon="layers"
           hue="teal"
           option={cacheRateOption}
         />

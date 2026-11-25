@@ -28,7 +28,7 @@ export function EmbedPage() {
       data-page-fill="always"
       title={t(menu.label_key, { defaultValue: menu.title || menu.code })}
       src={menu.link_url}
-      className="w-full rounded-2xl bg-surface"
+      className="w-full rounded-xl bg-surface"
     />
   );
 }

@@ -154,7 +154,7 @@ export function MaskingRecordDrawer({
         </ol>
 
         {data.blocked ? (
-          <div className="flex gap-3 rounded-2xl bg-rose-500/[0.07] p-3.5 dark:bg-rose-400/10">
+          <div className="flex gap-3 rounded-xl bg-rose-500/[0.07] p-3.5 dark:bg-rose-400/10">
             <ShieldAlert size={18} className="mt-0.5 shrink-0 text-rose-600 dark:text-rose-300" aria-hidden="true" />
             <div className="min-w-0 text-sm">
               <p className="font-medium text-rose-700 dark:text-rose-200">{t("privacy_masking.detail.held_title")}</p>
@@ -182,11 +182,11 @@ export function MaskingRecordDrawer({
             />
           </div>
           {loading ? (
-            <p className="rounded-2xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("common.loading")}</p>
+            <p className="rounded-xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("common.loading")}</p>
           ) : detail?.snippets && detail.snippets.length > 0 ? (
             <ul className="space-y-2">
               {detail.snippets.map((snippet, index) => (
-                <li key={index} className="rounded-2xl bg-subtle px-3.5 py-3">
+                <li key={index} className="rounded-xl bg-subtle px-3.5 py-3">
                   <p className="mb-1.5 flex items-center gap-2 text-2xs text-ink-3">
                     {snippet.role ? <span className="rounded bg-ink/[0.06] px-1.5 py-px font-medium text-ink-2 dark:bg-white/[0.08]">{snippet.role}</span> : null}
                     <span className="truncate font-mono">{snippet.field}</span>
@@ -196,7 +196,7 @@ export function MaskingRecordDrawer({
               ))}
             </ul>
           ) : (
-            <p className="rounded-2xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("privacy_masking.detail.snippets_gone")}</p>
+            <p className="rounded-xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("privacy_masking.detail.snippets_gone")}</p>
           )}
         </section>
 
@@ -215,7 +215,7 @@ export function MaskingRecordDrawer({
                     onClick={() => setPicked(active || !value.placeholder ? "" : value.placeholder)}
                     aria-pressed={active}
                     className={[
-                      "w-full rounded-2xl px-3.5 py-3 text-left transition-colors",
+                      "w-full rounded-xl px-3.5 py-3 text-left transition-colors",
                       active ? "bg-violet-500/10 dark:bg-violet-400/15" : "bg-subtle hover:bg-ink/[0.05] dark:hover:bg-white/[0.07]",
                     ].join(" ")}
                   >

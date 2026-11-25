@@ -322,7 +322,7 @@ export function VisualConfigEditor({
           <ResourceProfileBanner values={values} disabled={databaseLocked} onChange={onChange} />
         ) : null}
         {visibleSections.length === 0 ? (
-          <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-16 text-center">
+          <div className="grid place-items-center rounded-xl bg-subtle px-6 py-16 text-center">
             <SearchX size={22} className="text-ink-3 icon-hue:text-sky-500" aria-hidden="true" />
             <p className="mt-3 text-sm font-medium text-ink">
               {t("config_ui.search_empty_title", { query: deferredQuery.trim() })}

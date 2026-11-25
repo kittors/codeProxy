@@ -82,7 +82,7 @@ export function RoutingIssueModal({
           </div>
         </div>
       ) : (
-        <p className="rounded-2xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
+        <p className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
           {t("channel_groups_page.issue_modal_empty")}
         </p>
       )}

@@ -117,7 +117,7 @@ export function WordListEditor({
       </form>
 
       {importing ? (
-        <div className="space-y-2 rounded-2xl bg-subtle p-3">
+        <div className="space-y-2 rounded-xl bg-subtle p-3">
           <Textarea
             rows={4}
             value={bulk}

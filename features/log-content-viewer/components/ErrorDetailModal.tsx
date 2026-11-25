@@ -135,7 +135,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                 <h3 className="text-xs font-medium text-ink-3">{t("error_detail.full_response")}</h3>
                 <CopyButton value={errorContent} label={t("error_detail.copy_response")} />
               </div>
-              <pre className="max-h-[40vh] overflow-auto rounded-2xl bg-subtle p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2 [overflow-wrap:anywhere]">
+              <pre className="max-h-[40vh] overflow-auto rounded-xl bg-subtle p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2 [overflow-wrap:anywhere]">
                 {formattedContent}
               </pre>
             </section>

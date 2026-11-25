@@ -97,7 +97,7 @@ export function LandingHero({
                 胶囊在两种主题下都是深底；轮廓用伪元素细边。提示符在简约风格下是弱化白，多彩风格下
                 是终端绿。
               */}
-              <div className="cp-edge inline-flex h-12 items-center gap-3 rounded-full bg-[#0B0D13] pl-5 pr-2">
+              <div className="cp-edge inline-flex h-12 items-center gap-3 rounded-[var(--sn-btn-r)] bg-[#0B0D13] pl-4 pr-2">
                 <code className="max-w-[13rem] truncate font-mono text-xs text-slate-300 sm:max-w-none sm:text-sm">
                   <span className="text-white/45 colorful:text-emerald-400">$ </span>
                   {command}
@@ -106,7 +106,7 @@ export function LandingHero({
                   type="button"
                   onClick={handleCopy}
                   aria-label={copied ? copy.workflow.copied : copy.workflow.copy}
-                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 !text-white/65 hover:!bg-white/10 hover:!text-white"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn shrink-0 !text-white/65 hover:!bg-white/10 hover:!text-white"
                 >
                   <span className={copied ? "sn-swap sn-swapped" : "sn-swap"}>
                     <span className="sn-swap-a">
@@ -122,7 +122,7 @@ export function LandingHero({
               <button
                 type="button"
                 onClick={onBrowseModels}
-                className="sn-btn sn-ghost sn-round group !h-12 !px-4 !text-sm font-semibold text-[var(--sn-label2)]"
+                className="sn-btn sn-ghost group !h-12 !px-4 !text-sm font-semibold text-[var(--sn-label2)]"
               >
                 {copy.hero.secondaryCta}
                 <Icon

@@ -105,7 +105,7 @@ export function PublicPayPage() {
         <div className="mx-auto max-w-3xl space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
                 <Wallet size={20} />
               </span>
               <div>
@@ -167,7 +167,7 @@ export function PublicPayPage() {
               <div className={`${surface({ tone: "card", radius: "2xl" })} space-y-3 p-4 sm:p-5`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-ink/[0.06] text-ink dark:bg-white/[0.08]">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-ink/[0.06] text-ink dark:bg-white/[0.08]">
                       {target.target_kind === "api_key" ? (
                         <KeyRound size={18} />
                       ) : (

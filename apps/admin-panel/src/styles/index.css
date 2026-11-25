@@ -397,7 +397,7 @@
   --cp-focus: var(--cp-pref-focus-dark, var(--sn-focus, rgb(255 255 255 / 0.5)));
   --cp-edge: var(--sn-line, rgb(255 255 255 / 0.09));
   --cp-edge-highlight: rgb(255 255 255 / 0.04);
-  --cp-shadow-card: var(--sn-card-shadow, none);
+  --cp-shadow-card: none;
   --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.48));
   --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.5), inset 0 0 0 1px rgb(255 255 255 / 0.09));
   --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.7), inset 0 0 0 1px rgb(255 255 255 / 0.1));
@@ -532,7 +532,7 @@
    * scale 只改绘制，会在原尺寸的位置留下空洞。前面对整个页面排除 zoom 是因为浮层定位要读
    * getBoundingClientRect，而图标是叶子节点，不参与任何定位计算，这里没有那个风险。
    */
-  :where(svg.lucide) {
+  :where(svg.lucide, svg.sn-ic) {
     zoom: var(--ui-scale);
   }
 

@@ -129,7 +129,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
           <motion.div
             {...fade({ delay: 0.1 })}
             // 代码面板两种主题下都是深底；轮廓用伪元素细边，页签条与代码之间靠留白分开。
-            className="cp-edge overflow-hidden rounded-3xl bg-[#0B0D13]"
+            className="cp-edge overflow-hidden rounded-2xl bg-[#0B0D13]"
           >
             <div className="flex items-center gap-1 px-3 pt-2.5">
               <div ref={tabListRef} className="relative flex items-center gap-1 p-0.5">

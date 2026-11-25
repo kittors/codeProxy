@@ -196,7 +196,7 @@ export function CallbackPasteBox({
       <div
         // 和输入框同一套阴影描边（不画 border）：出错是红色描边，可以提交是绿色描边。
         className={[
-          "group relative rounded-2xl bg-field transition-shadow duration-200",
+          "group relative rounded-xl bg-field transition-shadow duration-200",
           message?.tone === "bad"
             ? "shadow-[0_0_0_1px_rgb(229_72_77/0.8)]"
             : ready

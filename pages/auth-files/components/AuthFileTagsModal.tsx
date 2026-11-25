@@ -205,7 +205,7 @@ export function AuthFileTagsModal({
                     key={tag}
                     // 不描边：未选是淡底，选中换成强调色淡底（勾选框本身也是强调色）。
                     className={[
-                      "flex cursor-pointer items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-sm transition-colors",
+                      "flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-colors",
                       checked ? "bg-accent-soft text-ink" : "bg-subtle text-ink-2 hover:bg-hover",
                     ].join(" ")}
                   >

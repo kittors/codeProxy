@@ -226,7 +226,7 @@ export function MenuIconPicker({
         <button
           type="button"
           disabled={disabled}
-          className="sn-btn sn-secondary sn-ibtn sn-round !h-9 !w-9 shrink-0"
+          className="sn-btn sn-secondary sn-ibtn !h-9 !w-9 shrink-0"
           aria-label={t("identity_admin.menu_icon_picker")}
           onClick={() => {
             if (!disabled) setOpen((current) => !current);

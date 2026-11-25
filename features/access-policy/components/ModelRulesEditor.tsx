@@ -23,7 +23,7 @@ export interface ModelRulesEditorProps {
 }
 
 /** 卡片底：弹窗本身已是一张卡，规则卡用无边的淡色井，不再叠一层描边。 */
-const RULE_CARD = "rounded-2xl bg-subtle p-4";
+const RULE_CARD = "rounded-xl bg-subtle p-4";
 
 /**
  * 按模型规则：一组模型模式配一套自己的额度，叠加在总额度之上——命中的请求两层都要满足。

@@ -98,7 +98,7 @@ export function ImageResultCanvas({
       data-testid={`${testIdPrefix}-stage`}
       data-state={state}
       aria-live="polite"
-      className={["relative isolate overflow-hidden rounded-2xl bg-subtle", className ?? ""].join(" ")}
+      className={["relative isolate overflow-hidden rounded-xl bg-subtle", className ?? ""].join(" ")}
     >
       {state === "generating" ? (
         <>

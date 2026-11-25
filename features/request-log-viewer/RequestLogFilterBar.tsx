@@ -58,7 +58,7 @@ export function RequestLogFilterBar({
   const { t } = useTranslation();
   const status = statusTabOf(filters);
   return (
-    <div className="rounded-2xl bg-subtle p-2">
+    <div className="rounded-xl border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] p-2">
       <DataGridToolbar
         end={
           <>

@@ -143,13 +143,13 @@ export function ChangePasswordPage() {
           <motion.div variants={card.item}>
             <motion.section
               animate={shakeControls}
-              className="cp-edge relative rounded-3xl bg-surface p-7 shadow-lift sm:p-9"
+              className="cp-edge relative rounded-2xl bg-[var(--sn-raised)] p-7 shadow-lift sm:p-9"
             >
               {forced ? null : (
                 <button
                   type="button"
                   onClick={goBack}
-                  className="sn-btn sn-ghost sn-sm sn-round !absolute top-5 left-5 text-[var(--sn-label3)]"
+                  className="sn-btn sn-ghost sn-sm !absolute top-5 left-5 text-[var(--sn-label3)]"
                 >
                   <ArrowLeft size={14} aria-hidden="true" />
                   {t("common.back")}
@@ -163,7 +163,7 @@ export function ChangePasswordPage() {
                 */}
                 <div
                   className={[
-                    "mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-200",
+                    "mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-200",
                     ready
                       ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300"
                       : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",

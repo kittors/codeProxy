@@ -80,7 +80,7 @@ export function MaskingTryIt({
         aria-label={t("privacy_masking.try.title")}
         className="font-mono text-xs"
       />
-      <div className="min-h-[9.5rem] rounded-2xl bg-subtle px-3.5 py-3" aria-live="polite">
+      <div className="min-h-[9.5rem] rounded-xl bg-subtle px-3.5 py-3" aria-live="polite">
         {error ? (
           <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>
         ) : !result ? (

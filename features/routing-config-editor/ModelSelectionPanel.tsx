@@ -39,7 +39,7 @@ export type ModelSelectionPanelProps = {
 
 // 提醒条只用琥珀淡底、不描边（同 Callout）。
 const NOTICE_CLASS =
-  "rounded-2xl bg-amber-500/[0.09] px-4 py-3 text-xs leading-5 text-amber-800 dark:text-amber-200";
+  "rounded-xl bg-amber-500/[0.09] px-4 py-3 text-xs leading-5 text-amber-800 dark:text-amber-200";
 
 type RuleChip = { list: ModelListName; entry: string; tagKey: string };
 

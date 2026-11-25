@@ -66,7 +66,7 @@ export function ProfilePicker({
             disabled={disabled}
             onClick={() => onChange(profile.id)}
             className={cn(
-              "flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-colors",
+              "flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-colors",
               selected
                 ? "bg-accent-soft shadow-control"
                 : "bg-subtle hover:bg-hover",

@@ -122,7 +122,7 @@ export function VertexImport({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
-              className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3"
+              className="flex items-center gap-3 rounded-xl bg-subtle px-4 py-3"
             >
               <FileJson size={18} className={`shrink-0 text-ink-3 ${iconHueClass(FileJson)}`} aria-hidden="true" />
               <div className="min-w-0 flex-1">

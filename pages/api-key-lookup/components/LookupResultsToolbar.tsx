@@ -152,9 +152,9 @@ export function LookupResultsToolbar({
       // 不画 ring；没吸顶时完全透明，和页面融为一体。cp-edge 的 position: relative 在
       // components 层，盖不过这里 utilities 层的 sticky。
       className={[
-        "sticky top-3 z-20 -mx-1 space-y-3 rounded-3xl px-2 py-2 backdrop-blur-md",
+        "sticky top-3 z-20 -mx-1 space-y-3 rounded-xl px-2 py-2 backdrop-blur-md",
         "motion-safe:transition-[box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-        stuck ? "cp-edge bg-surface/90 shadow-card" : "bg-transparent shadow-none",
+        stuck ? "cp-edge bg-surface/90 shadow-pop" : "bg-transparent shadow-none",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">

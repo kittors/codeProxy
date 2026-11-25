@@ -198,11 +198,11 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
           {clients.map(({ key, Icon, x, y }, index) => (
             <span
               key={key}
-              className="cp-edge absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-surface text-ink-3 shadow-card"
+              className="cp-edge absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-[var(--sn-raised)] text-ink-3 shadow-control"
               style={{ left: x, top: y }}
             >
               <span
-                className="ln-depart absolute -inset-1 rounded-3xl ring-1 ring-accent/40 colorful:ring-ok/40"
+                className="ln-depart absolute -inset-1 rounded-2xl ring-1 ring-accent/40 colorful:ring-ok/40"
                 style={{ animationDelay: `${(index * CYCLE_S) / CLIENTS.length}s`, animationDuration: `${CYCLE_S}s` }}
               />
               <Icon size={19} />
@@ -222,14 +222,14 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
               >
                 <span
                   className={[
-                    "cp-edge ln-arrive relative flex h-11 w-11 items-center justify-center rounded-2xl bg-surface",
+                    "cp-edge ln-arrive relative flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--sn-raised)]",
                     "transition-[box-shadow] duration-200 ease-soft",
-                    active ? "shadow-lift" : "shadow-card",
+                    active ? "shadow-lift" : "shadow-control",
                   ].join(" ")}
                   style={delay}
                 >
                   <span
-                    className="ln-glow absolute -inset-1 rounded-3xl ring-1 ring-accent/40 colorful:ring-ok/40"
+                    className="ln-glow absolute -inset-1 rounded-2xl ring-1 ring-accent/40 colorful:ring-ok/40"
                     style={delay}
                   />
                   <AnimatePresence initial={false}>
@@ -247,7 +247,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
                 </span>
                 <span
                   className={[
-                    "pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 rounded-full bg-accent px-2.5 py-1 text-xs font-medium whitespace-nowrap text-accent-fg shadow-pop",
+                    "pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 rounded-md bg-accent px-2.5 py-1 text-xs font-medium whitespace-nowrap text-accent-fg shadow-pop",
                     "transition-[opacity,translate] duration-200 ease-soft",
                     active ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0",
                   ].join(" ")}

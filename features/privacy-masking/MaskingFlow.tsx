@@ -212,7 +212,7 @@ export function MaskingFlow({
             </svg>
           ) : null}
           <span
-            className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-surface text-violet-600 shadow-card ring-4 ring-violet-500/12 dark:text-violet-300 dark:ring-violet-400/15"
+            className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-[var(--sn-raised)] text-violet-600 shadow-control ring-4 ring-violet-500/12 dark:text-violet-300 dark:ring-violet-400/15"
             title="CliRelay"
           >
             <ShieldCheck size={20} aria-hidden="true" />

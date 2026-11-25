@@ -63,12 +63,12 @@ export function ConfigGroupTabs({
       role="tablist"
       aria-label={t("config_ui.groups_label")}
       onKeyDown={onKeyDown}
-      className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-2xl bg-track p-1"
+      className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-xl bg-track p-1"
     >
       <span
         ref={thumbRef}
         aria-hidden="true"
-        className="pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-xl bg-elevated opacity-0 shadow-control will-change-transform"
+        className="pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-[var(--sn-btn-r)] bg-elevated opacity-0 shadow-control will-change-transform"
       />
       {tabs.map(({ def, modified, matches }) => {
         const selected = def.id === value;
@@ -88,7 +88,7 @@ export function ConfigGroupTabs({
             tabIndex={focusable ? 0 : -1}
             onClick={() => onChange(def.id)}
             className={cn(
-              "relative z-[1] flex shrink-0 items-center gap-2 rounded-xl py-1.5 pr-3 pl-1.5 text-sm font-medium transition-colors",
+              "relative z-[1] flex shrink-0 items-center gap-2 rounded-[var(--sn-btn-r)] py-1.5 pr-3 pl-1.5 text-sm font-medium transition-colors",
               selected ? "text-ink" : "text-ink-2 hover:text-ink",
             )}
           >

@@ -140,7 +140,7 @@ export function MaskingSummaryCard({
               channelsSelectable={scope !== "portal"}
             />
           ) : (
-            <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-10 text-center text-sm text-ink-3">
+            <div className="grid place-items-center rounded-xl bg-subtle px-6 py-10 text-center text-sm text-ink-3">
               {t("privacy_masking.summary.nothing_yet")}
             </div>
           )}

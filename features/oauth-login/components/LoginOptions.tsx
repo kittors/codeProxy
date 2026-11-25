@@ -118,7 +118,7 @@ export function LoginOptions({
             transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <div className="grid gap-4 rounded-2xl bg-subtle p-4">
+            <div className="grid gap-4 rounded-xl bg-subtle p-4">
               {showProxy ? (
                 <ProxyPoolSelect
                   value={values.proxyId}

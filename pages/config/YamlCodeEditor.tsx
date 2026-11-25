@@ -467,7 +467,7 @@ export const YamlCodeEditor = forwardRef<
     <div
       className={[
         // 编辑器就是一个大输入框：和其它输入框同一种阴影描边，聚焦时换成强调色描边，不画 border。
-        "overflow-hidden rounded-2xl bg-field shadow-control transition-[box-shadow] focus-within:shadow-control-focus",
+        "overflow-hidden rounded-xl bg-field shadow-control transition-[box-shadow] focus-within:shadow-control-focus",
         heightClass,
       ].join(" ")}
     >

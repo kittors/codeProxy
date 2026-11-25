@@ -64,7 +64,7 @@ function InfoCard({
         <button
           type="button"
           onClick={handleCopy}
-          className="sn-btn sn-ghost sn-xs sn-ibtn sn-round !absolute right-2.5 top-2.5 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          className="sn-btn sn-ghost sn-xs sn-ibtn !absolute right-2.5 top-2.5 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
           title={t("system_page.copy")}
           aria-label={t("system_page.copy")}
         >

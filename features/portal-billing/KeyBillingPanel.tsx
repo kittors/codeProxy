@@ -131,7 +131,7 @@ export function KeyBillingPanel({
       <div className={`${surface({ tone: "card", radius: "2xl" })} space-y-3 p-4 sm:p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-soft text-accent-ink">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
               <KeyRound size={18} />
             </span>
             <div>
