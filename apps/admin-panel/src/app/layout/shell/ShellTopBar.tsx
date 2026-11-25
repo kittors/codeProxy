@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2 } from "lucide-react";
 import { Icon } from "satin-ui/react";
 import {
-  iconHueClass,
+  HUE_GLYPH,
   LanguageSelector,
   SearchableSelect,
   ThemeToggleButton,
@@ -18,11 +17,14 @@ import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { AppearanceButton } from "./appearance/AppearanceButton";
 import { tenantDisplayName } from "./navModel";
 
-const TOPBAR_ICON_BUTTON = "sn-btn sn-ghost sn-ibtn sn-round text-[var(--sn-label2)]";
+const TOPBAR_ICON_BUTTON = "sn-btn sn-ghost sn-sm sn-ibtn text-[var(--sn-label2)]";
+const CMDK_SHORTCUT =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
 
 /**
- * 内容区顶栏：左侧是「分区 / 页面」位置提示（手机上多一个打开抽屉的按钮），右侧是切换租户、
- * 语言、主题与外观（外观在侧边抽屉里调）。不画分隔线、不加底色，和内容区连成一片。
+ * 壳层顶栏（落在 --sn-shell 统一底座上，高 44px 与左侧 Sidebar 顶栏严格齐平同中轴）：
+ * 左侧是「分区 / 页面」位置提示（手机上多一个打开抽屉的按钮），右侧是 ⌘K 命令面板入口、
+ * 切换租户、语言、主题与外观（外观在侧边抽屉里调）。
  *
  * 页面标题仍是一个只给读屏的 h1：各页面自己的卡片里已经有可见标题，这里再放一个可见的
  * 大标题会重复，也会让「按名称找 heading」的测试多匹配一个。
@@ -34,6 +36,7 @@ export function ShellTopBar({
   isMobile,
   mobileNavOpen,
   onToggleMobileNav,
+  onOpenCommandPalette,
 }: {
   titleKey: string;
   sectionLabel: string | null;
@@ -41,11 +44,12 @@ export function ShellTopBar({
   isMobile: boolean;
   mobileNavOpen: boolean;
   onToggleMobileNav: () => void;
+  onOpenCommandPalette?: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <header className="z-20 flex h-14 shrink-0 items-center gap-2 px-3 sm:px-6">
+    <header className="z-20 flex h-11 shrink-0 items-center gap-2 px-3 sm:px-5">
       <h1 className="sr-only">{t(titleKey)}</h1>
       {isMobile ? (
         <button
@@ -54,7 +58,7 @@ export function ShellTopBar({
           aria-label={mobileNavOpen ? t("shell.collapse_sidebar") : t("shell.expand_sidebar")}
           className={TOPBAR_ICON_BUTTON}
         >
-          <Icon name="panel-left" size={18} />
+          <Icon name="panel-left" size={17} />
         </button>
       ) : null}
       <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm" aria-hidden="true">
@@ -67,9 +71,25 @@ export function ShellTopBar({
         {pageLabel ? <span className="truncate font-medium text-[var(--sn-label)]">{pageLabel}</span> : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {onOpenCommandPalette ? (
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            data-command-palette-trigger="true"
+            aria-label={`${t("shell.cmdk_trigger", { defaultValue: "快速跳转…" })} (${CMDK_SHORTCUT})`}
+            aria-keyshortcuts="Meta+K Control+K"
+            className="cp-cmdk-trigger mr-1"
+          >
+            <Icon name="search" size={14} />
+            <span className="hidden md:inline">
+              {t("shell.cmdk_trigger", { defaultValue: "快速跳转…" })}
+            </span>
+            <kbd className="cp-cmdk-kbd hidden sm:inline-flex">{CMDK_SHORTCUT}</kbd>
+          </button>
+        ) : null}
         <TenantSwitcher />
-        <LanguageSelector size="md" />
-        <ThemeToggleButton size="md" />
+        <LanguageSelector size="sm" />
+        <ThemeToggleButton size="sm" />
         <AppearanceButton className={TOPBAR_ICON_BUTTON} />
       </div>
     </header>
@@ -136,7 +156,7 @@ function TenantSwitcher() {
         value: tenant.id,
         label,
         searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
-        icon: <Building2 size={16} className={`shrink-0 text-ink-3 ${iconHueClass(Building2)}`} />,
+        icon: <Icon name="house" size={16} className={`shrink-0 text-ink-3 ${HUE_GLYPH.indigo}`} />,
       };
     });
   }, [effectiveTenant, systemTenantLabel, tenants]);

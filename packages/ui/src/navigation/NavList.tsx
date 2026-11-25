@@ -187,7 +187,7 @@ export function NavList({
                   {item.icon ? (
                     <span
                       className={cn(
-                        "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg [&_svg.lucide]:size-[16px]",
+                        "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg [&_svg:is(.lucide,.sn-ic)]:size-[16px]",
                         dialogToneClass(item.tone ?? "auto", item.icon),
                       )}
                     >

@@ -140,7 +140,7 @@ export function buttonClassName({
     "sn-btn",
     BUTTON_VARIANT_MAP[variant],
     BUTTON_SIZE_MAP[size],
-    iconOnly ? "sn-ibtn sn-round" : null,
+    iconOnly ? "sn-ibtn" : null,
     iconClass,
     className,
   ]

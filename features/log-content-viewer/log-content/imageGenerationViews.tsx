@@ -140,7 +140,7 @@ export function OutputImageCard({
   // 图片本身就是内容，不再外面再套一块淡底框：底色只在图片加载出来之前垫在图片位置上。
   return (
     <div className="space-y-2">
-      <div className="relative min-h-[160px] overflow-hidden rounded-2xl bg-subtle">
+      <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-subtle">
         <img
           src={image.src}
           alt={t("log_content.output")}

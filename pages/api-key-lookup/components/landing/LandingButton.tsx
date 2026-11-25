@@ -10,7 +10,7 @@ const TONE_CLASS: Record<LandingButtonTone, string> = {
 
 /**
  * 基于 Satin `.sn-btn` 的落地页按钮：
- * 摒弃悬停上浮，采用 Satin 物理按压微缩放与胶囊形态，零 framer-motion 依赖。
+ * 摒弃悬停上浮，采用 Satin 物理按压微缩放与 8px 利落圆角，零 framer-motion 依赖。
  */
 export function LandingButton({
   children,
@@ -38,7 +38,7 @@ export function LandingButton({
       disabled={disabled}
       aria-label={ariaLabel}
       className={[
-        "sn-btn sn-round shrink-0 font-semibold",
+        "sn-btn shrink-0 font-semibold",
         size === "sm" ? "!h-9 !px-4 !text-sm" : "!h-12 !px-7 !text-sm",
         TONE_CLASS[tone],
         className,

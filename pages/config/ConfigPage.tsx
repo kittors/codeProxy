@@ -587,7 +587,7 @@ export function ConfigPage() {
                 </div>
                 {loading ? (
                   // 首次加载前表单里是默认值，盖一层淡色遮罩，别让人以为那就是服务器上的配置。
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-canvas/70 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-canvas/70 backdrop-blur-[2px]">
                     <span className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
                       <Loader2 size={15} className="animate-spin" aria-hidden="true" />
                       {t("common.loading_ellipsis")}

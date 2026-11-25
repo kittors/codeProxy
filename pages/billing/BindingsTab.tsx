@@ -605,7 +605,7 @@ export function BindingsTab({
                 <div className="font-mono text-xs text-ink-3">{qrTarget.key_masked}</div>
               ) : null}
             </div>
-            <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
+            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
               <QrCodeSvg
                 value={resolvePublicUrl(qrTarget)}
                 size={216}

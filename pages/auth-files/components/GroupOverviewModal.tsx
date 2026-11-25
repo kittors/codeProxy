@@ -28,11 +28,11 @@ function StatCard({
   help: ReactNode;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl bg-subtle px-4 py-3.5">
+    <div className="flex flex-col rounded-xl bg-subtle px-4 py-3.5">
       <div className="flex items-center gap-2">
         <span
           aria-hidden="true"
-          className="shrink-0 text-ink-3 icon-hue:hidden [&_svg.lucide]:size-[16px]"
+          className="shrink-0 text-ink-3 icon-hue:hidden [&_svg:is(.lucide,.sn-ic)]:size-[16px]"
         >
           {icon}
         </span>
@@ -210,7 +210,7 @@ export function GroupOverviewModal({
 
         <div className="min-h-0 flex-1">
           {activeGroupRows.length === 0 ? (
-            <div className="grid place-items-center rounded-2xl bg-subtle px-4 py-12 text-center text-sm text-ink-3">
+            <div className="grid place-items-center rounded-xl bg-subtle px-4 py-12 text-center text-sm text-ink-3">
               <BarChart3 size={20} className="mb-2 text-ink-4" aria-hidden="true" />
               {t("auth_files.group_overview_empty")}
             </div>

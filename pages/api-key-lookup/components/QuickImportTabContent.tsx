@@ -402,7 +402,7 @@ export function QuickImportTabContent({
       {showSkeleton ? <QuickImportLoadingSkeleton /> : null}
 
       {error ? (
-        <div className="rounded-2xl bg-rose-500/10 px-5 py-2.5 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+        <div className="rounded-xl bg-rose-500/10 px-5 py-2.5 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
           {error}
         </div>
       ) : null}

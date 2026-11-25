@@ -362,10 +362,19 @@ const ICON_HUE: Record<string, Hue> = {
   AlertTriangle: "amber",
   CircleAlert: "rose",
   AlertCircle: "rose",
+  CircleX: "rose",
   CircleCheck: "emerald",
   CheckCircle: "emerald",
   CheckCircle2: "emerald",
   Check: "emerald",
+  CheckCheck: "emerald",
+  CreditCard: "amber",
+  House: "indigo",
+  Plug: "sky",
+  Workflow: "teal",
+  GitFork: "teal",
+  Clipboard: "teal",
+  PenLine: "indigo",
   Power: "emerald",
   Inbox: "sky",
   SearchX: "sky",
@@ -391,6 +400,7 @@ const NEUTRAL_ICONS = new Set([
   "ArrowUp",
   "ArrowDown",
   "ArrowUpDown",
+  "CornerDownLeft",
   "MoreHorizontal",
   "MoreVertical",
   "Ellipsis",
@@ -401,6 +411,7 @@ const NEUTRAL_ICONS = new Set([
   "PanelLeft",
   "PanelLeftClose",
   "PanelLeftOpen",
+  "PanelRight",
   "Loader",
   "Loader2",
   "LoaderCircle",
@@ -433,7 +444,16 @@ export function hueForIconName(name: string): Hue {
   return FALLBACK_HUES[hash % FALLBACK_HUES.length]!;
 }
 
-/** 组件的名字：lucide 图标在 createLucideIcon 里显式设了 displayName（压缩后仍保留）。 */
+/** 将 Satin `<Icon name="key-round" />` 的 kebab-case 名称转为色相表使用的 PascalCase。 */
+const kebabToPascal = (value: string): string =>
+  value
+    .trim()
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1))
+    .join("");
+
+/** 组件的名字：菜单图标与 lucide 图标显式设了 displayName（压缩后仍保留）。 */
 const componentName = (type: unknown): string | null => {
   if (!type || (typeof type !== "object" && typeof type !== "function")) return null;
   const named = type as { displayName?: unknown; name?: unknown };
@@ -442,35 +462,41 @@ const componentName = (type: unknown): string | null => {
 };
 
 /**
- * 从图标节点推出色相：只认 lucide 这类带名字的图标组件；厂商 logo（img）、文字等返回 null，
- * 由调用方保持中性底色——logo 自带品牌色，底块再染色只会打架。
+ * 从图标节点推出色相：支持 Satin `<Icon name="..." />` 与带 displayName 的图标组件；
+ * 厂商 logo（img）、文字等返回 null，由调用方保持中性底色——logo 自带品牌色，底块再染色只会打架。
  */
 export function hueForIcon(icon: ReactNode): Hue | null {
   if (!isValidElement(icon)) return null;
-  const name = componentName(icon.type);
+  let name = componentName(icon.type);
+  if (!name && typeof icon.type !== "string") {
+    const rawName = (icon.props as { name?: unknown } | null)?.name;
+    if (typeof rawName === "string" && rawName.trim()) {
+      name = kebabToPascal(rawName);
+    }
+  }
   if (!name || isNeutralIconName(name)) return null;
   return hueForIconName(name);
 }
 
 /**
- * 按钮里的图标上色（图标按钮、带图标的次要按钮）：只改按钮里 lucide 图标的颜色，文字仍是中性色。
+ * 按钮里的图标上色（图标按钮、带图标的次要按钮）：只改按钮里 Satin / lucide 图标的颜色，文字仍是中性色。
  * 用后代选择器而不是改按钮的 text 色——按钮的文字色与悬停色各变体自己管，不和它们抢优先级。
  */
 export const HUE_BUTTON_ICON: Record<Hue, string> = {
-  blue: "icon-hue:[&_svg.lucide]:text-blue-500 icon-hue:dark:[&_svg.lucide]:text-blue-400",
-  sky: "icon-hue:[&_svg.lucide]:text-sky-500 icon-hue:dark:[&_svg.lucide]:text-sky-400",
-  cyan: "icon-hue:[&_svg.lucide]:text-cyan-500 icon-hue:dark:[&_svg.lucide]:text-cyan-400",
-  teal: "icon-hue:[&_svg.lucide]:text-teal-500 icon-hue:dark:[&_svg.lucide]:text-teal-400",
-  emerald: "icon-hue:[&_svg.lucide]:text-emerald-500 icon-hue:dark:[&_svg.lucide]:text-emerald-400",
-  lime: "icon-hue:[&_svg.lucide]:text-lime-600 icon-hue:dark:[&_svg.lucide]:text-lime-400",
-  amber: "icon-hue:[&_svg.lucide]:text-amber-500 icon-hue:dark:[&_svg.lucide]:text-amber-400",
-  orange: "icon-hue:[&_svg.lucide]:text-orange-500 icon-hue:dark:[&_svg.lucide]:text-orange-400",
-  rose: "icon-hue:[&_svg.lucide]:text-rose-500 icon-hue:dark:[&_svg.lucide]:text-rose-400",
-  pink: "icon-hue:[&_svg.lucide]:text-pink-500 icon-hue:dark:[&_svg.lucide]:text-pink-400",
-  fuchsia: "icon-hue:[&_svg.lucide]:text-fuchsia-500 icon-hue:dark:[&_svg.lucide]:text-fuchsia-400",
-  purple: "icon-hue:[&_svg.lucide]:text-purple-500 icon-hue:dark:[&_svg.lucide]:text-purple-400",
-  violet: "icon-hue:[&_svg.lucide]:text-violet-500 icon-hue:dark:[&_svg.lucide]:text-violet-400",
-  indigo: "icon-hue:[&_svg.lucide]:text-indigo-500 icon-hue:dark:[&_svg.lucide]:text-indigo-400",
+  blue: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-blue-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-blue-400",
+  sky: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-sky-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-sky-400",
+  cyan: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-cyan-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-cyan-400",
+  teal: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-teal-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-teal-400",
+  emerald: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-emerald-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-emerald-400",
+  lime: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-lime-600 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-lime-400",
+  amber: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-amber-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-amber-400",
+  orange: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-orange-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-orange-400",
+  rose: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-rose-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-rose-400",
+  pink: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-pink-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-pink-400",
+  fuchsia: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-fuchsia-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-fuchsia-400",
+  purple: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-purple-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-purple-400",
+  violet: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-violet-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-violet-400",
+  indigo: "icon-hue:[&_svg:is(.lucide,.sn-ic)]:text-indigo-500 icon-hue:dark:[&_svg:is(.lucide,.sn-ic)]:text-indigo-400",
 };
 
 /**

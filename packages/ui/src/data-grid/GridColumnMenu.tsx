@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, EyeOff } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
@@ -59,20 +59,19 @@ export function GridColumnMenu<T>({
 
   const sortButton = (direction: GridSortDirection) => {
     const active = activeDirection === direction;
-    const Icon = direction === "asc" ? ArrowUp : ArrowDown;
     return (
       <button
         type="button"
         aria-pressed={active}
         onClick={() => chooseSort(direction)}
         className={[
-          "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
+          "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
           active
             ? "bg-surface text-ink shadow-control"
             : "text-ink-2 hover:bg-hover hover:text-ink",
         ].join(" ")}
       >
-        <Icon size={13} aria-hidden="true" />
+        <Icon name={direction === "asc" ? "arrow-up" : "arrow-down"} size={13} />
         {direction === "asc" ? t("data_grid.sort_asc") : t("data_grid.sort_desc")}
       </button>
     );
@@ -91,7 +90,7 @@ export function GridColumnMenu<T>({
             }}
             className="inline-flex shrink-0 items-center gap-1 rounded-md text-xs text-ink-3 transition-colors hover:text-ink"
           >
-            <EyeOff size={12} aria-hidden="true" />
+            <Icon name="eye-off" size={12} />
             {t("data_grid.hide_column")}
           </button>
         ) : null}
@@ -99,7 +98,7 @@ export function GridColumnMenu<T>({
 
       {canSort ? (
         <div
-          className="grid grid-cols-2 gap-1 rounded-xl bg-track p-1"
+          className="grid grid-cols-2 gap-1 rounded-[var(--sn-btn-r)] bg-track p-1"
           role="group"
           aria-label={t("data_grid.sort")}
         >

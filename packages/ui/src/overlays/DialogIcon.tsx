@@ -32,13 +32,13 @@ const SEMANTIC_CLASS: Record<DialogSemanticTone, string> = {
 const isSemanticTone = (tone: DialogTone): tone is DialogSemanticTone =>
   tone === "neutral" || tone === "info" || tone === "success" || tone === "warning" || tone === "danger";
 
-// 只统一 lucide 图标的尺寸（它们的 width/height 写在属性上，再由全局 zoom 跟随根字号缩放）；
+// 只统一 lucide / Satin Solar 图标的尺寸（它们的 width/height 写在属性上，再由全局 zoom 跟随根字号缩放）；
 // 厂商 logo 之类的自带 svg 尺寸由调用方决定。
 const SIZE_CLASS = {
-  xs: "h-6 w-6 rounded-md [&_svg.lucide]:size-[13px]",
-  sm: "h-8 w-8 rounded-lg [&_svg.lucide]:size-[16px]",
-  md: "h-10 w-10 rounded-xl [&_svg.lucide]:size-[20px]",
-  lg: "h-12 w-12 rounded-2xl [&_svg.lucide]:size-[24px]",
+  xs: "h-6 w-6 rounded-md [&_svg:is(.lucide,.sn-ic)]:size-[13px]",
+  sm: "h-8 w-8 rounded-lg [&_svg:is(.lucide,.sn-ic)]:size-[16px]",
+  md: "h-10 w-10 rounded-xl [&_svg:is(.lucide,.sn-ic)]:size-[20px]",
+  lg: "h-12 w-12 rounded-2xl [&_svg:is(.lucide,.sn-ic)]:size-[24px]",
 } as const;
 
 export type DialogIconSize = keyof typeof SIZE_CLASS;

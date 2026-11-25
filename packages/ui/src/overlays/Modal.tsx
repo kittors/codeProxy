@@ -18,8 +18,8 @@ import {
   type DialogInitialFocus,
 } from "./useDialogBehavior";
 
-/** Satin 弹窗关闭按钮：无底色圆角图标按钮，带物理按压微缩放与 Esc 快捷键提示。 */
-const CLOSE_BUTTON_CLASS = "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0";
+/** Satin 弹窗关闭按钮：无底色 8px 圆角图标按钮，带物理按压微缩放与 Esc 快捷键提示。 */
+const CLOSE_BUTTON_CLASS = "sn-btn sn-ghost sn-sm sn-ibtn shrink-0";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
@@ -205,7 +205,7 @@ export function Modal({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-3xl bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl`,
+          `relative z-10 flex max-h-[calc(100dvh-0.5rem)] w-full ${widthCls} flex-col overflow-hidden rounded-t-2xl bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
           panelClassName,
@@ -226,14 +226,14 @@ export function Modal({
           ) : null
         ) : (
           // 头部、尾部不画分隔线：留白把三段分开，内容滚动时由正文区的上下渐隐过渡。
-          <div className="flex shrink-0 items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-6">
-            <div className="flex min-w-0 flex-1 items-start gap-3.5">
+          <div className="flex shrink-0 items-start justify-between gap-3 pt-5 pr-4 pb-1 pl-5">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
               {snapshot.icon ? <DialogIcon tone={tone}>{snapshot.icon}</DialogIcon> : null}
-              <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-1"].join(" ")}>
+              <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-0.5"].join(" ")}>
                 <h2
                   className={[
                     "flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink",
-                    snapshot.icon ? "text-lg" : "text-xl",
+                    snapshot.icon ? "text-base" : "text-lg",
                   ].join(" ")}
                 >
                   <span id={titleId} className="min-w-0 truncate">
@@ -274,9 +274,9 @@ export function Modal({
             "min-h-0",
             bodyHeightCls,
             bodyOverflowCls,
-            "overscroll-contain px-6",
-            hideHeader ? "pt-6" : "pt-4",
-            snapshot.footer ? "pb-2" : "pb-6",
+            "overscroll-contain px-5",
+            hideHeader ? "pt-5" : "pt-3.5",
+            snapshot.footer ? "pb-2" : "pb-5",
             bodyClassName ?? "",
           ].join(" ")}
         >
@@ -286,7 +286,7 @@ export function Modal({
         {snapshot.footer ? (
           <div
             className={[
-              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6",
+              "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 px-5 pt-3.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-5",
               snapshot.footerStart ? "justify-between" : "justify-end",
             ].join(" ")}
           >
@@ -297,7 +297,7 @@ export function Modal({
                 占满整行，调用方自己写的「左删除、右保存」两端布局也能撑开。 */}
             <div
               className={[
-                "flex flex-wrap items-center justify-end gap-2.5 max-sm:w-full max-sm:[&>button]:flex-1",
+                "flex flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:[&>button]:flex-1",
                 snapshot.footerStart ? "ml-auto" : "w-full",
               ].join(" ")}
             >

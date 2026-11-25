@@ -289,7 +289,7 @@ export function OAuthFlowPanel({
                   </div>
                 ) : (
                   // 粘贴框出现之前的占位：无边淡底（虚线框只留给文件拖放区）。
-                  <div className="rounded-2xl bg-subtle px-4 py-3 text-xs text-ink-3">
+                  <div className="rounded-xl bg-subtle px-4 py-3 text-xs text-ink-3">
                     {t("add_account.steps.paste_locked")}
                   </div>
                 )}

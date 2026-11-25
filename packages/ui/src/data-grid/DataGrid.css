@@ -12,27 +12,28 @@
  */
 .cp-grid {
   --grid-bg: var(--cp-backdrop, var(--sn-raised));
-  --grid-head-bg: var(--sn-raised);
+  /* 对齐 Satin .sn-tbl-wrap.sn-tbl-fill 表头微灰分层，使表头与表体一眼区分 */
+  --grid-head-bg: color-mix(in srgb, var(--sn-label) 2.5%, var(--sn-raised));
   --grid-row-hover: var(--sn-fill-hover-solid);
   --grid-row-selected: var(--sn-fill-active-solid);
   --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 92%, var(--sn-accent));
-  --grid-row-expanded: color-mix(in srgb, var(--grid-bg) 97.5%, var(--sn-label));
+  --grid-row-expanded: color-mix(in srgb, var(--sn-label) 2%, var(--grid-bg));
   --grid-sorted-tint: rgb(0 0 0 / 0.014);
-  --grid-pin-shadow: rgb(15 23 42 / 0.12);
-  --grid-head-shadow: rgb(0 0 0 / 0.06);
+  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(15 23 42 / 0.12));
+  --grid-head-shadow: rgb(0 0 0 / 0.05);
   --grid-row-line: var(--sn-line);
 }
 
 .dark .cp-grid,
 [data-theme="dark"] .cp-grid {
-  --grid-head-bg: var(--sn-raised);
+  --grid-head-bg: color-mix(in srgb, #fff 3%, var(--sn-raised));
   --grid-row-hover: var(--sn-fill-hover-solid);
   --grid-row-selected: var(--sn-fill-active-solid);
   --grid-row-selected-hover: color-mix(in srgb, var(--sn-fill-active-solid) 90%, var(--sn-accent));
-  --grid-row-expanded: color-mix(in srgb, var(--grid-bg) 97%, #fff);
+  --grid-row-expanded: color-mix(in srgb, #fff 2.4%, var(--grid-bg));
   --grid-sorted-tint: rgb(255 255 255 / 0.02);
-  --grid-pin-shadow: rgb(0 0 0 / 0.58);
-  --grid-head-shadow: rgb(0 0 0 / 0.45);
+  --grid-pin-shadow: var(--sn-tbl-pin-shadow, rgb(0 0 0 / 0.58));
+  --grid-head-shadow: rgb(0 0 0 / 0.42);
 }
 
 /*
@@ -85,7 +86,7 @@
   top: 0;
   z-index: 3;
   background-color: var(--grid-head-bg);
-  box-shadow: inset 0 -1px 0 var(--cp-line-strong);
+  box-shadow: inset 0 -1px 0 var(--sn-line);
   transition: box-shadow 160ms var(--ease-soft);
 }
 
@@ -96,7 +97,7 @@
 /* 内容滚到表头下面时，表头底边多一道柔和的投影，读起来是「浮在内容上」。 */
 .cp-grid[data-y-scrolled="true"] .cp-grid-head-cell {
   box-shadow:
-    inset 0 -1px 0 var(--cp-line-strong),
+    inset 0 -1px 0 var(--sn-line),
     0 6px 10px -8px var(--grid-head-shadow);
 }
 
@@ -189,19 +190,19 @@
 
 /* 行的语气（rowTone）：底色在单元格上，所以改的是行上的底色变量；悬停时再深一档。 */
 .cp-grid-row[data-tone="danger"] {
-  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 94%, var(--color-rose-500));
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 94%, var(--sn-danger));
 }
 
 .cp-grid-row[data-tone="danger"]:hover {
-  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 90%, var(--color-rose-500));
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 90%, var(--sn-danger));
 }
 
 .cp-grid-row[data-tone="warning"] {
-  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 93%, var(--color-amber-500));
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 93%, var(--sn-warning));
 }
 
 .cp-grid-row[data-tone="warning"]:hover {
-  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 89%, var(--color-amber-500));
+  --grid-cell-bg: color-mix(in srgb, var(--grid-bg) 89%, var(--sn-warning));
 }
 
 .cp-grid-row[data-tone="muted"] > .cp-grid-cell > [data-cell-inner] {

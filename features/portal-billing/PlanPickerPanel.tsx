@@ -122,7 +122,7 @@ export function PlanPickerPanel({
                 }
               }}
               className={cn(
-                surface({ tone: "card", radius: "2xl", bordered: !active }),
+                surface({ tone: "card", radius: "xl", bordered: !active }),
                 "group relative flex text-left transition-[background-color,box-shadow] duration-150",
                 isSinglePlan
                   ? "flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
@@ -130,7 +130,7 @@ export function PlanPickerPanel({
                 // 深色模式下 --cp-accent 会反转为近纯白，外扩 ring-2 ring-accent 会变成刺眼粗白框；
                 // 与 ChoiceCards 一致改用内嵌半透明强调描边 + 轻提亮底色，明暗双主题保持克制清晰。
                 active
-                  ? "bg-surface-hover shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--cp-accent)_50%,transparent),var(--cp-shadow-card)]"
+                  ? "bg-surface-hover shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--cp-accent)_50%,transparent)]"
                   : "hover:bg-surface-hover",
               )}
             >

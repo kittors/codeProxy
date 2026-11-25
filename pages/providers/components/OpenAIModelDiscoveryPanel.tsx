@@ -101,7 +101,7 @@ export function OpenAIModelDiscoveryPanel({
       </div>
 
       {discoveredModels.length ? (
-        <div ref={discoveredSectionRef} className="rounded-2xl bg-subtle p-4">
+        <div ref={discoveredSectionRef} className="rounded-xl bg-subtle p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium text-ink-2">
               {t("providers.found_models", { count: discoveredModels.length })}

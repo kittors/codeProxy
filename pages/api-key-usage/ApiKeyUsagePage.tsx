@@ -468,7 +468,7 @@ export function ApiKeyUsagePage() {
 
         <main className="mx-auto max-w-screen-xl space-y-4 px-4 py-6 sm:px-6">
           {error && queriedKey ? (
-            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+            <div className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           ) : null}
@@ -592,9 +592,9 @@ export function ApiKeyUsagePage() {
           ) : (
             <div
               data-testid="apikey-usage-empty"
-              className="bg-subtle rounded-3xl px-6 py-16 text-center"
+              className="rounded-xl bg-subtle px-6 py-16 text-center"
             >
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
                 <KeyRound size={22} />
               </div>
               <h2 className="mt-4 text-lg font-semibold text-ink">

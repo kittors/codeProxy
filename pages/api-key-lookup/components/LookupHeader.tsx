@@ -66,8 +66,8 @@ export function LookupHeader({
         className={[
           "cp-edge mx-auto flex h-14 max-w-screen-xl items-center justify-between",
           "motion-safe:transition-[background-color,box-shadow] motion-safe:duration-300",
-          "rounded-full px-4 backdrop-blur-xl sm:px-5",
-          scrolled ? "bg-surface/85 shadow-card" : "bg-surface/60",
+          "rounded-2xl px-4 backdrop-blur-xl sm:px-5",
+          scrolled ? "bg-surface/85 shadow-pop" : "bg-surface/60",
         ].join(" ")}
       >
         <LookupBrand showLanding={showLanding} title={t("apikey_lookup.title")} />

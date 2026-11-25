@@ -114,17 +114,17 @@ export function Drawer({
         }}
         style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
+          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e2)] outline-none [--cp-backdrop:var(--sn-overlay)] sm:max-w-[calc(100vw-1rem)] sm:rounded-2xl`,
           panelMotion.className,
           nudging ? "overlay-nudge" : "",
         ].join(" ")}
       >
         {/* 抽屉内容通常很长：头尾不画硬分隔线，正文滚动时上下渐隐，和 Modal 一致。 */}
-        <div className="flex items-start justify-between gap-3 py-4 pr-4 pl-6">
-          <div className="flex min-w-0 items-start gap-3.5">
+        <div className="flex items-start justify-between gap-3 py-3.5 pr-4 pl-5">
+          <div className="flex min-w-0 items-start gap-3">
             {icon ? <DialogIcon tone={tone}>{icon}</DialogIcon> : null}
-            <div className={["min-w-0", icon ? "pt-px" : "pt-1"].join(" ")}>
-              <h2 id={titleId} className="truncate text-lg font-semibold tracking-tight text-ink">
+            <div className={["min-w-0", icon ? "pt-px" : "pt-0.5"].join(" ")}>
+              <h2 id={titleId} className="truncate text-base font-semibold tracking-tight text-ink">
                 {title}
               </h2>
               {description ? (
@@ -139,7 +139,7 @@ export function Drawer({
             onClick={onClose}
             disabled={!open}
             data-kbd="Esc"
-            className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0"
+            className="sn-btn sn-ghost sn-sm sn-ibtn shrink-0"
             aria-label={t("common.close")}
           >
             <Icon name="x" size={16} />
@@ -147,12 +147,12 @@ export function Drawer({
         </div>
         <div
           ref={fade.ref}
-          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-3 ${bodyClassName ?? ""}`}
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-3 ${bodyClassName ?? ""}`}
         >
           {children}
         </div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2.5 px-6 py-4">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 px-5 py-3.5">
             {footer}
           </div>
         ) : null}

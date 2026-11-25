@@ -83,7 +83,7 @@ export function ApiKeyUsageModal({
   const { t } = useTranslation();
   const metricLabel = "text-2xs text-ink-3";
   const metricValue = "mt-0.5 font-mono text-base font-semibold tabular-nums text-ink";
-  const summaryCard = "rounded-2xl bg-subtle px-4 py-3";
+  const summaryCard = "rounded-xl bg-subtle px-4 py-3";
   const defaultHidden = useMemo(
     () => usageLogColumns.filter((column) => column.defaultHidden).map((column) => column.id),
     [usageLogColumns],

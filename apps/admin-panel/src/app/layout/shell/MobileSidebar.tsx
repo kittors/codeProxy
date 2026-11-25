@@ -59,12 +59,12 @@ export function MobileSidebar({
             : "pointer-events-none -translate-x-full motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.4,0,1,1)]",
         ].join(" ")}
       >
-        <div className="flex h-14 shrink-0 items-center gap-2 px-3">
-          <span className="grid size-9 shrink-0 place-items-center">
-            <LogoMark size={26} />
+        <div className="flex h-11 shrink-0 items-center gap-2 px-3">
+          <span className="grid size-8 shrink-0 place-items-center">
+            <LogoMark size={22} />
           </span>
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-base font-semibold tracking-tight text-ink">
+            <span className="block truncate text-sm font-semibold tracking-tight text-ink">
               {t("shell.console")}
             </span>
             <span className="block font-display text-2xs text-ink-3">{BRAND_NAME}</span>

@@ -64,7 +64,7 @@ export function PolicyTester({
   }
 
   return (
-    <div className="rounded-2xl bg-subtle p-3.5">
+    <div className="rounded-xl bg-subtle p-3.5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-ink-2">
           <span

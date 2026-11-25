@@ -80,7 +80,7 @@ export function ModelRoutesEditor({
               key={route.key}
               aria-label={t("access_policy.route_label", { index: position })}
               className={cn(
-                "rounded-2xl bg-subtle p-3.5",
+                "rounded-xl bg-subtle p-3.5",
                 hasIssueUnder(issues, prefix) ? "ring-1 ring-rose-500/40" : null,
               )}
             >

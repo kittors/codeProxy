@@ -48,7 +48,7 @@ export function SecretValue({
                 ? t("common.hide", { defaultValue: "隐藏" })
                 : t("common.show", { defaultValue: "显示" })
             }
-            className="sn-btn sn-ghost sn-xs sn-ibtn sn-round shrink-0"
+            className="sn-btn sn-ghost sn-xs sn-ibtn shrink-0"
           >
             <Icon name={revealed ? "eye-off" : "eye"} size={14} />
           </button>

@@ -22,7 +22,7 @@ export function SettingGroup({
         "divide-y divide-[var(--sn-line)]",
         flat
           ? "[&>[data-slot=setting-row]]:px-0"
-          : "overflow-hidden rounded-2xl border border-[var(--sn-line)] bg-[var(--sn-raised)] shadow-[var(--sn-card-shadow)] [--cp-backdrop:var(--sn-raised)]",
+          : "overflow-hidden rounded-xl border border-[var(--sn-line)] bg-[var(--sn-raised)] [--cp-backdrop:var(--sn-raised)]",
         className,
       )}
     >

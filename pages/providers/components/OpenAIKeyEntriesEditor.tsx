@@ -15,7 +15,7 @@ import { useModerationPermissions } from "@app/providers/useModerationPermission
  * 条目里面的审核配置不再垫第二层底。
  */
 const FieldGroup = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl bg-subtle p-4">{children}</div>
+  <div className="rounded-xl bg-subtle p-4">{children}</div>
 );
 
 interface OpenAIKeyEntriesEditorProps {

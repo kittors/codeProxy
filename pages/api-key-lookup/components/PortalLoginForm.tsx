@@ -63,7 +63,7 @@ export function PortalLoginForm({
   // 锁定倒计时走完后，那句「请 N 分钟后重试」已经过时，不再显示。
   const showError = Boolean(error) && (locked || !error?.lockedUntil);
 
-  const fieldClass = "h-12 rounded-2xl px-4 text-sm";
+  const fieldClass = "h-12 rounded-[var(--sn-btn-r)] px-4 text-sm";
   const adornmentClass = "text-ink-3";
 
   return (

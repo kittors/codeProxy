@@ -26,4 +26,14 @@ describe("Satin CSS cascade layer production guard", () => {
     expect(config).toContain('id.includes("/css/md.css")');
     expect(config).toContain('if (id.endsWith(".css")) return undefined;');
   });
+
+  test("satin-bridge.css imports shell.css and defaults to Satin native 8px control radius", () => {
+    const bridge = fs.readFileSync(
+      path.join(adminPanelRoot, "src/styles/satin-bridge.css"),
+      "utf8",
+    );
+    expect(bridge).toContain('@import "satin-ui/css/shell.css";');
+    expect(bridge).toContain("--sn-btn-r: 8px;");
+    expect(bridge).not.toContain("--sn-btn-r: var(--sn-r-full); /* legacy */");
+  });
 });

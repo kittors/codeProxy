@@ -122,7 +122,7 @@ export function CheckoutQrModal({
           </div>
         ) : (
           <>
-            <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
+            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
               {liveOrder.qrcode_url && !imgFailed ? (
                 <img
                   src={liveOrder.qrcode_url}

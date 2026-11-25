@@ -90,13 +90,13 @@ export function EntityCard({
       className={[
         // Both `group` and `group/card`: children written against the plain
         // group variant keep working, and tests locate a card by `.group`.
-        // 悬停只把投影加深一档，不上浮：卡片里有开关、勾选框这类小目标，鼠标移上去时
-        // 整张卡跟着挪 2px，正要点的那个控件也会跟着跑。
-        "group group/card flex w-full max-w-[34rem] flex-col transition-[box-shadow,opacity] duration-250 ease-soft hover:shadow-lift md:max-w-none",
+        // 对齐 Satin 卡片规范：不加悬停投影、不上浮，悬停仅把 1px 细描边微提亮一档。
+        "group group/card flex w-full max-w-[34rem] flex-col transition-[opacity] duration-200 ease-soft hover:[--cp-edge:var(--sn-line-control)] md:max-w-none",
         fill ? "h-full" : "",
-        // 紧凑卡片的圆角小一档（16），同心内圆角跟着改成 16 − 12 = 4（见 Card 的说明）。
-        dense ? "rounded-2xl [--cp-inner-radius:var(--radius-sm)]" : "rounded-3xl",
-        // 选中：把伪元素细边换成强调色，不再叠一圈墨色 ring——投影照常，卡片不会因为选中「变厚」。
+        dense
+          ? "rounded-lg [--cp-inner-radius:var(--radius-sm)]"
+          : "rounded-xl [--cp-inner-radius:var(--radius-lg)]",
+        // 选中：把伪元素细边换成强调色，卡片不会因为选中变厚。
         selected ? "[--cp-edge:var(--cp-accent)] dark:[--cp-edge:var(--cp-accent-ink)]" : "",
         muted ? "opacity-90" : "",
         dimmed ? "opacity-85" : "",
@@ -216,8 +216,8 @@ export function EntityCardSkeleton({
       aria-hidden="true"
       className={[
         "relative flex w-full min-w-0 max-w-[34rem] flex-col md:max-w-none",
-        surface({ tone: "card", radius: "3xl" }),
-        dense ? "rounded-2xl p-3" : "rounded-3xl p-4",
+        surface({ tone: "card", radius: "xl" }),
+        dense ? "rounded-lg p-3.5" : "rounded-xl p-5",
         fill ? "h-full" : "",
         className,
       ]

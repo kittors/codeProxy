@@ -29,7 +29,7 @@ export function CheckboxField({
     <label
       htmlFor={id}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border px-3.5 py-3 transition-[background-color,border-color]",
+        "flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-[background-color,border-color]",
         checked && tone === "danger"
           ? "border-[var(--sn-danger)]/40 bg-[var(--sn-b-danger-soft)]"
           : "border-[var(--sn-line)] bg-[var(--sn-raised)] hover:border-[var(--sn-line-control-hover)] hover:bg-[var(--sn-fill-hover)]",

@@ -181,10 +181,10 @@ export function LoginPage() {
           <p className="mt-3 max-w-md text-sm leading-6 text-ink-3">{t("login.hero_description")}</p>
         </motion.div>
         <motion.div ref={cardRef} variants={page.item} className="w-full max-w-[420px]">
-            {/* 登录卡浮在页面上：伪元素细边 + 抬起一档的投影，不画 border。 */}
+            {/* 登录卡对齐 Satin .sn-auth 表面：16px 清晰圆角、1px 细描边与干净抬升投影。 */}
             <motion.section
               animate={shakeControls}
-              className="cp-edge rounded-3xl bg-surface p-7 shadow-lift sm:p-8"
+              className="cp-edge rounded-2xl bg-[var(--sn-raised)] p-7 shadow-lift sm:p-8"
             >
               <div className="mb-7">
                 <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("login.sign_in")}</h2>

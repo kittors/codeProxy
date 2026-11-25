@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "../primitives/Checkbox";
@@ -81,7 +81,7 @@ export function OptionsFilterEditor({
           onChange={(event) => setQuery(event.currentTarget.value)}
           onKeyDown={onSearchKeyDown}
           placeholder={t("data_grid.search_options")}
-          startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+          startAdornment={<Icon name="search" size={14} className="text-ink-3" />}
         />
       ) : null}
       <div className="flex items-center justify-between px-2 pt-0.5 text-xs text-ink-3">
@@ -211,7 +211,7 @@ export function RangeFilterEditor({
                   )
                 }
                 className={[
-                  "h-7 rounded-full px-2.5 text-xs font-medium tabular-nums transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.96]",
+                  "h-7 rounded-[var(--sn-btn-r)] px-2.5 text-xs font-medium tabular-nums transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.96]",
                   active
                     ? "bg-accent text-accent-fg"
                     : "bg-ink/[0.05] text-ink-2 hover:bg-ink/[0.08] hover:text-ink dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
@@ -288,7 +288,7 @@ export function TextFilterEditor({
           }
         }}
         placeholder={placeholder ?? t("data_grid.contains_placeholder")}
-        startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+        startAdornment={<Icon name="search" size={14} className="text-ink-3" />}
       />
     </div>
   );

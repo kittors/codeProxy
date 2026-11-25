@@ -22,7 +22,7 @@ function UserCode({ code }: { code: string }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div
-        className="flex items-center gap-1 rounded-2xl bg-subtle px-4 py-3"
+        className="flex items-center gap-1 rounded-xl bg-subtle px-4 py-3"
         aria-label={t("add_account.device.code_label")}
         role="group"
       >

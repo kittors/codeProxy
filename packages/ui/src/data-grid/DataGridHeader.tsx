@@ -1,4 +1,4 @@
-import { ArrowUp, GripHorizontal, GripVertical, ListFilter } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   useId,
   type CSSProperties,
@@ -48,16 +48,16 @@ export function pinEdge(columnId: string, layout: GridColumnLayout): "start" | "
  */
 function SortGlyph({ direction, reverse }: { direction: "asc" | "desc" | null; reverse: boolean }) {
   return (
-    <ArrowUp
+    <Icon
+      name="arrow-up"
       size={12}
-      aria-hidden="true"
       className={[
         "pointer-events-none absolute top-1/2 -translate-y-1/2 transition-[rotate,opacity,color] duration-200 ease-pop",
         reverse ? "right-full mr-0.5" : "left-full ml-0.5",
         direction === "desc" ? "rotate-180" : "",
         direction
-          ? "text-ink opacity-100"
-          : "text-ink-3 opacity-0 group-hover/sort:opacity-70 group-focus-visible/sort:opacity-70",
+          ? "text-[var(--sn-label)] opacity-100"
+          : "text-[var(--sn-label3)] opacity-0 group-hover/sort:opacity-70 group-focus-visible/sort:opacity-70",
       ].join(" ")}
     />
   );
@@ -192,8 +192,8 @@ export function DataGridHeader<T>({
             className={`cp-grid-head-cell p-0 ${headHeight}`}
             style={pinStyle(GRID_REORDER_COLUMN_ID, "start", layout)}
           >
-            <span className="flex h-full items-center justify-center text-ink-4">
-              <GripVertical size={14} aria-hidden="true" />
+            <span className="flex h-full items-center justify-center text-[var(--sn-label3)]">
+              <Icon name="grip-vertical" size={14} />
               <span className="sr-only">{t("common.row_order")}</span>
             </span>
           </th>
@@ -272,7 +272,7 @@ export function DataGridHeader<T>({
                   onKeyDown={(event) => columnGrip?.onKeyDown(column, event)}
                   className="absolute left-1/2 top-0 z-[2] inline-flex h-3 w-7 -translate-x-1/2 cursor-grab touch-none items-center justify-center rounded-b-md text-ink-4 opacity-0 transition-[opacity,color] duration-150 ease-soft hover:text-ink-2 focus-visible:opacity-100 group-hover/head:opacity-100 active:cursor-grabbing"
                 >
-                  <GripHorizontal size={12} aria-hidden="true" />
+                  <Icon name="grip-vertical" size={12} className="rotate-90" />
                 </button>
               ) : null}
               <div
@@ -296,7 +296,9 @@ export function DataGridHeader<T>({
                     onClick={() => onSortClick?.(column)}
                     className={[
                       "group/sort relative inline-flex min-w-0 max-w-full items-center rounded-md text-xs font-medium transition-colors",
-                      direction ? "text-ink" : "text-ink-2 hover:text-ink",
+                      direction
+                        ? "text-[var(--sn-label)]"
+                        : "text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
                     ].join(" ")}
                   >
                     <HeaderLabel header={column.header} hint={column.headerHint} />
@@ -304,7 +306,7 @@ export function DataGridHeader<T>({
                   </button>
                 ) : (
                   <span
-                    className="inline-flex min-w-0 max-w-full text-xs font-medium text-ink-2"
+                    className="inline-flex min-w-0 max-w-full text-xs font-medium text-[var(--sn-label3)]"
                     aria-describedby={hintId}
                   >
                     <HeaderLabel header={column.header} hint={column.headerHint} focusable />
@@ -340,7 +342,7 @@ export function DataGridHeader<T>({
                         : "bg-[var(--grid-head-bg)] text-ink-3 opacity-0 hover:bg-hover hover:text-ink group-hover/head:opacity-100 focus-visible:opacity-100",
                     ].join(" ")}
                   >
-                    <ListFilter size={13} aria-hidden="true" />
+                    <Icon name="list-filter" size={13} />
                     {filterActive ? (
                       <span
                         aria-hidden="true"

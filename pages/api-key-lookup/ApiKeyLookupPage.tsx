@@ -994,7 +994,7 @@ export function ApiKeyLookupPage() {
         >
           {/* Error */}
           {error && (
-            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+            <div className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           )}

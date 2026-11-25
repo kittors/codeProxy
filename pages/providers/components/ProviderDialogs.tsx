@@ -153,7 +153,7 @@ export function ProviderImportPreviewModal({
                 key={tile.key}
                 role="group"
                 aria-label={t(TILE_ARIA[tile.key], { count: diff[tile.key] })}
-                className="rounded-2xl bg-subtle px-3.5 py-3"
+                className="rounded-xl bg-subtle px-3.5 py-3"
               >
                 <p className="flex items-center gap-1.5 text-xs text-ink-3">
                   <span aria-hidden="true" className={["h-1.5 w-1.5 rounded-full", tile.dot].join(" ")} />

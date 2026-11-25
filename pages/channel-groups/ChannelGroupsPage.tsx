@@ -561,7 +561,7 @@ export function ChannelGroupsPage() {
         loading={loading}
       >
         {error ? (
-          <div className="rounded-2xl bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
+          <div className="rounded-xl bg-rose-500/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error}
           </div>
         ) : null}

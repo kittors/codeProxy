@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, ChevronRight, GripVertical } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import {
   Fragment,
   useEffect,
@@ -264,7 +264,7 @@ export function DataGridBody<T>({
                 onKeyDown={(event) => rowGrip.onKeyDown(key, event)}
                 className="inline-flex h-7 w-6 cursor-grab touch-none items-center justify-center rounded-md text-ink-4 transition-colors hover:bg-hover hover:text-ink-2 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
               >
-                <GripVertical size={14} aria-hidden="true" />
+                <Icon name="grip-vertical" size={14} />
               </button>
             </div>
           )}
@@ -314,9 +314,9 @@ export function DataGridBody<T>({
                 }}
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
               >
-                <ChevronRight
+                <Icon
+                  name="chevron-right"
                   size={14}
-                  aria-hidden="true"
                   className={`transition-[rotate] duration-200 ease-pop ${expanded ? "rotate-90" : ""}`}
                 />
               </button>
@@ -364,7 +364,7 @@ export function DataGridBody<T>({
               {status === "error" ? (
                 <div role="alert">
                   <EmptyState
-                    icon={<AlertTriangle aria-hidden="true" />}
+                    icon={<Icon name="triangle-alert" size={20} />}
                     title={t("data_grid.error_title")}
                     description={error ?? undefined}
                     action={

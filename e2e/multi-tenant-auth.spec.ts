@@ -329,7 +329,7 @@ test("logs in with username and password without selecting a tenant", async ({ p
   await mockIdentity(page);
   await page.goto("/#/login");
   await expect(page.getByLabel(/tenant/i)).toHaveCount(0);
-  await expect(page.locator("svg.lucide-key-round")).toBeVisible();
+  await expect(page.locator('svg[data-icon="key-round"]')).toBeVisible();
   const usernameBox = await page.getByLabel(/username/i).boundingBox();
   const passwordBox = await page.getByLabel(/^password$/i).boundingBox();
   expect(usernameBox?.height).toBeGreaterThanOrEqual(44);
@@ -338,8 +338,8 @@ test("logs in with username and password without selecting a tenant", async ({ p
   await page.getByLabel(/^password$/i).fill("correct-password");
   await page.getByRole("button", { name: /^login$/i }).click();
   await expect(page.getByRole("heading", { name: /change password/i })).toBeVisible();
-  await expect(page.locator("main svg.lucide-key-round")).toHaveCount(0);
-  await expect(page.locator("main svg.lucide-eye")).toHaveCount(0);
+  await expect(page.locator('main svg[data-icon="key-round"], main svg.lucide-key-round')).toHaveCount(0);
+  await expect(page.locator('main svg[data-icon="eye"], main svg.lucide-eye')).toHaveCount(0);
   const passwordVisibility = page.getByRole("checkbox", { name: /show passwords/i });
   await expect(passwordVisibility).toBeVisible();
   await expect(page.getByLabel(/current password/i)).toHaveAttribute("type", "password");

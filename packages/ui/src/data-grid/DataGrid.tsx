@@ -502,10 +502,10 @@ export function DataGrid<T>({
       ref={rootRef}
       className={[
         "cp-grid group/grid relative flex min-w-0 flex-col",
-        // 外框与面板卡片同一套：圆角 + 伪元素细边 + 投影；overflow-hidden 让表头底色、
-        // 选中行、冻结列阴影、滚动条都被圆角裁住，四个角不会露出直角。
+        // 外框与 Satin .sn-tbl-wrap / .sn-panel 同一套：12px（xl）圆角 + 1px 伪元素细边；
+        // overflow-hidden 让表头底色、选中行、冻结列阴影、滚动条都被圆角裁住。
         frame
-          ? `${surface({ tone: "card", radius: "3xl" })} cp-grid-frame isolate overflow-hidden`
+          ? `${surface({ tone: "card", radius: "xl" })} cp-grid-frame isolate overflow-hidden`
           : "",
         fill ? "h-full min-h-0 flex-1" : "",
         className ?? "",
@@ -635,14 +635,14 @@ export function DataGrid<T>({
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0, transition: popoverEnterTransition }}
               exit={{ opacity: 0, y: reduceMotion ? 0 : -4, transition: popoverExitTransition }}
-              className="absolute right-0 top-0 z-[9] flex items-center gap-3 bg-[var(--grid-head-bg)] pr-3 shadow-[inset_0_-1px_0_var(--cp-line-strong)]"
+              className="absolute right-0 top-0 z-[9] flex items-center gap-3 bg-[var(--grid-head-bg)] pr-3 shadow-[inset_0_-1px_0_var(--sn-line)]"
               style={{ left: selectionBarLeft, height: viewport.headerHeight }}
             >
-              <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-ink">
+              <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-[var(--sn-label)]">
                 {t("data_grid.selected_rows", { count: selectedCount })}
               </span>
               {selectionSummary ? (
-                <span className="min-w-0 truncate text-xs text-ink-3">
+                <span className="min-w-0 truncate text-xs text-[var(--sn-label3)]">
                   {selectionSummary({ count: selectedCount, clear: clearSelection })}
                 </span>
               ) : null}
@@ -669,7 +669,7 @@ export function DataGrid<T>({
             <div
               aria-hidden="true"
               data-grid-resize-badge
-              className="pointer-events-none absolute z-[11] -translate-x-1/2 rounded-full bg-ink px-2 py-0.5 text-2xs font-medium tabular-nums text-canvas shadow-pop"
+              className="pointer-events-none absolute z-[11] -translate-x-1/2 rounded-md bg-[var(--sn-tip-bg)] px-2 py-0.5 text-2xs font-medium tabular-nums text-[var(--sn-tip-fg)] shadow-pop"
               style={{ left: badgeX ?? guideX, top: viewport.headerHeight + 8 }}
             >
               {t("data_grid.width_px", {
@@ -722,7 +722,7 @@ export function DataGrid<T>({
       {footer ? (
         <div
           className={
-            frame ? "shrink-0 px-4 py-2 shadow-[inset_0_1px_0_var(--cp-line)]" : "shrink-0 pt-2.5"
+            frame ? "shrink-0 px-4 py-2.5 shadow-[inset_0_1px_0_var(--sn-line)]" : "shrink-0 pt-2.5"
           }
         >
           {footer}
@@ -767,7 +767,7 @@ export function DataGrid<T>({
         ? createPortal(
             <div
               aria-hidden="true"
-              className="pointer-events-none fixed z-[1000] rounded-full bg-ink px-2.5 py-1 text-xs font-medium text-canvas shadow-pop"
+              className="pointer-events-none fixed z-[1000] rounded-md bg-[var(--sn-tip-bg)] px-2.5 py-1 text-xs font-medium text-[var(--sn-tip-fg)] shadow-pop"
               style={{ left: columnDrag.pointerX + 12, top: columnDrag.pointerY + 14 }}
             >
               {columnDrag.header}

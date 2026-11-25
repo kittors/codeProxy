@@ -297,7 +297,7 @@ export function UpdateModal({
         {display ? (
           <>
             {/* 弹窗里的版本摘要是一块无边淡底；行与行之间的细线是数据分隔线。 */}
-            <dl className="min-w-0 divide-y divide-line rounded-2xl bg-subtle px-3">
+            <dl className="min-w-0 divide-y divide-line rounded-xl bg-subtle px-3">
               <VersionRow
                 label={t("auto_update.service_version")}
                 from={versionLabel(

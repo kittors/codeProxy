@@ -1,12 +1,11 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { FileQuestion } from "lucide-react";
 import { Navigate, Route, Routes, createPath, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { AppearanceProvider, Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
-import { SatinProvider } from "satin-ui/react";
+import { Icon, SatinProvider } from "satin-ui/react";
 import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
@@ -84,7 +83,7 @@ function StaleRoutePage() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
       <div>
-        <FileQuestion className="mx-auto mb-5 text-ink-3 colorful:text-amber-500" size={48} />
+        <Icon name="file" className="mx-auto mb-5 text-ink-3 colorful:text-amber-500" size={48} />
         <h2 className="text-2xl font-semibold text-ink">{t("shell.stale_route_title")}</h2>
         <p className="mt-2 text-sm text-ink-2">{t("shell.stale_route_description")}</p>
         <p className="mt-2 text-xs text-ink-3">
@@ -200,6 +199,10 @@ function AuthenticatedRoutes() {
   );
 }
 
+// 控制台采用 Satin 原生 8px 利落控件圆角体系；persist 同步写入内部状态，避免切换深浅主题时
+// Satin 的 MutationObserver 将 data-radius 重绘回内置默认的 pill。
+const SATIN_NATIVE_THEME = { radius: "8" } as const;
+
 export function AppRouter() {
   const routes = pageRoutes;
   const publicRoutes = routes.filter((r) => !r.auth);
@@ -207,7 +210,7 @@ export function AppRouter() {
   const standalonePublicRoutes = publicRoutes.filter((r) => r.path !== "/login");
 
   return (
-    <SatinProvider>
+    <SatinProvider theme={SATIN_NATIVE_THEME} persist>
       <ThemeProvider>
         <AppearanceProvider>
           <ToastProvider>

@@ -77,7 +77,7 @@ export function MaskingExplainer() {
                   <ArrowRight size={14} />
                 </span>
               ) : null}
-              <div className="rounded-2xl bg-subtle px-3.5 py-3">
+              <div className="rounded-xl bg-subtle px-3.5 py-3">
                 <p className="text-2xs font-medium text-ink-3">
                   {index + 1}. {step.label}
                 </p>

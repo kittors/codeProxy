@@ -327,15 +327,15 @@ function ActiveFilterChips({
         query[dimension].map((value) => (
           <span
             key={`${dimension}:${value}`}
-            className="inline-flex max-w-72 items-center gap-1 rounded-full bg-selected py-0.5 pr-1 pl-2.5 text-xs text-ink"
+            className="inline-flex max-w-72 items-center gap-1 rounded-md border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] py-0.5 pr-1 pl-2.5 text-xs text-[var(--sn-label)]"
           >
-            <span className="shrink-0 text-ink-3">{t(`monitor_center.filter.${dimension}`)}</span>
+            <span className="shrink-0 text-[var(--sn-label3)]">{t(`monitor_center.filter.${dimension}`)}</span>
             <span className="truncate font-medium">{labelFor(dimension, value)}</span>
             <button
               type="button"
               onClick={() => onRemove(dimension, value)}
               aria-label={t("monitor_center.filter.remove", { value: labelFor(dimension, value) })}
-              className="grid size-5 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+              className="grid size-5 shrink-0 place-items-center rounded text-[var(--sn-label3)] transition-colors hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
             >
               <X size={14} aria-hidden="true" />
             </button>
@@ -345,7 +345,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="sn-btn sn-ghost sn-xs sn-round ml-1 !h-6 !px-2 !text-xs text-[var(--sn-label2)]"
+        className="sn-btn sn-ghost sn-xs ml-1 !h-6 !px-2 !text-xs text-[var(--sn-label2)]"
       >
         {t("monitor_center.filter.clear_all")}
       </button>

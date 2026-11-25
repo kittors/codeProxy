@@ -175,7 +175,7 @@ export function ProxyUrlInput({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="sn-btn sn-secondary sn-xs sn-round"
+          className="sn-btn sn-secondary sn-xs"
         >
           <Icon name="plus" size={13} />
           {t("proxy_input.add")}
@@ -211,7 +211,7 @@ export function ProxyUrlInput({
             setPasteError(false);
           }}
           aria-expanded={pasteOpen}
-          className="sn-btn sn-ghost sn-xs sn-round ml-auto text-[var(--sn-label2)]"
+          className="sn-btn sn-ghost sn-xs ml-auto text-[var(--sn-label2)]"
         >
           <Icon name={pasteOpen ? "x" : "clipboard"} size={13} />
           {pasteOpen ? t("proxy_input.paste_cancel") : t("proxy_input.paste_open")}
@@ -224,7 +224,7 @@ export function ProxyUrlInput({
               setPasteOpen(false);
               setExpanded(false);
             }}
-            className="sn-btn sn-ghost-danger sn-xs sn-round"
+            className="sn-btn sn-ghost-danger sn-xs"
           >
             <Icon name="trash-2" size={13} />
             {t("proxy_input.remove")}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, KeyRound } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { Callout } from "../forms/Callout";
 import { SecretValue } from "../forms/SecretValue";
@@ -78,7 +78,7 @@ export function SecretRevealModal({
       open={open}
       title={title}
       description={description}
-      icon={<KeyRound />}
+      icon={<Icon name="key-round" />}
       tone="warning"
       size="sm"
       onClose={onClose}
@@ -87,7 +87,7 @@ export function SecretRevealModal({
       footer={
         <>
           <Button variant="secondary" onClick={() => void copyAll()} disabled={values.length === 0}>
-            {copiedAll ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+            <Icon name={copiedAll ? "check" : "copy"} size={16} />
             {copiedAll
               ? t("common.copied", { defaultValue: "已复制" })
               : values.length > 1

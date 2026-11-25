@@ -259,7 +259,7 @@ export function ModelOwnerGroupDialog({
     >
       <div className="space-y-5">
         {/* 弹窗里不用 SettingGroup（它是带细边和投影的卡片）：一层无边淡底就够了。 */}
-        <div className="overflow-hidden rounded-2xl bg-subtle">
+        <div className="overflow-hidden rounded-xl bg-subtle">
           <SettingRow
             label={t("auth_files.model_owner_group_enabled")}
             description={t("auth_files.model_owner_group_enabled_desc")}

@@ -58,7 +58,7 @@ function ActiveFreezeCard({
     },
   ];
   return (
-    <li className="rounded-2xl bg-subtle p-4">
+    <li className="rounded-xl bg-subtle p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <ProviderTag vendor={freeze.provider} withLogo>
           {freezeProviderName(t, freeze)}

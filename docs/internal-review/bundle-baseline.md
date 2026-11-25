@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-11-25 00:53 +0800（全站迁移至 `satin-ui` 组件库，移除 `react-markdown`/`remark-gfm`/`react-syntax-highlighter`/`@radix-ui/react-dropdown-menu`/`chart.js`/`gsap`）
+更新时间：2026-11-25 11:45 +0800（Satin 原生 P1 改造：引入 `satin-ui/css/shell.css` 三层工作台与骨架样式，并在顶栏接入 Satin 原生 `CommandPalette`）
 
 ## 当前构建命令
 
@@ -14,11 +14,11 @@ bun run build
 | Chunk                   |       Size |      Gzip | 备注                                                                        |
 | ----------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
 | `vendor-echarts`        | 1118.03 kB | 375.96 kB | 图表主依赖，明显过大；6.1.0 为 XSS 安全修复（GHSA-fgmj-fm8m-jvvx）后的体积 |
-| `vendor-satin`          |  121.32 kB |  42.34 kB | Satin UI 核心引擎（Solar Icons、Avatar、NumberFlow、EmptyArt、Loader、edgeFrames 等） |
+| `vendor-satin`          |  129.41 kB |  45.11 kB | Satin UI 核心引擎（含 Solar Icons、Avatar、NumberFlow、EmptyArt、Loader、CommandPalette 等） |
 | `vendor-satin-markdown` |   35.45 kB |  14.42 kB | 按需懒加载的零依赖 Satin Markdown 渲染器（取代原 263.84 kB gzip 的 `vendor-markdown`，净减重 -249.42 kB gzip） |
 | `vendor-animation`      |  122.21 kB |  40.36 kB | 动画依赖独立 vendor chunk（已移除 `gsap` 及核心 UI 控件中的 `framer-motion`） |
-| `index`                 |  321.52 kB | 101.35 kB | 主入口脚本（已移除 Radix Dropdown 等第三方重依赖，较原基线净降 -19.69 kB gzip） |
-| `index.css`             |  695.36 kB | 124.53 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明与 Satin 组件库 10 个核心样式模块（`md.css` 已按需懒加载拆分；全站总传输较原基线净减重 >200 kB gzip） |
+| `index`                 |  331.14 kB | 104.23 kB | 主入口脚本（含 Satin 三层工作台外壳与按需挂载的 `ShellCommandPalette`） |
+| `index.css`             |  731.33 kB | 130.98 kB | 入口样式表；含 114 条自托管字体 @font-face 分片声明与 Satin 11 个样式模块（新增 `shell.css` 三层工作台与页面骨架，较原非 Satin 基线全站总传输仍净减重 >190 kB gzip） |
 | `ConfigPage`            |  143.55 kB |  43.44 kB | 接入 Satin 分组流体滑块与表单控件；低于 `< 80 kB gzip` 页面预算 |
 | `AuthFilesPage`         |  259.72 kB |  75.50 kB | 接入 Satin 复选框/加载器与专控重置额度端点；低于 `< 80 kB gzip` 页面预算 |
 | `ProvidersPage`         |  127.92 kB |  34.69 kB | 接入 Satin 控件与复制翻转/测速加载微动效；低于 `< 80 kB gzip` 页面预算 |

@@ -338,7 +338,7 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.previousMonth}
                   onClick={() => moveMonth(-1)}
-                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn"
                 >
                   <Icon name="chevron-left" size={16} />
                 </button>
@@ -347,7 +347,7 @@ export function DateTimePicker({
                   type="button"
                   aria-label={labels.nextMonth}
                   onClick={() => moveMonth(1)}
-                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn"
                 >
                   <Icon name="chevron-right" size={16} />
                 </button>
@@ -376,7 +376,7 @@ export function DateTimePicker({
                       aria-label={dayLabel}
                       onClick={() => commitDate(date)}
                       className={cn(
-                        "mx-auto h-8 w-8 rounded-full text-xs font-medium tabular-nums transition-[background-color,color,transform] duration-120 active:scale-95",
+                        "mx-auto h-8 w-8 rounded-[var(--sn-btn-r)] text-xs font-medium tabular-nums transition-[background-color,color,transform] duration-120 active:scale-95",
                         selected
                           ? "bg-[var(--sn-accent)] text-[var(--sn-on-primary)]"
                           : "text-[var(--sn-label)] hover:bg-[var(--sn-b-ghost-hover)]",
