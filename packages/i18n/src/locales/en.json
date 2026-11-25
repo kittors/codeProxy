@@ -2672,7 +2672,13 @@
     "nav_video_generation": "Video Models",
     "nav_alerts": "Alerts",
     "nav_privacy_masking": "Privacy masking",
-    "nav_billing": "Billing & Payments"
+    "nav_billing": "Billing & Payments",
+    "cmdk_trigger": "Quick jump...",
+    "cmdk_placeholder": "Search pages or quick actions...",
+    "cmdk_group_pages": "Pages",
+    "cmdk_group_actions": "Quick actions",
+    "cmdk_enter": "Open",
+    "cmdk_empty": "No matching results"
   },
   "proxies": {
     "title": "Proxy Management",

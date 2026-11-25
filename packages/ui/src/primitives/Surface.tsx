@@ -27,9 +27,10 @@ const EDGE = "cp-edge";
 
 /**
  * Fills come from the semantic tokens in styles/index.css, so light/dark is a
- * variable swap rather than a pair of classes per tone. Depth is the layered
- * drop shadow on the element itself (`shadow-card`). Opaque tones also set
- * `--cp-backdrop`, so a table's frozen columns inside them match the card.
+ * variable swap rather than a pair of classes per tone. Top-level cards rely on
+ * the crisp 1px `.cp-edge` hairline and surface fill (matching Satin `.sn-panel`,
+ * with no card drop shadow). Opaque tones also set `--cp-backdrop`, so a table's
+ * frozen columns inside them match the card.
  *
  * There is one level of elevation. A block nested inside a card does not get a
  * second card around it — `raised` and `inset` are flat tinted wells with no edge
@@ -37,8 +38,8 @@ const EDGE = "cp-edge";
  * were the main reason the panel read as cluttered.
  */
 const TONE: Record<SurfaceTone, string> = {
-  /** Top-level card sitting directly on the content area. */
-  card: "bg-surface shadow-card [--cp-backdrop:var(--cp-surface)]",
+  /** Top-level card sitting directly on the content area (Satin: 1px hairline, no drop shadow). */
+  card: "bg-surface [--cp-backdrop:var(--cp-surface)]",
   /** Nested block inside a card. Kept as a name for existing call sites; it is a flat well now. */
   raised: "bg-subtle",
   /** Nested block that should read as recessed — code blocks, previews, wells. */
@@ -46,7 +47,7 @@ const TONE: Record<SurfaceTone, string> = {
   /** Opaque surface with no elevation, e.g. popovers over dense content. */
   plain: "bg-surface [--cp-backdrop:var(--cp-surface)]",
   /** Dashboard-style panel: same quiet card, kept as a name for existing call sites. */
-  panel: "bg-surface shadow-card [--cp-backdrop:var(--cp-surface)]",
+  panel: "bg-surface [--cp-backdrop:var(--cp-surface)]",
 };
 
 /** Tones that sit on the content area and need an edge; wells inside a card never do. */
@@ -62,11 +63,9 @@ export type SurfaceOptions = {
 /**
  * The single source of truth for "a box" in the admin panel.
  *
- * Before this existed the same three decisions — radius, edge, fill — were
- * re-made inline at every call site, which produced 69 distinct combinations
- * across 166 places and no two pages that agreed.
+ * Aligns with Satin `.sn-panel`: 12px (`xl`) outer radius, 1px hairline edge, flat fill.
  */
-export const surface = ({ tone = "card", radius = "2xl", bordered = true }: SurfaceOptions = {}) =>
+export const surface = ({ tone = "card", radius = "xl", bordered = true }: SurfaceOptions = {}) =>
   [RADIUS[radius], bordered && EDGED_TONES.has(tone) ? EDGE : null, TONE[tone]]
     .filter(Boolean)
     .join(" ");

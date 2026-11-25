@@ -2674,7 +2674,13 @@
     "nav_video_generation": "视频模型",
     "nav_alerts": "告警",
     "nav_privacy_masking": "隐私脱敏",
-    "nav_billing": "支付与收款"
+    "nav_billing": "支付与收款",
+    "cmdk_trigger": "快速跳转…",
+    "cmdk_placeholder": "搜索页面或快捷操作…",
+    "cmdk_group_pages": "页面导航",
+    "cmdk_group_actions": "快捷操作",
+    "cmdk_enter": "打开",
+    "cmdk_empty": "没有找到匹配项"
   },
   "proxies": {
     "title": "代理管理",

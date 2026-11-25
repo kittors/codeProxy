@@ -357,11 +357,11 @@
   --cp-accent-ink: var(--cp-pref-accent-ink, var(--sn-accent, #1d1d1f));
   --cp-accent-soft: var(--cp-pref-accent-soft, var(--sn-fill-subtle, rgb(0 0 0 / 0.05)));
   --cp-focus: var(--cp-pref-focus, var(--sn-focus, rgb(0 0 0 / 0.4)));
-  /* 细边与层次严格对齐 Satin 令牌：卡片靠 1px 细描边与极轻托影，浮层用 --sn-e1 / --sn-e2。 */
+  /* 细边与层次严格对齐 Satin 规范：卡片只靠 1px 细描边与明度差分层（不加脏阴影），阴影只留给浮层（--sn-e1 / --sn-e2）。 */
   --cp-edge: var(--sn-line, rgb(0 0 0 / 0.08));
   --cp-edge-highlight: rgb(255 255 255 / 0);
-  --cp-shadow-card: var(--sn-card-shadow, 0 1px 3px rgb(0 0 0 / 0.04));
-  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.26));
+  --cp-shadow-card: none;
+  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.16));
   --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.06));
   --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.16), 0 0 0 1px rgb(0 0 0 / 0.06));
   --cp-shadow-control: 0 0 0 1px var(--sn-line-control, rgb(0 0 0 / 0.14)), var(--sn-b-lift, 0 1px 2px rgb(0 0 0 / 0.05));

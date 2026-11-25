@@ -24,7 +24,7 @@ export function AccountAvatar({
       data-sidebar-account-avatar="true"
       className="inline-flex shrink-0 items-center justify-center [--sn-av-ring:var(--sn-side-bg)]"
     >
-      <Avatar name={name || initials} size={size === "lg" ? 34 : 28} online decorative />
+      <Avatar name={name || initials} size={size === "lg" ? 34 : 26} online decorative />
     </span>
   );
 }
@@ -62,9 +62,9 @@ export function AccountMenu({
           aria-label={account.name}
           data-tooltip={collapsed ? account.name : undefined}
           data-tooltip-placement="right"
-          className="flex h-11 w-full min-w-0 items-center rounded-xl text-left outline-none transition-[background-color,scale] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] active:scale-[0.98] data-[state=open]:bg-[var(--sn-fill-hover)]"
+          className="flex h-10 w-full min-w-0 items-center rounded-lg text-left outline-none transition-[background-color,scale] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] active:scale-[0.98] data-[state=open]:bg-[var(--sn-fill-hover)]"
         >
-          <span className="grid size-9 shrink-0 place-items-center">
+          <span className="grid size-8 shrink-0 place-items-center">
             <AccountAvatar initials={account.initials} name={account.name} />
           </span>
           <SidebarRowLabel collapsed={collapsed}>

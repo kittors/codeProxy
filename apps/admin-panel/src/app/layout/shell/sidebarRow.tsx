@@ -25,7 +25,7 @@ export const SIDEBAR_ACTIVE_CARD =
 
 export const sidebarRowClass = (active: boolean) =>
   [
-    "flex h-9 w-full min-w-0 items-center rounded-xl text-left text-sm whitespace-nowrap outline-none",
+    "flex h-8 w-full min-w-0 items-center rounded-lg text-left text-sm whitespace-nowrap outline-none",
     "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.98]",
     active
       ? `${SIDEBAR_ACTIVE_CARD} font-medium`
@@ -34,9 +34,9 @@ export const sidebarRowClass = (active: boolean) =>
 
 export function SidebarRowIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
   return (
-    <span className="grid size-9 shrink-0 place-items-center">
+    <span className="grid size-8 shrink-0 place-items-center">
       <Icon
-        size={18}
+        size={17}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
         className={sidebarIconClass(Icon, active)}
         aria-hidden="true"

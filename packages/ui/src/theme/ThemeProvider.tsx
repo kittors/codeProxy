@@ -327,7 +327,7 @@ export function ThemeToggleButton({
           }
         }}
         className={cn(
-          "sn-btn sn-ibtn sn-round",
+          "sn-btn sn-ibtn",
           variant === "secondary" ? "sn-secondary" : "sn-ghost",
           TOGGLE_SIZE_CLASS[size],
           open ? "sn-is-open" : null,

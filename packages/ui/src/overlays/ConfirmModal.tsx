@@ -111,19 +111,26 @@ export function ConfirmModal({
       {hasBody ? (
         <div className="space-y-4">
           {subject ? (
-            <div className="rounded-2xl bg-subtle px-4 py-3 text-sm text-ink">
+            <div className="rounded-xl bg-subtle px-3.5 py-2.5 text-sm text-ink">
               {subject}
             </div>
           ) : null}
           {consequences?.length ? (
-            <ul className="space-y-1.5 text-sm text-ink-2">
+            <ul
+              className={[
+                "space-y-1.5 text-sm",
+                variant === "danger"
+                  ? "rounded-lg bg-[var(--sn-b-danger-soft)] px-3.5 py-2.5 text-[var(--sn-label)]"
+                  : "text-ink-2",
+              ].join(" ")}
+            >
               {consequences.map((item, index) => (
                 <li key={index} className="flex gap-2.5">
                   <span
                     aria-hidden="true"
                     className={[
                       "mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full",
-                      variant === "danger" ? "bg-rose-500/70" : "bg-ink-4",
+                      variant === "danger" ? "bg-[var(--sn-danger)]" : "bg-ink-4",
                     ].join(" ")}
                   />
                   <span className="min-w-0">{item}</span>

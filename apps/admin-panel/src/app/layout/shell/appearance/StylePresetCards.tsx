@@ -61,11 +61,11 @@ function PresetSample({ preset }: { preset: StylePresetId }) {
       <div className="flex gap-1.5">
         <span
           className={cn(
-            "h-5 w-14 rounded-full",
+            "h-5 w-14 rounded-md",
             colorful ? "bg-[#111113] dark:bg-[#f2f2f4]" : "bg-[#2a6ee8]",
           )}
         />
-        <span className="h-5 w-10 rounded-full bg-surface shadow-control" />
+        <span className="h-5 w-10 rounded-md bg-surface shadow-control" />
       </div>
     </div>
   );
@@ -95,7 +95,7 @@ export function StylePresetCards({
             aria-checked={selected}
             onClick={() => onSelect(preset)}
             className={cn(
-              "flex min-w-0 flex-col gap-3 rounded-2xl bg-surface p-3.5 text-left transition-[background-color,box-shadow] duration-150",
+              "flex min-w-0 flex-col gap-3 rounded-xl bg-surface p-3.5 text-left transition-[background-color,box-shadow] duration-150",
               selected
                 ? "shadow-[inset_0_0_0_1.5px_var(--cp-accent),0_1px_2px_rgb(0_0_0/0.06)]"
                 : "shadow-control hover:bg-surface-hover hover:shadow-control-hover",

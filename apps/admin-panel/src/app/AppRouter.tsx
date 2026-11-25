@@ -200,6 +200,10 @@ function AuthenticatedRoutes() {
   );
 }
 
+// 控制台采用 Satin 原生 8px 利落控件圆角体系；persist 同步写入内部状态，避免切换深浅主题时
+// Satin 的 MutationObserver 将 data-radius 重绘回内置默认的 pill。
+const SATIN_NATIVE_THEME = { radius: "8" } as const;
+
 export function AppRouter() {
   const routes = pageRoutes;
   const publicRoutes = routes.filter((r) => !r.auth);
@@ -207,7 +211,7 @@ export function AppRouter() {
   const standalonePublicRoutes = publicRoutes.filter((r) => r.path !== "/login");
 
   return (
-    <SatinProvider>
+    <SatinProvider theme={SATIN_NATIVE_THEME} persist>
       <ThemeProvider>
         <AppearanceProvider>
           <ToastProvider>

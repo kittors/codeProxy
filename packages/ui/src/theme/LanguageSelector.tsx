@@ -181,7 +181,7 @@ export function LanguageSelector({
           }
         }}
         className={cn(
-          "sn-btn sn-round gap-1.5",
+          "sn-btn gap-1.5",
           variant === "secondary" ? "sn-secondary" : "sn-ghost",
           SIZE_CLASS[size],
           open ? "sn-is-open" : null,

@@ -2786,7 +2786,13 @@
     "nav_ip_access": "Контроль доступа по IP",
     "nav_video_generation": "Модели видео",
     "nav_alerts": "Оповещения",
-    "nav_privacy_masking": "Маскирование данных"
+    "nav_privacy_masking": "Маскирование данных",
+    "cmdk_trigger": "Быстрый переход…",
+    "cmdk_placeholder": "Поиск страниц или действий…",
+    "cmdk_group_pages": "Страницы",
+    "cmdk_group_actions": "Быстрые действия",
+    "cmdk_enter": "Открыть",
+    "cmdk_empty": "Ничего не найдено"
   },
   "api_key_permissions_page": {
     "title": "Права аккаунтов портала",

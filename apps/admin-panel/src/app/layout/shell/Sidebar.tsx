@@ -41,12 +41,13 @@ export function Sidebar({
     <aside
       data-collapsed={collapsed ? "true" : "false"}
       className={[
-        "relative z-30 flex h-full shrink-0 flex-col overflow-hidden bg-[var(--sn-side-bg)] py-2",
+        "relative z-30 flex h-full shrink-0 flex-col overflow-hidden bg-[var(--sn-side-bg)] pb-2.5",
         "transition-[width] duration-300 ease-[var(--sn-ease-open)] motion-reduce:transition-none",
-        collapsed ? "w-15" : "w-64",
+        collapsed ? "w-14" : "w-64",
       ].join(" ")}
     >
-      <div className="flex h-14 shrink-0 items-center px-3">
+      {/* 顶栏高 44px（h-11），与右侧 ShellTopBar 严格同高同中轴；w-14(56px) 收起态下 px-3(24px) + size-8(32px) 与下方导航图标同竖轴。 */}
+      <div className="flex h-11 shrink-0 items-center px-3">
         {/*
           Logo 与收起按钮叠在同一个位置：平时显示 Logo，悬停或键盘聚焦时换成侧栏图标，
           点击切换收起/展开。两种状态共用一个按钮，所以收起前后它的位置和大小都不会变。
@@ -59,17 +60,17 @@ export function Sidebar({
           data-sidebar-toggle="true"
           data-tooltip={`${toggleLabel}  ${SHORTCUT_HINT}`}
           data-tooltip-placement="right"
-          className="group/logo grid size-9 shrink-0 place-items-center rounded-xl outline-none transition-colors duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] focus-visible:bg-[var(--sn-fill-hover)]"
+          className="group/logo grid size-8 shrink-0 place-items-center rounded-lg outline-none transition-colors duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] focus-visible:bg-[var(--sn-fill-hover)]"
         >
           <span
             data-sidebar-logo="true"
             className="col-start-1 row-start-1 grid place-items-center transition-[opacity,scale] duration-150 ease-[var(--sn-ease-out)] group-hover/logo:scale-90 group-hover/logo:opacity-0 group-focus-visible/logo:scale-90 group-focus-visible/logo:opacity-0"
           >
-            <LogoMark size={26} />
+            <LogoMark size={22} />
           </span>
           <Icon
             name="panel-left"
-            size={18}
+            size={17}
             className="col-start-1 row-start-1 scale-90 text-[var(--sn-label2)] opacity-0 transition-[opacity,scale] duration-200 ease-[var(--sn-ease-out-strong)] group-hover/logo:scale-100 group-hover/logo:opacity-100 group-focus-visible/logo:scale-100 group-focus-visible/logo:opacity-100"
           />
         </button>
@@ -77,7 +78,7 @@ export function Sidebar({
           aria-hidden={collapsed}
           className={`ml-2 min-w-0 flex-1 overflow-hidden leading-tight whitespace-nowrap ${sidebarFadeClass(collapsed)}`}
         >
-          <span className="block truncate text-base font-semibold tracking-tight text-[var(--sn-label)]">
+          <span className="block truncate text-sm font-semibold tracking-tight text-[var(--sn-label)]">
             {t("shell.console")}
           </span>
           <span className="block truncate font-display text-2xs text-[var(--sn-label3)]">
@@ -93,14 +94,14 @@ export function Sidebar({
           data-tooltip={collapsed ? undefined : `${toggleLabel}  ${SHORTCUT_HINT}`}
           data-tooltip-placement="bottom"
           className={[
-            "sn-btn sn-ghost sn-sm sn-ibtn sn-round ml-1 shrink-0 text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
+            "sn-btn sn-ghost sn-sm sn-ibtn ml-1 shrink-0 text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
             sidebarFadeClass(collapsed),
             collapsed ? "pointer-events-none" : null,
           ]
             .filter(Boolean)
             .join(" ")}
         >
-          <Icon name="panel-left" size={16} />
+          <Icon name="panel-left" size={15} />
         </button>
       </div>
       {/* 展开时上下渐隐；收起时关掉——渐隐用的 mask 会把伸出侧边栏的分区浮层一起裁掉。 */}

@@ -129,7 +129,18 @@ const measureScrolledEnd = (page: Page) =>
       if (r.width <= 0 || r.height <= 0) return;
       const s = getComputedStyle(el);
       if (s.visibility === "hidden" || s.display === "none") return;
-      lowest = Math.max(lowest, r.bottom);
+      // 被祖先 overflow:hidden/clip（如 Satin NumberFlow 的 50 行滚筒轨）裁掉的部分不可见，
+      // 可见底边应钳制在最近裁剪祖先的底边以内。
+      let visibleBottom = r.bottom;
+      let ancestor = el.parentElement;
+      while (ancestor && ancestor !== main) {
+        const as = getComputedStyle(ancestor);
+        if (as.overflowY === "hidden" || as.overflowY === "clip") {
+          visibleBottom = Math.min(visibleBottom, ancestor.getBoundingClientRect().bottom);
+        }
+        ancestor = ancestor.parentElement;
+      }
+      lowest = Math.max(lowest, visibleBottom);
     });
     return Math.round(scroller.getBoundingClientRect().bottom - lowest);
   });
