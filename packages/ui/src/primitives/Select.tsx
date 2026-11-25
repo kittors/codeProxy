@@ -96,6 +96,7 @@ export function Select({
     left: 0,
     width: 0,
     placement: "bottom" as "bottom" | "top",
+    ready: false,
   });
 
   const reposition = useCallback(() => {
@@ -103,21 +104,33 @@ export function Select({
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const gap = 6;
-    // Estimate dropdown height: each option ~36px + padding 8px, capped at maxHeight 280
-    const estimatedHeight = Math.min(options.length * 36 + 8, 280);
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const fitsBelow = spaceBelow >= estimatedHeight;
+    const pad = 8;
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+    const panelEl = listRef.current;
+    const panelHeight = panelEl?.offsetHeight || Math.min(options.length * 36 + 12, 280);
+    const panelWidth = Math.max(rect.width, panelEl?.offsetWidth || 0);
+    const spaceBelow = vh - rect.bottom - gap - pad;
+    const spaceAbove = rect.top - gap - pad;
+    const fitsBelow = spaceBelow >= panelHeight || spaceBelow >= spaceAbove;
+    const rawTop = fitsBelow ? rect.bottom + gap : rect.top - gap - panelHeight;
+    const top = Math.min(Math.max(pad, rawTop), Math.max(pad, vh - panelHeight - pad));
+    const left = Math.min(Math.max(pad, rect.left), Math.max(pad, vw - panelWidth - pad));
     setPos({
-      top: fitsBelow ? rect.bottom + gap : rect.top - gap - estimatedHeight,
-      left: rect.left,
+      top: Math.round(top),
+      left: Math.round(left),
       width: rect.width,
       placement: fitsBelow ? "bottom" : "top",
+      ready: true,
     });
   }, [options.length]);
 
   /* Recompute position on open and on scroll/resize */
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      return;
+    }
     reposition();
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
@@ -139,18 +152,44 @@ export function Select({
     return () => document.removeEventListener("pointerdown", handleClick);
   }, [open]);
 
-  /* Close on Escape */
+  /* Keyboard navigation & Escape close */
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
-      e.preventDefault();
-      setOpen(false);
+      if (e.key === "Escape") {
+        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
+        e.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End") {
+        const panel = listRef.current;
+        if (!panel) return;
+        const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="option"]'));
+        if (items.length === 0) return;
+        e.preventDefault();
+        if (e.key === "Home") {
+          items[0]?.focus();
+          return;
+        }
+        if (e.key === "End") {
+          items[items.length - 1]?.focus();
+          return;
+        }
+        const cur = items.indexOf(document.activeElement as HTMLElement);
+        const nextIdx =
+          cur < 0
+            ? Math.max(0, options.findIndex((opt) => opt.value === value))
+            : e.key === "ArrowDown"
+              ? (cur + 1 + items.length) % items.length
+              : (cur - 1 + items.length) % items.length;
+        items[nextIdx]?.focus();
+      }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [open, options, value]);
 
   const selectedLabel = useMemo(() => {
     const match = options.find((o) => o.value === value);
@@ -184,6 +223,12 @@ export function Select({
         disabled={disabled}
         data-state={selectTriggerState(open)}
         onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={(event) => {
+          if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !open) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
         className={cn(
           variant === "chip" ? selectTriggerChip : getSelectTriggerBase(size),
           variant !== "chip" && fullWidth ? "w-full" : null,
@@ -213,6 +258,7 @@ export function Select({
                 left: pos.left,
                 minWidth: pos.width,
                 maxWidth: "min(500px, 90vw)",
+                visibility: pos.ready ? undefined : "hidden",
               }}
             >
               {/* 面板本身保留圆角与投影，滚动交给里面这一层：选项多到要滚时上下渐隐，不会被面板边缘一刀切断。 */}

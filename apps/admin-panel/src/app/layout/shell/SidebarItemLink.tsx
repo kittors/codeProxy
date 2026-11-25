@@ -6,12 +6,8 @@ import { SIDEBAR_ACTIVE_CARD, sidebarIconClass } from "./sidebarRow";
 /**
  * 分区下的一行页面链接，两种外观：
  *
- * - `tree`：侧边栏里展开的分区子项。只有文字，左侧靠分区的竖向引导线表明层级——分区标题
- *   已经有图标，子项再各带一个图标会让两层图标挤在一起、分不清主次。
- * - `menu`：侧边栏收起后悬停弹出的分区浮层。带图标，浅灰实底表示当前页。
- *
- * 悬停只铺一层浅灰叠层；按下轻微收缩。外链（menu.type === "link"）在新标签页打开，
- * 不走站内导航与进度条。
+ * - `tree`：侧边栏里展开的分区子项。只有文字，左侧靠极淡树形引导线表明层级；
+ * - `menu`：侧边栏收起后悬停弹出的分区浮层。带图标，采用 Satin 菜单项视觉与节奏。
  */
 export function SidebarItemLink({
   item,
@@ -39,19 +35,23 @@ export function SidebarItemLink({
   const className =
     variant === "tree"
       ? [
-          "flex h-8 w-full min-w-0 items-center rounded-lg px-2.5 text-sm whitespace-nowrap",
-          "transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.98]",
-          active ? `${SIDEBAR_ACTIVE_CARD} font-medium` : "text-ink-2 hover:bg-hover hover:text-ink",
+          "flex h-8 w-full min-w-0 items-center rounded-lg px-2 text-sm whitespace-nowrap outline-none",
+          "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.98]",
+          active
+            ? `${SIDEBAR_ACTIVE_CARD} font-medium`
+            : "text-[var(--sn-label2)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]",
         ].join(" ")
       : [
-          "flex h-9 w-full min-w-0 items-center gap-3 rounded-xl px-2.5 text-sm whitespace-nowrap",
-          "transition-[background-color,color,scale] duration-150 ease-soft active:scale-[0.985]",
-          active ? "bg-selected font-semibold text-ink" : "font-normal text-ink hover:bg-hover",
+          "flex h-8.5 w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 text-sm whitespace-nowrap outline-none",
+          "transition-[background-color,color,transform] duration-120 ease-[var(--sn-ease-out)] active:scale-[0.985]",
+          active
+            ? "bg-[var(--sn-fill-active)] font-medium text-[var(--sn-label)]"
+            : "font-normal text-[var(--sn-label)] hover:bg-[var(--sn-b-ghost-hover)]",
         ].join(" ");
   const icon =
     variant === "tree" ? null : (
       <Icon
-        size={18}
+        size={16}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
         className={["shrink-0", sidebarIconClass(Icon, active)].join(" ")}
         aria-hidden="true"

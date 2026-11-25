@@ -64,11 +64,15 @@ function InfoCard({
         <button
           type="button"
           onClick={handleCopy}
-          className="sn-btn sn-ghost sn-xs sn-icon !absolute right-2.5 top-2.5 !h-6 !w-6 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          className="sn-btn sn-ghost sn-xs sn-ibtn sn-round !absolute right-2.5 top-2.5 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
           title={t("system_page.copy")}
           aria-label={t("system_page.copy")}
         >
-          <span className="sn-swap" data-swapped={copied ? "true" : "false"} aria-hidden="true">
+          <span
+            className={copied ? "sn-swap sn-swapped" : "sn-swap"}
+            data-swapped={copied ? "true" : "false"}
+            aria-hidden="true"
+          >
             <span className="sn-swap-a">
               <SatinIcon name="copy" size={13} />
             </span>

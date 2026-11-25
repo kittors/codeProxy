@@ -25,9 +25,6 @@ export interface LookupHeaderProps {
   suppressAccountMenuFocusRestoreRef: MutableRefObject<boolean>;
 }
 
-const ICON_BUTTON_CLASS =
-  "inline-flex items-center rounded-full p-2 text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink";
-
 export function LookupHeader({
   t,
   showLanding,
@@ -191,8 +188,8 @@ export function LookupHeader({
               {t("common.login", { defaultValue: "登录" })}
             </LandingButton>
           )}
-          <LanguageSelector className={ICON_BUTTON_CLASS} />
-          <ThemeToggleButton className={ICON_BUTTON_CLASS} />
+          <LanguageSelector size="sm" />
+          <ThemeToggleButton size="sm" />
         </div>
       </div>
     </header>

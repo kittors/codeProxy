@@ -33,7 +33,11 @@ export function ProviderIdCopyButton({ id }: { id: string }) {
         }}
         onMouseLeave={() => setCopied(false)}
       >
-        <span className="sn-swap" data-swapped={copied ? "true" : "false"} aria-hidden="true">
+        <span
+          className={copied ? "sn-swap sn-swapped" : "sn-swap"}
+          data-swapped={copied ? "true" : "false"}
+          aria-hidden="true"
+        >
           <span className="sn-swap-a">
             <Hash size={11} />
           </span>

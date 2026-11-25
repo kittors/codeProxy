@@ -1967,3 +1967,202 @@ export const createChat = /* @__PURE__ */ defineComponent({
     };
   },
 });
+
+// ———— 会话列表组件（createConvList / convListHTML / mountConvList）————
+// 分组展示历史会话、实时搜索、置顶、行内重命名、删除与新建；零多余分隔线，适配宽屏侧栏与移动端手势抽屉
+export function convListHTML({ title = "会话", searchable = true, closeable = false, placeholder = "搜索会话…" } = {}) {
+  return `<div class="sn-convs" role="navigation" aria-label="${esc(title)}">`
+    + `<div class="sn-conv-hd"><b>${esc(title)}</b><div class="sn-conv-hd-acts">`
+    + `<button type="button" class="sn-btn sn-ghost sn-sm sn-ibtn" data-conv-new data-tip="新对话" aria-label="新对话">${icon("square-pen", 15)}</button>`
+    + (closeable ? `<button type="button" class="sn-btn sn-ghost sn-sm sn-ibtn" data-conv-close aria-label="收起会话列表">${icon("panel-left", 15)}</button>` : "")
+    + `</div></div>`
+    + (searchable ? `<div class="sn-conv-q"><span class="sn-conv-q-ic">${icon("search", 14)}</span><input class="sn-input" type="search" placeholder="${esc(placeholder)}" aria-label="${esc(placeholder)}" data-conv-q><button type="button" class="sn-btn sn-ghost sn-ibtn sn-round sn-conv-q-clr" data-conv-clr aria-label="清空搜索" hidden>${icon("x", 12)}</button></div>` : "")
+    + `<div class="sn-conv-scroll" data-conv-list role="listbox" aria-label="${esc(title)}"></div>`
+    + `</div>`;
+}
+
+export function mountConvList(host, opts = {}, emit) {
+  if (host._convList) return host._convList;
+  let cfg = {
+    title: "会话",
+    items: [],
+    activeId: null,
+    searchable: true,
+    closeable: false,
+    placeholder: "搜索会话…",
+    ...opts,
+  };
+  if (!host.querySelector(".sn-convs")) host.innerHTML = convListHTML(cfg);
+  const listEl = host.querySelector("[data-conv-list]");
+  const qEl = host.querySelector("[data-conv-q]");
+  const clrEl = host.querySelector("[data-conv-clr]");
+  const newBtn = host.querySelector("[data-conv-new]");
+  const closeBtn = host.querySelector("[data-conv-close]");
+  let query = "", editingId = null;
+
+  function render() {
+    if (!listEl) return;
+    const kw = query.trim().toLowerCase();
+    const filtered = (cfg.items || []).filter((it) => !kw || String(it.title || "").toLowerCase().includes(kw) || String(it.preview || "").toLowerCase().includes(kw));
+    if (!filtered.length) {
+      listEl.innerHTML = `<div class="sn-conv-empty">${kw ? "没有匹配的会话" : "暂无历史会话"}</div>`;
+      return;
+    }
+    const groups = new Map();
+    for (const it of filtered) {
+      const g = it.pinned ? "置顶" : (it.group || "最近");
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(it);
+    }
+    const ordered = [...groups.entries()].sort(([a], [b]) => (a === "置顶" ? -1 : b === "置顶" ? 1 : 0));
+    listEl.innerHTML = ordered.map(([g, arr]) => `<div class="sn-conv-grp"><div class="sn-conv-grp-t">${esc(g)}</div>${arr.map((it) => {
+      const on = String(it.id) === String(cfg.activeId);
+      const isEdit = editingId != null && String(it.id) === String(editingId);
+      const titleInner = isEdit
+        ? `<input class="sn-conv-edit" type="text" value="${esc(it.title || "")}" data-conv-edit-input="${esc(it.id)}" aria-label="重命名会话">`
+        : `<span class="sn-conv-t">${it.pinned ? `<span class="sn-conv-pin-ic">${icon("pin", 12)}</span>` : ""}<span>${esc(it.title || "未命名对话")}</span></span>`;
+      return `<div class="sn-conv-item${on ? " sn-on" : ""}" role="option" tabindex="0" aria-selected="${on}" data-conv-id="${esc(it.id)}">`
+        + titleInner
+        + (isEdit ? "" : `<span class="sn-conv-time">${esc(it.time || "")}</span>`)
+        + (it.preview ? `<span class="sn-conv-sub">${esc(it.preview)}</span>` : "")
+        + (isEdit ? "" : `<div class="sn-conv-acts">`
+          + `<button type="button" class="sn-btn sn-ghost sn-ibtn" data-conv-act="pin" data-id="${esc(it.id)}" aria-label="${it.pinned ? "取消置顶" : "置顶"}">${icon("pin", 13)}</button>`
+          + `<button type="button" class="sn-btn sn-ghost sn-ibtn" data-conv-act="rename" data-id="${esc(it.id)}" aria-label="重命名">${icon("pencil", 13)}</button>`
+          + `<button type="button" class="sn-btn sn-ghost sn-ibtn" data-conv-act="delete" data-id="${esc(it.id)}" aria-label="删除">${icon("trash-2", 13)}</button>`
+          + `</div>`)
+        + `</div>`;
+    }).join("")}</div>`).join("");
+    if (editingId != null) {
+      const inp = listEl.querySelector("[data-conv-edit-input]");
+      if (inp) { inp.focus(); inp.select(); }
+    }
+  }
+
+  const findItem = (id) => (cfg.items || []).find((x) => String(x.id) === String(id));
+  const commitEdit = (id, value) => {
+    const it = findItem(id);
+    editingId = null;
+    const next = String(value || "").trim();
+    if (it && next && next !== it.title) {
+      it.title = next;
+      cfg.onRename?.(it, next);
+      emit?.("rename", { item: it, title: next });
+    }
+    render();
+  };
+
+  const onListClick = (e) => {
+    const act = e.target.closest("[data-conv-act]");
+    if (act) {
+      e.stopPropagation();
+      const id = act.dataset.id, it = findItem(id);
+      if (!it) return;
+      if (act.dataset.convAct === "pin") {
+        it.pinned = !it.pinned;
+        cfg.onPin?.(it);
+        emit?.("pin", it);
+        render();
+      } else if (act.dataset.convAct === "rename") {
+        editingId = it.id;
+        render();
+      } else if (act.dataset.convAct === "delete") {
+        cfg.onDelete?.(it);
+        emit?.("delete", it);
+      }
+      return;
+    }
+    if (e.target.closest("[data-conv-edit-input]")) return;
+    const row = e.target.closest("[data-conv-id]");
+    if (!row) return;
+    const it = findItem(row.dataset.convId);
+    if (!it) return;
+    cfg.activeId = it.id;
+    render();
+    cfg.onSelect?.(it);
+    emit?.("select", it);
+  };
+  const onListDbl = (e) => {
+    const row = e.target.closest("[data-conv-id]");
+    if (!row || e.target.closest("[data-conv-act]")) return;
+    editingId = row.dataset.convId;
+    render();
+  };
+  const onListKey = (e) => {
+    const inp = e.target.closest("[data-conv-edit-input]");
+    if (inp) {
+      if (e.key === "Enter") { e.preventDefault(); commitEdit(inp.dataset.convEditInput, inp.value); }
+      else if (e.key === "Escape") { e.preventDefault(); editingId = null; render(); }
+      return;
+    }
+    const row = e.target.closest("[data-conv-id]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); row.click(); }
+  };
+  const onListFocusOut = (e) => {
+    const inp = e.target.closest("[data-conv-edit-input]");
+    if (inp) commitEdit(inp.dataset.convEditInput, inp.value);
+  };
+  const onQuery = () => {
+    query = qEl.value;
+    if (clrEl) clrEl.hidden = !query;
+    render();
+  };
+  const onClr = () => {
+    if (!qEl) return;
+    qEl.value = ""; query = "";
+    if (clrEl) clrEl.hidden = true;
+    render();
+    qEl.focus();
+  };
+  const onNew = () => { cfg.onCreate?.(); emit?.("create"); };
+  const onClose = () => { cfg.onClose?.(); emit?.("close"); };
+
+  listEl?.addEventListener("click", onListClick);
+  listEl?.addEventListener("dblclick", onListDbl);
+  listEl?.addEventListener("keydown", onListKey);
+  listEl?.addEventListener("focusout", onListFocusOut);
+  qEl?.addEventListener("input", onQuery);
+  clrEl?.addEventListener("click", onClr);
+  newBtn?.addEventListener("click", onNew);
+  closeBtn?.addEventListener("click", onClose);
+  render();
+
+  const api = {
+    get activeId() { return cfg.activeId; },
+    setItems(items, activeId) {
+      cfg.items = Array.isArray(items) ? items : [];
+      if (activeId !== undefined) cfg.activeId = activeId;
+      render();
+    },
+    setActive(id) { cfg.activeId = id; render(); },
+    destroy() {
+      listEl?.removeEventListener("click", onListClick);
+      listEl?.removeEventListener("dblclick", onListDbl);
+      listEl?.removeEventListener("keydown", onListKey);
+      listEl?.removeEventListener("focusout", onListFocusOut);
+      qEl?.removeEventListener("input", onQuery);
+      clrEl?.removeEventListener("click", onClr);
+      newBtn?.removeEventListener("click", onNew);
+      closeBtn?.removeEventListener("click", onClose);
+      delete host._convList;
+    },
+  };
+  return (host._convList = api);
+}
+
+export const createConvList = /* @__PURE__ */ defineComponent({
+  name: "conv-list",
+  html: (o) => convListHTML(o),
+  mount(el, o, api) {
+    const inst = mountConvList(el, o, (ev, detail) => api.emit(ev, detail));
+    return {
+      get activeId() { return inst.activeId; },
+      setItems: inst.setItems,
+      setActive: inst.setActive,
+      update(next) {
+        if (next.items) inst.setItems(next.items, next.activeId);
+        else if (next.activeId !== undefined) inst.setActive(next.activeId);
+      },
+      destroy() { inst.destroy(); },
+    };
+  },
+});

@@ -1,8 +1,8 @@
 /*
  * Satin 组件库样式入口与语义令牌桥接层。
  *
- * 所有 satin-ui 样式文件都在 @layer satin 内，由 index.css 顶部的
- * `@layer theme, base, satin, components, utilities;` 确定层叠顺序：
+ * 所有 satin-ui 样式文件都在 @layer satin 内，由 index.html / manage.html 与 index.css 顶部的
+ * `@layer properties, theme, base, satin, components, utilities;` 锁死层叠顺序：
  * - 高于 Tailwind base preflight，保证 Satin 组件外观与微动效不被重置；
  * - 低于 Tailwind utilities，允许布局层传入的定位与间距类正常生效。
  */
@@ -48,6 +48,12 @@
 :root,
 [data-theme="light"] {
   --sn-btn-r: var(--sn-r-full);
+  --sn-shell: #eff0f3;
+  --sn-side-bg: #eff0f3;
+  --sn-side-active: #ffffff;
+  --sn-side-active-line: rgba(0, 0, 0, 0.06);
+  --sn-workspace: #ffffff;
+  --sn-workspace-line: rgba(0, 0, 0, 0.06);
   --sn-accent: var(--cp-pref-accent, #1d1d1f);
   --sn-on-primary: var(--cp-pref-accent-fg, #ffffff);
   --sn-font-scale: var(--cp-pref-text-scale, 1);
@@ -59,6 +65,12 @@
 [data-theme="dark"],
 .dark {
   --sn-btn-r: var(--sn-r-full);
+  --sn-shell: #0b0b0e;
+  --sn-side-bg: #0b0b0e;
+  --sn-side-active: rgba(255, 255, 255, 0.09);
+  --sn-side-active-line: rgba(255, 255, 255, 0.07);
+  --sn-workspace: #16161a;
+  --sn-workspace-line: rgba(255, 255, 255, 0.06);
   --sn-accent: var(--cp-pref-accent-dark, #f5f5f7);
   --sn-on-primary: var(--cp-pref-accent-fg-dark, #000000);
   --sn-font-scale: var(--cp-pref-text-scale, 1);
@@ -67,7 +79,7 @@
   --sn-danger: var(--color-rose-400, #ff6961);
 }
 
-/* 兼容仅带 .dark 类的深色上下文（与 satin-ui/css/tokens.css 的 [data-theme="dark"] 保持一致）。 */
+/* 兼容仅带 .dark 类的深色上下文（完整同步 satin-ui/css/tokens.css 的 [data-theme="dark"] 令牌）。 */
 .dark:not([data-theme="dark"]) {
   color-scheme: dark;
   --sn-canvas: #000;
@@ -95,17 +107,176 @@
   --sn-line-control-hover: rgba(255, 255, 255, 0.24);
   --sn-focus: rgba(255, 255, 255, 0.5);
   --sn-field: #1c1c1e;
+  --sn-ring: rgba(255, 255, 255, 0.09);
+  --sn-danger-ring: rgba(255, 105, 97, 0.18);
+  --sn-card-line: rgba(255, 255, 255, 0.09);
+  --sn-glass-bg: rgba(28, 28, 30, 0.74);
+  --sn-glass-line: rgba(255, 255, 255, 0.12);
+  --sn-b-primary: var(--sn-accent);
+  --sn-b-primary-hover: color-mix(in srgb, var(--sn-accent) 70%, #fff);
+  --sn-b-primary-active: color-mix(in srgb, var(--sn-accent) 90%, #000);
+  --sn-b-on-primary: var(--sn-on-primary);
+  --sn-b-outline: rgba(255, 255, 255, 0.03);
+  --sn-b-outline-hover: rgba(255, 255, 255, 0.07);
+  --sn-b-outline-active: rgba(255, 255, 255, 0.11);
+  --sn-b-outline-line: rgba(255, 255, 255, 0.13);
+  --sn-b-outline-line-hover: rgba(255, 255, 255, 0.22);
+  --sn-b-soft: rgba(255, 255, 255, 0.08);
+  --sn-b-soft-hover: rgba(255, 255, 255, 0.12);
+  --sn-b-soft-active: rgba(255, 255, 255, 0.16);
+  --sn-b-ghost-hover: rgba(255, 255, 255, 0.08);
+  --sn-b-ghost-active: rgba(255, 255, 255, 0.12);
+  --sn-b-danger: #d92d20;
+  --sn-b-danger-hover: #c4291d;
+  --sn-b-danger-active: #b42318;
+  --sn-b-danger-soft: rgba(255, 105, 97, 0.12);
+  --sn-b-danger-soft-hover: rgba(255, 105, 97, 0.18);
+  --sn-b-danger-soft-active: rgba(255, 105, 97, 0.24);
+  --sn-b-lift: 0 0 0 0 transparent;
   --sn-tip-bg: #3a3a3c;
   --sn-tip-fg: #f5f5f7;
+  --sn-menu-bg: var(--sn-overlay);
   --sn-card-shadow: none;
   --sn-e1: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.09);
   --sn-e2: 0 24px 64px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --sn-tip-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --sn-menu-shadow: 0 18px 34px rgba(0, 0, 0, 0.42), 0 2px 4px rgba(0, 0, 0, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 @layer satin {
-  /* 独立使用 <TextInput invalid />（不在 .sn-field 内）也自动享有 Satin 校验错误红框。 */
+  /*
+   * 跨控件尺寸对齐阶梯（与 controlHeightBySize 的 h-8 / h-9 / h-10 同源 rem）：
+   * - macOS (--ui-scale: 0.9, 1rem=14.4px): xs=23.4px / sm=28.8px / md=32.4px / lg=36px / xl=39.6px
+   * - Windows (--ui-scale: 1, 1rem=16px):   xs=26px   / sm=32px   / md=36px   / lg=40px / xl=44px
+   * 同一工具栏内的 Button、TextInput、Select、Tabs、SegmentedControl 永远严丝合缝同高，
+   * 且跟随「外观 → 界面缩放」同步缩放。
+   */
+  .sn-btn {
+    --sn-h: 2.25rem;
+    --sn-px: 0.875rem;
+    --sn-fs: 0.875rem;
+    --sn-icon: 16px;
+  }
+  .sn-btn.sn-xs {
+    --sn-h: 1.625rem;
+    --sn-px: 0.5rem;
+    --sn-r: max(4px, calc(var(--sn-btn-r) - 2px));
+    --sn-fs: 0.75rem;
+    --sn-icon: 13px;
+  }
+  .sn-btn.sn-sm {
+    --sn-h: 2rem;
+    --sn-px: 0.75rem;
+    --sn-r: max(4px, calc(var(--sn-btn-r) - 2px));
+    --sn-fs: 0.75rem;
+    --sn-icon: 14px;
+  }
+  .sn-btn.sn-lg {
+    --sn-h: 2.5rem;
+    --sn-px: 1.125rem;
+    --sn-r: calc(var(--sn-btn-r) + 2px);
+    --sn-fs: 0.875rem;
+    --sn-icon: 16px;
+  }
+
+  .sn-ibtn {
+    --sn-h: 2.25rem;
+    --sn-icon: 17px;
+  }
+  .sn-ibtn.sn-xs {
+    --sn-h: 1.625rem;
+    --sn-icon: 13px;
+  }
+  .sn-ibtn.sn-sm {
+    --sn-h: 2rem;
+    --sn-icon: 15px;
+  }
+  .sn-ibtn.sn-lg {
+    --sn-h: 2.5rem;
+    --sn-icon: 18px;
+  }
+
+  .sn-input {
+    --sn-h: 2.25rem;
+    font-size: calc(0.875rem * var(--sn-font-scale, 1));
+  }
+  .sn-input.sn-sm {
+    --sn-h: 2rem;
+    padding-bottom: 0;
+    font-size: calc(0.75rem * var(--sn-font-scale, 1));
+  }
+  .sn-input.sn-lg {
+    --sn-h: 2.5rem;
+    font-size: calc(0.875rem * var(--sn-font-scale, 1));
+  }
+  .sn-input.sn-xl {
+    --sn-h: 2.75rem;
+    font-size: calc(0.9375rem * var(--sn-font-scale, 1));
+  }
+
+  /* 胶囊输入框内的前后缀：保持同心圆间距，避免内部按钮撑破输入框边框。 */
+  .sn-ib > .sn-pre {
+    left: 13px;
+  }
+  /* 非按钮类后置图标/单位文本与前置图标左右光学对称，按钮则保留 right: 4px 严格同心圆。 */
+  .sn-ib > .sn-post:not(:has(button)) {
+    right: 12px;
+  }
+  .sn-ib.sn-has-pre > .sn-input {
+    padding-left: 38px;
+  }
+  .sn-ib.sn-has-pre > .sn-input.sn-sm {
+    padding-left: 34px;
+  }
+  .sn-ib.sn-has-post > .sn-input {
+    padding-right: 40px;
+  }
+  .sn-ib.sn-has-post > .sn-input.sn-xl {
+    padding-right: 46px;
+  }
+  .sn-ib > .sn-post .sn-eye,
+  .sn-ib > .sn-post .sn-clear {
+    width: calc(var(--sn-ib-h, 2.25rem) - 8px);
+    height: calc(var(--sn-ib-h, 2.25rem) - 8px);
+    border-radius: 9999px;
+  }
+  .sn-ib:has(> .sn-input.sn-sm) {
+    --sn-ib-h: 2rem;
+  }
+  .sn-ib:has(> .sn-input.sn-lg) {
+    --sn-ib-h: 2.5rem;
+  }
+  .sn-ib:has(> .sn-input.sn-xl) {
+    --sn-ib-h: 2.75rem;
+  }
+
+  /* 分段控件与标签页高度对齐按钮和下拉框。 */
+  .sn-seg {
+    height: 2.25rem;
+  }
+  .sn-seg.sn-sm {
+    height: 2rem;
+  }
+  .sn-seg.sn-lg {
+    height: 2.5rem;
+  }
+  .sn-seg.sn-seg-block {
+    display: grid;
+    width: 100%;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+  .dark:not([data-theme="dark"]) .sn-seg .sn-thumb {
+    background: #3a3a3c;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  .dark:not([data-theme="dark"]) .sn-switch input:checked + .sn-track .sn-knob {
+    background: #1c1c1e;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  /* 独立使用 <TextInput invalid /> / <Textarea invalid /> 也自动享有 Satin 校验错误红框。 */
   .sn-input[aria-invalid="true"],
   .sn-select > .sn-trigger[aria-invalid="true"] {
     border-color: var(--sn-danger);
@@ -174,6 +345,18 @@
     margin: 0;
   }
 
+  /* Portal 浮层菜单：fixed 定位的包含块是视口，必须覆盖 .sn-menu 的 min-width: 100%（否则会撑成 100vw），
+     同时由 FloatingPanel.css 统一驱动双向弹性进场，避免与 .sn-menu 过渡重复打架。 */
+  .sn-menu.code-proxy-floating-surface {
+    min-width: max-content;
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    pointer-events: auto;
+    visibility: visible;
+    transition: none;
+  }
+
   /* 兼容 React 表单弹窗里高 z-index 浮层栈，让 Satin Tooltip / Menu / Popover 始终位于弹窗之上。 */
   .sn-tip:not(.sn-md-callout) {
     z-index: 10050;
@@ -182,37 +365,67 @@
     z-index: 10020;
   }
 
-  /* Satin 顶部提示条（多行/单行兼容版）物理进场微动效与图标色 */
+  /* Satin 液态毛玻璃胶囊 Toast 扩展：支持 React 堆叠容器、警告语义色与多行错误详情卡片。 */
   @keyframes sn-toast-enter {
     from {
       opacity: 0;
-      transform: translateY(-12px) scale(0.96);
+      transform: translateY(-10px) scale(0.95);
     }
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
   }
-  .sn-toast-item {
-    animation: sn-toast-enter 0.3s var(--sn-ease-out-strong) both;
+  .sn-toast.sn-toast-flow {
+    position: relative;
+    top: auto;
+    left: auto;
+    translate: none;
+    animation: sn-toast-enter 0.28s var(--sn-ease-out-strong) both;
+  }
+  .sn-toast .sn-ico[data-tone="warn"] {
+    background: rgba(217, 119, 6, 0.13);
+  }
+  [data-theme="dark"] .sn-toast .sn-ico[data-tone="warn"],
+  .dark .sn-toast .sn-ico[data-tone="warn"] {
+    background: rgba(255, 214, 10, 0.18);
+  }
+  .sn-toast .sn-glyph.sn-warn {
+    color: #d97706;
+  }
+  [data-theme="dark"] .sn-toast .sn-glyph.sn-warn,
+  .dark .sn-toast .sn-glyph.sn-warn {
+    color: #ffd60a;
   }
   .sn-toast-in.sn-toast-multiline {
     height: auto;
     min-height: 44px;
-    padding: 11px 14px 11px 14px;
+    padding: 11px 14px 11px 11px;
+    border-radius: 18px;
     white-space: normal;
     align-items: flex-start;
   }
-  .sn-toast-in .sn-glyph.sn-warn {
-    color: #ffd60a;
+  .dark:not([data-theme="dark"]) .sn-toast-in {
+    background: rgba(28, 29, 36, 0.88);
+    color: #f5f5f7;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 16px 38px -10px rgba(0, 0, 0, 0.74);
   }
 
-  /* Satin Banner 扩展 info 语义变体 */
+  /* Satin Banner 扩展 info 语义变体（sn-ok / sn-warn / sn-bad 由新版 feedback.css 提供）。 */
   .sn-banner.sn-info {
     background: color-mix(in srgb, var(--sn-accent) 8%, var(--sn-fill-subtle));
   }
   .sn-banner.sn-info > .sn-ic {
     color: var(--sn-label);
+  }
+
+  /* 空状态自定义图标容器：确保传入 Lucide 等任意图标节点都浮在 .sn-art::before 内层白卡之上。 */
+  .sn-empty-state .sn-art > * {
+    position: relative;
+    z-index: 1;
   }
 
   /* Satin 步骤条与结果页物理微动效（零 framer-motion，纯合成线程） */
@@ -282,7 +495,7 @@
     animation: sn-fade-up 0.32s var(--sn-ease-out-strong) both;
   }
 
-  /* 复制/状态切换按钮图标原地交叉缩放微动效 */
+  /* 复制/状态切换按钮图标原地交叉缩放微动效（同时支持 .sn-swapped 与 [data-swapped="true"]）。 */
   .sn-swap {
     position: relative;
     display: inline-grid;
@@ -298,17 +511,19 @@
     opacity: 0;
     transform: scale(0.55);
   }
-  .sn-swap.sn-swapped > .sn-swap-a {
+  .sn-swap.sn-swapped > .sn-swap-a,
+  .sn-swap[data-swapped="true"] > .sn-swap-a {
     opacity: 0;
     transform: scale(0.55);
   }
-  .sn-swap.sn-swapped > .sn-swap-b {
+  .sn-swap.sn-swapped > .sn-swap-b,
+  .sn-swap[data-swapped="true"] > .sn-swap-b {
     opacity: 1;
     transform: scale(1);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .sn-toast-item,
+    .sn-toast.sn-toast-flow,
     .sn-step-pulse,
     .sn-pop-in,
     .sn-draw-stroke,

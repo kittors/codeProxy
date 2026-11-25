@@ -206,8 +206,8 @@ export function SidebarGroup({
           与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
         */}
         <div className="-mx-1 min-h-0 overflow-hidden px-1">
-          {/* 子项靠缩进表达层级、不画竖向引导线；子项文字与分区标题文字左对齐。 */}
-          <div className="ml-4.5 space-y-0.5 py-1 pl-1.5">
+          {/* 树形引导线正中穿过父图标轴心（1.125rem），子项文字与父标题文字严格垂直左对齐（2.25rem）。 */}
+          <div className="my-1 ml-[1.125rem] space-y-0.5 border-l border-[var(--sn-line)] pl-2.5">
             {section.items.map((item) => (
               <SidebarItemLink
                 key={item.to}
@@ -285,9 +285,9 @@ function SectionFlyout({
         visibility: position ? undefined : "hidden",
       }}
       // before: 伪元素在图标与浮层之间搭一座 12px 的「桥」，指针穿过空隙时不会触发离开。
-      className={`${floatingPanelSurface} fixed z-50 w-60 p-2 before:absolute before:top-0 before:-left-3 before:h-full before:w-3`}
+      className={`${floatingPanelSurface} fixed z-50 min-w-52 max-w-64 p-1.5 before:absolute before:top-0 before:-left-3 before:h-full before:w-3`}
     >
-      <div className="px-2.5 pt-1.5 pb-1.5 text-xs font-semibold text-[var(--sn-label3)]">{label}</div>
+      <div className="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-[var(--sn-label3)]">{label}</div>
       <div className="space-y-0.5">
         {section.items.map((item) => (
           <SidebarItemLink

@@ -115,4 +115,17 @@ describe("Toaster", () => {
 
     expect(getToasts().map((item) => item.title)).toEqual(["第 3 条", "第 4 条", "同 id 第二次"]);
   });
+
+  test("带描述的多行提示提供专属关闭按钮，点击可立即关闭且不与弹窗 Close 冲突", () => {
+    render(<Toaster />);
+    act(() => {
+      toast.error("请求失败", { description: "详细错误信息" });
+    });
+
+    const dismissButton = screen.getByRole("button", { name: "Dismiss notification" });
+    expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+
+    fireEvent.click(dismissButton);
+    expect(getToasts()).toHaveLength(0);
+  });
 });

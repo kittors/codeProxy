@@ -24,18 +24,40 @@ const SHORT_LABELS: Record<Language, string> = {
   ru: "RU",
 };
 
-const FLAG_ICONS: Record<Language, string> = {
-  "zh-CN": "🇨🇳",
-  en: "🇬🇧",
-  ru: "🇷🇺",
+/** 遵循 Satin 禁 emoji 规范，采用跨平台一致的等宽语种缩写徽标。 */
+const LANGUAGE_CODES: Record<Language, string> = {
+  "zh-CN": "ZH",
+  en: "EN",
+  ru: "RU",
 };
 
-export function LanguageSelector({ className }: { className?: string }) {
+export interface LanguageSelectorProps {
+  className?: string;
+  variant?: "ghost" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+const SIZE_CLASS: Record<NonNullable<LanguageSelectorProps["size"]>, string> = {
+  sm: "sn-sm",
+  md: "",
+  lg: "sn-lg",
+};
+
+export function LanguageSelector({
+  className,
+  variant = "ghost",
+  size = "sm",
+}: LanguageSelectorProps) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{ top: number; left: number; side: "bottom" | "top"; ready: boolean }>({
+    top: 0,
+    left: 0,
+    side: "bottom",
+    ready: false,
+  });
 
   const currentLanguage = i18n.language as Language;
   const currentValue =
@@ -58,6 +80,7 @@ export function LanguageSelector({ className }: { className?: string }) {
         // ignore
       }
       setOpen(false);
+      triggerRef.current?.focus();
     },
     [i18n],
   );
@@ -66,16 +89,28 @@ export function LanguageSelector({ className }: { className?: string }) {
     const el = triggerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const width = 170;
+    const width = listRef.current?.offsetWidth || 176;
+    const height = listRef.current?.offsetHeight || 116;
     const margin = 8;
+    const gap = 6;
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+
     const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+    const maxLeft = Math.max(margin, vw - width - margin);
     const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-    setPos({ top: rect.bottom + 6, left });
+
+    const openAbove = vh - rect.bottom - gap < height && rect.top - gap > vh - rect.bottom;
+    const rawTop = openAbove ? rect.top - gap - height : rect.bottom + gap;
+    const top = Math.min(Math.max(margin, rawTop), Math.max(margin, vh - height - margin));
+    setPos({ top: Math.round(top), left: Math.round(left), side: openAbove ? "top" : "bottom", ready: true });
   }, []);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      return;
+    }
     reposition();
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
@@ -92,17 +127,41 @@ export function LanguageSelector({ className }: { className?: string }) {
       if (triggerRef.current?.contains(target) || listRef.current?.contains(target)) return;
       setOpen(false);
     };
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End") {
+        const panel = listRef.current;
+        if (!panel) return;
+        const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="option"]'));
+        if (items.length === 0) return;
+        e.preventDefault();
+        if (e.key === "Home") {
+          items[0]?.focus();
+          return;
+        }
+        if (e.key === "End") {
+          items[items.length - 1]?.focus();
+          return;
+        }
+        const cur = items.indexOf(document.activeElement as HTMLElement);
+        const nextIdx =
+          e.key === "ArrowDown"
+            ? (cur + 1 + items.length) % items.length
+            : (cur - 1 + items.length) % items.length;
+        items[nextIdx]?.focus();
+      }
     };
+    document.addEventListener("pointerdown", handleClick);
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, [open]);
 
   const label = t("language.switch");
@@ -115,7 +174,19 @@ export function LanguageSelector({ className }: { className?: string }) {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={cn("sn-btn sn-ghost sn-sm", open ? "sn-is-open" : null, className)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && !open) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={cn(
+          "sn-btn sn-round gap-1.5",
+          variant === "secondary" ? "sn-secondary" : "sn-ghost",
+          SIZE_CLASS[size],
+          open ? "sn-is-open" : null,
+          className,
+        )}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -131,10 +202,16 @@ export function LanguageSelector({ className }: { className?: string }) {
               ref={listRef}
               role="listbox"
               data-state="open"
-              data-side="bottom"
+              data-side={pos.side}
               aria-label={label}
-              className="sn-menu sn-solid code-proxy-floating-surface sn-open w-[176px]"
-              style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
+              className="sn-menu sn-solid code-proxy-floating-surface w-44 outline-none"
+              style={{
+                position: "fixed",
+                top: pos.top,
+                left: pos.left,
+                zIndex: 9999,
+                visibility: pos.ready ? undefined : "hidden",
+              }}
             >
               {SUPPORTED_LANGUAGES.map((lng) => {
                 const selected = lng === currentValue;
@@ -146,13 +223,16 @@ export function LanguageSelector({ className }: { className?: string }) {
                     aria-selected={selected}
                     onClick={() => handleLanguageChange(lng)}
                     className={cn(
-                      "sn-item w-full border-0 bg-transparent text-left hover:bg-[var(--sn-b-ghost-hover)]",
+                      "sn-item w-full border-0 bg-transparent text-left outline-none hover:bg-[var(--sn-b-ghost-hover)] focus:bg-[var(--sn-b-ghost-hover)]",
                       selected ? "sn-sel font-medium" : null,
                     )}
                   >
-                    <span className="shrink-0 text-base leading-none" aria-hidden="true">
-                      {FLAG_ICONS[lng]}
-                    </span>
+                    <code
+                      className="inline-flex h-5 w-7 flex-none items-center justify-center rounded-md bg-[var(--sn-fill-subtle)] font-mono text-2xs font-semibold text-[var(--sn-label2)]"
+                      aria-hidden="true"
+                    >
+                      {LANGUAGE_CODES[lng]}
+                    </code>
                     <span className="min-w-0 flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
                     {selected ? (
                       <span className="sn-chk">

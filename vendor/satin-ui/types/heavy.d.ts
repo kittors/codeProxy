@@ -114,6 +114,18 @@ export function mountChat(box: HTMLElement, o?: ChatOptions): ChatApi & { destro
 /** 对话（统一写法）：空容器按选项渲染；update({ status }) 改顶栏状态；destroy 停掉生成中的回答、撤掉监听、清空容器 */
 export const createChat: SatinFactory<ChatOptions, ChatApi>;
 export function chatHTML(o?: { title?: string; status?: string; placeholder?: string; max?: number; maxLines?: number; attach?: boolean; voice?: boolean; menu?: boolean; newChat?: boolean }): string;
+export interface ConvListItem { id: string | number; title: string; preview?: string; time?: string; group?: string; pinned?: boolean }
+export interface ConvListOptions {
+  title?: string; items?: ConvListItem[]; activeId?: string | number | null;
+  searchable?: boolean; closeable?: boolean; placeholder?: string;
+  onSelect?(item: ConvListItem): void; onCreate?(): void; onPin?(item: ConvListItem): void;
+  onRename?(item: ConvListItem, title: string): void; onDelete?(item: ConvListItem): void; onClose?(): void;
+}
+export interface ConvListApi { readonly activeId: string | number | null; setItems(items: ConvListItem[], activeId?: string | number | null): void; setActive(id: string | number | null): void }
+export function convListHTML(o?: Pick<ConvListOptions, "title" | "searchable" | "closeable" | "placeholder">): string;
+export function mountConvList(host: HTMLElement, o?: ConvListOptions): ConvListApi & { destroy(): void };
+/** 会话列表：分组展示历史会话、实时搜索、置顶、行内重命名、删除与新建，支持宽屏侧栏与移动端手势抽屉 */
+export const createConvList: SatinFactory<ConvListOptions, ConvListApi>;
 export interface FlowPort { name: string; type?: string }
 export interface FlowGroup { id: string; title: string; x: number; y: number; w: number; h: number; hue?: number; color?: string }
 export type FlowEdge = [string, string] | { from: string; to: string; fromPort?: string; toPort?: string; type?: string };

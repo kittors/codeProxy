@@ -89,8 +89,7 @@ export const selectCheckboxBox = (checked: boolean) =>
   );
 
 /** 浮层里的轻量文字操作（全选、清空、取消）。 */
-export const selectTextAction =
-  "sn-btn sn-ghost sn-xs !h-7 !px-2.5 !text-xs text-[var(--sn-label2)]";
+export const selectTextAction = "sn-btn sn-ghost sn-xs text-[var(--sn-label2)]";
 
 export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-[var(--sn-label3)]";
 

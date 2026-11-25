@@ -24,7 +24,7 @@ export function AccountAvatar({
       data-sidebar-account-avatar="true"
       className="inline-flex shrink-0 items-center justify-center [--sn-av-ring:var(--sn-side-bg)]"
     >
-      <Avatar name={name || initials} size={size === "lg" ? 36 : 32} online decorative />
+      <Avatar name={name || initials} size={size === "lg" ? 34 : 28} online decorative />
     </span>
   );
 }

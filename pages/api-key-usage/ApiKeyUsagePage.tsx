@@ -398,8 +398,6 @@ export function ApiKeyUsagePage() {
   }, [billingOverview]);
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
-  const headerControlClass =
-    "inline-flex items-center rounded-xl p-2 text-ink-2 transition hover:bg-hover hover:text-ink";
 
   return (
     <PageBackground variant="app">
@@ -462,8 +460,8 @@ export function ApiKeyUsagePage() {
                   {t("apikey_lookup.query")}
                 </Button>
               )}
-              <LanguageSelector className={headerControlClass} />
-              <ThemeToggleButton className={headerControlClass} />
+              <LanguageSelector size="sm" />
+              <ThemeToggleButton size="sm" />
             </div>
           </div>
         </header>

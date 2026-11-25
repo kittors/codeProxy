@@ -28,8 +28,8 @@ interface TabsContextState {
 
 const tabsListSizeClass: Record<ControlSize, string> = {
   sm: "sn-sm",
-  default: "h-9",
-  lg: "h-10",
+  default: "",
+  lg: "sn-lg",
 };
 
 const tabsTriggerPaddingBySize: Record<ControlSize, string> = {

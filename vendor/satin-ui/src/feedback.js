@@ -31,7 +31,22 @@ function getHost() {
 }
 function layout() {
   let y = 0; const up = host.dataset.pos === "bottom" ? -1 : 1;
-  for (const t of live) { t.el.style.transform = `translateY(${up * y}px)`; y += t.el.offsetHeight + 8; }
+  const mobile = typeof window !== "undefined" && window.innerWidth <= 640;
+  live.forEach((t, i) => {
+    if (mobile) {
+      // 移动端采用 Sonner 风格 3D 纵深叠牌：首条主显，后续依次微缩错位露边，绝不竖排刷屏遮挡内容
+      const sc = Math.max(0.84, 1 - i * 0.065);
+      const oy = i === 0 ? 0 : i === 1 ? 10 : 18 + (i - 2) * 7;
+      t.el.style.transform = `translate3d(0, ${up * oy}px, 0) scale(${sc.toFixed(3)})`;
+      t.el.style.opacity = i === 0 ? "1" : i === 1 ? "0.74" : "0.42";
+      t.el.style.pointerEvents = i === 0 ? "auto" : "none";
+    } else {
+      t.el.style.transform = `translate3d(0, ${up * y}px, 0)`;
+      t.el.style.opacity = "";
+      t.el.style.pointerEvents = "";
+      y += t.el.offsetHeight + 8;
+    }
+  });
 }
 export function setToastPos(pos) {
   getHost().dataset.pos = pos; localStorage.setItem("satin-toast", pos);
@@ -45,12 +60,33 @@ export const toastPos = () => getHost().dataset.pos;
  *  返回 { update(o), close() }。update 原地变形：图标换、文字模糊换、宽度跟着走，done 时扫一道光。
  */
 export function toast(o = {}) {
-  const h = getHost(), el = document.createElement("div");
+  if (typeof o === "string") o = { text: o };
+  const h = getHost();
+  const dedupKey = o.kind !== "progress" && !o.action ? `${o.kind || "status"}|${o.tone || ""}|${o.icon || ""}|${o.text || ""}` : "";
+  // 连续触发同文案轻提示：合并到顶部卡片并弹出计数脉动，绝不连叠多条一模一样的提示
+  if (dedupKey && live[0] && live[0].key === dedupKey && !live[0].closed) {
+    live[0].bump(o);
+    return live[0];
+  }
+  const el = document.createElement("div");
   el.className = "sn-toast"; el.setAttribute("role", o.alert ? "alert" : "status");
-  el.innerHTML = '<div class="sn-toast-in"><span class="sn-ico"></span><span class="sn-txt"></span><span class="sn-pct sn-num"></span></div>';
-  const inner = el.firstElementChild, ico = inner.children[0], txt = inner.children[1], pct = inner.children[2];
-  let timer = 0, left = 0, startedAt = 0, ring = null, closed = false, paused = h.matches(":hover");
-  const t = { el, pause, update, close };
+  el.innerHTML = '<div class="sn-toast-in"><span class="sn-ico"></span><span class="sn-txt"></span><span class="sn-toast-dup sn-num" hidden></span><span class="sn-pct sn-num"></span></div>';
+  const inner = el.firstElementChild, ico = inner.children[0], txt = inner.children[1], dup = inner.children[2], pct = inner.children[3];
+  let timer = 0, left = 0, startedAt = 0, ring = null, closed = false, paused = h.matches(":hover"), dupCount = 1;
+  const t = { el, key: dedupKey, get closed() { return closed; }, pause, update, close, bump };
+
+  function bump(nextOpts = {}) {
+    dupCount += 1;
+    dup.hidden = false;
+    dup.textContent = `×${dupCount}`;
+    const ms = nextOpts.duration ?? (o.action ? 5000 : 3000);
+    arm(ms);
+    if (!reduced()) {
+      inner.animate([{ transform: "scale(1)" }, { transform: "scale(1.045)" }, { transform: "scale(1)" }], { duration: 240, easing: POP });
+      dup.animate([{ transform: "scale(.65)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 260, easing: POP });
+    }
+    shine();
+  }
 
   function setIcon(kind, tone, animate) {
     const old = ico.firstElementChild, wrap = document.createElement("span");
@@ -95,6 +131,8 @@ export function toast(o = {}) {
   function apply(n, animate) {
     const kind = n.kind || "status";
     const glyph = setIcon(kind === "action" ? "count" : kind === "progress" ? "progress" : n.icon || "check", n.tone ?? (kind === "status" && !n.icon ? "ok" : ""), animate);
+    const resolvedTone = n.tone ?? (kind === "status" && !n.icon ? "ok" : "");
+    ico.dataset.tone = resolvedTone || "neutral";
     setText(n.text || "", animate); setAction(n.action); pct.textContent = ""; inner.classList.toggle("sn-has-pct", kind === "progress");
     const ms = n.duration ?? (kind === "progress" ? Infinity : n.action ? 5000 : 3000);
     if (kind === "progress") setProgress(n.progress || 0);
@@ -122,12 +160,51 @@ export function toast(o = {}) {
     a.onfinish = () => el.remove();
   }
 
+  // 轻扫手势关闭（顶部模式上划 / 底部模式下滑，跟手阻尼与回弹）
+  let swId = null, swY = 0, swDy = 0, swT = 0;
+  inner.addEventListener("pointerdown", (e) => {
+    if (e.button && e.button !== 0) return;
+    if (e.target.closest("button")) return;
+    swId = e.pointerId; swY = e.clientY; swDy = 0; swT = performance.now();
+    pause(true);
+    try { inner.setPointerCapture(swId); } catch {}
+  });
+  inner.addEventListener("pointermove", (e) => {
+    if (swId == null || e.pointerId !== swId) return;
+    const isBot = h.dataset.pos === "bottom";
+    const raw = e.clientY - swY;
+    const dir = isBot ? 1 : -1;
+    // 允许沿关闭方向 1:1 跟手，反方向给予强阻尼微弹
+    swDy = raw * dir > 0 ? raw : raw * 0.22;
+    inner.style.transition = "none";
+    inner.style.transform = `translate3d(0, ${swDy.toFixed(1)}px, 0)`;
+    inner.style.opacity = String(Math.max(0.25, 1 - Math.max(0, raw * dir) / 68).toFixed(3));
+  });
+  const swFinish = (e) => {
+    if (swId == null || e.pointerId !== swId) return;
+    swId = null;
+    const isBot = h.dataset.pos === "bottom";
+    const dir = isBot ? 1 : -1;
+    const dt = Math.max(12, performance.now() - swT);
+    const v = (swDy * dir) / dt;
+    if (swDy * dir > 24 || v > 0.35) {
+      close();
+    } else {
+      inner.style.transition = "transform .28s cubic-bezier(.22,1,.36,1), opacity .2s ease-out";
+      inner.style.transform = "";
+      inner.style.opacity = "";
+      pause(false);
+    }
+  };
+  inner.addEventListener("pointerup", swFinish);
+  inner.addEventListener("pointercancel", swFinish);
+
   apply(o, false);
   el.style.zIndex = String(++z); el.style.transition = "none";
   h.append(el); live.unshift(t); layout();
   requestAnimationFrame(() => (el.style.transition = ""));
   if (reduced()) inner.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 });
-  else inner.animate([{ opacity: 0, transform: `translateY(${h.dataset.pos === "bottom" ? 10 : -10}px)`, scale: ".98" }, { opacity: 1, transform: "none", scale: "1" }], { duration: 500, easing: ENTER });
+  else inner.animate([{ opacity: 0, transform: `translateY(${h.dataset.pos === "bottom" ? 12 : -14}px) scale(.94)` }, { opacity: 1, transform: "none" }], { duration: 380, easing: POP });
   while (live.length > 3) live.at(-1).close();
   return t;
 }

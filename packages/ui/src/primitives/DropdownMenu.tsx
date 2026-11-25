@@ -22,6 +22,8 @@ import { createPortal } from "react-dom";
 import { cn } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 
+type MenuSide = "top" | "right" | "bottom" | "left";
+
 interface DropdownContextValue {
   open: boolean;
   setOpen: (next: boolean) => void;
@@ -66,9 +68,9 @@ export interface DropdownMenuRootProps extends PropsWithChildren {
 }
 
 /**
- * 纯 Satin 下拉菜单（彻底移除 @radix-ui/react-dropdown-menu）：
- * 采用 Satin `.sn-menu` / `.sn-item` / `.sn-sep` / `.sn-danger-item` 材质与回弹生长微动效，
- * 完整支持键盘上下导航、Esc 关闭、自动视口翻转、受控/非受控与子菜单。
+ * 纯 Satin 下拉菜单（零 Radix 依赖）：
+ * 采用 Satin `.sn-menu` / `.sn-item` / `.sn-sep` / `.sn-danger-item` 与统一浮层材质，
+ * 完整支持 top/bottom/left/right 四向定位与视口翻转、键盘上下导航、Esc 关闭、受控/非受控与子菜单。
  */
 function Root({
   size = "default",
@@ -120,11 +122,9 @@ const Trigger = forwardRef<
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     onKeyDown?.(event as React.KeyboardEvent<HTMLButtonElement>);
     if (event.defaultPrevented) return;
-    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
-      if (!ctx.open && event.key === "ArrowDown") {
-        event.preventDefault();
-        ctx.setOpen(true);
-      }
+    if (event.key === "ArrowDown" && !ctx.open) {
+      event.preventDefault();
+      ctx.setOpen(true);
     }
   };
 
@@ -208,7 +208,7 @@ const ITEM_SIZE_CLASS: Record<ControlSize, string> = {
 
 interface ContentProps extends HTMLAttributes<HTMLDivElement> {
   align?: "start" | "center" | "end";
-  side?: "top" | "right" | "bottom" | "left";
+  side?: MenuSide;
   sideOffset?: number;
   alignOffset?: number;
   collisionPadding?: number;
@@ -241,10 +241,10 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
   const [coords, setCoords] = useState<{
     top: number;
     left: number;
-    up: boolean;
+    resolvedSide: MenuSide;
     end: boolean;
-  }>({ top: 0, left: 0, up: side === "top", end: align === "end" });
-  const [shown, setShown] = useState(false);
+    ready: boolean;
+  }>({ top: 0, left: 0, resolvedSide: side, end: align === "end", ready: false });
 
   const reposition = useCallback(() => {
     const trigger = ctx.triggerRef.current;
@@ -257,47 +257,70 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
     const vh = window.innerHeight || 768;
     const pad = collisionPadding;
 
-    let up = side === "top";
-    if (side === "bottom" && vh - ar.bottom - sideOffset < ph && ar.top - sideOffset > vh - ar.bottom) {
-      up = true;
-    } else if (side === "top" && ar.top - sideOffset < ph && vh - ar.bottom > ar.top) {
-      up = false;
-    }
-
-    let left = ar.left + alignOffset;
+    let resolvedSide: MenuSide = side;
+    let left = 0;
+    let top = 0;
     let end = align === "end";
-    if (align === "end") {
-      left = ar.right - pw + alignOffset;
-    } else if (align === "center") {
-      left = ar.left + (ar.width - pw) / 2 + alignOffset;
-    }
-    if (left + pw > vw - pad) {
-      left = Math.max(pad, vw - pw - pad);
-      end = true;
-    }
-    if (left < pad) left = pad;
 
-    let top = up ? ar.top - sideOffset - ph : ar.bottom + sideOffset;
+    if (side === "right" || side === "left") {
+      if (side === "right" && vw - ar.right - sideOffset < pw && ar.left - sideOffset > vw - ar.right) {
+        resolvedSide = "left";
+      } else if (side === "left" && ar.left - sideOffset < pw && vw - ar.right > ar.left) {
+        resolvedSide = "right";
+      }
+      left = resolvedSide === "right" ? ar.right + sideOffset : ar.left - sideOffset - pw;
+      end = resolvedSide === "left";
+
+      if (align === "end") {
+        top = ar.bottom - ph + alignOffset;
+      } else if (align === "center") {
+        top = ar.top + (ar.height - ph) / 2 + alignOffset;
+      } else {
+        top = ar.top + alignOffset;
+      }
+    } else {
+      if (side === "bottom" && vh - ar.bottom - sideOffset < ph && ar.top - sideOffset > vh - ar.bottom) {
+        resolvedSide = "top";
+      } else if (side === "top" && ar.top - sideOffset < ph && vh - ar.bottom > ar.top) {
+        resolvedSide = "bottom";
+      }
+      top = resolvedSide === "top" ? ar.top - sideOffset - ph : ar.bottom + sideOffset;
+
+      if (align === "end") {
+        left = ar.right - pw + alignOffset;
+      } else if (align === "center") {
+        left = ar.left + (ar.width - pw) / 2 + alignOffset;
+      } else {
+        left = ar.left + alignOffset;
+      }
+      if (left + pw > vw - pad) {
+        end = true;
+      }
+    }
+
+    if (left + pw > vw - pad) left = Math.max(pad, vw - pw - pad);
+    if (left < pad) left = pad;
     if (top + ph > vh - pad) top = Math.max(pad, vh - ph - pad);
     if (top < pad) top = pad;
 
-    setCoords({ top: Math.round(top), left: Math.round(left), up, end });
+    setCoords({
+      top: Math.round(top),
+      left: Math.round(left),
+      resolvedSide,
+      end,
+      ready: true,
+    });
   }, [align, alignOffset, collisionPadding, ctx.triggerRef, side, sideOffset]);
 
   useLayoutEffect(() => {
     if (!ctx.open) {
-      setShown(false);
+      setCoords((prev) => (prev.ready ? { ...prev, ready: false } : prev));
       return;
     }
     reposition();
-    const raf = window.requestAnimationFrame(() => {
-      reposition();
-      setShown(true);
-    });
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     return () => {
-      window.cancelAnimationFrame(raf);
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);
     };
@@ -332,7 +355,7 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
         ctx.triggerRef.current?.focus();
         return;
       }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
         const panel = localRef.current;
         if (!panel) return;
         const items = Array.from(
@@ -342,6 +365,14 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
         );
         if (items.length === 0) return;
         event.preventDefault();
+        if (event.key === "Home") {
+          items[0]?.focus();
+          return;
+        }
+        if (event.key === "End") {
+          items[items.length - 1]?.focus();
+          return;
+        }
         const cur = items.indexOf(document.activeElement as HTMLElement);
         const nextIdx =
           event.key === "ArrowDown"
@@ -368,6 +399,7 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
     bottom: "auto",
     zIndex: 9999,
     minWidth: "max-content",
+    visibility: coords.ready ? undefined : "hidden",
     ...style,
   };
 
@@ -380,12 +412,11 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
       }}
       role="menu"
       data-state="open"
-      data-side={coords.up ? "top" : "bottom"}
+      data-side={coords.resolvedSide}
       style={mergedStyle}
       className={cn(
         "sn-menu sn-solid code-proxy-floating-surface outline-none",
-        shown ? "sn-open" : null,
-        coords.up ? "sn-up" : null,
+        coords.resolvedSide === "top" ? "sn-up" : null,
         coords.end ? "sn-end" : null,
         CONTENT_SIZE_CLASS[ctx.size],
         className,
@@ -581,8 +612,12 @@ const SubContent = forwardRef<
   const ctx = useContext(DropdownMenuContext);
   const sub = useContext(SubMenuContext);
   const localRef = useRef<HTMLDivElement | null>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [shown, setShown] = useState(false);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    side: "right" | "left";
+    ready: boolean;
+  }>({ top: 0, left: 0, side: "right", ready: false });
 
   const reposition = useCallback(() => {
     const trigger = sub?.triggerRef.current;
@@ -594,8 +629,10 @@ const SubContent = forwardRef<
     const vw = window.innerWidth || 1024;
     const vh = window.innerHeight || 768;
 
+    let resolvedSide: "right" | "left" = "right";
     let left = ar.right + sideOffset;
     if (left + pw > vw - collisionPadding) {
+      resolvedSide = "left";
       left = Math.max(collisionPadding, ar.left - sideOffset - pw);
     }
     let top = ar.top + alignOffset;
@@ -604,23 +641,18 @@ const SubContent = forwardRef<
     }
     if (top < collisionPadding) top = collisionPadding;
 
-    setCoords({ top: Math.round(top), left: Math.round(left) });
+    setCoords({ top: Math.round(top), left: Math.round(left), side: resolvedSide, ready: true });
   }, [alignOffset, collisionPadding, sideOffset, sub]);
 
   useLayoutEffect(() => {
     if (!sub?.open) {
-      setShown(false);
+      setCoords((prev) => (prev.ready ? { ...prev, ready: false } : prev));
       return;
     }
     reposition();
-    const raf = window.requestAnimationFrame(() => {
-      reposition();
-      setShown(true);
-    });
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     return () => {
-      window.cancelAnimationFrame(raf);
       window.removeEventListener("scroll", reposition, true);
       window.removeEventListener("resize", reposition);
     };
@@ -646,6 +678,7 @@ const SubContent = forwardRef<
       }}
       role="menu"
       data-state="open"
+      data-side={coords.side}
       onMouseEnter={() => sub.cancelClose()}
       onMouseLeave={() => sub.scheduleClose()}
       style={{
@@ -654,11 +687,11 @@ const SubContent = forwardRef<
         left: coords.left,
         zIndex: 10000,
         minWidth: "max-content",
+        visibility: coords.ready ? undefined : "hidden",
         ...style,
       }}
       className={cn(
         "sn-menu sn-solid code-proxy-floating-surface outline-none",
-        shown ? "sn-open" : null,
         ctx ? CONTENT_SIZE_CLASS[ctx.size] : CONTENT_SIZE_CLASS.default,
         className,
       )}
@@ -690,12 +723,26 @@ const RadioItem = forwardRef<
     onSelect?: (event: Event) => void;
   }
 >(function DropdownMenuRadioItem(
-  { value, disabled = false, className, onSelect, onClick, children, ...props },
+  { value, disabled = false, className, onSelect, onClick, onKeyDown, children, ...props },
   ref,
 ) {
   const ctx = useContext(DropdownMenuContext);
   const radio = useContext(RadioGroupContext);
   const checked = radio?.value === value;
+
+  const activate = (event: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) {
+      event.preventDefault();
+      return;
+    }
+    const synthetic = new Event("select", { cancelable: true });
+    onSelect?.(synthetic);
+    radio?.onValueChange?.(value);
+    if (!synthetic.defaultPrevented && !event.defaultPrevented) {
+      ctx?.setOpen(false);
+    }
+  };
+
   return (
     <div
       ref={ref}
@@ -706,11 +753,13 @@ const RadioItem = forwardRef<
       onClick={(event) => {
         if (disabled) return;
         onClick?.(event);
-        const synthetic = new Event("select", { cancelable: true });
-        onSelect?.(synthetic);
-        radio?.onValueChange?.(value);
-        if (!synthetic.defaultPrevented && !event.defaultPrevented) {
-          ctx?.setOpen(false);
+        activate(event);
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          activate(event);
         }
       }}
       className={cn(

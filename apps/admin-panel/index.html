@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 锁死全站 CSS Cascade Layers 顺序：确保任意异步或拆分出来的 Satin CSS 永远高于 Tailwind base preflight、低于 utilities。 -->
+    <style>@layer properties, theme, base, satin, components, utilities;</style>
     <title>CliRelay 管理后台</title>
     <link rel="icon" type="image/svg+xml" href="/manage/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/manage/favicon-32.png" />
@@ -63,9 +65,7 @@
           } else if (t === "light") {
             apply(false);
           } else {
-            if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-              apply(true);
-            }
+            apply(Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches));
           }
         } catch (e) {}
       })();

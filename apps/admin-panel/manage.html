@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 锁死全站 CSS Cascade Layers 顺序：确保任意异步或拆分出来的 Satin CSS 永远高于 Tailwind base preflight、低于 utilities。 -->
+    <style>@layer properties, theme, base, satin, components, utilities;</style>
     <title>CliRelay · 一个入口，接入全部模型能力</title>
     <meta
       name="description"
@@ -77,10 +79,8 @@
           } else if (t === "light") {
             apply(false);
           } else {
-            // 跟随系统偏好
-            if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-              apply(true);
-            }
+            // 跟随系统偏好并显式写入 data-theme，确保首屏与后续主题切换状态一致
+            apply(Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches));
           }
         } catch (e) {}
       })();

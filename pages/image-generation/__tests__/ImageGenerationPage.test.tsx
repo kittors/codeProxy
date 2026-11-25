@@ -545,7 +545,7 @@ describe("ImageGenerationPage", () => {
       "sn-banner",
     );
     expect(within(stage).getByText("上游图片生成失败").parentElement?.className).toContain(
-      "sn-err",
+      "sn-bad",
     );
   });
 

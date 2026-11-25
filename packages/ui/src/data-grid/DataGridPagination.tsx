@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { getPaginationItems } from "./gridPagination";
@@ -9,8 +10,9 @@ import { getPageCount } from "./gridModel";
 
 /**
  * 基于 Satin 流体滑块与按钮微动效的表格分页器：
- * - 当前页胶囊由 Satin `edgeFrames` Web Animations 驱动（前缘先走、后缘跟上、落定轻压），零 framer-motion；
- * - 翻页按钮、每页下拉与跳页输入框全部遵循 Satin 控件规范。
+ * - 翻页按钮与每页下拉、跳页输入全部对齐 Satin `sn-sm`（2rem）尺寸阶梯，水平中轴齐平；
+ * - 当前页胶囊由 Satin `edgeFrames` Web Animations 驱动（前缘先走、后缘跟上、落定轻压），
+ *   按钮自身在滑块就位后保持透明，彻底避免滑块与实底按钮互相遮挡。
  */
 export interface DataGridPaginationProps {
   page: number;
@@ -25,8 +27,11 @@ export interface DataGridPaginationProps {
   className?: string;
 }
 
-const NAV_BUTTON =
-  "sn-btn sn-ghost sn-xs sn-round !h-8 !min-w-8 !px-2 !text-xs tabular-nums text-[var(--sn-label2)]";
+const ARROW_BUTTON =
+  "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 text-[var(--sn-label2)]";
+
+const PAGE_BUTTON =
+  "sn-btn sn-ghost sn-sm sn-round relative z-[1] min-w-8 !px-2 tabular-nums text-[var(--sn-label2)]";
 
 export function DataGridPagination({
   page,
@@ -84,20 +89,19 @@ export function DataGridPagination({
           {info}
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
-            className={`${NAV_BUTTON} hidden @2xl:inline-flex`}
+            className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
             onClick={() => go(1)}
             disabled={current <= 1}
             aria-label={t("data_grid.first_page")}
           >
-            <Icon name="chevron-left" size={13} className="-mr-1.5" />
-            <Icon name="chevron-left" size={13} />
+            <ChevronsLeft size={14} aria-hidden="true" />
           </button>
           <button
             type="button"
-            className={NAV_BUTTON}
+            className={ARROW_BUTTON}
             onClick={() => go(current - 1)}
             disabled={current <= 1}
             aria-label={t("data_grid.prev_page")}
@@ -105,25 +109,25 @@ export function DataGridPagination({
             <Icon name="chevron-left" size={14} />
           </button>
           <span
-            className="px-2 text-xs text-[var(--sn-label2)] tabular-nums @xl:hidden"
+            className="px-2 text-xs font-medium text-[var(--sn-label2)] tabular-nums @xl:hidden"
             aria-hidden="true"
           >
             {current} / {pageCount}
           </span>
           <span
             ref={pagesHostRef}
-            className="relative hidden items-center gap-0.5 @xl:flex"
+            className="group/pages relative hidden items-center gap-1 @xl:flex"
           >
             <span
               ref={thumbRef}
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 left-0 h-8 rounded-full bg-[var(--sn-accent)] opacity-0"
+              className="pointer-events-none absolute top-0 left-0 h-8 origin-left rounded-full bg-[var(--sn-accent)] opacity-0 will-change-transform"
             />
             {items.map((item, index) =>
               item === "..." ? (
                 <span
                   key={`gap-${index}`}
-                  className="w-6 text-center text-xs text-[var(--sn-label-off)]"
+                  className="inline-flex h-8 w-6 items-center justify-center text-xs text-[var(--sn-label-off)] select-none"
                   aria-hidden="true"
                 >
                   …
@@ -135,11 +139,14 @@ export function DataGridPagination({
                   aria-current={item === current ? "page" : undefined}
                   aria-label={t("data_grid.page_n", { page: item })}
                   onClick={() => go(item)}
-                  className={`${NAV_BUTTON} relative z-[1] ${
+                  className={[
+                    PAGE_BUTTON,
                     item === current
-                      ? "!bg-[var(--sn-accent)] !text-[var(--sn-on-primary)]"
-                      : ""
-                  }`}
+                      ? "bg-[var(--sn-accent)] font-semibold !text-[var(--sn-on-primary)] hover:!bg-transparent hover:!text-[var(--sn-on-primary)] group-data-[thumb-ready=true]/pages:!bg-transparent"
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
                   <span className="relative">{item}</span>
                 </button>
@@ -148,7 +155,7 @@ export function DataGridPagination({
           </span>
           <button
             type="button"
-            className={NAV_BUTTON}
+            className={ARROW_BUTTON}
             onClick={() => go(current + 1)}
             disabled={current >= pageCount}
             aria-label={t("data_grid.next_page")}
@@ -157,13 +164,12 @@ export function DataGridPagination({
           </button>
           <button
             type="button"
-            className={`${NAV_BUTTON} hidden @2xl:inline-flex`}
+            className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
             onClick={() => go(pageCount)}
             disabled={current >= pageCount}
             aria-label={t("data_grid.last_page")}
           >
-            <Icon name="chevron-right" size={13} />
-            <Icon name="chevron-right" size={13} className="-ml-1.5" />
+            <ChevronsRight size={14} aria-hidden="true" />
           </button>
         </div>
 
@@ -183,7 +189,7 @@ export function DataGridPagination({
                   label: String(size),
                 }))}
                 aria-label={t("data_grid.rows_per_page")}
-                className="w-[4.75rem]"
+                className="w-18"
               />
             </label>
           ) : null}
@@ -198,12 +204,15 @@ export function DataGridPagination({
                   if (event.key === "Enter") {
                     event.preventDefault();
                     submitJump();
+                    event.currentTarget.blur();
                   }
                 }}
-                onBlur={() => setJump("")}
+                onBlur={() => {
+                  if (jump.trim()) submitJump();
+                }}
                 placeholder={String(current)}
                 aria-label={t("data_grid.go_to_page")}
-                className="sn-input sn-sm !h-8 !w-12 !px-2 text-center !text-xs tabular-nums"
+                className="sn-input sn-sm !w-12 !px-2 text-center tabular-nums"
               />
             </label>
           ) : null}

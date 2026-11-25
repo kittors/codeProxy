@@ -182,6 +182,82 @@
   color: #f3f1ec;
 }
 
+/* 预设 7：釉面陶瓷（Ceramic — 精密陶瓷表壳般的凝脂温润高光与细腻冷暖底散射） */
+.sn-vol[data-vol="ceramic"], .sn-vol.sn-vol-ceramic {
+  --sn-vol-bg:
+    radial-gradient(72% 58% at 24% 12%, rgba(255, 255, 255, .98) 0%, rgba(255, 255, 255, .56) 46%, transparent 78%),
+    radial-gradient(74% 64% at 82% 90%, rgba(208, 214, 226, .52) 0%, rgba(228, 230, 236, .18) 54%, transparent 80%),
+    linear-gradient(160deg, #fcfcfd 0%, #f3f4f7 54%, #e9ebf0 100%);
+  --sn-vol-rim-top: rgba(255, 255, 255, 1);
+  --sn-vol-rim-bot: rgba(118, 126, 144, .18);
+  --sn-vol-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 18px 38px -18px rgba(15, 23, 42, .16);
+  color: #16171c;
+}
+[data-theme="dark"] .sn-vol[data-vol="ceramic"], [data-theme="dark"] .sn-vol.sn-vol-ceramic {
+  --sn-vol-bg:
+    radial-gradient(72% 56% at 24% 12%, rgba(255, 255, 255, .13) 0%, rgba(255, 255, 255, .04) 48%, transparent 78%),
+    radial-gradient(74% 64% at 82% 88%, rgba(116, 128, 152, .14) 0%, transparent 74%),
+    linear-gradient(160deg, #272930 0%, #1a1c21 56%, #121318 100%);
+  --sn-vol-rim-top: rgba(255, 255, 255, .24);
+  --sn-vol-rim-bot: rgba(0, 0, 0, .66);
+  color: #f4f5f8;
+}
+
+/* 预设 8：拉丝钛金属（Titanium — 微拉丝金属光泽带 + 精密 CNC 倒角棱线） */
+.sn-vol[data-vol="titanium"], .sn-vol.sn-vol-titanium {
+  --sn-vol-bg:
+    linear-gradient(118deg, rgba(255, 255, 255, .64) 0%, rgba(255, 255, 255, .08) 28%, rgba(92, 88, 82, .10) 52%, rgba(255, 255, 255, .42) 76%, rgba(164, 158, 148, .22) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .06) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, #e5e1d8 0%, #c6c1b7 48%, #d7d2c9 100%);
+  --sn-vol-rim-top: rgba(255, 253, 248, .92);
+  --sn-vol-rim-bot: rgba(88, 82, 74, .28);
+  --sn-vol-shadow: 0 2px 6px rgba(36, 32, 26, .09), 0 20px 42px -18px rgba(48, 44, 38, .28);
+  color: #1c1a17;
+}
+[data-theme="dark"] .sn-vol[data-vol="titanium"], [data-theme="dark"] .sn-vol.sn-vol-titanium {
+  --sn-vol-bg:
+    linear-gradient(118deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .02) 32%, rgba(0, 0, 0, .24) 56%, rgba(255, 255, 255, .14) 80%, rgba(0, 0, 0, .12) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, #3c3b38 0%, #242321 52%, #2f2e2b 100%);
+  --sn-vol-rim-top: rgba(255, 250, 242, .24);
+  --sn-vol-rim-bot: rgba(0, 0, 0, .68);
+  color: #f3f1ec;
+}
+
+/* 预设 9：液态黑曜石（Obsidian — 深邃炭黑体积玻璃 + 顶缘冷银镜面线 + 幽微深蓝底散射） */
+.sn-vol[data-vol="obsidian"], .sn-vol.sn-vol-obsidian {
+  --sn-vol-bg:
+    radial-gradient(66% 42% at 50% 0%, rgba(164, 190, 255, .16) 0%, rgba(102, 132, 214, .06) 46%, transparent 78%),
+    radial-gradient(72% 58% at 78% 92%, rgba(74, 96, 168, .26) 0%, transparent 74%),
+    linear-gradient(170deg, #1b1d24 0%, #101116 48%, #090a0d 100%);
+  --sn-vol-rim-top: rgba(214, 226, 255, .28);
+  --sn-vol-rim-bot: rgba(0, 0, 0, .78);
+  --sn-vol-shadow: 0 2px 8px rgba(0, 0, 0, .32), 0 24px 52px -18px rgba(8, 12, 24, .76);
+  color: #f5f6fa;
+}
+
+/* 预设 10：厚切磨砂晶（Frosted — 多层冰晶通透磨砂与高光折射边） */
+.sn-vol[data-vol="frosted"], .sn-vol.sn-vol-frosted {
+  --sn-vol-bg:
+    radial-gradient(68% 58% at 18% 16%, rgba(168, 222, 255, .36) 0%, transparent 70%),
+    radial-gradient(66% 58% at 84% 84%, rgba(188, 198, 255, .32) 0%, transparent 72%),
+    linear-gradient(148deg, rgba(255, 255, 255, .86) 0%, rgba(242, 246, 252, .72) 55%, rgba(232, 238, 248, .82) 100%);
+  --sn-vol-rim-top: rgba(255, 255, 255, .98);
+  --sn-vol-rim-bot: rgba(124, 148, 196, .24);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  backdrop-filter: blur(22px) saturate(165%);
+  color: #161a24;
+}
+[data-theme="dark"] .sn-vol[data-vol="frosted"], [data-theme="dark"] .sn-vol.sn-vol-frosted {
+  --sn-vol-bg:
+    radial-gradient(68% 58% at 18% 16%, rgba(114, 178, 255, .18) 0%, transparent 70%),
+    radial-gradient(66% 58% at 84% 84%, rgba(148, 158, 248, .16) 0%, transparent 72%),
+    linear-gradient(148deg, rgba(44, 48, 60, .82) 0%, rgba(24, 26, 34, .86) 55%, rgba(18, 20, 28, .92) 100%);
+  --sn-vol-rim-top: rgba(224, 236, 255, .24);
+  --sn-vol-rim-bot: rgba(0, 0, 0, .62);
+  color: #f3f5fc;
+}
+
 /* ———— 2. 内嵌立体果冻光环雕塑（.sn-vol-orb，致敬推文卡片 1） ———— */
 .sn-vol-orb {
   position: relative;
@@ -271,6 +347,56 @@
   --sn-vb-rim: rgba(255, 255, 255, .44);
   --sn-vb-sh: 0 1px 2px rgba(132, 62, 6, .22), 0 10px 22px -8px rgba(212, 116, 18, .44);
   color: #ffffff;
+}
+/* 釉瓷白立体按钮：克制柔和的高级瓷面受光质感 */
+.sn-btn.sn-vol-btn.sn-vol-ceramic {
+  --sn-vb-top: #ffffff;
+  --sn-vb-bot: #eceef2;
+  --sn-vb-rim: rgba(255, 255, 255, 1);
+  --sn-vb-sh: 0 1px 2px rgba(15, 23, 42, .07), 0 8px 18px -8px rgba(15, 23, 42, .18);
+  color: #16171c;
+  box-shadow:
+    inset 0 1px 0 var(--sn-vb-rim),
+    inset 0 -1.5px 2px rgba(15, 23, 42, .07),
+    0 0 0 1px rgba(15, 23, 42, .10),
+    var(--sn-vb-sh);
+}
+[data-theme="dark"] .sn-btn.sn-vol-btn.sn-vol-ceramic {
+  --sn-vb-top: #2f3139;
+  --sn-vb-bot: #1f2127;
+  --sn-vb-rim: rgba(255, 255, 255, .20);
+  --sn-vb-sh: 0 1px 2px rgba(0, 0, 0, .42), 0 10px 22px -8px rgba(0, 0, 0, .72);
+  color: #f4f5f8;
+  box-shadow:
+    inset 0 1px 0 var(--sn-vb-rim),
+    inset 0 -1.5px 2px rgba(0, 0, 0, .42),
+    0 0 0 1px rgba(255, 255, 255, .13),
+    var(--sn-vb-sh);
+}
+/* 拉丝钛金属立体按钮 */
+.sn-btn.sn-vol-btn.sn-vol-titanium {
+  --sn-vb-top: #e2ddd4;
+  --sn-vb-bot: #bdb7ac;
+  --sn-vb-rim: rgba(255, 253, 248, .88);
+  --sn-vb-sh: 0 1px 2px rgba(48, 44, 38, .16), 0 10px 22px -8px rgba(62, 58, 50, .34);
+  color: #1c1a17;
+  box-shadow:
+    inset 0 1px 0 var(--sn-vb-rim),
+    inset 0 -1.5px 2px rgba(68, 62, 54, .22),
+    0 0 0 1px rgba(72, 66, 58, .22),
+    var(--sn-vb-sh);
+}
+[data-theme="dark"] .sn-btn.sn-vol-btn.sn-vol-titanium {
+  --sn-vb-top: #4b4944;
+  --sn-vb-bot: #2e2d29;
+  --sn-vb-rim: rgba(255, 250, 242, .24);
+  --sn-vb-sh: 0 1px 2px rgba(0, 0, 0, .48), 0 10px 24px -8px rgba(0, 0, 0, .76);
+  color: #f3f1ec;
+  box-shadow:
+    inset 0 1px 0 var(--sn-vb-rim),
+    inset 0 -1.5px 2px rgba(0, 0, 0, .48),
+    0 0 0 1px rgba(255, 248, 236, .14),
+    var(--sn-vb-sh);
 }
 @media (hover: hover) {
   .sn-btn.sn-vol-btn:hover {
