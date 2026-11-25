@@ -1,5 +1,4 @@
 import { useRef, useState, type ReactNode } from "react";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { getPaginationItems } from "./gridPagination";
@@ -10,8 +9,8 @@ import { getPageCount } from "./gridModel";
 
 /**
  * 基于 Satin 流体滑块与按钮微动效的表格分页器：
- * - 翻页按钮与每页下拉、跳页输入全部对齐 Satin `sn-sm`（2rem）尺寸阶梯，水平中轴齐平；
- * - 当前页胶囊由 Satin `edgeFrames` Web Animations 驱动（前缘先走、后缘跟上、落定轻压），
+ * - 翻页按钮与每页下拉、跳页输入全部对齐 Satin `sn-sm`（2rem）与 `var(--sn-btn-r)`（8px）圆角家族；
+ * - 当前页滑块由 Satin `edgeFrames` Web Animations 驱动（前缘先走、后缘跟上、落定轻压），
  *   按钮自身在滑块就位后保持透明，彻底避免滑块与实底按钮互相遮挡。
  */
 export interface DataGridPaginationProps {
@@ -28,10 +27,40 @@ export interface DataGridPaginationProps {
 }
 
 const ARROW_BUTTON =
-  "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 text-[var(--sn-label2)]";
+  "sn-btn sn-ghost sn-sm sn-ibtn shrink-0 text-[var(--sn-label2)]";
 
 const PAGE_BUTTON =
-  "sn-btn sn-ghost sn-sm sn-round relative z-[1] min-w-8 !px-2 tabular-nums text-[var(--sn-label2)]";
+  "sn-btn sn-ghost sn-sm relative z-[1] min-w-8 !px-2 tabular-nums text-[var(--sn-label2)]";
+
+/** 首尾页双箭头：复用 Satin Solar chevron 曲线与 .sn-ic-d 双色调层，避免额外引入 lucide。 */
+function DoubleChevron({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      className="sn-ic"
+      width={14}
+      height={14}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direction === "left" ? (
+        <>
+          <path d="m11 5-6 7 6 7" />
+          <path d="m18 5-6 7 6 7" className="sn-ic-d" />
+        </>
+      ) : (
+        <>
+          <path d="m6 5 6 7-6 7" className="sn-ic-d" />
+          <path d="m13 5 6 7-6 7" />
+        </>
+      )}
+    </svg>
+  );
+}
 
 export function DataGridPagination({
   page,
@@ -97,7 +126,7 @@ export function DataGridPagination({
             disabled={current <= 1}
             aria-label={t("data_grid.first_page")}
           >
-            <ChevronsLeft size={14} aria-hidden="true" />
+            <DoubleChevron direction="left" />
           </button>
           <button
             type="button"
@@ -121,7 +150,7 @@ export function DataGridPagination({
             <span
               ref={thumbRef}
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 left-0 h-8 origin-left rounded-full bg-[var(--sn-accent)] opacity-0 will-change-transform"
+              className="pointer-events-none absolute top-0 left-0 h-8 origin-left rounded-[var(--sn-btn-r)] bg-[var(--sn-accent)] opacity-0 will-change-transform"
             />
             {items.map((item, index) =>
               item === "..." ? (
@@ -169,7 +198,7 @@ export function DataGridPagination({
             disabled={current >= pageCount}
             aria-label={t("data_grid.last_page")}
           >
-            <ChevronsRight size={14} aria-hidden="true" />
+            <DoubleChevron direction="right" />
           </button>
         </div>
 

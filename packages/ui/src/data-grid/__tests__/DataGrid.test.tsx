@@ -258,7 +258,7 @@ describe("DataGrid states", () => {
   test("默认是四边封闭的圆角外框，嵌入小表可以关掉", () => {
     const { container, rerender } = render(<Harness />);
     const root = container.querySelector(".cp-grid");
-    expect(root).toHaveClass("cp-grid-frame", "cp-edge", "rounded-3xl", "overflow-hidden");
+    expect(root).toHaveClass("cp-grid-frame", "cp-edge", "rounded-xl", "overflow-hidden");
     rerender(<Harness frame={false} />);
     expect(container.querySelector(".cp-grid")).not.toHaveClass("cp-grid-frame");
   });

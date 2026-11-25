@@ -1,4 +1,4 @@
-import { MoreHorizontal } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
@@ -67,7 +67,7 @@ const alignClassNames = {
 } as const;
 
 /**
- * 一行的操作：同一尺寸、同一形状的图标按钮（ghost 胶囊），危险操作只换成红色（ghost-danger），
+ * 一行的操作：同一尺寸、同一形状的图标按钮（Satin ghost），危险操作只换成红色（ghost-danger），
  * 不换按钮形态；图标统一按 1rem 画，不管各页传进来的是 14、15 还是 16。
  */
 export function GridRowActions({
@@ -138,7 +138,7 @@ export function GridRowActions({
               aria-label={more}
               className="[&_svg]:size-4"
             >
-              <MoreHorizontal size={16} />
+              <Icon name="ellipsis" size={16} />
             </Button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>

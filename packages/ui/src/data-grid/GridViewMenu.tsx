@@ -1,4 +1,4 @@
-import { Lock, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
@@ -67,7 +67,7 @@ export function GridViewMenu<T>({
         onClick={(event) => setAnchor(anchor ? null : event.currentTarget)}
         className="h-8 px-3 text-xs"
       >
-        <SlidersHorizontal size={13} aria-hidden="true" />
+        <Icon name="sliders-horizontal" size={13} />
         {t("data_grid.view")}
         {hiddenCount > 0 ? (
           <span className="rounded-full bg-ink/[0.08] px-1.5 text-2xs tabular-nums text-ink-2 dark:bg-white/[0.1]">
@@ -87,7 +87,7 @@ export function GridViewMenu<T>({
             {t("data_grid.density")}
           </p>
           <div
-            className="grid grid-cols-3 gap-1 rounded-xl bg-track p-1"
+            className="grid grid-cols-3 gap-1 rounded-[var(--sn-btn-r)] bg-track p-1"
             role="radiogroup"
             aria-label={t("data_grid.density")}
           >
@@ -102,7 +102,7 @@ export function GridViewMenu<T>({
                   data-autofocus={active ? "" : undefined}
                   onClick={() => onDensityChange(item)}
                   className={[
-                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
+                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
                     active
                       ? "bg-surface text-ink shadow-control"
                       : "text-ink-2 hover:bg-hover hover:text-ink",
@@ -143,11 +143,13 @@ export function GridViewMenu<T>({
                   />
                   <span className="min-w-0 flex-1 truncate">{column.header}</span>
                   {locked ? (
-                    <Lock
-                      size={12}
-                      className="shrink-0 text-ink-4"
+                    <span
+                      className="inline-flex shrink-0 items-center text-ink-4"
+                      role="img"
                       aria-label={t("data_grid.column_locked")}
-                    />
+                    >
+                      <Icon name="lock" size={12} />
+                    </span>
                   ) : null}
                 </label>
               );
@@ -163,7 +165,7 @@ export function GridViewMenu<T>({
               }}
               className="inline-flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
             >
-              <RotateCcw size={13} aria-hidden="true" />
+              <Icon name="rotate-ccw" size={13} />
               {t("data_grid.reset_view")}
             </button>
           </div>
