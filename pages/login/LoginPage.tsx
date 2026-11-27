@@ -33,8 +33,8 @@ interface RedirectState {
 
 /** 字段标签：输入框聚焦时跟着变深，靠外层 label 上的 `group`。 */
 const FIELD_LABEL =
-  "block pl-1 text-xs font-medium text-ink-3 transition-colors duration-200 group-focus-within:text-ink";
-const FIELD_ICON = "text-ink-4 transition-colors duration-200 group-focus-within:text-ink";
+  "block pl-1 text-xs font-medium text-sn-label3 transition-colors duration-200 group-focus-within:text-sn-label";
+const FIELD_ICON = "text-sn-label-off transition-colors duration-200 group-focus-within:text-sn-label";
 
 function triggerSatinShake(el: HTMLElement | null) {
   if (!el) return;
@@ -159,15 +159,15 @@ export function LoginPage() {
         <div className="sn-fade-up mb-9 flex flex-col items-center text-center">
           <div className="flex items-center gap-2.5">
             <LogoMark size={32} />
-            <span className="text-xl font-normal tracking-tight text-ink">
+            <span className="text-xl font-normal tracking-tight text-sn-label">
               {BRAND_NAME_PREFIX}
               <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
             </span>
           </div>
-          <h1 className="mt-7 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          <h1 className="mt-7 text-3xl font-semibold tracking-tight text-sn-label sm:text-4xl">
             {t("login.hero_prefix")} <RotatingModelName />
           </h1>
-          <p className="mt-3 max-w-md text-sm leading-6 text-ink-3">{t("login.hero_description")}</p>
+          <p className="mt-3 max-w-md text-sm leading-6 text-sn-label3">{t("login.hero_description")}</p>
           <div className="mt-4">
             <GitHubRepoLink variant="badge" />
           </div>
@@ -180,10 +180,10 @@ export function LoginPage() {
           {/* 登录卡对齐 Satin .sn-auth 表面：16px 清晰圆角、1px 细描边与干净抬升投影。 */}
           <section
             ref={sectionRef}
-            className="cp-edge rounded-2xl bg-[var(--sn-raised)] p-7 shadow-lift sm:p-8"
+            className="border border-sn-line rounded-2xl bg-[var(--sn-raised)] p-7 shadow-sn-lift sm:p-8"
           >
             <div className="mb-7">
-              <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("login.sign_in")}</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-sn-label">{t("login.sign_in")}</h2>
             </div>
             <form className="space-y-5" onSubmit={handleSubmit}>
               {accessFailureMessage ? (
@@ -259,7 +259,7 @@ export function LoginPage() {
                   </p>
                 ) : null}
               </div>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-sn-label2">
                 <Checkbox checked={rememberPassword} onCheckedChange={setRememberPassword} />
                 {t("login.remember_password_label")}
               </label>

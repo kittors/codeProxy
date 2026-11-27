@@ -342,7 +342,7 @@ export function EndUserEditModal({
                 label: (
                   <span className="inline-flex items-center gap-1.5">
                     {t("access_policy.source_template")}
-                    <span className="rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
+                    <span className="rounded-full bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
                       {t("access_policy.recommended")}
                     </span>
                   </span>
@@ -420,9 +420,9 @@ export function EndUserEditModal({
             idPrefix="account-limits"
             label={t("access_policy.account_limits_title")}
           />
-          <p className="mt-4 text-2xs leading-5 text-ink-3">{t("access_policy.limits_input_hint")}</p>
+          <p className="mt-4 text-2xs leading-5 text-sn-label3">{t("access_policy.limits_input_hint")}</p>
           {user["quota-usage"]?.["five-hour-resets-at"] ? (
-            <p className="mt-1 text-2xs leading-5 text-ink-3">
+            <p className="mt-1 text-2xs leading-5 text-sn-label3">
               {t("access_policy.five_hour_resets_at", {
                 time: new Date(user["quota-usage"]["five-hour-resets-at"]).toLocaleString(),
               })}

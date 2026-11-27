@@ -133,7 +133,7 @@ export function GridColumnMenu<T>({
 
       {canFilter && filter && draft ? (
         <>
-          <div className={canSort ? "mt-2 border-t border-line pt-2.5" : "pt-1"}>
+          <div className={canSort ? "mt-2 border-t border-sn-line pt-2.5" : "pt-1"}>
             <GridFilterEditor
               filter={filter}
               draft={draft}
@@ -141,7 +141,7 @@ export function GridColumnMenu<T>({
               onSubmit={apply}
             />
           </div>
-          <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-line pt-2">
+          <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-sn-line pt-2">
             <Button size="xs" variant="ghost" onClick={reset}>
               {t("data_grid.reset")}
             </Button>

@@ -455,7 +455,7 @@ describe("ModelPlazaPage", () => {
     // bar has no backdrop of its own and a translucent track would show rows scrolling under it.
     const tabList = screen.getByRole("tablist", { name: /filter by vendor/i });
     expect(tabList.className).not.toMatch(/!bg-transparent/);
-    expect(tabList.className).toMatch(/(?:^|\s)bg-track(?:\s|$)/);
+    expect(tabList.className).toMatch(/(?:^|\s)bg-sn-sunken(?:\s|$)/);
     // overflow-x-hidden on an ancestor computes overflow-y as auto and breaks sticky
     expect(container.firstElementChild?.className ?? "").not.toMatch(/overflow-x-hidden/);
   });

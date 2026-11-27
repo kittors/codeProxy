@@ -181,7 +181,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
 
   const disabled = loading || saving || Boolean(loadError);
   const unit = (key: string) => (
-    <span className="pr-2 text-xs text-ink-3 select-none">{t(key)}</span>
+    <span className="pr-2 text-xs text-sn-label3 select-none">{t(key)}</span>
   );
 
   return (
@@ -240,7 +240,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
           }}
         >
           {/* 弹窗里不用 SettingGroup（它是带细边和投影的卡片）：设置行放在一层无边淡底里。 */}
-          <div className="overflow-hidden rounded-xl bg-subtle">
+          <div className="overflow-hidden rounded-xl bg-sn-subtle">
             <SettingRow
               label={t("antigravity_quota.warmup_policy_enabled")}
               description={t("antigravity_quota.warmup_tooltip")}
@@ -316,7 +316,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                 />
               </FormField>
             </div>
-            <div className="overflow-hidden rounded-xl bg-subtle">
+            <div className="overflow-hidden rounded-xl bg-sn-subtle">
               <SettingRow
                 label={t("antigravity_quota.warmup_daily_window_enable")}
                 description={t("antigravity_quota.warmup_daily_window_desc")}
@@ -394,7 +394,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
               description={t("antigravity_quota.warmup_exclude_desc")}
               icon={<UserMinus />}
               actions={
-                <span className="text-xs text-ink-3 tabular-nums">
+                <span className="text-xs text-sn-label3 tabular-nums">
                   {t("antigravity_quota.warmup_exclude_count", {
                     excluded: excludedAuthIds.length,
                     total: allFileNames.length,
@@ -403,7 +403,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
               }
             >
               {/* 一层无边淡底装下搜索框和账号列表，不再描边、也不再用分隔线切开。 */}
-              <div className="overflow-hidden rounded-xl bg-subtle">
+              <div className="overflow-hidden rounded-xl bg-sn-subtle">
                 {allFileNames.length > 6 ? (
                   <div className="p-2 pb-0.5">
                     <TextInput
@@ -412,7 +412,7 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                       onChange={(e) => setAccountQuery(e.currentTarget.value)}
                       placeholder={t("antigravity_quota.warmup_exclude_search")}
                       aria-label={t("antigravity_quota.warmup_exclude_search")}
-                      startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+                      startAdornment={<Search size={14} className="text-sn-label3" aria-hidden="true" />}
                       data-dismiss-safe=""
                     />
                   </div>
@@ -426,8 +426,8 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                         className={[
                           "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
                           excluded
-                            ? "bg-selected text-ink colorful:bg-rose-500/[0.06]"
-                            : "text-ink-2 hover:bg-hover",
+                            ? "bg-sn-active text-sn-label colorful:bg-rose-500/[0.06]"
+                            : "text-sn-label2 hover:bg-sn-hover",
                         ].join(" ")}
                       >
                         <Checkbox
@@ -441,8 +441,8 @@ export function WarmupPolicyModal({ open, onClose, allFileNames }: WarmupPolicyM
                           className={[
                             "shrink-0 text-2xs font-medium",
                             excluded
-                              ? "text-ink-2 colorful:text-rose-600 colorful:dark:text-rose-400"
-                              : "text-ink-3",
+                              ? "text-sn-label2 colorful:text-rose-600 colorful:dark:text-rose-400"
+                              : "text-sn-label3",
                           ].join(" ")}
                         >
                           {excluded

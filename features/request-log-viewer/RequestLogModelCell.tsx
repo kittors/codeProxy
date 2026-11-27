@@ -103,7 +103,7 @@ function UpstreamModelMismatchBadge({ row }: { row: RequestLogsRow }) {
 export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
   const { t } = useTranslation();
   if (!row.model) {
-    return <span className="text-xs text-ink-3">--</span>;
+    return <span className="text-xs text-sn-label3">--</span>;
   }
   const realModel = isDistinctModelIdentity(row.model, row.upstreamModel) ? row.upstreamModel : "";
   const visionModel = isDistinctModelIdentity(row.model, row.visionFallbackModel)
@@ -111,16 +111,16 @@ export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
     : "";
   return (
     <span className="flex min-w-0 items-center gap-2.5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.04] dark:bg-white/[0.06]">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.04] dark:bg-white/[0.06]">
         <VendorIcon modelId={row.model} size={15} />
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="flex min-w-0 items-center gap-1.5">
-          <OverflowTooltip content={row.displayModel || row.model} className="block min-w-0 truncate text-sm font-medium text-ink">
+          <OverflowTooltip content={row.displayModel || row.model} className="block min-w-0 truncate text-sm font-medium text-sn-label">
             {row.model}
           </OverflowTooltip>
           {row.thinkingLevel ? (
-            <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 text-2xs leading-4 text-ink-2 dark:bg-white/[0.07]">
+            <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs leading-4 text-sn-label2 dark:bg-white/[0.07]">
               {row.thinkingLevel}
             </span>
           ) : null}
@@ -128,7 +128,7 @@ export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
             <UpstreamModelMismatchBadge row={row} />
           ) : null}
         </span>
-        <span className="mt-0.5 flex min-w-0 items-center gap-2 text-2xs text-ink-3">
+        <span className="mt-0.5 flex min-w-0 items-center gap-2 text-2xs text-sn-label3">
           {realModel ? (
             <ModelRouteHint
               label={t("request_logs.real_model_id")}

@@ -50,7 +50,7 @@ export function ShellTopBar({
   const { t } = useTranslation();
 
   return (
-    <header className="z-20 flex h-11 shrink-0 items-center gap-2 px-3 sm:px-5">
+    <header className="z-20 flex h-[42px] shrink-0 items-center gap-2 px-3 sm:px-5">
       <h1 className="sr-only">{t(titleKey)}</h1>
       {isMobile ? (
         <button
@@ -158,7 +158,7 @@ function TenantSwitcher() {
         value: tenant.id,
         label,
         searchText: `${label} ${tenant.slug ?? ""} ${tenant.name}`,
-        icon: <Icon name="house" size={16} className={`shrink-0 text-ink-3 ${HUE_GLYPH.indigo}`} />,
+        icon: <Icon name="house" size={16} className={`shrink-0 text-sn-label3 ${HUE_GLYPH.indigo}`} />,
       };
     });
   }, [effectiveTenant, systemTenantLabel, tenants]);

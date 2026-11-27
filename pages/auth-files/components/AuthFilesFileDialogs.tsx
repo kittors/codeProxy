@@ -50,7 +50,7 @@ export function UploadProgressDialog({
   const counts = [
     { key: "success", dot: "bg-emerald-500", label: t("auth_files.upload_progress_success", { count: progress.success }) },
     { key: "failed", dot: "bg-rose-500", label: t("auth_files.upload_progress_failed", { count: progress.failed }) },
-    { key: "skipped", dot: "bg-ink-4", label: t("auth_files.upload_progress_skipped", { count: progress.skipped }) },
+    { key: "skipped", dot: "bg-sn-label-off", label: t("auth_files.upload_progress_skipped", { count: progress.skipped }) },
   ];
   return (
     <Modal
@@ -69,32 +69,32 @@ export function UploadProgressDialog({
       <div className="space-y-4" data-testid="auth-files-upload-progress" aria-live="polite">
         <div>
           <div className="flex items-baseline justify-between gap-3">
-            <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
-              <Loader2 size={15} className="shrink-0 animate-spin text-ink-3" aria-hidden="true" />
+            <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-sn-label">
+              <Loader2 size={15} className="shrink-0 animate-spin text-sn-label3" aria-hidden="true" />
               <span className="truncate" data-testid="auth-files-upload-progress-title">
                 {title}
               </span>
             </p>
-            <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">{percent}%</span>
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-sn-label">{percent}%</span>
           </div>
           <div
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent}
-            className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track"
+            className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-sn-sunken"
           >
             <div
-              className="h-full rounded-full bg-accent transition-[width] duration-450 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none bar-semantic:bg-gradient-to-r bar-semantic:from-teal-400 bar-semantic:to-sky-500"
+              className="h-full rounded-full bg-sn-accent transition-[width] duration-450 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none bar-semantic:bg-gradient-to-r bar-semantic:from-teal-400 bar-semantic:to-sky-500"
               style={{ width: `${percent}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-ink-3" data-testid="auth-files-upload-progress-detail">
+          <p className="mt-2 text-xs text-sn-label3" data-testid="auth-files-upload-progress-detail">
             {progress.phase === "refreshing" ? t("auth_files.upload_progress_refreshing_short") : description}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-sn-label2">
           {counts.map((item) => (
             <span key={item.key} className="inline-flex items-center gap-1.5 tabular-nums">
               <span aria-hidden="true" className={["h-1.5 w-1.5 rounded-full", item.dot].join(" ")} />
@@ -108,7 +108,7 @@ export function UploadProgressDialog({
             {progress.activeFileNames.map((name) => (
               <span
                 key={name}
-                className="inline-flex max-w-full items-center rounded-full bg-subtle px-2.5 py-1 font-mono text-2xs text-ink-2"
+                className="inline-flex max-w-full items-center rounded-full bg-sn-subtle px-2.5 py-1 font-mono text-2xs text-sn-label2"
               >
                 <span className="truncate">{name}</span>
               </span>
@@ -255,7 +255,7 @@ export function ModelOwnerGroupDialog({
     >
       <div className="space-y-5">
         {/* 弹窗里不用 SettingGroup（它是带细边和投影的卡片）：一层无边淡底就够了。 */}
-        <div className="overflow-hidden rounded-xl bg-subtle">
+        <div className="overflow-hidden rounded-xl bg-sn-subtle">
           <SettingRow
             label={t("auth_files.model_owner_group_enabled")}
             description={t("auth_files.model_owner_group_enabled_desc")}
@@ -290,9 +290,9 @@ export function ModelOwnerGroupDialog({
         {/* 标题行 + 模型行（淡底），不再套一个描边框、也不再用分隔线切出表头。 */}
         <section>
           <header className="mb-2 flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-ink">{t("auth_files.detail_tab_models")}</p>
+            <p className="text-sm font-medium text-sn-label">{t("auth_files.detail_tab_models")}</p>
             {models ? (
-              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 tabular-nums dark:bg-white/[0.07]">
+              <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label2 tabular-nums dark:bg-white/[0.07]">
                 {t("auth_files.count_items", { count: models.length })}
               </span>
             ) : null}
@@ -319,10 +319,10 @@ export function ModelOwnerGroupDialog({
                         model.owned_by ? `owned_by: ${model.owned_by}` : "",
                       ].filter(Boolean);
                       return (
-                        <li key={model.id} className="rounded-xl bg-subtle px-3 py-2">
-                          <p className="truncate font-mono text-xs font-medium text-ink">{model.id}</p>
+                        <li key={model.id} className="rounded-xl bg-sn-subtle px-3 py-2">
+                          <p className="truncate font-mono text-xs font-medium text-sn-label">{model.id}</p>
                           {modelMeta.length > 0 ? (
-                            <p className="mt-0.5 truncate text-xs text-ink-3">{modelMeta.join(" · ")}</p>
+                            <p className="mt-0.5 truncate text-xs text-sn-label3">{modelMeta.join(" · ")}</p>
                           ) : null}
                         </li>
                       );

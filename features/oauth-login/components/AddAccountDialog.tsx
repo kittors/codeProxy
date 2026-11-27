@@ -264,7 +264,7 @@ export function AddAccountDialog({
       {/* 左栏用一层淡底和右侧分开，不画竖线（窄屏横排时也不画横线）：选中项是一张浮起的白片，
           落在淡底上才读得出来。 */}
       <div className="flex h-full min-h-0 flex-col sm:flex-row">
-        <nav className="shrink-0 sm:w-56 sm:overflow-y-auto sm:bg-subtle">
+        <nav className="shrink-0 sm:w-56 sm:overflow-y-auto sm:bg-sn-subtle">
           <ProviderList providers={providers} value={providerId} onChange={selectProvider} />
         </nav>
         <section
@@ -279,8 +279,8 @@ export function AddAccountDialog({
                 <ProviderGlyph provider={provider} size={20} />
               </DialogIcon>
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-base font-semibold text-ink">{providerName}</h3>
-                <p className="truncate text-xs text-ink-3">
+                <h3 className="truncate text-base font-semibold text-sn-label">{providerName}</h3>
+                <p className="truncate text-xs text-sn-label3">
                   {t(`add_account.providers.${provider.copyKey}.tagline`)}
                 </p>
               </div>

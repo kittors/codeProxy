@@ -18,7 +18,7 @@ type BadgeItem = {
  * 能力标签的基础形态（简约风格）是中性淡底，靠图标和文字区分。多彩风格下按类别叠回颜色：
  * 视觉天蓝、出图琥珀、音频绿；文本与视频一直是中性的。
  */
-const NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_BADGE = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 const BADGE_CLASS: Record<ModelCapabilityKey, string> = {
   text: NEUTRAL_BADGE,
@@ -79,7 +79,7 @@ export function ModelCapabilityBadges({
     badges.push({
       key: "unknown",
       label: t("models_page.capability_unknown"),
-      className: "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+      className: "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
       icon: null,
     });
   }

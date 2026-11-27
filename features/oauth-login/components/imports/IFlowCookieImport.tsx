@@ -68,7 +68,7 @@ export function IFlowCookieImport({
   return (
     <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
-        <ol className="grid list-decimal gap-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
+        <ol className="grid list-decimal gap-1 pl-5 text-sm text-sn-label2 marker:text-sn-label3">
           <li>{t("add_account.import.iflow_step_1")}</li>
           <li>{t("add_account.import.iflow_step_2")}</li>
           <li>{t("add_account.import.iflow_step_3")}</li>

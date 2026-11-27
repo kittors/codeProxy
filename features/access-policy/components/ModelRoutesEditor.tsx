@@ -46,7 +46,7 @@ export function ModelRoutesEditor({
   if (value.length === 0) {
     return (
       <EmptyState
-        icon={<Route size={28} className={cn("text-ink-3", HUE_GLYPH.teal)} />}
+        icon={<Route size={28} className={cn("text-sn-label3", HUE_GLYPH.teal)} />}
         title={t("access_policy.routes_empty_title")}
         description={t(readOnly ? "access_policy.routes_empty_readonly" : "access_policy.routes_empty_desc")}
         action={
@@ -80,20 +80,20 @@ export function ModelRoutesEditor({
               key={route.key}
               aria-label={t("access_policy.route_label", { index: position })}
               className={cn(
-                "rounded-xl bg-subtle p-3.5",
+                "rounded-xl bg-sn-subtle p-3.5",
                 hasIssueUnder(issues, prefix) ? "ring-1 ring-rose-500/40" : null,
               )}
             >
               <div className="flex items-start gap-2.5">
                 <span
                   aria-hidden="true"
-                  className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.05] text-xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07] icon-hue:bg-teal-500/10 icon-hue:text-teal-600 icon-hue:dark:bg-teal-400/15 icon-hue:dark:text-teal-300"
+                  className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.05] text-xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07] icon-hue:bg-teal-500/10 icon-hue:text-teal-600 icon-hue:dark:bg-teal-400/15 icon-hue:dark:text-teal-300"
                 >
                   {position}
                 </span>
                 <div className="grid min-w-0 flex-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,0.8fr)] md:items-start">
                   <div className="min-w-0">
-                    <div className="mb-1 text-2xs font-medium text-ink-3">{t("access_policy.route_from")}</div>
+                    <div className="mb-1 text-2xs font-medium text-sn-label3">{t("access_policy.route_from")}</div>
                     {editable ? (
                       <ModelPatternInput
                         id={`${rowId}-from`}
@@ -121,10 +121,10 @@ export function ModelRoutesEditor({
                   <ArrowRight
                     size={16}
                     aria-hidden="true"
-                    className={cn("hidden shrink-0 text-ink-3 md:mt-7 md:block", HUE_GLYPH.teal)}
+                    className={cn("hidden shrink-0 text-sn-label3 md:mt-7 md:block", HUE_GLYPH.teal)}
                   />
                   <div className="min-w-0">
-                    <div className="mb-1 text-2xs font-medium text-ink-3">{t("access_policy.route_to")}</div>
+                    <div className="mb-1 text-2xs font-medium text-sn-label3">{t("access_policy.route_to")}</div>
                     {editable ? (
                       <ModelTargetInput
                         id={`${rowId}-to`}
@@ -187,7 +187,7 @@ export function ModelRoutesEditor({
             <Plus size={14} />
             {t("access_policy.add_route")}
           </Button>
-          <span className="text-2xs tabular-nums text-ink-3">
+          <span className="text-2xs tabular-nums text-sn-label3">
             {t("access_policy.routes_count", { count: value.length, max: MAX_MODEL_ROUTES })}
           </span>
         </div>

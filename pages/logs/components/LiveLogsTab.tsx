@@ -147,7 +147,7 @@ export function LiveLogsTab({
 
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-ink-2">{quotaSummary}</div>
+            <div className="text-xs text-sn-label2">{quotaSummary}</div>
             <Button
               variant="ghost"
               size="sm"
@@ -192,7 +192,7 @@ export function LiveLogsTab({
           "mt-4 overflow-hidden md:flex md:min-h-0 md:flex-1 md:flex-col",
         ].join(" ")}
       >
-        <div className="flex min-h-11 items-center justify-between gap-3 px-4 pt-3 pb-1 text-xs text-ink-2">
+        <div className="flex min-h-11 items-center justify-between gap-3 px-4 pt-3 pb-1 text-xs text-sn-label2">
           <div className="min-w-0">
             <span className="block whitespace-pre-wrap break-words tabular-nums">
               {t("logs_page.showing_lines", {
@@ -220,7 +220,7 @@ export function LiveLogsTab({
         <ScrollFade
           ref={containerRef}
           onScroll={onScroll}
-          className="max-h-[60vh] overflow-y-auto px-4 pb-3 text-ink md:max-h-none md:min-h-0 md:flex-1"
+          className="max-h-[60vh] overflow-y-auto px-4 pb-3 text-sn-label md:max-h-none md:min-h-0 md:flex-1"
         >
           {visibleLines.length === 0 ? (
             <div className="px-1 py-4">
@@ -239,12 +239,12 @@ export function LiveLogsTab({
           ) : (
             <div className="overflow-x-auto">
               {/* 一行一条日志，行与行之间只留数据行的细分隔线。 */}
-              <div className="min-w-[640px] divide-y divide-line">
+              <div className="min-w-[640px] divide-y divide-sn-line">
                 {parsedVisibleLines.map((line, index) => {
                   const levelStyles = line.level ? getLevelStyles(line.level) : null;
                   const rowClassName = [
                     "px-3 py-2",
-                    "hover:bg-hover",
+                    "hover:bg-sn-hover",
                     levelStyles?.row,
                   ]
                     .filter(Boolean)
@@ -256,7 +256,7 @@ export function LiveLogsTab({
                       className={rowClassName}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="w-36 shrink-0 tabular-nums text-xs text-ink-3">
+                        <div className="w-36 shrink-0 tabular-nums text-xs text-sn-label3">
                           {line.timestamp ?? ""}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -290,7 +290,7 @@ export function LiveLogsTab({
                             ) : null}
                             {line.path ? <RequestPath>{line.path}</RequestPath> : null}
                           </div>
-                          <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-ink">
+                          <div className="mt-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-sn-label">
                             {line.message}
                           </div>
                         </div>

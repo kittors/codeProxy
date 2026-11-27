@@ -35,11 +35,11 @@ export function LoopGuardSummary({ guard }: { guard: MonitorLoopGuard }) {
 
   return (
     <section aria-label={t("monitor_center.loop_guard.title")} className="space-y-1">
-      <h4 className="text-xs font-medium text-ink-3">{t("monitor_center.loop_guard.title")}</h4>
+      <h4 className="text-xs font-medium text-sn-label3">{t("monitor_center.loop_guard.title")}</h4>
       <dl className="space-y-1 px-2.5 text-xs">
         {rows.map((row) => (
           <div key={row.key} className="flex items-baseline justify-between gap-3">
-            <dt className="min-w-0 text-ink-2">{row.label}</dt>
+            <dt className="min-w-0 text-sn-label2">{row.label}</dt>
             <dd className="shrink-0 font-semibold tabular-nums text-amber-600 dark:text-amber-300">
               {formatMonitorCompact(row.value)}
             </dd>
@@ -47,14 +47,14 @@ export function LoopGuardSummary({ guard }: { guard: MonitorLoopGuard }) {
         ))}
         {guard.estimated_saved_cost > 0 ? (
           <div className="flex items-baseline justify-between gap-3">
-            <dt className="min-w-0 text-ink-2">{t("monitor_center.loop_guard.saved")}</dt>
-            <dd className="shrink-0 tabular-nums text-ink-2">
+            <dt className="min-w-0 text-sn-label2">{t("monitor_center.loop_guard.saved")}</dt>
+            <dd className="shrink-0 tabular-nums text-sn-label2">
               {formatMonitorCost(guard.estimated_saved_cost)}
             </dd>
           </div>
         ) : null}
       </dl>
-      <p className="px-2.5 text-xs text-ink-3">{t("monitor_center.loop_guard.hint")}</p>
+      <p className="px-2.5 text-xs text-sn-label3">{t("monitor_center.loop_guard.hint")}</p>
     </section>
   );
 }

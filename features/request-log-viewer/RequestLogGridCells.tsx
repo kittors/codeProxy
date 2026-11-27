@@ -32,13 +32,13 @@ import type { RequestLogsRow } from "./requestLogsRow";
 const DASH = "—";
 
 function Dash() {
-  return <span className="text-ink-4">{DASH}</span>;
+  return <span className="text-sn-label-off">{DASH}</span>;
 }
 
-/** 图标块：两行单元格前面的 28px 圆角方块，厂商 logo 用中性底，logo 自带品牌色。 */
+/** 图标块：两行单元格前面的 28px 圆角方块，遵循 Satin 微细边中性容器，logo 自带品牌色。 */
 function IconTile({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.04] text-ink-3 dark:bg-white/[0.06]">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] text-[var(--sn-label3)]">
       {children}
     </span>
   );
@@ -47,7 +47,7 @@ function IconTile({ children }: { children: React.ReactNode }) {
 export function RequestLogTimeCell({ row, now }: { row: RequestLogsRow; now: number }) {
   const { t, i18n } = useTranslation();
   if (!Number.isFinite(row.timestampMs)) {
-    return <span className="font-mono text-xs text-ink-3">{row.timestamp || DASH}</span>;
+    return <span className="font-mono text-xs text-sn-label3">{row.timestamp || DASH}</span>;
   }
   const date = new Date(row.timestampMs);
   const relative = formatRelativeTime(row.timestampMs, now, i18n.language);
@@ -64,10 +64,10 @@ export function RequestLogTimeCell({ row, now }: { row: RequestLogsRow; now: num
       }
     >
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className="font-mono text-xs tabular-nums text-ink">
+        <span className="font-mono text-xs tabular-nums text-sn-label">
           {formatClock(row.timestampMs)}
         </span>
-        <span className="mt-0.5 truncate text-2xs text-ink-3">
+        <span className="mt-0.5 truncate text-2xs text-sn-label3">
           {isSameLocalDay(row.timestampMs, now)
             ? relative
             : `${date.getMonth() + 1}/${date.getDate()}`}
@@ -120,11 +120,11 @@ export function RequestLogIdentityCell({
           <Avatar name={avatarSeed} size={28} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className={`truncate text-sm font-medium ${primary === DASH ? "text-ink-4" : "text-ink"}`}>
+          <span className={`truncate text-sm font-medium ${primary === DASH ? "text-sn-label-off" : "text-sn-label"}`}>
             {primary}
           </span>
           {secondary ? (
-            <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">{secondary}</span>
+            <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">{secondary}</span>
           ) : null}
         </span>
       </span>
@@ -161,11 +161,11 @@ export function RequestLogChannelCell({ row, masked }: { row: RequestLogsRow; ma
           <VendorIcon modelId={provider} size={14} />
         </IconTile>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm text-ink">{name}</span>
+          <span className="truncate text-sm text-sn-label">{name}</span>
           {auth || provider ? (
             // 列被压窄时（1366 宽）厂商名只剩一个字母没有意义：放不下 4 个字宽就整个折到看不见的第二行，
             // 放得下就照常截断出省略号。完整信息在悬停提示里。
-            <span className="mt-0.5 flex h-[1.4em] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden text-2xs text-ink-3">
+            <span className="mt-0.5 flex h-[1.4em] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden text-2xs text-sn-label3">
               {auth ? (
                 <span
                   className={`shrink-0 rounded px-1 font-medium ${channelAuthTypeBadgeClass(row.channelAuthType === "oauth" ? "oauth" : "api")}`}
@@ -199,13 +199,13 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
         {client?.vendor ? (
           <VendorIcon modelId={client.vendor} size={14} />
         ) : (
-          <Glyph size={14} aria-hidden="true" className={client ? "" : "text-ink-4"} />
+          <Glyph size={14} aria-hidden="true" className={client ? "" : "text-sn-label-off"} />
         )}
       </IconTile>
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className={`truncate text-sm ${client ? "text-ink" : "text-ink-4"}`}>{label}</span>
+        <span className={`truncate text-sm ${client ? "text-sn-label" : "text-sn-label-off"}`}>{label}</span>
         {row.clientVersion ? (
-          <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">{row.clientVersion}</span>
+          <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">{row.clientVersion}</span>
         ) : null}
       </span>
     </span>
@@ -260,7 +260,7 @@ export function RequestLogTokensCell({
         type="button"
         onClick={() => onOpen?.(row, side)}
         aria-label={`${label} · ${formatInteger(value)}`}
-        className="-mx-1 rounded-md px-1 underline decoration-ink-4 decoration-dotted underline-offset-[3px] transition-colors hover:bg-hover hover:decoration-current"
+        className="-mx-1 rounded-md px-1 underline decoration-sn-label-off decoration-dotted underline-offset-[3px] transition-colors hover:bg-sn-hover hover:decoration-current"
       >
         {text}
       </button>
@@ -302,12 +302,12 @@ export function RequestLogTokensCell({
       }
     >
       <span className="flex min-w-0 flex-col items-end gap-1">
-        <span className="flex items-baseline gap-1 whitespace-nowrap text-ink">
+        <span className="flex items-baseline gap-1 whitespace-nowrap text-sn-label">
           {number("input", input)}
-          <span className="text-2xs text-ink-4" aria-hidden="true">
+          <span className="text-2xs text-sn-label-off" aria-hidden="true">
             →
           </span>
-          {output > 0 ? number("output", output) : <span className="text-ink-4">{DASH}</span>}
+          {output > 0 ? number("output", output) : <span className="text-sn-label-off">{DASH}</span>}
         </span>
         <CacheMeter
           ratio={ratio}
@@ -333,15 +333,15 @@ function CacheMeter({
   unknownHint?: string;
 }) {
   const { t } = useTranslation();
-  const label = <span className="text-ink-4">{t("request_logs.cache_short")}</span>;
+  const label = <span className="text-sn-label-off">{t("request_logs.cache_short")}</span>;
   if (ratio === null) {
     return (
       <span className="flex items-center gap-1.5 text-2xs leading-none">
         {label}
         {legacyCached > 0 ? (
-          <span className="tabular-nums text-ink-3">{formatCompactNumber(legacyCached)}</span>
+          <span className="tabular-nums text-sn-label3">{formatCompactNumber(legacyCached)}</span>
         ) : (
-          <span className="text-ink-4" aria-label={unknownHint}>
+          <span className="text-sn-label-off" aria-label={unknownHint}>
             {DASH}
           </span>
         )}
@@ -350,17 +350,17 @@ function CacheMeter({
   }
   const tone =
     ratio >= 0.8
-      ? "bg-ink/40 bar-semantic:bg-emerald-500"
+      ? "bg-sn-label/40 bar-semantic:bg-emerald-500"
       : ratio >= 0.4
-        ? "bg-ink/30 bar-semantic:bg-amber-500"
-        : "bg-ink/20 bar-semantic:bg-rose-400";
+        ? "bg-sn-label/30 bar-semantic:bg-amber-500"
+        : "bg-sn-label/20 bar-semantic:bg-rose-400";
   return (
     <span className="flex items-center gap-1.5 text-2xs leading-none">
       {label}
-      <span className="h-1 w-9 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]" aria-hidden="true">
+      <span className="h-1 w-9 overflow-hidden rounded-full bg-sn-label/[0.07] dark:bg-white/[0.08]" aria-hidden="true">
         <span className={`block h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, ratio * 100)}%` }} />
       </span>
-      <span className="w-[5ch] text-right tabular-nums text-ink-2">{Math.round(ratio * 100)}%</span>
+      <span className="w-[5ch] text-right tabular-nums text-sn-label2">{Math.round(ratio * 100)}%</span>
     </span>
   );
 }
@@ -369,7 +369,7 @@ function CacheMeter({
 function durationTone(ms: number): string {
   if (ms >= 30_000) return "text-rose-600 dark:text-rose-400";
   if (ms >= 10_000) return "text-amber-600 dark:text-amber-400";
-  return "text-ink";
+  return "text-sn-label";
 }
 
 /** 两行：总耗时（按阈值着色）+ 首字。一眼分得清慢在等首字还是慢在生成；流式与否写在提示里。 */
@@ -399,7 +399,7 @@ export function RequestLogLatencyCell({ row }: { row: RequestLogsRow }) {
     >
       <span className="flex min-w-0 flex-col items-end leading-tight">
         <span className={`tabular-nums ${durationTone(latency)}`}>{formatDurationMs(latency)}</span>
-        <span className="mt-0.5 whitespace-nowrap text-2xs text-ink-3">
+        <span className="mt-0.5 whitespace-nowrap text-2xs text-sn-label3">
           {row.streaming ? (
             <>
               {t("request_logs.first_token_short")}{" "}
@@ -451,9 +451,9 @@ export function RequestLogThroughputCell({ row }: { row: RequestLogsRow }) {
         />
       }
     >
-      <span className="whitespace-nowrap tabular-nums text-ink">
+      <span className="whitespace-nowrap tabular-nums text-sn-label">
         {value}
-        <span className="ml-0.5 text-2xs text-ink-3">tok/s</span>
+        <span className="ml-0.5 text-2xs text-sn-label3">tok/s</span>
       </span>
     </GridCellTooltip>
   );
@@ -472,7 +472,7 @@ export function RequestLogCostCell({ row }: { row: RequestLogsRow }) {
         />
       }
     >
-      <span className="tabular-nums text-ink">{formatUsd(row.cost)}</span>
+      <span className="tabular-nums text-sn-label">{formatUsd(row.cost)}</span>
     </GridCellTooltip>
   );
 }

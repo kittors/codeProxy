@@ -15,7 +15,6 @@ import {
   type ReactNode,
 } from "react";
 import { TooltipBubble, TooltipTriggerContext, type TooltipPlacement } from "../overlays/Tooltip";
-import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 
 type ButtonVariant =
   | "default"
@@ -105,43 +104,26 @@ function useSatinBusySpin(active: boolean): boolean {
   return shown;
 }
 
-function buttonIconHue(children: ReactNode): Hue | null {
-  for (const child of flattenButtonChildren(children)) {
-    const hue = hueForIcon(child);
-    if (hue) return hue;
-  }
-  return null;
-}
-
 /**
  * 生成正宗 Satin 按钮类名（.sn-btn + 变体 + 尺寸 + 纯图标按钮 .sn-ibtn）。
+ * 严格遵循 Satin 克制单色图标规范：按钮图标一律跟随按钮文字色，不叠加彩虹染色。
  */
 export function buttonClassName({
   className,
   iconOnly = false,
   size = "md",
   variant = "default",
-  iconHue = null,
 }: {
   className?: string;
   iconOnly?: boolean;
   size?: ButtonSize;
   variant?: ButtonVariant;
-  iconHue?: Hue | null;
 }) {
-  const neutral =
-    variant === "default" ||
-    variant === "secondary" ||
-    variant === "tertiary" ||
-    variant === "ghost";
-  const iconClass = iconHue && neutral ? HUE_BUTTON_ICON[iconHue] : null;
-
   return [
     "sn-btn",
     BUTTON_VARIANT_MAP[variant],
     BUTTON_SIZE_MAP[size],
     iconOnly ? "sn-ibtn" : null,
-    iconClass,
     className,
   ]
     .filter(Boolean)
@@ -242,7 +224,7 @@ export function Button({
         disabled={isDisabled}
         aria-busy={loading ? true : props["aria-busy"]}
         className={[
-          buttonClassName({ className, iconOnly, size, variant, iconHue: buttonIconHue(children) }),
+          buttonClassName({ className, iconOnly, size, variant }),
           busySpin ? "sn-busy" : null,
           showOk ? "sn-ok" : null,
         ]

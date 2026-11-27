@@ -125,7 +125,7 @@ export function RoutingSimulatorDialog({
           label: name,
           searchText: `${name} ${id}`,
           trailing: entry.disabled ? (
-            <span className="rounded-md bg-subtle px-1.5 py-0.5 text-2xs text-ink-3">
+            <span className="rounded-md bg-sn-subtle px-1.5 py-0.5 text-2xs text-sn-label3">
               {t("channel_groups_page.simulator.key_disabled")}
             </span>
           ) : undefined,
@@ -191,7 +191,7 @@ export function RoutingSimulatorDialog({
       onClose={onClose}
       footerStart={
         outcome && !sameParams(outcome.params, params) ? (
-          <span className="text-xs text-ink-3">{t("channel_groups_page.simulator.stale")}</span>
+          <span className="text-xs text-sn-label3">{t("channel_groups_page.simulator.stale")}</span>
         ) : undefined
       }
       footer={

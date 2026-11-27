@@ -196,7 +196,7 @@ export function PlansTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-3">{t("billing_admin.plans_intro")}</p>
+        <p className="text-xs text-sn-label3">{t("billing_admin.plans_intro")}</p>
         {canWrite ? (
           <Button size="sm" variant="primary" onClick={openCreate}>
             <Plus size={14} />
@@ -229,7 +229,7 @@ export function PlansTab({
                 title={plan.name}
                 dimmed={!plan.enabled}
                 titleAdornment={
-                  <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-2 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.08]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.06] px-2 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.08]">
                     <KindBadgeIcon kind={plan.kind} />
                     {planKindLabel(plan.kind, t)}
                   </span>
@@ -248,19 +248,19 @@ export function PlansTab({
                 }
                 header={
                   plan.description ? (
-                    <p className="text-xs text-ink-3">{plan.description}</p>
+                    <p className="text-xs text-sn-label3">{plan.description}</p>
                   ) : undefined
                 }
               >
                 <div className="space-y-2.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-mono text-2xl font-bold tabular-nums text-ink">
+                    <span className="font-mono text-2xl font-bold tabular-nums text-sn-label">
                       {plan.kind === "custom_quota"
                         ? t("billing.custom_price_label")
                         : formatYuan(plan.price_cents)}
                     </span>
                     {plan.badge ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-2xs font-medium text-accent-ink">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sn-accent-soft px-2 py-0.5 text-2xs font-medium text-sn-accent-ink">
                         <Sparkles size={11} />
                         {plan.badge}
                       </span>
@@ -270,7 +270,7 @@ export function PlansTab({
                     {benefits.map((line) => (
                       <span
                         key={line}
-                        className="rounded-lg bg-ink/[0.05] px-2 py-0.5 text-2xs text-ink-2 dark:bg-white/[0.07]"
+                        className="rounded-lg bg-sn-label/[0.05] px-2 py-0.5 text-2xs text-sn-label2 dark:bg-white/[0.07]"
                       >
                         {line}
                       </span>

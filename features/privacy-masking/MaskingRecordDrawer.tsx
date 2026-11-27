@@ -116,14 +116,14 @@ export function MaskingRecordDrawer({
               {data.channel}
             </>
           )}
-          {data.model ? <span className="text-ink-3">· {data.model}</span> : null}
+          {data.model ? <span className="text-sn-label3">· {data.model}</span> : null}
         </span>
       }
       icon={<ShieldCheck size={18} aria-hidden="true" />}
       widthClassName="sm:max-w-2xl"
       footer={
         <div className="flex w-full items-center gap-2">
-          <p className="min-w-0 flex-1 text-xs text-ink-3">{t("privacy_masking.detail.no_values_kept")}</p>
+          <p className="min-w-0 flex-1 text-xs text-sn-label3">{t("privacy_masking.detail.no_values_kept")}</p>
           <Button size="sm" variant="ghost" onClick={onPrev} disabled={!onPrev} aria-label={t("privacy_masking.detail.newer")}>
             <ChevronUp size={14} aria-hidden="true" />
           </Button>
@@ -140,13 +140,13 @@ export function MaskingRecordDrawer({
               <div
                 className={[
                   "mb-2 h-1 rounded-full",
-                  step.tone === "held" ? "bg-rose-500" : step.tone === "muted" ? "bg-ink/[0.08] dark:bg-white/[0.1]" : "bg-violet-500 dark:bg-violet-400",
+                  step.tone === "held" ? "bg-rose-500" : step.tone === "muted" ? "bg-sn-label/[0.08] dark:bg-white/[0.1]" : "bg-violet-500 dark:bg-violet-400",
                 ].join(" ")}
               />
-              <p className={`text-xs font-medium ${step.tone === "held" ? "text-rose-600 dark:text-rose-300" : step.tone === "muted" ? "text-ink-3" : "text-ink"}`}>
+              <p className={`text-xs font-medium ${step.tone === "held" ? "text-rose-600 dark:text-rose-300" : step.tone === "muted" ? "text-sn-label3" : "text-sn-label"}`}>
                 {step.title}
               </p>
-              <p className="mt-0.5 truncate text-2xs text-ink-3" title={step.sub}>
+              <p className="mt-0.5 truncate text-2xs text-sn-label3" title={step.sub}>
                 {step.sub}
               </p>
             </li>
@@ -158,7 +158,7 @@ export function MaskingRecordDrawer({
             <ShieldAlert size={18} className="mt-0.5 shrink-0 text-rose-600 dark:text-rose-300" aria-hidden="true" />
             <div className="min-w-0 text-sm">
               <p className="font-medium text-rose-700 dark:text-rose-200">{t("privacy_masking.detail.held_title")}</p>
-              <p className="mt-0.5 text-xs text-ink-2">
+              <p className="mt-0.5 text-xs text-sn-label2">
                 {t("privacy_masking.detail.held_body", {
                   kinds: [...new Set(data.values.filter((v) => v.action === "block").map((v) => kindLabel(v.kind)))].join("、"),
                 })}
@@ -169,7 +169,7 @@ export function MaskingRecordDrawer({
 
         <section>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-medium text-ink">{t("privacy_masking.detail.content")}</h3>
+            <h3 className="text-sm font-medium text-sn-label">{t("privacy_masking.detail.content")}</h3>
             <SegmentedControl
               size="sm"
               ariaLabel={t("privacy_masking.detail.content")}
@@ -182,26 +182,26 @@ export function MaskingRecordDrawer({
             />
           </div>
           {loading ? (
-            <p className="rounded-xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("common.loading")}</p>
+            <p className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-xs text-sn-label3">{t("common.loading")}</p>
           ) : detail?.snippets && detail.snippets.length > 0 ? (
             <ul className="space-y-2">
               {detail.snippets.map((snippet, index) => (
-                <li key={index} className="rounded-xl bg-subtle px-3.5 py-3">
-                  <p className="mb-1.5 flex items-center gap-2 text-2xs text-ink-3">
-                    {snippet.role ? <span className="rounded bg-ink/[0.06] px-1.5 py-px font-medium text-ink-2 dark:bg-white/[0.08]">{snippet.role}</span> : null}
+                <li key={index} className="rounded-xl bg-sn-subtle px-3.5 py-3">
+                  <p className="mb-1.5 flex items-center gap-2 text-2xs text-sn-label3">
+                    {snippet.role ? <span className="rounded bg-sn-label/[0.06] px-1.5 py-px font-medium text-sn-label2 dark:bg-white/[0.08]">{snippet.role}</span> : null}
                     <span className="truncate font-mono">{snippet.field}</span>
                   </p>
-                  <p className="font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-ink-2">{ink(snippet.text)}</p>
+                  <p className="font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-sn-label2">{ink(snippet.text)}</p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="rounded-xl bg-subtle px-4 py-6 text-center text-xs text-ink-3">{t("privacy_masking.detail.snippets_gone")}</p>
+            <p className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-xs text-sn-label3">{t("privacy_masking.detail.snippets_gone")}</p>
           )}
         </section>
 
         <section>
-          <h3 className="mb-2 text-sm font-medium text-ink">
+          <h3 className="mb-2 text-sm font-medium text-sn-label">
             {t("privacy_masking.detail.values", { count: data.distinct, places: data.places })}
           </h3>
           <ul className="grid gap-2 sm:grid-cols-2">
@@ -216,29 +216,29 @@ export function MaskingRecordDrawer({
                     aria-pressed={active}
                     className={[
                       "w-full rounded-xl px-3.5 py-3 text-left transition-colors",
-                      active ? "bg-violet-500/10 dark:bg-violet-400/15" : "bg-subtle hover:bg-ink/[0.05] dark:hover:bg-white/[0.07]",
+                      active ? "bg-violet-500/10 dark:bg-violet-400/15" : "bg-sn-subtle hover:bg-sn-label/[0.05] dark:hover:bg-white/[0.07]",
                     ].join(" ")}
                   >
                     <span className="flex items-center gap-1.5 text-xs">
                       <KindDot kind={value.kind} />
-                      <span className="font-medium text-ink">{kindLabel(value.kind)}</span>
+                      <span className="font-medium text-sn-label">{kindLabel(value.kind)}</span>
                       {value.action ? (
                         <span className={`rounded px-1.5 py-px text-2xs font-medium ${ACTION_CHIP[value.action]}`}>
                           {t(`privacy_masking.action.${value.action}`)}
                         </span>
                       ) : null}
                       <span className="flex-1" />
-                      <span className="text-ink-3 tabular-nums">×{value.n}</span>
+                      <span className="text-sn-label3 tabular-nums">×{value.n}</span>
                     </span>
                     <span className="mt-2 flex min-w-0 items-center gap-1.5 font-mono text-xs">
-                      <span className="text-ink">{valueShape(value.head)}</span>
-                      <span className="text-2xs text-ink-3">{t("privacy_masking.values.length", { count: value.len })}</span>
-                      <ArrowRight size={11} aria-hidden="true" className="shrink-0 text-ink-3" />
+                      <span className="text-sn-label">{valueShape(value.head)}</span>
+                      <span className="text-2xs text-sn-label3">{t("privacy_masking.values.length", { count: value.len })}</span>
+                      <ArrowRight size={11} aria-hidden="true" className="shrink-0 text-sn-label3" />
                       <span className="truncate text-violet-700 dark:text-violet-300">
                         {value.action === "warn" ? t("privacy_masking.detail.as_written") : (value.placeholder ?? "{{…}}")}
                       </span>
                     </span>
-                    <span className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-ink-3">
+                    <span className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-sn-label3">
                       <span>{t(FINDER_KEYS[value.by])}</span>
                       {value.field ? <span className="truncate font-mono">{value.field}</span> : null}
                       <span>

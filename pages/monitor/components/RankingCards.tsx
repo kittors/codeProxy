@@ -35,7 +35,7 @@ interface RankingCardProps {
   onSelect: (dimension: MonitorFilterDimension, value: string) => void;
 }
 
-const dash = <span className="text-ink-4">—</span>;
+const dash = <span className="text-sn-label-off">—</span>;
 
 /** 窄屏按重要性收起次要列，而不是让表格横向滚出卡片：成功率、请求、耗时最后才收。 */
 const fromBreakpoint = (column: RankingColumn, minBreakpoint: RankingBreakpoint): RankingColumn => ({
@@ -59,8 +59,8 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     width,
     render: (row) => (
       <span className="flex flex-col items-end leading-tight">
-        <span className="font-medium text-ink">{formatMonitorCompact(row.requests)}</span>
-        <span className="text-2xs text-ink-3">
+        <span className="font-medium text-sn-label">{formatMonitorCompact(row.requests)}</span>
+        <span className="text-2xs text-sn-label3">
           {formatMonitorPercent(shareOf(row, overview), 1)}
         </span>
       </span>
@@ -90,7 +90,7 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     width,
     render: (row) =>
       row.latency_avg_ms > 0 ? (
-        <span className="text-ink-2">{formatMonitorDuration(row.latency_avg_ms)}</span>
+        <span className="text-sn-label2">{formatMonitorDuration(row.latency_avg_ms)}</span>
       ) : (
         dash
       ),
@@ -100,7 +100,7 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     header: t("monitor_center.ranking.tokens"),
     align: "right",
     width,
-    render: (row) => <span className="text-ink-2">{formatMonitorCompact(row.total_tokens)}</span>,
+    render: (row) => <span className="text-sn-label2">{formatMonitorCompact(row.total_tokens)}</span>,
   };
   const cost: RankingColumn = {
     key: "cost",
@@ -108,7 +108,7 @@ function useCommonColumns(overview: MonitorOverview, legacy: boolean, compact = 
     align: "right",
     width,
     render: (row) =>
-      legacy ? dash : <span className="text-ink-2">{formatMonitorCost(row.cost)}</span>,
+      legacy ? dash : <span className="text-sn-label2">{formatMonitorCost(row.cost)}</span>,
   };
   return { requests, success, latency, tokens, cost };
 }
@@ -186,7 +186,7 @@ export function ModelLeaderboardCard({
                 <span className="grid size-5 shrink-0 place-items-center" aria-hidden="true">
                   <VendorIcon modelId={row.label} size={16} />
                 </span>
-                <span className="truncate font-medium text-ink">{row.label}</span>
+                <span className="truncate font-medium text-sn-label">{row.label}</span>
               </span>
               <ShareBar share={shareOf(row, overview)} color={requestsColor} />
             </span>
@@ -274,7 +274,7 @@ export function ChannelHealthCard({
                 {/* 空闲点与 LevelDot 一样：多彩风格加一圈淡光晕，简约风格只有实心点。 */}
                 {idle ? (
                   <span
-                    className="size-2 shrink-0 rounded-full bg-ink-4 colorful:ring-4 colorful:ring-ink-4/15"
+                    className="size-2 shrink-0 rounded-full bg-sn-label-off colorful:ring-4 colorful:ring-sn-label-off/15"
                     role="img"
                     aria-label={t("monitor_center.channels.status_idle")}
                     title={t("monitor_center.channels.status_idle")}
@@ -288,7 +288,7 @@ export function ChannelHealthCard({
                   authType={row.auth_type}
                   apiLabel={t("request_logs.auth_type_api")}
                   oauthLabel={t("request_logs.auth_type_oauth")}
-                  nameClassName="text-sm font-medium text-ink"
+                  nameClassName="text-sm font-medium text-sn-label"
                 />
               </span>
             );
@@ -360,12 +360,12 @@ export function ConsumerLeaderboardCard({
             return (
               <span className="block min-w-0">
                 <span className="flex min-w-0 items-center gap-2">
-                  <Icon size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
-                  <span className="truncate font-medium text-ink">
+                  <Icon size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+                  <span className="truncate font-medium text-sn-label">
                     {row.label || t("monitor_center.unnamed_consumer")}
                   </span>
                   {row.key_hint ? (
-                    <span className="shrink-0 font-mono text-2xs text-ink-3">{row.key_hint}</span>
+                    <span className="shrink-0 font-mono text-2xs text-sn-label3">{row.key_hint}</span>
                   ) : null}
                 </span>
                 <ShareBar share={shareOf(row, overview)} color={shareColor} />

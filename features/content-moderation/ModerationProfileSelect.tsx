@@ -38,7 +38,7 @@ function SelectShell({
   const { t } = useTranslation();
   return (
     <div className={["space-y-2", className].filter(Boolean).join(" ")}>
-      <p className="text-sm font-medium text-ink">{label}</p>
+      <p className="text-sm font-medium text-sn-label">{label}</p>
       <Select
         value=""
         onChange={() => undefined}
@@ -47,7 +47,7 @@ function SelectShell({
         placeholder={t("content_moderation.profile_select_placeholder")}
         disabled
       />
-      <p className="text-xs leading-5 text-ink-3">{hint}</p>
+      <p className="text-xs leading-5 text-sn-label3">{hint}</p>
     </div>
   );
 }
@@ -182,7 +182,7 @@ function BoundModerationProfileSelect({
 
   return (
     <div className={["space-y-2", className].filter(Boolean).join(" ")}>
-      <p className="text-sm font-medium text-ink">{resolvedLabel}</p>
+      <p className="text-sm font-medium text-sn-label">{resolvedLabel}</p>
       <Select
         value={profileId}
         onChange={handleChange}
@@ -191,7 +191,7 @@ function BoundModerationProfileSelect({
         placeholder={t("content_moderation.profile_select_placeholder")}
         disabled={!canWrite || loading || saving}
       />
-      <p className="text-xs leading-5 text-ink-3">
+      <p className="text-xs leading-5 text-sn-label3">
         {hint ?? t("content_moderation.profile_select_hint")}
       </p>
 
@@ -206,10 +206,10 @@ function BoundModerationProfileSelect({
         subject={
           pendingProfileId !== null ? (
             <span className="flex min-w-0 items-center gap-2.5">
-              <span className="min-w-0 truncate text-ink-3">
+              <span className="min-w-0 truncate text-sn-label3">
                 {profileId ? profileName(profileId) : t("content_moderation.rebind_existing_unknown")}
               </span>
-              <ArrowRight size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <ArrowRight size={14} className="shrink-0 text-sn-label3" aria-hidden="true" />
               <span className="min-w-0 truncate font-medium">{profileName(pendingProfileId)}</span>
             </span>
           ) : null

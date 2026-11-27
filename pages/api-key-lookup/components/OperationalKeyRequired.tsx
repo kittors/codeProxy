@@ -5,7 +5,7 @@ export function OperationalKeyRequired({
   t: (key: string, options?: Record<string, unknown>) => string;
 }) {
   return (
-    <div className="bg-subtle rounded-xl px-6 py-12 text-center text-sm text-ink-3">
+    <div className="bg-sn-subtle rounded-xl px-6 py-12 text-center text-sm text-sn-label3">
       {t("apikey_lookup.operational_key_required", {
         defaultValue: "请先创建一把可用 Key；模型列表和快速导入需要凭证，用量与日志仍按账号聚合。",
       })}

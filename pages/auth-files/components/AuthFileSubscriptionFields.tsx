@@ -28,18 +28,18 @@ export function AuthFileSubscriptionFields({
   if (live) {
     return (
       <div className="grid gap-2">
-        <p className="text-xs font-semibold text-ink-2">
+        <p className="text-xs font-semibold text-sn-label2">
           {t("auth_files.subscription_live_label")}
         </p>
-        <p className="text-sm text-ink">{describeAuthFileSubscription(live, t)}</p>
-        <p className="text-xs text-ink-3">{t("auth_files.subscription_live_hint")}</p>
+        <p className="text-sm text-sn-label">{describeAuthFileSubscription(live, t)}</p>
+        <p className="text-xs text-sn-label3">{t("auth_files.subscription_live_hint")}</p>
       </div>
     );
   }
 
   return (
     <div className="grid gap-2">
-      <p className="text-xs font-semibold text-ink-2">
+      <p className="text-xs font-semibold text-sn-label2">
         {t("auth_files.subscription_started_at_label")}
       </p>
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
@@ -85,7 +85,7 @@ export function AuthFileSubscriptionFields({
           aria-label={t("auth_files.subscription_period_label")}
         />
       </div>
-      <p className="text-xs text-ink-3">{t("auth_files.subscription_started_at_hint")}</p>
+      <p className="text-xs text-sn-label3">{t("auth_files.subscription_started_at_hint")}</p>
     </div>
   );
 }

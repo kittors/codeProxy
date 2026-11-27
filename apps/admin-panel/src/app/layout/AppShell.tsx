@@ -147,7 +147,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
     <PageBackground variant="app">
       <a
         href="#main-content"
-        className="sr-only z-[200] rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-fg shadow-pop focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
+        className="sr-only z-[200] rounded-lg bg-sn-accent px-4 py-2 text-sm font-medium text-sn-on-primary shadow-sn-e1 focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
       >
         {t("shell.skip_to_content")}
       </a>
@@ -171,7 +171,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
         nav={nav}
         onToggleSidebar={toggleDesktop}
       />
-      <div className="sn-app sn-workbench flex h-[100dvh] overflow-hidden bg-rail">
+      <div className="sn-app sn-workbench flex h-[100dvh] overflow-hidden bg-sn-shell">
         {isMobile ? null : (
           <Sidebar
             sections={sections}
@@ -195,7 +195,7 @@ export function AppShell({ children, onLogout }: PropsWithChildren<{ onLogout?: 
           <div
             className={
               isMobile
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-canvas"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-sn-workspace"
                 : "cp-work-board flex min-h-0 flex-1 flex-col overflow-hidden"
             }
           >

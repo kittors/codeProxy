@@ -19,7 +19,7 @@ export function ProxySharingCell({
   const { t } = useTranslation();
   const overriddenBy = entry.overriddenBy ?? [];
   if (!entry.sharing && overriddenBy.length === 0) {
-    return <span className="text-xs text-ink-3">{t("resource_sharing.not_shared")}</span>;
+    return <span className="text-xs text-sn-label3">{t("resource_sharing.not_shared")}</span>;
   }
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1">

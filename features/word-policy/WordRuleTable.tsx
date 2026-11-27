@@ -38,8 +38,8 @@ function KindBadge({ kind }: { kind: WordRuleKind }) {
       className={[
         "rounded-full px-2.5 py-1 text-xs font-medium",
         kind === "regex"
-          ? "bg-accent-soft text-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300"
-          : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+          ? "bg-sn-accent-soft text-sn-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300"
+          : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
       ].join(" ")}
     >
       {t(`content_moderation.words.kind_${kind}`)}
@@ -64,7 +64,7 @@ function RuleTag({
         "rounded-full px-2 py-0.5 text-2xs font-medium",
         warning
           ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-          : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+          : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
       ].join(" ")}
     >
       {children}
@@ -119,9 +119,9 @@ export function WordRuleTable({
                 {rule.kind === "regex" ? <KindBadge kind={rule.kind} /> : null}
                 <span
                   className={[
-                    "truncate text-ink",
+                    "truncate text-sn-label",
                     rule.kind === "regex" ? "font-mono text-xs" : "text-sm",
-                    rule.enabled ? "" : "text-ink-3 line-through",
+                    rule.enabled ? "" : "text-sn-label3 line-through",
                   ].join(" ")}
                   title={rule.pattern}
                 >
@@ -155,7 +155,7 @@ export function WordRuleTable({
         id: "note",
         header: t("content_moderation.words.col_note"),
         width: GRID_WIDTH.name,
-        className: "text-xs text-ink-2",
+        className: "text-xs text-sn-label2",
         cell: (rule) => rule.note ?? "",
       },
       {
@@ -212,7 +212,7 @@ export function WordRuleTable({
         <div className="w-full min-w-48 sm:w-72">
           <TextInput
             value={query}
-            startAdornment={<Search size={15} className="text-ink-3" aria-hidden="true" />}
+            startAdornment={<Search size={15} className="text-sn-label3" aria-hidden="true" />}
             placeholder={t("content_moderation.words.search_placeholder")}
             aria-label={t("content_moderation.words.search_placeholder")}
             onChange={(event) => {
@@ -236,7 +236,7 @@ export function WordRuleTable({
             }}
           />
         </div>
-        <p className="min-w-0 text-xs text-ink-3 sm:ml-auto" aria-live="polite">
+        <p className="min-w-0 text-xs text-sn-label3 sm:ml-auto" aria-live="polite">
           {t("content_moderation.words.rule_counts", {
             count: rules.length,
             max: limits.max_rules,

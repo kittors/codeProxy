@@ -28,7 +28,7 @@ function UserCode({ code }: { code: string }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div
-        className="flex items-center gap-1 rounded-xl bg-subtle px-4 py-3"
+        className="flex items-center gap-1 rounded-xl bg-sn-subtle px-4 py-3"
         aria-label={t("add_account.device.code_label")}
         role="group"
       >
@@ -39,8 +39,8 @@ function UserCode({ code }: { code: string }) {
             style={reduceMotion ? undefined : { animationDelay: `${index * 35}ms` }}
             className={[
               reduceMotion ? "" : "sn-fade-up",
-              "font-mono text-2xl font-semibold tracking-wider text-ink tabular-nums",
-              character === "-" ? "px-0.5 text-ink-3" : "",
+              "font-mono text-2xl font-semibold tracking-wider text-sn-label tabular-nums",
+              character === "-" ? "px-0.5 text-sn-label3" : "",
             ]
               .filter(Boolean)
               .join(" ")}

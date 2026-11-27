@@ -39,10 +39,10 @@ function CopyValue({ value, label }: { value: string; label: string }) {
         void copyTextToClipboard(value).then((ok) => setCopied(ok));
       }}
       aria-label={copied ? t("request_logs.copied_value", { label }) : t("request_logs.copy_value", { label })}
-      className="group/copy inline-flex min-w-0 items-center gap-1.5 rounded-md text-left font-mono text-xs text-ink transition-colors hover:text-ink-2"
+      className="group/copy inline-flex min-w-0 items-center gap-1.5 rounded-md text-left font-mono text-xs text-sn-label transition-colors hover:text-sn-label2"
     >
       <span className="min-w-0 break-all">{value}</span>
-      <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-ink-3">
+      <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-sn-label3">
         <span className={copied ? "sn-swap sn-on" : "sn-swap"}>
           <span className="sn-a">
             <Copy size={12} aria-hidden="true" />
@@ -60,8 +60,8 @@ function CopyValue({ value, label }: { value: string; label: string }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid min-w-0 grid-cols-[6.5rem_minmax(0,1fr)] items-baseline gap-3 py-1">
-      <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-xs text-ink">{children}</dd>
+      <dt className="text-xs text-sn-label3">{label}</dt>
+      <dd className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-xs text-sn-label">{children}</dd>
     </div>
   );
 }
@@ -69,13 +69,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="min-w-0">
-      <h4 className="mb-1.5 text-2xs font-semibold tracking-wide text-ink-3">{title}</h4>
+      <h4 className="mb-1.5 text-2xs font-semibold tracking-wide text-sn-label3">{title}</h4>
       <dl className="flex flex-col">{children}</dl>
     </section>
   );
 }
 
-const muted = (text: string) => <span className="text-ink-3">{text}</span>;
+const muted = (text: string) => <span className="text-sn-label3">{text}</span>;
 
 export function RequestLogDetailPanel({
   row,
@@ -175,7 +175,7 @@ export function RequestLogDetailPanel({
           {row.upstreamModel && row.upstreamModel !== row.model ? (
             <Field label={t("request_logs.real_model_id")}>
               <span className="flex min-w-0 items-center gap-1.5">
-                <ArrowRight size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
+                <ArrowRight size={12} className="shrink-0 text-sn-label3" aria-hidden="true" />
                 <span className="break-all">{row.upstreamModel}</span>
               </span>
             </Field>

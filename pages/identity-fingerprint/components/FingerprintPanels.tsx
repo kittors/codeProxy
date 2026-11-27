@@ -25,16 +25,16 @@ export function RecordHeader({
   const productLine = [product, variant, version].filter(Boolean).join(" / ");
   return (
     <div className="min-w-0">
-      <div className="break-all text-xs font-semibold text-ink">
+      <div className="break-all text-xs font-semibold text-sn-label">
         {accountKey || t("identity_fingerprint.default_account")}
       </div>
       {authSubjectId ? (
-        <div className="mt-1 break-all text-xs text-ink-3">
+        <div className="mt-1 break-all text-xs text-sn-label3">
           {authSubjectId}
         </div>
       ) : null}
       {productLine ? (
-        <div className="mt-1 break-all text-xs text-ink-3">
+        <div className="mt-1 break-all text-xs text-sn-label3">
           {productLine}
         </div>
       ) : null}
@@ -45,15 +45,15 @@ export function RecordHeader({
 export function KeyValueList({ title, entries }: { title: string; entries: Array<[string, string]> }) {
   if (entries.length === 0) return null;
   return (
-    <details className="mt-3 rounded-lg bg-subtle px-3 py-2 text-xs">
-      <summary className="cursor-pointer font-semibold text-ink-2">
+    <details className="mt-3 rounded-lg bg-sn-subtle px-3 py-2 text-xs">
+      <summary className="cursor-pointer font-semibold text-sn-label2">
         {title}
       </summary>
       <div className="mt-2 space-y-2">
         {entries.map(([key, value]) => (
           <div key={key}>
-            <div className="font-semibold text-ink-3">{key}</div>
-            <div className="break-all text-ink">{value || "-"}</div>
+            <div className="font-semibold text-sn-label3">{key}</div>
+            <div className="break-all text-sn-label">{value || "-"}</div>
           </div>
         ))}
       </div>
@@ -93,7 +93,7 @@ export function SourcePill({
 }) {
   return (
     <span
-      className={`rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07] ${SOURCE_PILL_HUE[tone]}`}
+      className={`rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-semibold text-sn-label2 dark:bg-white/[0.07] ${SOURCE_PILL_HUE[tone]}`}
     >
       {children}
     </span>
@@ -147,9 +147,9 @@ export function SimplePanel({
     // 页面上的一张卡片：外观来自 surface()（伪元素细边 + 投影），不再手写描边。
     <section className={`${surface()} p-4`}>
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
         {description ? (
-          <p className="mt-1 text-xs leading-5 text-ink-3">{description}</p>
+          <p className="mt-1 text-xs leading-5 text-sn-label3">{description}</p>
         ) : null}
       </div>
       <div className="space-y-3">{children}</div>
@@ -160,10 +160,10 @@ export function SimplePanel({
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block space-y-2">
-      <span className="text-xs font-semibold text-ink-2">{label}</span>
+      <span className="text-xs font-semibold text-sn-label2">{label}</span>
       {children}
       {hint ? (
-        <span className="block text-xs text-ink-3">{hint}</span>
+        <span className="block text-xs text-sn-label3">{hint}</span>
       ) : null}
     </label>
   );
@@ -171,9 +171,9 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 
 export function PreviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-subtle px-3 py-2">
-      <div className="text-xs text-ink-3">{label}</div>
-      <div className="mt-1 break-all text-sm font-medium text-ink">
+    <div className="rounded-xl bg-sn-subtle px-3 py-2">
+      <div className="text-xs text-sn-label3">{label}</div>
+      <div className="mt-1 break-all text-sm font-medium text-sn-label">
         {value || "-"}
       </div>
     </div>

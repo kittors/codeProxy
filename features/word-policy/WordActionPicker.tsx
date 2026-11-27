@@ -114,7 +114,7 @@ export function WordActionPicker({
             />
           </FormField>
           {/* 替换做不到的情形要说在前面：那时请求会被拦下，而不是带着敏感词放行。 */}
-          <p className="text-xs leading-5 text-ink-3">{t("content_moderation.words.setting_action_replace_note")}</p>
+          <p className="text-xs leading-5 text-sn-label3">{t("content_moderation.words.setting_action_replace_note")}</p>
         </>
       ) : null}
     </div>

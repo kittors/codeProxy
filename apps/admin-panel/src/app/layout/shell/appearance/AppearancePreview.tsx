@@ -26,7 +26,7 @@ export function AppearancePreview() {
       role="group"
       aria-label={t("appearance.preview_title")}
       data-testid="appearance-preview"
-      className="space-y-4 rounded-xl bg-subtle p-4"
+      className="space-y-4 rounded-xl bg-sn-subtle p-4"
     >
       <div className="flex flex-wrap gap-1.5">
         {PREVIEW_ICONS.map((iconName) => (

@@ -98,7 +98,8 @@ export function DataGridPagination({
       aria-label={t("data_grid.pagination")}
       className={["@container min-w-0", className ?? ""].join(" ")}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3">
+      {/* 对齐 Satin 官方工作台 .sn-tbl-foot 简洁两栏结构：左栏汇总与每页条数，右栏流体圆滑块页码。 */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex min-w-0 items-center gap-3 text-xs text-[var(--sn-label3)]">
           <span className="truncate whitespace-nowrap tabular-nums" aria-live="polite">
             {pending
@@ -111,45 +112,10 @@ export function DataGridPagination({
                     total: formatInteger(total, locale),
                   })}
           </span>
-          {info}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
-            onClick={() => go(1)}
-            disabled={current <= 1}
-            aria-label={t("data_grid.first_page")}
-          >
-            <DoubleChevron direction="left" />
-          </button>
-          <SatinPager
-            total={pageCount}
-            page={current}
-            prevLabel={t("data_grid.prev_page")}
-            nextLabel={t("data_grid.next_page")}
-            pageLabel={pageLabel}
-            onChange={(nextPage) => go(nextPage)}
-          />
-          <button
-            type="button"
-            className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
-            onClick={() => go(pageCount)}
-            disabled={current >= pageCount}
-            aria-label={t("data_grid.last_page")}
-          >
-            <DoubleChevron direction="right" />
-          </button>
-        </div>
-
-        <div className="flex min-w-0 items-center justify-end gap-3 text-xs text-[var(--sn-label3)]">
           {onPageSizeChange ? (
             <label className="flex items-center gap-1.5">
-              <span className="hidden whitespace-nowrap @2xl:inline">
-                {t("data_grid.rows_per_page")}
-              </span>
-              <span className="sn-tbl-ps inline-flex w-20">
+              <span className="sr-only">{t("data_grid.rows_per_page")}</span>
+              <span className="sn-tbl-ps inline-flex w-[4.5rem]">
                 <SatinSelect
                   size="sm"
                   up
@@ -161,8 +127,42 @@ export function DataGridPagination({
               </span>
             </label>
           ) : null}
+          {info}
+        </div>
+
+        <div className="ml-auto flex items-center gap-1.5">
           {pageCount > 7 ? (
-            <label className="hidden items-center gap-1.5 @4xl:flex">
+            <button
+              type="button"
+              className={`${ARROW_BUTTON} hidden @3xl:inline-flex`}
+              onClick={() => go(1)}
+              disabled={current <= 1}
+              aria-label={t("data_grid.first_page")}
+            >
+              <DoubleChevron direction="left" />
+            </button>
+          ) : null}
+          <SatinPager
+            total={pageCount}
+            page={current}
+            prevLabel={t("data_grid.prev_page")}
+            nextLabel={t("data_grid.next_page")}
+            pageLabel={pageLabel}
+            onChange={(nextPage) => go(nextPage)}
+          />
+          {pageCount > 7 ? (
+            <button
+              type="button"
+              className={`${ARROW_BUTTON} hidden @3xl:inline-flex`}
+              onClick={() => go(pageCount)}
+              disabled={current >= pageCount}
+              aria-label={t("data_grid.last_page")}
+            >
+              <DoubleChevron direction="right" />
+            </button>
+          ) : null}
+          {pageCount > 7 ? (
+            <label className="ml-1 hidden items-center gap-1.5 text-xs text-[var(--sn-label3)] @4xl:flex">
               <span className="whitespace-nowrap">{t("data_grid.go_to_page")}</span>
               <input
                 value={jump}
@@ -180,7 +180,7 @@ export function DataGridPagination({
                 }}
                 placeholder={String(current)}
                 aria-label={t("data_grid.go_to_page")}
-                className="sn-input sn-sm !w-12 !px-2 text-center tabular-nums"
+                className="sn-input sn-sm !h-[30px] !w-12 !px-2 text-center tabular-nums"
               />
             </label>
           ) : null}

@@ -22,7 +22,7 @@ const INTERACTIVE_TONE_CLASS: Record<SharingBadgeTone, string> = {
 };
 
 const BADGE_CLASS =
-  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold outline-none focus-visible:shadow-control-focus [&_svg]:shrink-0";
+  "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold outline-none focus-visible:border-sn-focus focus-visible:shadow-[0_0_0_3px_var(--sn-ring)] [&_svg]:shrink-0";
 
 /** 多行提示：一句说明 + 逐行列出租户。 */
 export const tenantListTooltip = (lead: string, names: readonly string[]): string =>

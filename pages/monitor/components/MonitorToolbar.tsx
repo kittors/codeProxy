@@ -63,13 +63,13 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-              <Activity size={18} aria-hidden="true" className={`text-ink-3 ${iconHueClass(Activity)}`} />
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-sn-label">
+              <Activity size={18} aria-hidden="true" className={`text-sn-label3 ${iconHueClass(Activity)}`} />
               {t("monitor_center.title")}
             </h2>
             <LiveStatus {...props} t={t} />
           </div>
-          <p className="mt-1 text-xs text-ink-3">{rangeCaption(overview, legacy, t)}</p>
+          <p className="mt-1 text-xs text-sn-label3">{rangeCaption(overview, legacy, t)}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-32">
@@ -85,7 +85,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
                 label: t(`monitor_center.auto_refresh_${seconds}`),
                 triggerLabel: (
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <Timer size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Timer)}`} aria-hidden="true" />
+                    <Timer size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Timer)}`} aria-hidden="true" />
                     <span className="truncate">
                       {t(`monitor_center.auto_refresh_short_${seconds}`)}
                     </span>
@@ -224,7 +224,7 @@ function optionLabel(dimension: MonitorFilterDimension, option: MonitorFilterOpt
     const Icon = option.kind === "end_user" ? UserRound : KeyRound;
     return (
       <span className="flex min-w-0 items-center gap-1.5">
-        <Icon size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+        <Icon size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
         <span className="truncate">{option.label || t("monitor_center.unnamed_consumer")}</span>
       </span>
     );
@@ -265,7 +265,7 @@ function FilterSelect({
       title: option.label || option.value,
       searchText: `${option.label} ${option.value}`,
       trailing: (
-        <span className="text-2xs tabular-nums text-ink-3">
+        <span className="text-2xs tabular-nums text-sn-label3">
           {formatMonitorCompact(option.requests)}
         </span>
       ),
@@ -322,7 +322,7 @@ function ActiveFilterChips({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-xs text-ink-3">{t("monitor_center.filter.active")}</span>
+      <span className="mr-1 text-xs text-sn-label3">{t("monitor_center.filter.active")}</span>
       {DIMENSIONS.flatMap((dimension) =>
         query[dimension].map((value) => (
           <span

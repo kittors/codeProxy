@@ -552,7 +552,7 @@ export function Modal({
         onClose();
       }}
       className={[
-        `sn-dlg cp-modal-panel ${widthCls} [--cp-backdrop:var(--sn-overlay)]`,
+        `sn-dlg cp-modal-panel ${widthCls} [--sn-backdrop:var(--sn-overlay)]`,
         panelClassName,
       ]
         .filter(Boolean)
@@ -581,7 +581,7 @@ export function Modal({
               <div className={["min-w-0", snapshot.icon ? "pt-px" : "pt-0.5"].join(" ")}>
                 <h2
                   className={[
-                    "flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink",
+                    "flex min-w-0 items-center gap-2 font-semibold tracking-tight text-sn-label",
                     snapshot.icon ? "text-base" : "text-lg",
                   ].join(" ")}
                 >
@@ -595,7 +595,7 @@ export function Modal({
                   ) : null}
                 </h2>
                 {snapshot.description ? (
-                  <div id={descriptionId} className="mt-0.5 text-sm leading-relaxed text-ink-2">
+                  <div id={descriptionId} className="mt-0.5 text-sm leading-relaxed text-sn-label2">
                     {snapshot.description}
                   </div>
                 ) : null}
@@ -641,7 +641,7 @@ export function Modal({
             ].join(" ")}
           >
             {snapshot.footerStart ? (
-              <div className="min-w-0 flex-1 text-xs text-ink-3">{snapshot.footerStart}</div>
+              <div className="min-w-0 flex-1 text-xs text-sn-label3">{snapshot.footerStart}</div>
             ) : null}
             {/* 手机上按钮平分一整行，拇指好按；桌面恢复按内容宽度靠右。没有左侧辅助信息时
                 占满整行，调用方自己写的「左删除、右保存」两端布局也能撑开。 */}

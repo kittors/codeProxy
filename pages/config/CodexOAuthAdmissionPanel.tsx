@@ -89,7 +89,7 @@ export function CodexOAuthAdmissionPanel() {
           <span className="inline-flex rounded-full bg-sky-500/10 px-2.5 py-1 text-2xs font-medium text-sky-700 dark:text-sky-300">
             {t("config_page.tenant_override_badge")}
           </span>
-          <span className="text-xs text-ink-3">{t("config_page.codex_oauth_admission_source_desc")}</span>
+          <span className="text-xs text-sn-label3">{t("config_page.codex_oauth_admission_source_desc")}</span>
         </div>
         {loading ? (
           <div className="grid gap-2 md:grid-cols-2">
@@ -105,7 +105,7 @@ export function CodexOAuthAdmissionPanel() {
                   key={preset.id}
                   className={[
                     "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-xl px-3.5 py-3 transition-colors",
-                    checked ? "bg-accent-soft" : "bg-subtle hover:bg-hover",
+                    checked ? "bg-sn-accent-soft" : "bg-sn-subtle hover:bg-sn-hover",
                   ].join(" ")}
                 >
                   <Checkbox
@@ -117,9 +117,9 @@ export function CodexOAuthAdmissionPanel() {
                     className="mt-0.5"
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-ink">{preset.label}</span>
+                    <span className="block text-sm font-medium text-sn-label">{preset.label}</span>
                     {preset.description ? (
-                      <span className="mt-0.5 block text-xs leading-5 text-ink-3">
+                      <span className="mt-0.5 block text-xs leading-5 text-sn-label3">
                         {preset.description}
                       </span>
                     ) : null}
@@ -129,11 +129,11 @@ export function CodexOAuthAdmissionPanel() {
             })}
           </div>
         ) : (
-          <p className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
+          <p className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-sm text-sn-label3">
             {t("config_page.codex_oauth_admission_empty")}
           </p>
         )}
-        <p className="text-xs leading-5 text-ink-3">
+        <p className="text-xs leading-5 text-sn-label3">
           {t("config_page.codex_oauth_admission_trace_hint")}
         </p>
       </div>
@@ -153,7 +153,7 @@ export function CodexOAuthAdmissionPanel() {
             <span className="block">
               <span className="block font-medium">{pending.preset.label}</span>
               {pending.preset.description ? (
-                <span className="mt-0.5 block text-xs text-ink-3">{pending.preset.description}</span>
+                <span className="mt-0.5 block text-xs text-sn-label3">{pending.preset.description}</span>
               ) : null}
             </span>
           ) : null

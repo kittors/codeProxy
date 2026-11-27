@@ -13,7 +13,7 @@ export function TestResultLine({
   const { t } = useTranslation();
   if (pending) {
     return (
-      <span role="status" className="inline-flex items-center gap-1 text-xs text-ink-3">
+      <span role="status" className="inline-flex items-center gap-1 text-xs text-sn-label3">
         <Loader2
           size={12}
           className="motion-reduce:animate-none motion-safe:animate-spin"

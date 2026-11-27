@@ -13,9 +13,9 @@ const prefersReducedMotion = (): boolean =>
  * children in corners opt in with `rounded-inner` so nested blocks stay concentric with 12px cards.
  */
 const PADDING = {
-  default: "p-5 [--cp-inner-radius:var(--radius-lg)]",
-  compact: "p-3.5 [--cp-inner-radius:var(--radius-md)]",
-  none: "p-0 [--cp-inner-radius:var(--radius-xl)]",
+  default: "p-5 [--sn-inner-radius:var(--sn-r-md)]",
+  compact: "p-3.5 [--sn-inner-radius:var(--sn-r-sm)]",
+  none: "p-0 [--sn-inner-radius:var(--sn-r-lg)]",
 } as const;
 
 export function Card({
@@ -65,10 +65,16 @@ export function Card({
       aria-busy={loading}
     >
       {hasHeader ? (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-0.5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-1">
             {title ? (
-              <h3 className="text-base font-semibold tracking-tight text-[var(--sn-label)]">
+              <h3
+                className={
+                  flat
+                    ? "text-xl leading-7 font-semibold tracking-tight text-[var(--sn-label)]"
+                    : "text-base leading-6 font-semibold tracking-tight text-[var(--sn-label)]"
+                }
+              >
                 {title}
               </h3>
             ) : null}

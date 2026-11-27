@@ -203,8 +203,8 @@ export const downloadBlob = (blob: Blob, filename: string) => {
  * info 与 2xx / 3xx 的基础形态（简约风格）是中性标签，多彩风格下叠回 info 天蓝标签加天蓝行底、
  * 2xx 绿、3xx 天蓝。debug / trace 一直是中性的。
  */
-export const LOG_NEUTRAL_BADGE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
-export const LOG_MUTED_BADGE = "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]";
+export const LOG_NEUTRAL_BADGE = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
+export const LOG_MUTED_BADGE = "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]";
 const WARN_BADGE = "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300";
 const ERROR_BADGE = "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300";
 const INFO_BADGE = `${LOG_NEUTRAL_BADGE} colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/10 colorful:dark:text-sky-200`;

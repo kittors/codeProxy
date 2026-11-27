@@ -312,7 +312,7 @@ export function ProviderKeyListCard({
                     {headerEntries.map(([k, v]) => (
                       <span
                         key={k}
-                        className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-2 dark:bg-white/[0.07]"
+                        className="inline-flex h-5 max-w-full min-w-0 items-center gap-1 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs font-semibold leading-none text-sn-label2 dark:bg-white/[0.07]"
                         title={`${k}: ${String(v)}`}
                       >
                         <span className="shrink-0 font-semibold">{k}:</span>
@@ -332,7 +332,7 @@ export function ProviderKeyListCard({
                       <span
                         key={model}
                         // 排除用删除线表达：简约风格下是中性标签，多彩风格下叠回红色淡底（与「排除」计数同色）。
-                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none text-ink-3 line-through decoration-ink-4 dark:bg-white/[0.07] colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
+                        className="inline-flex h-5 max-w-full min-w-0 items-center rounded-md bg-sn-label/[0.05] px-1.5 text-2xs font-semibold leading-none text-sn-label3 line-through decoration-sn-label-off dark:bg-white/[0.07] colorful:bg-rose-50 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
                         title={model}
                       >
                         <span className="min-w-0 truncate">{model}</span>

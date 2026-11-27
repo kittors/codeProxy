@@ -27,7 +27,7 @@ export function authFilesEmptyState(
         {labels.map((label) => (
           <li
             key={label}
-            className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+            className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]"
           >
             {label}
           </li>

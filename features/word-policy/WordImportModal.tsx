@@ -50,11 +50,11 @@ const readTextFile = (file: File): Promise<string> =>
 function Stat({ label, value, tone }: { label: string; value: number; tone?: "danger" }) {
   return (
     <div className={`${surface({ tone: "inset", radius: "xl" })} px-3 py-2.5`}>
-      <dt className="text-xs text-ink-3">{label}</dt>
+      <dt className="text-xs text-sn-label3">{label}</dt>
       <dd
         className={[
           "mt-0.5 text-lg font-semibold tabular-nums",
-          tone === "danger" && value > 0 ? "text-rose-600 dark:text-rose-400" : "text-ink",
+          tone === "danger" && value > 0 ? "text-rose-600 dark:text-rose-400" : "text-sn-label",
         ].join(" ")}
       >
         {value}
@@ -86,13 +86,13 @@ export function WordImportModal({
         header: t("content_moderation.words.import_col_line"),
         align: "end",
         width: 72,
-        cell: (item) => <span className="tabular-nums text-xs text-ink-3">{item.line}</span>,
+        cell: (item) => <span className="tabular-nums text-xs text-sn-label3">{item.line}</span>,
       },
       {
         id: "text",
         header: t("content_moderation.words.col_pattern"),
         width: 192,
-        cell: (item) => <span className="truncate font-mono text-xs text-ink-2">{item.text}</span>,
+        cell: (item) => <span className="truncate font-mono text-xs text-sn-label2">{item.text}</span>,
       },
       {
         id: "message",
@@ -348,15 +348,15 @@ export function WordImportModal({
 
             {review.invalid.length > 0 ? (
               <div className="space-y-1.5">
-                <p className="text-sm font-medium text-ink">
+                <p className="text-sm font-medium text-sn-label">
                   {t("content_moderation.words.import_invalid_title", {
                     count: review.invalid.length,
                   })}
                 </p>
                 {/* 弹窗里的小表：嵌在浅底框里、不再套外框，最高 13rem 后表内滚动（表头吸顶）。
-                    浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
+                    浅底框不设 --sn-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
                 <div
-                  className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
+                  className={`overflow-hidden [--sn-backdrop:var(--sn-fill-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
                 >
                   <DataGrid<ImportProblem>
                     frame={false}
@@ -371,7 +371,7 @@ export function WordImportModal({
                   />
                 </div>
                 {review.invalid.length > PROBLEM_PREVIEW_LIMIT ? (
-                  <p className="text-xs text-ink-3">
+                  <p className="text-xs text-sn-label3">
                     {t("content_moderation.words.import_more_problems", {
                       count: review.invalid.length - PROBLEM_PREVIEW_LIMIT,
                     })}

@@ -42,7 +42,7 @@ function DeliveryItem({ delivery }: { delivery: AlertEventDelivery }) {
         </span>
       </span>
       {reason ? (
-        <span className="mt-0.5 block break-words text-2xs leading-4 text-ink-3" title={reason}>
+        <span className="mt-0.5 block break-words text-2xs leading-4 text-sn-label3" title={reason}>
           {reason}
         </span>
       ) : null}
@@ -80,7 +80,7 @@ export function EventsPanel({
         cell: (event) => {
           const time = formatEventTime(event.at, locale);
           return (
-            <time dateTime={event.at} title={time.full} className="whitespace-nowrap tabular-nums text-ink-2">
+            <time dateTime={event.at} title={time.full} className="whitespace-nowrap tabular-nums text-sn-label2">
               {time.short}
             </time>
           );
@@ -91,7 +91,7 @@ export function EventsPanel({
         header: header("rule"),
         width: 144,
         cell: (event) => (
-          <span className="truncate whitespace-nowrap text-ink">
+          <span className="truncate whitespace-nowrap text-sn-label">
             {t(`alerts_page.events.rule.${event.rule}`, { defaultValue: event.rule })}
           </span>
         ),
@@ -115,8 +115,8 @@ export function EventsPanel({
         overflowTooltip: (event) => event.subject.name || event.subject.id,
         cell: (event) => (
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-ink">{event.subject.name || event.subject.id}</span>
-            <span className="text-2xs text-ink-3">
+            <span className="truncate text-sn-label">{event.subject.name || event.subject.id}</span>
+            <span className="text-2xs text-sn-label3">
               {t(`alerts_page.events.subject.${event.subject.kind}`, {
                 defaultValue: event.subject.kind,
               })}
@@ -133,9 +133,9 @@ export function EventsPanel({
         overflowTooltip: (event) => (event.text && event.text !== event.title ? event.text : null),
         cell: (event) => (
           <span className="flex min-w-0 flex-col py-1">
-            <span className="font-medium text-ink">{event.title}</span>
+            <span className="font-medium text-sn-label">{event.title}</span>
             {event.text && event.text !== event.title ? (
-              <span className="mt-0.5 line-clamp-2 text-xs leading-5 text-ink-3">{event.text}</span>
+              <span className="mt-0.5 line-clamp-2 text-xs leading-5 text-sn-label3">{event.text}</span>
             ) : null}
           </span>
         ),
@@ -148,7 +148,7 @@ export function EventsPanel({
         cell: (event) => {
           const deliveries = event.deliveries ?? [];
           return deliveries.length === 0 ? (
-            <span className="text-xs text-ink-3">{t("alerts_page.events.delivery.none")}</span>
+            <span className="text-xs text-sn-label3">{t("alerts_page.events.delivery.none")}</span>
           ) : (
             <ul className="min-w-0 space-y-1.5 py-1">
               {deliveries.map((delivery) => (
@@ -164,14 +164,14 @@ export function EventsPanel({
   return (
     <section
       aria-labelledby="alerts-events-title"
-      className={`p-4 [--cp-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}
+      className={`p-4 [--sn-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 id="alerts-events-title" className="text-sm font-semibold text-ink">
+          <h3 id="alerts-events-title" className="text-sm font-semibold text-sn-label">
             {t("alerts_page.events.title")}
           </h3>
-          <p className="mt-0.5 text-xs text-ink-3">
+          <p className="mt-0.5 text-xs text-sn-label3">
             {items && items.length > 0
               ? t("alerts_page.events.summary", { shown: items.length, total })
               : t("alerts_page.events.desc")}

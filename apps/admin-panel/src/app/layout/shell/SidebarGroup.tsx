@@ -197,7 +197,7 @@ export function SidebarGroup({
         aria-label={label}
         inert={!listVisible}
         className={[
-          "grid transition-[grid-template-rows,opacity] duration-300 ease-soft motion-reduce:transition-none",
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-sn-out motion-reduce:transition-none",
           listVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         ].join(" ")}
       >
@@ -206,8 +206,8 @@ export function SidebarGroup({
           与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
         */}
         <div className="-mx-1 min-h-0 overflow-hidden px-1">
-          {/* 树形引导线正中穿过父图标轴心（1rem = size-8 中线），子项文字与父标题文字严格垂直左对齐（2rem）。 */}
-          <div className="my-1 ml-4 space-y-0.5 border-l border-[var(--sn-line)] pl-2">
+          {/* 对齐 Satin 工作台侧栏：去掉陈旧树形竖线，用干净留白与一致左缩进区分层级。 */}
+          <div className="my-0.5 space-y-0.5 pl-6">
             {section.items.map((item) => (
               <SidebarItemLink
                 key={item.to}

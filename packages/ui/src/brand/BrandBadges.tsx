@@ -133,7 +133,7 @@ export function ProviderTag({
       style={brandStyle(vendor, rest.style)}
       className={cn(
         BRAND_VARS,
-        "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-ink-2 dark:bg-white/[0.07]",
+        "inline-flex shrink-0 items-center gap-1 rounded-md bg-sn-label/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-sn-label2 dark:bg-white/[0.07]",
         "colorful:bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}

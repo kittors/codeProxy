@@ -55,7 +55,7 @@ export function ManageKeysTabContent({
       overflowTooltip: false,
       cell: (row) => {
         if (!row.expires_at) {
-          return <span className="text-xs text-ink-3">{t("billing.no_expiry_limit")}</span>;
+          return <span className="text-xs text-sn-label3">{t("billing.no_expiry_limit")}</span>;
         }
         const ms = Date.parse(row.expires_at);
         if (Number.isNaN(ms)) return null;
@@ -70,7 +70,7 @@ export function ManageKeysTabContent({
                 ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
                 : diff <= 3 * 24 * 3600 * 1000
                   ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
-                  : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+                  : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]"
             }`}
           >
             <CalendarClock size={11} />
@@ -103,7 +103,7 @@ export function ManageKeysTabContent({
 
       {accessPolicy && account ? (
         <div className={`${surface({ tone: "inset", radius: "2xl" })} mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
-          <span className="shrink-0 text-xs font-semibold text-ink-2">{t("access_policy.my_account_quota")}</span>
+          <span className="shrink-0 text-xs font-semibold text-sn-label2">{t("access_policy.my_account_quota")}</span>
           <QuotaUsageCell
             limits={account["quota-limits"]}
             usage={account["quota-usage"]?.total}

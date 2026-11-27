@@ -53,7 +53,7 @@ export function CcSwitchClientIcon({
       aria-hidden="true"
       data-testid={`ccswitch-client-icon-${clientType}`}
       // 「多彩」图标着色时按全站的图标色相上色，「单色」时保持中性。
-      className={cn("shrink-0 text-ink-2", iconHueClass(Glyph), className)}
+      className={cn("shrink-0 text-sn-label2", iconHueClass(Glyph), className)}
     />
   );
 }

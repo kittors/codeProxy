@@ -241,7 +241,7 @@ describe("ProxiesPage", () => {
     const frame = table.closest(".sn-tbl-wrap");
     expect(frame).toBeInTheDocument();
     expect(frame).not.toHaveClass("sn-plain");
-    expect(frame?.parentElement?.closest(".cp-edge")).toBeNull();
+    expect(frame?.parentElement?.closest("section.border-sn-line")).toBeNull();
     expect(screen.queryByText("Proxy Pool")).not.toBeInTheDocument();
     expect(screen.queryByText(/Manage proxy entries in a compact table/i)).not.toBeInTheDocument();
     expect(screen.getByText("No proxies yet")).toBeInTheDocument();

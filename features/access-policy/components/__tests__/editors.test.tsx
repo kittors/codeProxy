@@ -175,7 +175,7 @@ describe("access policy editors", () => {
     const cost = within(group).getByText("$4 used · $1.5 in flight");
     expect(cost).toHaveClass("text-rose-600");
     expect(cost).toHaveAttribute("title", "$4 used · $1.5 in flight");
-    expect(within(group).getByText("9 used · 2 in flight")).toHaveClass("text-ink-2");
+    expect(within(group).getByText("9 used · 2 in flight")).toHaveClass("text-sn-label2");
     expect(within(group).getByText("1,000 used · 300 in flight")).toBeInTheDocument();
   });
 

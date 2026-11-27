@@ -31,11 +31,11 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
         <div
           ref={ref}
           style={style}
-          className="overflow-hidden rounded-t-3xl bg-white shadow-[inset_0_1px_0_var(--cp-edge),inset_1px_0_0_var(--cp-edge),inset_-1px_0_0_var(--cp-edge)] dark:bg-[#0C0C10]"
+          className="overflow-hidden rounded-t-3xl bg-white shadow-[inset_0_1px_0_var(--sn-line),inset_1px_0_0_var(--sn-line),inset_-1px_0_0_var(--sn-line)] dark:bg-[#0C0C10]"
         >
           <div>
             <div className="flex items-center justify-between gap-2 px-5 py-3.5">
-              <span className="font-display text-2xs font-medium uppercase tracking-[0.12em] text-ink-3">
+              <span className="font-display text-2xs font-medium uppercase tracking-[0.12em] text-sn-label3">
                 {copy.console.title}
               </span>
               <span className="sn-tag sn-ok !h-5 !text-2xs" aria-hidden="true">
@@ -48,10 +48,10 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                 <ul className="flex flex-wrap gap-x-10 gap-y-4">
                   {copy.console.kpis.map((kpi) => (
                     <li key={kpi.label}>
-                      <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
+                      <p className="font-display text-2xs uppercase tracking-[0.1em] text-sn-label3">
                         {kpi.label}
                       </p>
-                      <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-ink">
+                      <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-sn-label">
                         {kpi.value}
                       </p>
                     </li>
@@ -75,17 +75,17 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
               </div>
 
               <div>
-                <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
+                <p className="font-display text-2xs uppercase tracking-[0.1em] text-sn-label3">
                   {copy.console.logsTitle}
                 </p>
                 <ul className="mt-4">
                   {SAMPLE_ROWS.map((row) => (
                     <li
                       key={row.model}
-                      className="flex items-center gap-3 border-b border-line py-3 last:border-b-0"
+                      className="flex items-center gap-3 border-b border-sn-line py-3 last:border-b-0"
                     >
                       <VendorIcon modelId={row.model} size={16} />
-                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink-2">
+                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-sn-label2">
                         {row.model}
                       </span>
                       <span
@@ -98,10 +98,10 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
                       >
                         {row.status}
                       </span>
-                      <span className="w-14 text-right font-mono text-xs text-ink-3">
+                      <span className="w-14 text-right font-mono text-xs text-sn-label3">
                         {row.latency}
                       </span>
-                      <span className="hidden w-12 text-right font-mono text-xs text-ink-3 sm:block">
+                      <span className="hidden w-12 text-right font-mono text-xs text-sn-label3 sm:block">
                         {row.tokens}
                       </span>
                     </li>

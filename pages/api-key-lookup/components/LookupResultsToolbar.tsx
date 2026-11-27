@@ -148,13 +148,13 @@ export function LookupResultsToolbar({
       ref={toolbarRef}
       data-testid="apikey-lookup-toolbar-sticky"
       data-stuck={stuck ? "true" : "false"}
-      // 吸顶后才成为一块浮起的卡片：伪元素细边（cp-edge）+ 卡片投影 + 卡片色的半透明底，
-      // 不画 ring；没吸顶时完全透明，和页面融为一体。cp-edge 的 position: relative 在
+      // 吸顶后才成为一块浮起的卡片：伪元素细边（border border-sn-line）+ 卡片投影 + 卡片色的半透明底，
+      // 不画 ring；没吸顶时完全透明，和页面融为一体。border border-sn-line 的 position: relative 在
       // components 层，盖不过这里 utilities 层的 sticky。
       className={[
         "sticky top-3 z-20 -mx-1 space-y-3 rounded-xl px-2 py-2 backdrop-blur-md",
         "motion-safe:transition-[box-shadow,background-color] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-        stuck ? "cp-edge bg-surface/90 shadow-pop" : "bg-transparent shadow-none",
+        stuck ? "border border-sn-line bg-sn-raised/90 shadow-sn-e1" : "bg-transparent shadow-none",
       ].join(" ")}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -177,10 +177,10 @@ export function LookupResultsToolbar({
               {logsQuotaItems.map((item) => (
                 <div
                   key={item.key}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-ink/[0.05] px-2 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-sn-label/[0.05] px-2 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]"
                 >
                   <span>{item.title}</span>
-                  <span className="font-mono font-semibold tabular-nums text-ink">
+                  <span className="font-mono font-semibold tabular-nums text-sn-label">
                     {item.format(item.used)} / {item.format(item.limit)}
                   </span>
                 </div>
@@ -204,7 +204,7 @@ export function LookupResultsToolbar({
               onClick={handleRefresh}
               disabled={loading || chartLoading || modelsLoading}
               aria-label={t("common.refresh")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-2 transition hover:bg-hover hover:text-ink disabled:opacity-40"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sn-label2 transition hover:bg-sn-hover hover:text-sn-label disabled:opacity-40"
             >
               <RefreshCw
                 size={16}

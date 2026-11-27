@@ -60,11 +60,11 @@ export function AuthFilesToolbarActions({
   onCardColumnsChange,
 }: AuthFilesToolbarActionsProps) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-slate-50/90 px-1.5 py-1 dark:bg-white/[0.04]">
+    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
       <MaskToggleButton masked={masked} onToggle={onToggleMask} />
       <HoverTooltip content={t("auth_files.group_overview_button")}>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={onGroupOverview}
           disabled={groupOverviewLoading}
@@ -80,7 +80,7 @@ export function AuthFilesToolbarActions({
       </HoverTooltip>
       <HoverTooltip content={t("auth_files.refresh")}>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={onRefresh}
           disabled={refreshDisabled}
@@ -93,25 +93,9 @@ export function AuthFilesToolbarActions({
           />
         </Button>
       </HoverTooltip>
-      <HoverTooltip content={t("auth_files.upload")}>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={onUpload}
-          disabled={uploading}
-          aria-label={t("auth_files.upload")}
-          title={t("auth_files.upload")}
-        >
-          {uploading ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
-            <Upload size={15} />
-          )}
-        </Button>
-      </HoverTooltip>
       <HoverTooltip content={t("auth_files.paste_json")}>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={onPasteJson}
           disabled={uploading}
@@ -127,7 +111,7 @@ export function AuthFilesToolbarActions({
       </HoverTooltip>
       <HoverTooltip content={t("auth_files_page.add_oauth")}>
         <Button
-          variant="secondary"
+          variant="ghost"
           size="sm"
           onClick={onAddOAuth}
           aria-label={t("auth_files_page.add_oauth")}
@@ -139,13 +123,13 @@ export function AuthFilesToolbarActions({
       {onOpenWarmupPolicy ? (
         <HoverTooltip content={t("antigravity_quota.warmup_policy_title")}>
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             onClick={onOpenWarmupPolicy}
             aria-label={t("antigravity_quota.warmup_policy_title")}
             title={t("antigravity_quota.warmup_policy_title")}
           >
-            <Zap size={15} className="icon-hue:text-amber-500" />
+            <Zap size={15} />
           </Button>
         </HoverTooltip>
       ) : null}
@@ -167,6 +151,22 @@ export function AuthFilesToolbarActions({
           />
         </div>
       ) : null}
+      <HoverTooltip content={t("auth_files.upload")}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onUpload}
+          disabled={uploading}
+          aria-label={t("auth_files.upload")}
+          title={t("auth_files.upload")}
+        >
+          {uploading ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <Upload size={15} />
+          )}
+        </Button>
+      </HoverTooltip>
     </div>
   );
 }

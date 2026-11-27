@@ -86,11 +86,11 @@ export function ConfigGroupTabs({
       role="tablist"
       aria-label={t("config_ui.groups_label")}
       onKeyDown={onKeyDown}
-      className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-xl bg-track p-1"
+      className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-xl bg-sn-sunken p-1"
     >
       <span
         aria-hidden="true"
-        className="sn-thumb pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-[var(--sn-btn-r)] bg-elevated opacity-0 shadow-control will-change-transform"
+        className="sn-thumb pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-[var(--sn-btn-r)] bg-sn-overlay opacity-0 border border-sn-line-control will-change-transform"
       />
       {tabs.map(({ def, modified, matches }) => {
         const selected = def.id === value;
@@ -111,7 +111,7 @@ export function ConfigGroupTabs({
             onClick={() => onChange(def.id)}
             className={cn(
               "relative z-[1] flex shrink-0 items-center gap-2 rounded-[var(--sn-btn-r)] py-1.5 pr-3 pl-1.5 text-sm font-medium transition-colors",
-              selected ? "text-ink" : "text-ink-2 hover:text-ink",
+              selected ? "text-sn-label" : "text-sn-label2 hover:text-sn-label",
             )}
           >
             <span
@@ -119,8 +119,8 @@ export function ConfigGroupTabs({
               className={cn(
                 "relative grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors [&_svg]:size-[15px]",
                 selected
-                  ? cn("bg-accent-soft text-accent-ink icon-hue:shadow-xs", HUE_SOLID[def.hue])
-                  : cn("text-ink-3", HUE_TILE[def.hue]),
+                  ? cn("bg-sn-accent-soft text-sn-accent-ink icon-hue:shadow-xs", HUE_SOLID[def.hue])
+                  : cn("text-sn-label3", HUE_TILE[def.hue]),
               )}
             >
               <Icon />
@@ -130,7 +130,7 @@ export function ConfigGroupTabs({
               <span
                 className={cn(
                   "relative min-w-5 rounded-full px-1.5 text-center text-2xs font-semibold tabular-nums",
-                  matches > 0 ? cn("bg-accent-soft text-accent-ink", HUE_SOFT[def.hue]) : "bg-hover text-ink-3",
+                  matches > 0 ? cn("bg-sn-accent-soft text-sn-accent-ink", HUE_SOFT[def.hue]) : "bg-sn-hover text-sn-label3",
                 )}
               >
                 {matches}
@@ -138,7 +138,7 @@ export function ConfigGroupTabs({
               </span>
             ) : modified > 0 ? (
               <>
-                <span aria-hidden="true" className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500" />
+                <span aria-hidden="true" className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-sn-accent colorful:bg-sky-500" />
                 <span className="sr-only">{t("config_ui.section_modified")}</span>
               </>
             ) : null}
@@ -193,15 +193,15 @@ export function ConfigSectionChips({
               className={cn(
                 "sn-btn !h-auto shrink-0 gap-1.5 !rounded-full !border-0 !px-3 !py-1 !text-xs font-medium",
                 selected
-                  ? cn("!bg-accent-soft !text-accent-ink !shadow-none", HUE_SOFT[section.hue])
-                  : "!bg-surface !text-ink-2 !shadow-control hover:!text-ink hover:!shadow-control-hover",
+                  ? cn("!bg-sn-accent-soft !text-sn-accent-ink !shadow-none", HUE_SOFT[section.hue])
+                  : "!bg-sn-raised !text-sn-label2 !border !border-sn-line-control hover:!text-sn-label hover:!border-sn-line-control-hover",
               )}
             >
-              <Icon size={13} aria-hidden="true" className={cn(!selected && "text-ink-3", HUE_GLYPH[section.hue])} />
+              <Icon size={13} aria-hidden="true" className={cn(!selected && "text-sn-label3", HUE_GLYPH[section.hue])} />
               {t(`config_ui.sections.${section.id}.title`)}
               {dirty ? (
                 <>
-                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500" />
+                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-sn-accent colorful:bg-sky-500" />
                   <span className="sr-only">{t("config_ui.section_modified")}</span>
                 </>
               ) : null}

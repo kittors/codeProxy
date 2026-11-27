@@ -262,7 +262,7 @@ export function ThroughputTrendChart({
       <HoverTooltip content={t("dashboard.throughput_all_tenants_hint")} placement="top">
         <button
           type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
           aria-label={t("dashboard.throughput_all_tenants_hint")}
         >
           <CircleAlert size={14} />
@@ -322,7 +322,7 @@ export function ThroughputTrendChart({
           ] as const
         ).map((reading) => (
           <div key={reading.key} className="min-w-0">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-ink-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-sn-label3">
               <span
                 aria-hidden="true"
                 className="size-2 shrink-0 rounded-full"
@@ -330,7 +330,7 @@ export function ThroughputTrendChart({
               />
               {reading.label}
             </div>
-            <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
+            <div className="mt-0.5 text-xl font-semibold tabular-nums text-sn-label">
               <DashboardMetricValue value={reading.value} />
             </div>
           </div>

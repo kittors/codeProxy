@@ -83,10 +83,10 @@ function StaleRoutePage() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
       <div>
-        <Icon name="file" className="mx-auto mb-5 text-ink-3 colorful:text-amber-500" size={48} />
-        <h2 className="text-2xl font-semibold text-ink">{t("shell.stale_route_title")}</h2>
-        <p className="mt-2 text-sm text-ink-2">{t("shell.stale_route_description")}</p>
-        <p className="mt-2 text-xs text-ink-3">
+        <Icon name="file" className="mx-auto mb-5 text-sn-label3 colorful:text-amber-500" size={48} />
+        <h2 className="text-2xl font-semibold text-sn-label">{t("shell.stale_route_title")}</h2>
+        <p className="mt-2 text-sm text-sn-label2">{t("shell.stale_route_description")}</p>
+        <p className="mt-2 text-xs text-sn-label3">
           {t("shell.stale_route_shortcut")}
         </p>
         <Button className="mt-6" variant="primary" onClick={() => window.location.reload()}>

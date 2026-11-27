@@ -69,14 +69,14 @@ function buildKeys(now: number): DemoKey[] {
 function QuotaBar({ value }: { value: number }) {
   const tone =
     value >= 0.9
-      ? "bg-ink/50 bar-semantic:bg-rose-500"
+      ? "bg-sn-label/50 bar-semantic:bg-rose-500"
       : value >= 0.7
-        ? "bg-ink/40 bar-semantic:bg-amber-500"
-        : "bg-ink/30 bar-semantic:bg-emerald-500";
+        ? "bg-sn-label/40 bar-semantic:bg-amber-500"
+        : "bg-sn-label/30 bar-semantic:bg-emerald-500";
   return (
     <span className="flex w-full min-w-0 items-center gap-2">
       <span
-        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]"
+        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-sn-label/[0.07] dark:bg-white/[0.08]"
         aria-hidden="true"
       >
         <span
@@ -84,7 +84,7 @@ function QuotaBar({ value }: { value: number }) {
           style={{ width: `${Math.max(2, value * 100)}%` }}
         />
       </span>
-      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-ink-2">
+      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-sn-label2">
         {Math.round(value * 100)}%
       </span>
     </span>
@@ -112,8 +112,8 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         skeleton: "two-line",
         cell: (row) => (
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm font-medium text-ink">{row.name}</span>
-            <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">
+            <span className="truncate text-sm font-medium text-sn-label">{row.name}</span>
+            <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">
               {maskLabKey(row.key)}
             </span>
           </span>
@@ -126,7 +126,7 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         grow: true,
         sortable: true,
         sortValue: (row) => row.owner,
-        cell: (row) => <span className="truncate text-ink-2">{row.owner}</span>,
+        cell: (row) => <span className="truncate text-sn-label2">{row.owner}</span>,
       },
       {
         id: "enabled",
@@ -135,9 +135,9 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         sortable: true,
         sortValue: (row) => (row.enabled ? 1 : 0),
         cell: (row) => (
-          <span className="inline-flex items-center gap-1.5 text-xs text-ink-2">
+          <span className="inline-flex items-center gap-1.5 text-xs text-sn-label2">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${row.enabled ? "bg-emerald-500" : "bg-ink-4"}`}
+              className={`h-1.5 w-1.5 rounded-full ${row.enabled ? "bg-emerald-500" : "bg-sn-label-off"}`}
               aria-hidden="true"
             />
             {row.enabled ? "启用" : "已停用"}
@@ -153,9 +153,9 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         sortValue: (row) => row.spentToday,
         cell: (row) =>
           row.spentToday > 0 ? (
-            <span className="tabular-nums text-ink">${row.spentToday.toFixed(2)}</span>
+            <span className="tabular-nums text-sn-label">${row.spentToday.toFixed(2)}</span>
           ) : (
-            <span className="text-ink-4">—</span>
+            <span className="text-sn-label-off">—</span>
           ),
       },
       {
@@ -177,10 +177,10 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         cell: (row) =>
           row.lastUsedMs ? (
             <GridCellTooltip content={formatDateTime(row.lastUsedMs)}>
-              <span className="text-ink-2">{formatRelativeTime(row.lastUsedMs, now, "zh-CN")}</span>
+              <span className="text-sn-label2">{formatRelativeTime(row.lastUsedMs, now, "zh-CN")}</span>
             </GridCellTooltip>
           ) : (
-            <span className="text-ink-4">从未使用</span>
+            <span className="text-sn-label-off">从未使用</span>
           ),
       },
       {
@@ -192,7 +192,7 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
         sortValue: (row) => row.createdMs,
         cell: (row) => (
           <GridCellTooltip content={formatDateTime(row.createdMs)}>
-            <span className="font-mono text-xs tabular-nums text-ink-2">
+            <span className="font-mono text-xs tabular-nums text-sn-label2">
               {formatDateTime(row.createdMs).slice(0, 10)}
             </span>
           </GridCellTooltip>
@@ -228,7 +228,7 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
             多选示例 · 假数据
           </span>
         </div>
-        <p className="flex items-center gap-1.5 text-xs text-ink-3">
+        <p className="flex items-center gap-1.5 text-xs text-sn-label3">
           <KeyRound size={13} className="shrink-0" aria-hidden="true" />
           表头复选框全选 / 半选本页，Shift
           点击连选；选中后表头换成选择条，批量操作会真的改动下面的数据。
@@ -252,7 +252,7 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
               <button
                 type="button"
                 onClick={() => setSelected(new Set(keys.map((row) => row.id)))}
-                className="font-medium text-accent-ink underline decoration-ink-4 underline-offset-2 transition-colors hover:decoration-current"
+                className="font-medium text-sn-accent-ink underline decoration-sn-label-off underline-offset-2 transition-colors hover:decoration-current"
               >
                 选中全部 {formatInteger(keys.length)} 个
               </button>
@@ -303,7 +303,7 @@ export function ApiKeySelectionDemo({ switcher }: { switcher: ReactNode }) {
               onPageChange={setPage}
               info={
                 count > 0 ? (
-                  <span className="text-ink-2">已选 {formatInteger(count)} 个（跨页保留）</span>
+                  <span className="text-sn-label2">已选 {formatInteger(count)} 个（跨页保留）</span>
                 ) : null
               }
             />

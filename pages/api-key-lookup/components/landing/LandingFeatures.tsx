@@ -6,7 +6,7 @@ import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy, LandingFeatureCopy } from "./landingCopy";
 
 const CARD_CLASS =
-  "cp-edge group relative flex flex-col overflow-hidden rounded-2xl bg-[var(--sn-raised)] p-8 transition-shadow duration-200 hover:shadow-lift";
+  "border border-sn-line group relative flex flex-col overflow-hidden rounded-2xl bg-[var(--sn-raised)] p-8 transition-shadow duration-200 hover:shadow-sn-lift";
 
 function FeatureCard({
   copy,
@@ -28,10 +28,10 @@ function FeatureCard({
         size={22}
         strokeWidth={1.7}
         aria-hidden
-        className="text-ink transition-transform duration-200 group-hover:scale-110"
+        className="text-sn-label transition-transform duration-200 group-hover:scale-110"
       />
-      <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-ink">{copy.title}</h3>
-      <p className="mt-3 text-sm leading-7 text-ink-2">{copy.desc}</p>
+      <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-sn-label">{copy.title}</h3>
+      <p className="mt-3 text-sm leading-7 text-sn-label2">{copy.desc}</p>
     </LandingFadeItem>
   );
 }
@@ -57,12 +57,12 @@ export function LandingFeatures({ copy }: { copy: LandingCopy }) {
             size={22}
             strokeWidth={1.7}
             aria-hidden
-            className="text-ink"
+            className="text-sn-label"
           />
-          <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-ink">
+          <h3 className="mt-6 font-display text-2xl font-bold tracking-tight text-sn-label">
             {features.gateway.title}
           </h3>
-          <p className="mt-3 max-w-xl text-sm leading-7 text-ink-2">
+          <p className="mt-3 max-w-xl text-sm leading-7 text-sn-label2">
             {features.gateway.desc}
           </p>
           <LandingRelayDiagram appLabel={features.gateway.diagramLabel} />

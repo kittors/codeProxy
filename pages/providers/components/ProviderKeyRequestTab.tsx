@@ -16,7 +16,7 @@ import type { ProviderKeyDraft } from "../providers-helpers";
  * 叠着五六张描边小卡，读起来像一摞框。只读的说明（固定端点、调用地址）传 `well`，用无边淡底和可编辑的字段区分开。
  */
 const FieldGroup = ({ children, well = false }: { children: React.ReactNode; well?: boolean }) => (
-  <div className={well ? "rounded-xl bg-subtle px-4 py-3" : undefined}>{children}</div>
+  <div className={well ? "rounded-xl bg-sn-subtle px-4 py-3" : undefined}>{children}</div>
 );
 
 const OPENCODE_GO_MODELS_URL = "https://opencode.ai/zen/go/v1/models";
@@ -91,23 +91,23 @@ export function ProviderKeyRequestTab({
       {isOpenCodeGo ? (
         <>
           <FieldGroup well>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.opencode_go_fixed_endpoint_title")}
             </p>
-            <div className="mt-3 grid gap-2 text-xs text-ink-2">
+            <div className="mt-3 grid gap-2 text-xs text-sn-label2">
               <p className="break-all font-mono">{OPENCODE_GO_CHAT_URL}</p>
               <p className="break-all font-mono">{OPENCODE_GO_MESSAGES_URL}</p>
               <p className="break-all font-mono">{OPENCODE_GO_MODELS_URL}</p>
             </div>
-            <p className="mt-2 text-xs text-ink-3">
+            <p className="mt-2 text-xs text-sn-label3">
               {t("providers.opencode_go_fixed_endpoint_hint")}
             </p>
           </FieldGroup>
           <FieldGroup>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.opencode_go_usage_title")}
             </p>
-            <p className="mt-1 text-xs text-ink-3">
+            <p className="mt-1 text-xs text-sn-label3">
               {t("providers.opencode_go_usage_hint")}
             </p>
           </FieldGroup>
@@ -116,13 +116,13 @@ export function ProviderKeyRequestTab({
 
       {isCline ? (
         <FieldGroup well>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.cline_endpoint_title")}
           </p>
-          <p className="mt-3 break-all font-mono text-xs text-ink-2">
+          <p className="mt-3 break-all font-mono text-xs text-sn-label2">
             {clineChatUrl}
           </p>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {t("providers.cline_endpoint_hint")}
           </p>
         </FieldGroup>
@@ -130,10 +130,10 @@ export function ProviderKeyRequestTab({
 
       {isOllamaCloud ? (
         <FieldGroup well>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.ollama_cloud_endpoint_title")}
           </p>
-          <p className="mt-3 break-all font-mono text-xs text-ink-2">
+          <p className="mt-3 break-all font-mono text-xs text-sn-label2">
             {ollamaCloudChatUrl}
           </p>
         </FieldGroup>
@@ -142,21 +142,21 @@ export function ProviderKeyRequestTab({
       {isCommandCode ? (
         <>
           <FieldGroup well>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.commandcode_endpoint_title")}
             </p>
-            <p className="mt-3 break-all font-mono text-xs text-ink-2">
+            <p className="mt-3 break-all font-mono text-xs text-sn-label2">
               {commandCodeChatUrl}
             </p>
-            <p className="mt-2 text-xs text-ink-3">
+            <p className="mt-2 text-xs text-sn-label3">
               {t("providers.commandcode_endpoint_hint")}
             </p>
           </FieldGroup>
           <FieldGroup>
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.commandcode_usage_title")}
             </p>
-            <p className="mt-1 text-xs text-ink-3">
+            <p className="mt-1 text-xs text-sn-label3">
               {t("providers.commandcode_usage_hint")}
             </p>
           </FieldGroup>
@@ -165,16 +165,16 @@ export function ProviderKeyRequestTab({
 
       {hasDashboardUsage ? (
         <FieldGroup>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {dashboardUsageTitle}
           </p>
-          <p className="mt-1 text-xs text-ink-3">
+          <p className="mt-1 text-xs text-sn-label3">
             {dashboardUsageHint}
           </p>
 
           <div className="mt-3 grid gap-3 md:grid-cols-1">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-ink-2">
+              <p className="text-xs font-semibold text-sn-label2">
                 {t("providers.opencode_go_auth_cookie")}
               </p>
               <TextInput
@@ -193,7 +193,7 @@ export function ProviderKeyRequestTab({
 
       {isOpenCodeGo || isCline || isOllamaCloud || isCommandCode ? (
         <FieldGroup>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.opencode_go_vision_fallback_title")}
           </p>
           <div className="mt-3">
@@ -207,7 +207,7 @@ export function ProviderKeyRequestTab({
               disabled={openCodeModelsLoading || openCodeVisionFallbackOptions.length <= 1}
             />
           </div>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {t("providers.opencode_go_vision_fallback_hint")}
           </p>
         </FieldGroup>
@@ -215,7 +215,7 @@ export function ProviderKeyRequestTab({
 
       {isBedrock ? (
         <FieldGroup>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.bedrock_region")}
           </p>
           <div className="mt-2">
@@ -238,20 +238,20 @@ export function ProviderKeyRequestTab({
               }
             />
           </div>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {t("providers.bedrock_region_hint")}
           </p>
         </FieldGroup>
       ) : null}
 
       <FieldGroup>
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.connection_proxy_label")}
         </p>
         <div className="mt-3 grid gap-3">
           {isOpenCodeGo ? null : (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-ink-2">
+              <p className="text-xs font-semibold text-sn-label2">
                 {t("providers.base_url")}
               </p>
               <TextInput
@@ -290,7 +290,7 @@ export function ProviderKeyRequestTab({
             onChange={(proxyUrl) => setKeyDraft((prev) => ({ ...prev, proxyUrl }))}
           />
         </div>
-        <p className="mt-2 text-xs text-ink-3">
+        <p className="mt-2 text-xs text-sn-label3">
           {isOpenCodeGo
             ? t("providers.opencode_go_connection_hint")
             : isCline
@@ -307,7 +307,7 @@ export function ProviderKeyRequestTab({
           keyPlaceholder={t("providers.header_name_placeholder")}
           valuePlaceholder={t("providers.header_value_placeholder")}
         />
-        <p className="mt-2 text-xs text-ink-3">
+        <p className="mt-2 text-xs text-sn-label3">
           {t("providers.headers_common_hint")}
         </p>
       </FieldGroup>
@@ -326,10 +326,10 @@ export function ProviderKeyRequestTab({
         <FieldGroup>
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-sn-label">
                 {t("providers.anthropic_processing_label")}
               </p>
-              <p className="mt-1 text-xs text-ink-3">
+              <p className="mt-1 text-xs text-sn-label3">
                 {t("providers.anthropic_processing_hint")}
               </p>
             </div>

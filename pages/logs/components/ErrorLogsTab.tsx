@@ -120,8 +120,8 @@ const buildDiagnosticBadges = (file: ErrorLogItem, t: Translate) => {
 function DiagnosticLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 text-xs sm:grid-cols-[7rem_minmax(0,1fr)]">
-      <span className="text-ink-3">{label}</span>
-      <code className="min-w-0 break-all rounded-md bg-ink/[0.05] px-2 py-1 text-xs text-ink-2 dark:bg-white/[0.07]">
+      <span className="text-sn-label3">{label}</span>
+      <code className="min-w-0 break-all rounded-md bg-sn-label/[0.05] px-2 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]">
         {value}
       </code>
     </div>
@@ -173,10 +173,10 @@ export function ErrorLogsTab({
         <Card className="md:shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-sm font-semibold text-sn-label">
                 {t("logs_page.request_id_download_title")}
               </p>
-              <p className="mt-1 text-sm text-ink-2">
+              <p className="mt-1 text-sm text-sn-label2">
                 {t("logs_page.request_id_download_desc")}
               </p>
             </div>
@@ -206,12 +206,12 @@ export function ErrorLogsTab({
           className="md:flex md:min-h-0 md:flex-1 md:flex-col"
           bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col"
         >
-          <p className="text-sm font-semibold text-ink">{t("logs_page.error_log_files")}</p>
-          <p className="mt-1 text-sm text-ink-2">{t("logs_page.error_log_list_desc")}</p>
+          <p className="text-sm font-semibold text-sn-label">{t("logs_page.error_log_files")}</p>
+          <p className="mt-1 text-sm text-sn-label2">{t("logs_page.error_log_list_desc")}</p>
 
           <ScrollFade className="mt-3 md:min-h-0 md:flex-1 md:overflow-y-auto">
             {errorLogsLoading ? (
-              <div className="text-sm text-ink-2">
+              <div className="text-sm text-sn-label2">
                 {t("logs_page.loading")}
               </div>
             ) : errorLogs.length === 0 ? (
@@ -220,7 +220,7 @@ export function ErrorLogsTab({
                 description={t("logs_page.no_error_desc")}
               />
             ) : (
-              <div className="divide-y divide-line">
+              <div className="divide-y divide-sn-line">
                 {errorLogs.map((file) => {
                   const badges = buildDiagnosticBadges(file, t);
                   const originalUrl = textValue(file.original_url);
@@ -235,8 +235,8 @@ export function ErrorLogsTab({
                     >
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="min-w-0">
-                          <p className="break-all font-mono text-xs text-ink">{file.name}</p>
-                          <p className="mt-1 text-xs text-ink-2">
+                          <p className="break-all font-mono text-xs text-sn-label">{file.name}</p>
+                          <p className="mt-1 text-xs text-sn-label2">
                             {typeof file.size === "number"
                               ? t("logs_page.bytes", { size: file.size.toLocaleString() })
                               : "--"}{" "}

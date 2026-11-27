@@ -240,7 +240,7 @@ export function Drawer({
         data-nudging={nudging ? "true" : undefined}
         onInput={onInput}
         className={[
-          `sn-drawer cp-drawer-panel ${widthClassName} [--cp-backdrop:var(--sn-overlay)]`,
+          `sn-drawer cp-drawer-panel ${widthClassName} [--sn-backdrop:var(--sn-overlay)]`,
           visible ? "sn-open" : "",
         ]
           .filter(Boolean)
@@ -251,11 +251,11 @@ export function Drawer({
           <div className="flex min-w-0 items-start gap-3">
             {icon ? <DialogIcon tone={tone}>{icon}</DialogIcon> : null}
             <div className={["min-w-0", icon ? "pt-px" : "pt-0.5"].join(" ")}>
-              <h2 id={titleId} className="truncate text-base font-semibold tracking-tight text-ink">
+              <h2 id={titleId} className="truncate text-base font-semibold tracking-tight text-sn-label">
                 {title}
               </h2>
               {description ? (
-                <div id={descriptionId} className="mt-0.5 text-sm text-ink-2">
+                <div id={descriptionId} className="mt-0.5 text-sm text-sn-label2">
                   {description}
                 </div>
               ) : null}

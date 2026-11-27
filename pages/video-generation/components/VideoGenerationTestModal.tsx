@@ -221,7 +221,7 @@ export function VideoGenerationTestModal({
 
         <div className="grid gap-x-4 gap-y-4 sm:grid-cols-[auto_minmax(0,1fr)]">
           <div className="flex flex-col gap-2.5">
-            <span className="text-sm font-medium text-ink">{t("video_generation.field_mode")}</span>
+            <span className="text-sm font-medium text-sn-label">{t("video_generation.field_mode")}</span>
             <SegmentedControl
               ariaLabel={t("video_generation.field_mode")}
               value={mode}
@@ -326,13 +326,13 @@ export function VideoGenerationTestModal({
             <video
               src={test.result.video.url}
               controls
-              className="w-full rounded-xl bg-subtle"
+              className="w-full rounded-xl bg-sn-subtle"
             />
             <a
               href={test.result.video.url}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-ink underline"
+              className="text-xs text-sn-label underline"
             >
               {t("video_generation.result_open_original")}
             </a>

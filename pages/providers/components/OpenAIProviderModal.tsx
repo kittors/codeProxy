@@ -92,7 +92,7 @@ export function OpenAIProviderModal({
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
 
         {/* 弹窗里只有一层：审核配置用无边淡底分组，分区之间靠留白，不再画分隔线、套描边卡。 */}
-        <div className="rounded-xl bg-subtle p-4">
+        <div className="rounded-xl bg-sn-subtle p-4">
           <ModerationProfileSelect
             canRead={moderationPerms.canRead}
             canWrite={moderationPerms.canWrite}

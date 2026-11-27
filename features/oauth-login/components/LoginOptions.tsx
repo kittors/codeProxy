@@ -78,7 +78,7 @@ export function LoginOptions({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full min-w-0 items-center gap-2 rounded-xl py-1 text-left text-xs text-ink-2 transition-colors hover:text-ink"
+        className="flex w-full min-w-0 items-center gap-2 rounded-xl py-1 text-left text-xs text-sn-label2 transition-colors hover:text-sn-label"
       >
         <SlidersHorizontal size={13} className="shrink-0" aria-hidden="true" />
         <span className="shrink-0 font-medium">{t("add_account.options.title")}</span>
@@ -90,8 +90,8 @@ export function LoginOptions({
                 "truncate rounded-full px-2 py-0.5",
                 // 改过默认值的项标出来（简约风格强调色淡底，多彩风格天蓝淡底），其余中性。
                 chip.custom
-                  ? "bg-accent-soft text-accent-ink colorful:bg-sky-500/12 colorful:text-sky-800 colorful:dark:text-sky-200"
-                  : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+                  ? "bg-sn-accent-soft text-sn-accent-ink colorful:bg-sky-500/12 colorful:text-sky-800 colorful:dark:text-sky-200"
+                  : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
               ].join(" ")}
             >
               {chip.label}
@@ -106,7 +106,7 @@ export function LoginOptions({
       </button>
       {open ? (
         <div id={panelId} className="sn-fade-up overflow-hidden">
-          <div className="grid gap-4 rounded-xl bg-subtle p-4">
+          <div className="grid gap-4 rounded-xl bg-sn-subtle p-4">
             {showProxy ? (
               <ProxyPoolSelect
                 value={values.proxyId}
@@ -122,7 +122,7 @@ export function LoginOptions({
             ) : null}
             {provider.projectId ? (
               <label className="grid gap-1.5">
-                <span className="text-xs font-medium text-ink-2">
+                <span className="text-xs font-medium text-sn-label2">
                   {t("add_account.options.project_label")}
                 </span>
                 <TextInput
@@ -132,14 +132,14 @@ export function LoginOptions({
                   placeholder={t("add_account.options.project_placeholder")}
                   aria-label={t("add_account.options.project_label")}
                 />
-                <span className="text-xs text-ink-3">
+                <span className="text-xs text-sn-label3">
                   {t("add_account.options.project_hint")}
                 </span>
               </label>
             ) : null}
             {provider.endpointMode ? (
               <div className="grid gap-1.5">
-                <span className="text-xs font-medium text-ink-2">
+                <span className="text-xs font-medium text-sn-label2">
                   {t("add_account.options.endpoint_label")}
                 </span>
                 <Select
@@ -152,7 +152,7 @@ export function LoginOptions({
                   aria-label={t("add_account.options.endpoint_label")}
                   disabled={disabled}
                 />
-                <span className="text-xs text-ink-3">
+                <span className="text-xs text-sn-label3">
                   {t(
                     values.usingApi
                       ? "add_account.options.endpoint_api_hint"

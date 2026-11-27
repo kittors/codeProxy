@@ -36,19 +36,19 @@ export function CodexImageGenerationBridgePanel({
 
   return (
     <div
-      className="min-w-0 space-y-4 rounded-lg bg-subtle px-4 py-4 lg:col-span-2"
+      className="min-w-0 space-y-4 rounded-lg bg-sn-subtle px-4 py-4 lg:col-span-2"
       data-testid="codex-image-generation-bridge-panel"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("auth_files.codex_image_generation_bridge_title")}
           </p>
-          <p className="mt-1 text-xs text-ink-3">
+          <p className="mt-1 text-xs text-sn-label3">
             {t("auth_files.codex_image_generation_bridge_desc")}
           </p>
         </div>
-        <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+        <span className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs font-semibold text-sn-label2 dark:bg-white/[0.07]">
           {editor.enabled ? t("auth_files.enabled") : t("auth_files.disabled")}
         </span>
       </div>
@@ -70,7 +70,7 @@ export function CodexImageGenerationBridgePanel({
         <div className="space-y-2" data-testid="codex-image-generation-model-select">
           <label
             htmlFor="codex-image-generation-model"
-            className="block text-sm font-medium text-ink"
+            className="block text-sm font-medium text-sn-label"
           >
             {t("auth_files.codex_image_generation_model_label")}
           </label>
@@ -82,7 +82,7 @@ export function CodexImageGenerationBridgePanel({
             disabled={editor.saving || !editor.enabled}
             aria-label={t("auth_files.codex_image_generation_model_label")}
           />
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-sn-label3">
             {t("auth_files.codex_image_generation_model_hint")}
           </p>
         </div>

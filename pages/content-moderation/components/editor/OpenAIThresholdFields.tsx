@@ -114,13 +114,13 @@ export function OpenAIThresholdFields({
           const categoryName = t(`content_moderation.threshold_category.${i18nKey}`);
           const error = errorFor?.(key);
           return (
-            <div key={key} className="border-b border-line py-3 last:border-b-0">
+            <div key={key} className="border-b border-sn-line py-3 last:border-b-0">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <label htmlFor={id} className="text-sm font-medium text-ink">
+                  <label htmlFor={id} className="text-sm font-medium text-sn-label">
                     {categoryName}
                   </label>
-                  <p id={`${id}-desc`} className="mt-0.5 text-xs leading-5 text-ink-3">
+                  <p id={`${id}-desc`} className="mt-0.5 text-xs leading-5 text-sn-label3">
                     {t(`content_moderation.threshold_category_desc.${i18nKey}`)}
                   </p>
                 </div>

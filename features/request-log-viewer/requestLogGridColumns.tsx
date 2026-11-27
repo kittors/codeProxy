@@ -73,7 +73,7 @@ function RowActions({
         <button
           type="button"
           aria-label={t("request_logs.row_actions", { id: row.id })}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-3 opacity-60 transition-[opacity,background-color,color] duration-150 ease-soft hover:bg-hover hover:text-ink group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:bg-selected data-[state=open]:text-ink data-[state=open]:opacity-100"
+          className="sn-btn sn-ghost sn-sm sn-ibtn !h-7 !w-7 text-[var(--sn-label3)] hover:text-[var(--sn-label)]"
         >
           <MoreHorizontal size={15} aria-hidden="true" />
         </button>
@@ -134,8 +134,8 @@ export function buildRequestLogGridColumns(
       id: "time",
       header: t("request_logs.col_time"),
       pin: "start",
-      width: 96,
-      minWidth: 88,
+      width: 92,
+      minWidth: 82,
       skeleton: "two-line",
       cell: (row) => <RequestLogTimeCell row={row} now={opts.now} />,
     },
@@ -145,8 +145,8 @@ export function buildRequestLogGridColumns(
       id: "identity",
       header:
         opts.identity === "key" ? t("request_logs.col_key_name") : t("request_logs.col_user_key"),
-      width: 140,
-      minWidth: 104,
+      width: 136,
+      minWidth: 96,
       grow: 1,
       filter: options(opts.facets?.identity),
       skeleton: "two-line",
@@ -156,8 +156,8 @@ export function buildRequestLogGridColumns(
   columns.push({
     id: "model",
     header: t("request_logs.col_model"),
-    width: 200,
-    minWidth: 168,
+    width: 192,
+    minWidth: 144,
     grow: 2,
     filter: options(opts.facets?.model),
     skeleton: "two-line",
@@ -167,8 +167,8 @@ export function buildRequestLogGridColumns(
     columns.push({
       id: "channel",
       header: t("request_logs.col_channel"),
-      width: 136,
-      minWidth: 104,
+      width: 128,
+      minWidth: 94,
       grow: 1,
       filter: options(opts.facets?.channel),
       skeleton: "two-line",
@@ -180,25 +180,23 @@ export function buildRequestLogGridColumns(
       id: "agent",
       header: t("request_logs.col_agent"),
       headerHint: t("request_logs.agent_hint"),
-      width: 156,
-      minWidth: 120,
+      width: 144,
+      minWidth: 102,
       grow: 0.5,
       filter: opts.clients === "supported" ? options(opts.facets?.agent) : undefined,
       skeleton: "two-line",
       cell: (row) =>
-        opts.clients === "supported" ? <RequestLogAgentCell row={row} /> : <span className="text-ink-4">—</span>,
+        opts.clients === "supported" ? <RequestLogAgentCell row={row} /> : <span className="text-sn-label-off">—</span>,
     });
   }
   columns.push(
     {
-      // 输入 → 输出 + 缓存命中合成一列（见 RequestLogTokensCell）：原来三列一共 260，放进 1440 宽就得合并。
-      // 128 正好放下「142K → 4,854」和「缓存 ▬ 100%」；省下的给 Agent，常见客户端名（Claude Code）在 1440 宽不被截断。
       id: "tokens",
       header: t("request_logs.col_tokens"),
       headerHint: t("request_logs.tokens_hint"),
       align: "end",
-      width: 128,
-      minWidth: 120,
+      width: 124,
+      minWidth: 112,
       skeleton: "two-line",
       cell: (row) => <RequestLogTokensCell row={row} onOpen={opts.onOpenContent} />,
     },
@@ -211,7 +209,7 @@ export function buildRequestLogGridColumns(
       defaultHidden: true,
       cell: (row) => (
         <GridCellTooltip content={`${formatInteger(row.totalTokens)} tokens`}>
-          <span className="tabular-nums text-ink">{formatCompactNumber(row.totalTokens)}</span>
+          <span className="tabular-nums text-sn-label">{formatCompactNumber(row.totalTokens)}</span>
         </GridCellTooltip>
       ),
     },
@@ -220,8 +218,8 @@ export function buildRequestLogGridColumns(
       header: t("request_logs.col_duration"),
       headerHint: t("request_logs.latency_hint"),
       align: "end",
-      width: 88,
-      minWidth: 76,
+      width: 84,
+      minWidth: 70,
       skeleton: "two-line",
       cell: (row) => <RequestLogLatencyCell row={row} />,
     },
@@ -230,24 +228,24 @@ export function buildRequestLogGridColumns(
       header: t("request_logs.col_throughput"),
       headerHint: t("request_logs.throughput_hint"),
       align: "end",
-      width: 92,
-      minWidth: 80,
+      width: 86,
+      minWidth: 72,
       cell: (row) => <RequestLogThroughputCell row={row} />,
     },
     {
       id: "cost",
       header: t("request_logs.col_cost"),
       align: "end",
-      width: 84,
-      minWidth: 72,
+      width: 88,
+      minWidth: 80,
       cell: (row) => <RequestLogCostCell row={row} />,
     },
     {
       id: "status",
       header: t("request_logs.col_status"),
       pin: "end",
-      width: 116,
-      minWidth: 100,
+      width: 104,
+      minWidth: 88,
       filter: options(opts.facets?.status),
       skeleton: "pill",
       cell: (row) => <RequestLogStatusCell row={row} onOpenError={opts.onOpenError} />,
@@ -260,9 +258,9 @@ export function buildRequestLogGridColumns(
       hideHeaderLabel: true,
       pin: "end",
       align: "center",
-      width: 48,
-      minWidth: 48,
-      maxWidth: 48,
+      width: 44,
+      minWidth: 44,
+      maxWidth: 44,
       resizable: false,
       hideable: false,
       overflowTooltip: false,

@@ -24,8 +24,8 @@ function Stat({
   return (
     <HoverTooltip content={hint} placement="bottom">
       <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-        <span className="text-ink-3">{label}</span>
-        <span className={`inline-block font-medium tabular-nums text-ink ${width}`}>{value}</span>
+        <span className="text-sn-label3">{label}</span>
+        <span className={`inline-block font-medium tabular-nums text-sn-label ${width}`}>{value}</span>
       </span>
     </HoverTooltip>
   );

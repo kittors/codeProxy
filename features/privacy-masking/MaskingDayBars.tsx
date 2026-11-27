@@ -26,7 +26,7 @@ export function MaskingDayBars({ days }: { days: MaskDay[] }) {
       role="img"
       aria-label={t("privacy_masking.days_aria", { count: total, days: days.length })}
     >
-      <div className="mb-1.5 h-4 text-2xs text-ink-3 tabular-nums" aria-hidden="true">
+      <div className="mb-1.5 h-4 text-2xs text-sn-label3 tabular-nums" aria-hidden="true">
         {hover === null
           ? null
           : t("privacy_masking.day_tip", {
@@ -47,12 +47,12 @@ export function MaskingDayBars({ days }: { days: MaskDay[] }) {
             >
               <span
                 className={[
-                  "w-full rounded-xs transition-[height,opacity] duration-500 ease-pop motion-safe:animate-[pm-bar-grow_700ms_cubic-bezier(0.16,1,0.3,1)]",
+                  "w-full rounded-xs transition-[height,opacity] duration-500 ease-sn-strong motion-safe:animate-[pm-bar-grow_700ms_cubic-bezier(0.16,1,0.3,1)]",
                   day.places === 0
-                    ? "h-[3px] bg-ink/[0.07] dark:bg-white/[0.08]"
+                    ? "h-[3px] bg-sn-label/[0.07] dark:bg-white/[0.08]"
                     : index === last
                       ? "bg-violet-500 dark:bg-violet-400"
-                      : "bg-ink/[0.14] dark:bg-white/[0.16]",
+                      : "bg-sn-label/[0.14] dark:bg-white/[0.16]",
                   hover !== null && hover !== index ? "opacity-60" : "",
                 ].join(" ")}
                 style={day.places > 0 ? { height: `${pct}%` } : undefined}
@@ -61,7 +61,7 @@ export function MaskingDayBars({ days }: { days: MaskDay[] }) {
           );
         })}
       </div>
-      <div className="mt-1.5 flex justify-between text-2xs text-ink-3" aria-hidden="true">
+      <div className="mt-1.5 flex justify-between text-2xs text-sn-label3" aria-hidden="true">
         <span>{dayName(0)}</span>
         <span className={hover === null ? "font-medium text-violet-600 dark:text-violet-300" : ""}>{dayName(last)}</span>
       </div>

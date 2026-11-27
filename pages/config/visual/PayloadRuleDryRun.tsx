@@ -86,8 +86,8 @@ export function PayloadRuleDryRun({
   return (
     <div className={surface({ radius: "2xl" })}>
       <div className="px-5 pt-4 pb-3">
-        <h3 className="text-sm font-semibold text-ink">{t("config_ui.payload.dry_run.title")}</h3>
-        <p className="mt-0.5 text-xs leading-5 text-ink-3">{t("config_ui.payload.dry_run.desc")}</p>
+        <h3 className="text-sm font-semibold text-sn-label">{t("config_ui.payload.dry_run.title")}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-sn-label3">{t("config_ui.payload.dry_run.desc")}</p>
       </div>
       <div className="space-y-3 px-5 pb-5">
         <div className="grid gap-3 md:grid-cols-[1fr_1fr_200px]">
@@ -154,12 +154,12 @@ export function PayloadRuleDryRun({
             {running ? t("config_ui.payload.dry_run.running") : t("config_ui.payload.dry_run.run")}
           </Button>
           {!canRun ? (
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {t("config_ui.payload.dry_run.no_permission")}
             </span>
           ) : null}
           {outcome && outcome.draftKey !== draftKey ? (
-            <span className="text-xs text-ink-3">{t("config_ui.payload.dry_run.stale")}</span>
+            <span className="text-xs text-sn-label3">{t("config_ui.payload.dry_run.stale")}</span>
           ) : null}
         </div>
         {error ? (

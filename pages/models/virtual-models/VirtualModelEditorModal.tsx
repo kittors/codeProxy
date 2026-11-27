@@ -125,7 +125,7 @@ export function VirtualModelEditorModal({
         width: 48,
         overflowTooltip: false,
         cell: (_member, { rowIndex: index }) => (
-          <span className="text-sm tabular-nums text-ink-3">{index + 1}</span>
+          <span className="text-sm tabular-nums text-sn-label3">{index + 1}</span>
         ),
       },
       {
@@ -191,7 +191,7 @@ export function VirtualModelEditorModal({
                     disabled={saving}
                   />
                   {shares[member.id] !== undefined ? (
-                    <span className="whitespace-nowrap text-xs tabular-nums text-ink-3">
+                    <span className="whitespace-nowrap text-xs tabular-nums text-sn-label3">
                       {t("models_page.virtual.member_share", { share: shares[member.id] })}
                     </span>
                   ) : null}
@@ -360,14 +360,14 @@ export function VirtualModelEditorModal({
           <section className="space-y-2" aria-labelledby="virtual-model-members-title">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div className="min-w-0">
-                <h3 id="virtual-model-members-title" className="text-sm font-medium text-ink">
+                <h3 id="virtual-model-members-title" className="text-sm font-medium text-sn-label">
                   {t("models_page.virtual.members")}
                 </h3>
-                <p className="text-xs leading-5 text-ink-3">
+                <p className="text-xs leading-5 text-sn-label3">
                   {t("models_page.virtual.members_hint")}
                 </p>
               </div>
-              <span className="text-xs tabular-nums text-ink-3">
+              <span className="text-xs tabular-nums text-sn-label3">
                 {t("models_page.virtual.member_count", {
                   used: draft.members.length,
                   max: MAX_VIRTUAL_MODEL_MEMBERS,

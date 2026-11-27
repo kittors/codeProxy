@@ -43,11 +43,11 @@ export function Sidebar({
       className={[
         "relative z-30 flex h-full shrink-0 flex-col overflow-hidden bg-[var(--sn-side-bg)] pb-2.5",
         "transition-[width] duration-300 ease-[var(--sn-ease-open)] motion-reduce:transition-none",
-        collapsed ? "w-14" : "w-64",
+        collapsed ? "w-14" : "w-[224px]",
       ].join(" ")}
     >
-      {/* 顶栏高 44px（h-11），与右侧 ShellTopBar 严格同高同中轴；w-14(56px) 收起态下 px-3(24px) + size-8(32px) 与下方导航图标同竖轴。 */}
-      <div className="flex h-11 shrink-0 items-center px-3">
+      {/* 顶栏高 42px，与右侧 ShellTopBar 严格同高同中轴（对齐 Satin shell.css）。 */}
+      <div className="flex h-[42px] shrink-0 items-center px-3">
         {/*
           Logo 与收起按钮叠在同一个位置：平时显示 Logo，悬停或键盘聚焦时换成侧栏图标，
           点击切换收起/展开。两种状态共用一个按钮，所以收起前后它的位置和大小都不会变。

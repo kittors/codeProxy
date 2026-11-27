@@ -25,7 +25,7 @@ export function ExcludedModelsEditor({
   return (
     <FieldGroup>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.excluded_models_label")}
         </p>
         <div className="flex items-center gap-2">
@@ -56,7 +56,7 @@ export function ExcludedModelsEditor({
         className="mt-3 min-h-[140px] resize-y font-mono text-xs"
       />
 
-      <p className="mt-2 text-xs text-ink-3">
+      <p className="mt-2 text-xs text-sn-label3">
         {t("providers.excluded_count_hint", { count })}
       </p>
     </FieldGroup>

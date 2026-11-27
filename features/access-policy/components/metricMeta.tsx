@@ -23,7 +23,7 @@ export function MetricGlyph({
   className?: string;
 }) {
   const { icon: Icon, hue } = METRIC_META[metric];
-  return <Icon size={size} aria-hidden="true" className={`shrink-0 text-ink-3 ${HUE_GLYPH[hue]} ${className}`} />;
+  return <Icon size={size} aria-hidden="true" className={`shrink-0 text-sn-label3 ${HUE_GLYPH[hue]} ${className}`} />;
 }
 
 /** 带渐变淡底的小图标块（矩阵行头、规则卡片）。 */
@@ -33,7 +33,7 @@ export function MetricTile({ metric, size = "sm" }: { metric: QuotaMetric; size?
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] ${box} ${HUE_TILE[hue]}`}
+      className={`inline-flex shrink-0 items-center justify-center bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07] ${box} ${HUE_TILE[hue]}`}
     >
       <Icon size={size === "md" ? 16 : 14} />
     </span>

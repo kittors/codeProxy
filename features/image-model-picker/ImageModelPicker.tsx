@@ -43,7 +43,7 @@ export function ImageModelPicker({
                 <>
                   {/* 读屏读到「模型名 服务商」，而不是两段文字粘在一起。 */}
                   <span className="sr-only"> </span>
-                  <span className="shrink-0 text-xs font-normal text-ink-3">
+                  <span className="shrink-0 text-xs font-normal text-sn-label3">
                     {providerLabel(entry.provider)}
                   </span>
                 </>

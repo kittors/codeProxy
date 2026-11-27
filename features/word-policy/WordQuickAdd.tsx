@@ -117,7 +117,7 @@ export function WordQuickAdd({ rules, limits, disabled = false, onAdd, onAddRege
         aria-live="polite"
         className={[
           "min-h-4 text-xs",
-          feedback?.tone === "warn" ? "text-amber-700 dark:text-amber-300" : "text-ink-3",
+          feedback?.tone === "warn" ? "text-amber-700 dark:text-amber-300" : "text-sn-label3",
         ].join(" ")}
       >
         {feedback?.message ?? t("content_moderation.words.quick_add_hint")}

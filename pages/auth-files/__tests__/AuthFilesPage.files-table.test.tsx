@@ -2024,7 +2024,7 @@ describe("AuthFilesPage files table", () => {
     expect(codexBrand).not.toBe("");
     const providerTag = within(card as HTMLElement).getByText(/^codex$/i);
     expect(providerTag.style.getPropertyValue("--brand-l")).toBe(codexBrand);
-    expect(providerTag).toHaveClass("text-ink-2", "colorful:text-[var(--brand-text)]");
+    expect(providerTag).toHaveClass("text-sn-label2", "colorful:text-[var(--brand-text)]");
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 

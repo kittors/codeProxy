@@ -20,7 +20,7 @@ export function ProviderIdCopyButton({ id }: { id: string }) {
     <HoverTooltip content={`ID: ${id}`} placement="top">
       <button
         type="button"
-        className="sn-btn !h-5 !w-5 !p-0 shrink-0 !rounded-md !bg-ink/[0.05] !text-2xs font-semibold !text-ink-3 !shadow-none hover:!bg-ink/[0.08] hover:!text-ink-2 dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]"
+        className="sn-btn !h-5 !w-5 !p-0 shrink-0 !rounded-md !bg-sn-label/[0.05] !text-2xs font-semibold !text-sn-label3 !shadow-none hover:!bg-sn-label/[0.08] hover:!text-sn-label2 dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]"
         aria-label={t("providers.copy_channel_id")}
         onClick={(event) => {
           event.stopPropagation();

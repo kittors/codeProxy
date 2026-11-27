@@ -15,7 +15,7 @@ export function ProviderGlyph({
   return provider.icon ? (
     <VendorIcon modelId={provider.icon} size={size} />
   ) : (
-    <FileJson size={size} className="text-ink-2" aria-hidden="true" />
+    <FileJson size={size} className="text-sn-label2" aria-hidden="true" />
   );
 }
 

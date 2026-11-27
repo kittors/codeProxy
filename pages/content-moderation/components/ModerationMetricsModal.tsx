@@ -137,10 +137,10 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
           title={
             <span className="flex flex-wrap items-center gap-2">
               {t("content_moderation.metrics_card_title")}
-              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+              <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07]">
                 {t("content_moderation.metrics_badge_sync")}
               </span>
-              <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:text-emerald-300">
+              <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:text-emerald-300">
                 {t("content_moderation.metrics_badge_pre_block")}
               </span>
             </span>
@@ -163,18 +163,18 @@ export function ModerationMetricsModal({ open, onClose }: ModerationMetricsModal
                 key={tile.key}
                 className={`flex h-full min-w-0 flex-col p-4 ${surface({ tone: "raised", radius: "2xl" })}`}
               >
-                <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-ink-3">
-                  <Icon size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+                <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-sn-label3">
+                  <Icon size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
                   <span className="min-w-0 truncate">{tile.title}</span>
                 </p>
-                <div className="mt-2.5 min-w-0 overflow-hidden text-2xl font-semibold tracking-tight tabular-nums text-ink">
+                <div className="mt-2.5 min-w-0 overflow-hidden text-2xl font-semibold tracking-tight tabular-nums text-sn-label">
                   {loading && !metrics ? (
                     <Skeleton className="my-1 h-6 w-16" />
                   ) : (
                     <AnimatedNumber value={tile.value} format={tile.format} />
                   )}
                 </div>
-                <p className="mt-auto pt-2 text-xs leading-5 text-ink-3">{tile.help}</p>
+                <p className="mt-auto pt-2 text-xs leading-5 text-sn-label3">{tile.help}</p>
               </article>
             );
           })}

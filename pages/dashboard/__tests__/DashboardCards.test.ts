@@ -72,7 +72,7 @@ describe("dashboard card composition", () => {
     expect(visuals).toContain("transition-[stroke-dashoffset]");
     expect(source).toContain("grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)_280px]");
     // 只有一层卡片：卡片里不再套淡底小块和彩色图标块，「系统监控」本身是扁平分区。
-    expect(source).not.toContain("bg-subtle");
+    expect(source).not.toContain("bg-sn-subtle");
     expect(source).not.toContain("IconChip");
     expect(source).toMatch(/<Card\s+flat/);
   });
@@ -89,13 +89,13 @@ describe("dashboard card composition", () => {
     const systemMonitorSource = readModule("pages/dashboard/SystemMonitorSection.tsx");
 
     // RPM / TPM 读数直接写在卡片上（标签前一颗与曲线同色的圆点），不再套白底小卡和
-    // 彩色图标块；文字用 text-ink-* 令牌，深浅色都跟着切换，没有只顾浅色的填充色。
+    // 彩色图标块；文字用 Satin text-sn-label* 令牌，深浅色都跟着切换，没有只顾浅色的填充色。
     expect(chartSource).not.toContain("surface(");
     expect(chartSource).not.toContain("DialogIcon");
-    expect(chartSource).not.toContain("bg-subtle");
-    expect(chartSource).toContain("text-ink-3");
+    expect(chartSource).not.toContain("bg-sn-subtle");
+    expect(chartSource).toContain("text-sn-label3");
     expect(chartSource).not.toMatch(/bg-slate-50(?![\w/-])/);
     expect(systemMonitorSource).not.toContain("dark:text-white/80");
-    expect(systemMonitorSource).toContain("text-ink-2");
+    expect(systemMonitorSource).toContain("text-sn-label2");
   });
 });

@@ -9,11 +9,9 @@ import {
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type PropsWithChildren,
-  type ReactNode,
 } from "react";
 import { initSeg } from "satin-ui";
 import { useScrollFade } from "../hooks/useScrollFade";
-import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 import type { ControlSize } from "../utils/controlStyles";
 
 type TabsValue = string;
@@ -130,7 +128,7 @@ export function TabsList({
       {...divProps}
       role="tablist"
       className={[
-        "sn-seg bg-track scrollbar-hidden !inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap",
+        "sn-seg bg-sn-sunken scrollbar-hidden !inline-flex w-fit max-w-full shrink-0 self-start gap-0.5 overflow-x-auto overscroll-x-contain whitespace-nowrap",
         tabsListSizeClass[size],
         className,
       ]
@@ -152,15 +150,6 @@ export function TabsList({
   );
 }
 
-function firstIconHue(children: ReactNode): Hue | null {
-  let found: Hue | null = null;
-  Children.forEach(children, (child) => {
-    if (found) return;
-    found = hueForIcon(child);
-  });
-  return found;
-}
-
 export function TabsTrigger({
   value,
   children,
@@ -172,7 +161,6 @@ export function TabsTrigger({
 >) {
   const { size, value: current, onValueChange, tone } = useTabs();
   const active = current === value;
-  const iconHue = tone === "brand" && active ? null : firstIconHue(children);
 
   const onClick = useCallback(() => {
     onValueChange(value);
@@ -190,7 +178,6 @@ export function TabsTrigger({
         "!inline-flex h-full shrink-0 items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:-outline-offset-2",
         tabsTriggerPaddingBySize[size],
         active && tone === "brand" ? "!text-[var(--sn-on-primary)]" : null,
-        iconHue ? HUE_BUTTON_ICON[iconHue] : null,
         buttonProps.className,
       ]
         .filter(Boolean)

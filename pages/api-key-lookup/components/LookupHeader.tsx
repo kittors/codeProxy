@@ -59,15 +59,15 @@ export function LookupHeader({
       ].join(" ")}
     >
       {/*
-        浮岛的轮廓是伪元素细边（cp-edge），不画 border；滚动后底色加实一点、再给卡片投影，
+        浮岛的轮廓是伪元素细边（border border-sn-line），不画 border；滚动后底色加实一点、再给卡片投影，
         和页面内容拉开前后层次。底色用卡片色的半透明：深色下是近黑的卡片色，不再是一层发灰的白。
       */}
       <div
         className={[
-          "cp-edge mx-auto flex h-14 max-w-screen-xl items-center justify-between",
+          "border border-sn-line mx-auto flex h-14 max-w-screen-xl items-center justify-between",
           "motion-safe:transition-[background-color,box-shadow] motion-safe:duration-300",
           "rounded-2xl px-4 backdrop-blur-xl sm:px-5",
-          scrolled ? "bg-surface/85 shadow-pop" : "bg-surface/60",
+          scrolled ? "bg-sn-raised/85 shadow-sn-e1" : "bg-sn-raised/60",
         ].join(" ")}
       >
         <LookupBrand showLanding={showLanding} title={t("apikey_lookup.title")} />
@@ -80,16 +80,16 @@ export function LookupHeader({
                   type="button"
                   aria-label={displayName}
                   data-testid="apikey-lookup-account-menu"
-                  className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-ink-2 transition-colors duration-150 hover:bg-hover hover:text-ink sm:max-w-56"
+                  className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-sn-label2 transition-colors duration-150 hover:bg-sn-hover hover:text-sn-label sm:max-w-56"
                 >
                   <Key size={14} className="shrink-0" />
                   <span className="min-w-0 truncate">{displayName}</span>
                   {extraKeyCount > 0 ? (
-                    <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
+                    <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07]">
                       +{extraKeyCount}
                     </span>
                   ) : null}
-                  <ChevronRight size={14} className="shrink-0 rotate-90 text-ink-3" />
+                  <ChevronRight size={14} className="shrink-0 rotate-90 text-sn-label3" />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
@@ -111,7 +111,7 @@ export function LookupHeader({
                         <span className="min-w-0 flex-1">
                           {t("apikey_lookup.switch_account", { defaultValue: "切换账号" })}
                         </span>
-                        <ChevronRight size={14} className="ml-auto shrink-0 text-ink-3" />
+                        <ChevronRight size={14} className="ml-auto shrink-0 text-sn-label3" />
                       </DropdownMenu.SubTrigger>
                       <DropdownMenu.Portal>
                         <DropdownMenu.SubContent
@@ -150,7 +150,7 @@ export function LookupHeader({
                                   // 当前账号是「选中项」：简约风格下对勾是强调色，多彩风格下是绿色。
                                   <Check
                                     size={15}
-                                    className="ml-auto shrink-0 text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-400"
+                                    className="ml-auto shrink-0 text-sn-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-400"
                                   />
                                 ) : null}
                               </DropdownMenu.Item>

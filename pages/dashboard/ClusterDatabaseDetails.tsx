@@ -45,7 +45,7 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
             <DetailItem label={t("cluster_nodes.wal_senders")} value={String(db.connections.wal_senders)} />
           </DetailGrid>
         ) : (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.not_readable")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.not_readable")}</p>
         )}
       </DetailSection>
 
@@ -72,7 +72,7 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
             />
           </DetailGrid>
         ) : (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.not_readable")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.not_readable")}</p>
         )}
       </DetailSection>
 
@@ -103,7 +103,7 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
             <DetailItem label={t("cluster_nodes.temp_bytes")} value={formatBytes(db.window.temp_bytes)} />
           </DetailGrid>
         ) : (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.window_pending")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.window_pending")}</p>
         )}
       </DetailSection>
 
@@ -130,13 +130,13 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
 
       <DetailSection title={t("cluster_nodes.section_slots")}>
         {view.slots.length === 0 ? (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.no_slots")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.no_slots")}</p>
         ) : (
           <ul className="space-y-3">
             {view.slots.map((slot) => (
               <li key={slot.name} data-testid="slot-row" data-level={slot.level} className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-mono text-xs font-semibold text-ink">{slot.name}</span>
+                  <span className="truncate font-mono text-xs font-semibold text-sn-label">{slot.name}</span>
                   <Chip level={slot.level}>
                     {[slot.active ? t("cluster_nodes.slot_active") : t("cluster_nodes.slot_inactive"), slot.walStatus]
                       .filter(Boolean)
@@ -167,13 +167,13 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
 
       <DetailSection title={t("cluster_nodes.section_replication")}>
         {view.replicas.length === 0 ? (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.no_replicas")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.no_replicas")}</p>
         ) : (
           <ul className="space-y-3">
             {view.replicas.map((replica, index) => (
               <li key={`${replica.name}-${index}`} className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-mono text-xs font-semibold text-ink">{replica.name}</span>
+                  <span className="truncate font-mono text-xs font-semibold text-sn-label">{replica.name}</span>
                   <Chip level={replica.level}>{[replica.state, replica.syncState].filter(Boolean).join(" · ")}</Chip>
                 </div>
                 <DetailGrid>
@@ -207,8 +207,8 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
             {hostCpu ? (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-2 text-xs">
-                  <span className="text-ink-3">{t("cluster_nodes.cpu_with_cores", { count: hostCpu.cpus })}</span>
-                  <span className="tabular-nums text-ink-2">
+                  <span className="text-sn-label3">{t("cluster_nodes.cpu_with_cores", { count: hostCpu.cpus })}</span>
+                  <span className="tabular-nums text-sn-label2">
                     {t("cluster_nodes.host_cpu_value", {
                       busy: formatCores(hostCpu.busyCores),
                       steal: formatCores(hostCpu.stealCores),
@@ -232,7 +232,7 @@ export function ClusterDatabaseDetails({ view, now }: { view: DatabaseView; now:
             <DiskRows disks={host.disks} />
           </div>
         ) : (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.host_none")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.host_none")}</p>
         )}
       </DetailSection>
 

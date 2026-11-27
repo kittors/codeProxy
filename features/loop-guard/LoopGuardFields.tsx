@@ -168,7 +168,7 @@ export function LoopGuardFields({
   const distinctMax = maxDistinctFor(windowForDistinct, info);
 
   const effectiveNote = (line: string | null) =>
-    line ? <p className="mt-3 text-xs text-ink-3">{line}</p> : null;
+    line ? <p className="mt-3 text-xs text-sn-label3">{line}</p> : null;
 
   return (
     <SettingGroup flat={flat}>

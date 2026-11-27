@@ -157,10 +157,10 @@ test.describe("request logs grid", () => {
     await page.mouse.move(x - 600, y, { steps: 12 });
     await page.mouse.up();
     const narrowed = await headerBox(page, "model");
-    // 模型列最小 168 设计像素：存下的就是下限。表格这时放得下、有剩余宽度，模型列是 grow 列会再分到一点，
+    // 模型列最小 144 设计像素：存下的就是下限。表格这时放得下、有剩余宽度，模型列是 grow 列会再分到一点，
     // 所以显示宽度不小于下限（0.9 的根字号）即可。
-    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").widths?.model, PREFS_KEY)).toBe(168);
-    expect(narrowed?.width ?? 0).toBeGreaterThanOrEqual(168 * 0.9 - 0.5);
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").widths?.model, PREFS_KEY)).toBe(144);
+    expect(narrowed?.width ?? 0).toBeGreaterThanOrEqual(144 * 0.9 - 0.5);
     expect(narrowed?.width ?? 0).toBeLessThan(before.width);
 
     await handle.dblclick();

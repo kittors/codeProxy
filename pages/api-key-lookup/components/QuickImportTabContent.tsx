@@ -37,7 +37,7 @@ const SKELETON_GROUPS = ["first", "second"];
 const QUICK_IMPORT_CACHE_STORAGE_KEY = "apiKeyLookup.quickImportCache.v3";
 
 /** 中性小标签：只有淡底、不描边。 */
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -131,7 +131,7 @@ function QuickImportCard({
     <div
       className={[
         surface({ radius: "2xl" }),
-        "sn-fade-up group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] transition-shadow hover:shadow-lift",
+        "sn-fade-up group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] transition-shadow hover:shadow-sn-lift",
       ].join(" ")}
     >
       <button
@@ -143,7 +143,7 @@ function QuickImportCard({
         <CcSwitchClientIcon clientType={clientType} className="mt-0.5 h-5 w-5" />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="truncate text-sm font-semibold text-ink">
+            <span className="truncate text-sm font-semibold text-sn-label">
               {config.providerName}
             </span>
             <span className={`rounded-md px-1.5 py-0.5 text-2xs font-semibold ${NEUTRAL_TAG}`}>
@@ -151,7 +151,7 @@ function QuickImportCard({
             </span>
           </span>
           {config.note ? (
-            <span className="mt-1 block truncate text-xs text-ink-3">
+            <span className="mt-1 block truncate text-xs text-sn-label3">
               {config.note}
             </span>
           ) : null}
@@ -162,7 +162,7 @@ function QuickImportCard({
               {getPrimaryModel(config) || t("common.no_model_data")}
             </span>
             {config.allowedChannelGroups.length > 0 ? (
-              <span className="truncate text-2xs text-ink-3">
+              <span className="truncate text-2xs text-sn-label3">
                 {config.allowedChannelGroups.join(", ")}
               </span>
             ) : null}
@@ -175,7 +175,7 @@ function QuickImportCard({
           size="xs"
           title={copied ? t("ccswitch.copy_import_link_copied") : t("ccswitch.copy_import_link")}
           onClick={() => onCopyLink(config)}
-          className="text-ink-2 hover:text-ink"
+          className="text-sn-label2 hover:text-sn-label"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </Button>
@@ -199,9 +199,9 @@ function QuickImportLoadingSkeleton() {
         {SKELETON_GROUPS.map((group) => (
           <section key={group} className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="h-4 w-4 rounded-md bg-track motion-safe:animate-pulse" />
-              <span className="h-4 w-24 rounded-md bg-track motion-safe:animate-pulse" />
-              <span className="h-5 w-8 rounded-full bg-track motion-safe:animate-pulse" />
+              <span className="h-4 w-4 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
+              <span className="h-4 w-24 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
+              <span className="h-5 w-8 rounded-full bg-sn-sunken motion-safe:animate-pulse" />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {[0, 1].map((index) => (
@@ -209,13 +209,13 @@ function QuickImportLoadingSkeleton() {
                   key={index}
                   className={`${surface({ radius: "2xl" })} flex min-h-[116px] items-start gap-4 p-4`}
                 >
-                  <span className="h-5 w-5 shrink-0 rounded-md bg-track motion-safe:animate-pulse" />
+                  <span className="h-5 w-5 shrink-0 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
                   <span className="min-w-0 flex-1 space-y-3 pt-0.5">
-                    <span className="block h-4 w-1/2 rounded-md bg-track motion-safe:animate-pulse" />
-                    <span className="block h-3 w-2/3 rounded-md bg-track motion-safe:animate-pulse" />
+                    <span className="block h-4 w-1/2 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
+                    <span className="block h-3 w-2/3 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
                     <span className="flex gap-2 pt-1">
-                      <span className="h-5 w-24 rounded-md bg-track motion-safe:animate-pulse" />
-                      <span className="h-5 w-16 rounded-md bg-track motion-safe:animate-pulse" />
+                      <span className="h-5 w-24 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
+                      <span className="h-5 w-16 rounded-md bg-sn-sunken motion-safe:animate-pulse" />
                     </span>
                   </span>
                 </div>
@@ -368,12 +368,12 @@ export function QuickImportTabContent({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           {/* 线性图标跟在标题前，不再垫一块反色的图标方块（卡片角落里的又一层）。 */}
           <div className="flex items-start gap-2.5">
-            <Download size={16} className="mt-0.5 shrink-0 text-ink-3" aria-hidden="true" />
+            <Download size={16} className="mt-0.5 shrink-0 text-sn-label3" aria-hidden="true" />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-ink">
+              <h3 className="text-sm font-semibold text-sn-label">
                 {t("apikey_lookup.quick_import_setup_title")}
               </h3>
-              <p className="max-w-3xl text-xs leading-5 text-ink-2">
+              <p className="max-w-3xl text-xs leading-5 text-sn-label2">
                 {t("apikey_lookup.quick_import_setup_desc")}
               </p>
             </div>
@@ -382,7 +382,7 @@ export function QuickImportTabContent({
             href={CC_SWITCH_RELEASES_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-surface px-3 text-xs font-semibold text-ink shadow-control transition-[background-color,box-shadow] hover:bg-surface-hover hover:shadow-control-hover focus-visible:shadow-control-focus"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-sn-raised px-3 text-xs font-semibold text-sn-label border border-sn-line-control transition-[background-color,box-shadow] hover:bg-sn-hover-solid hover:border-sn-line-control-hover focus-visible:border-sn-focus focus-visible:shadow-[0_0_0_3px_var(--sn-ring)]"
           >
             {t("apikey_lookup.quick_import_download_latest")}
             <ExternalLink size={13} />
@@ -421,7 +421,7 @@ export function QuickImportTabContent({
                 >
                   <div className="flex items-center gap-2">
                     <CcSwitchClientIcon clientType={clientType} />
-                    <h3 className="text-sm font-semibold text-ink">{label}</h3>
+                    <h3 className="text-sm font-semibold text-sn-label">{label}</h3>
                     <span
                       key={`${clientType}-${items.length}`}
                       className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${NEUTRAL_TAG}`}

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 // 请求详情里的小标签：只用状态色的淡底，深浅色由同一组类名覆盖。
 const BADGE_TONE = {
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
   info: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
   warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",

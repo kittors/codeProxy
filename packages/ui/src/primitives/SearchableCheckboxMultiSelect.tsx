@@ -498,7 +498,7 @@ export function SearchableCheckboxMultiSelect({
                         "block text-xs font-medium",
                         // 「全部」是当前生效的选择：简约风格用强调色，多彩风格沿用绿色。
                         showAllSelectionSummary
-                          ? "text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
+                          ? "text-sn-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
                           : "text-[var(--sn-label2)]",
                       )}
                     >

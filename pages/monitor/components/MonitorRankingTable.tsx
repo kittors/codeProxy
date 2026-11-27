@@ -136,7 +136,7 @@ export function MonitorRankingTable({
       isRowActive={(row) => row.key !== "" && selected.includes(row.key)}
       footer={
         hiddenCount > 0 || expanded || total > rows.length ? (
-          <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
+          <div className="flex items-center justify-between gap-2 text-xs text-sn-label3">
             <span>
               {total > rows.length
                 ? t("monitor_center.ranking.showing_top", { shown: rows.length, total })
@@ -169,9 +169,9 @@ export function MonitorRankingTable({
 export function ShareBar({ share, color }: { share: number; color: string }) {
   const width = Math.max(0, Math.min(100, share));
   return (
-    <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-track">
+    <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-sn-sunken">
       <span
-        className="block h-full rounded-full transition-[width] duration-700 ease-pop motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]"
+        className="block h-full rounded-full transition-[width] duration-700 ease-sn-strong motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]"
         style={{ width: `${width}%`, backgroundColor: color }}
       />
     </span>

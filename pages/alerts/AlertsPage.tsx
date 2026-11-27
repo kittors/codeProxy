@@ -108,7 +108,7 @@ function AlertsWorkspace() {
           页签和保存按钮钉在顶部：通道多了页面会很长，改完往下滚也要够得着保存。保存失败的原因放在
           同一层，否则滚在下面点了保存，错误出现在视口外。
         */}
-        <div className="sticky top-0 z-20 -mx-4 space-y-3 bg-canvas px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
+        <div className="sticky top-0 z-20 -mx-4 space-y-3 bg-sn-workspace px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList aria-label={t("nav.alerts")} className="max-w-full">
               <TabsTrigger value="notify">{t("alerts_page.tab.notify")}</TabsTrigger>

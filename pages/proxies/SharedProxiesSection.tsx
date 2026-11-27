@@ -54,7 +54,7 @@ export function SharedProxiesSection({
         cell: (entry) => (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate font-semibold text-ink">{entry.name}</p>
+              <p className="truncate font-semibold text-sn-label">{entry.name}</p>
               {entry.overridden ? (
                 <SharingNoticeBadge
                   tone="warning"
@@ -64,7 +64,7 @@ export function SharedProxiesSection({
                 />
               ) : null}
             </div>
-            <p className="mt-1 truncate font-mono text-xs text-ink-3">{entry.id}</p>
+            <p className="mt-1 truncate font-mono text-xs text-sn-label3">{entry.id}</p>
           </div>
         ),
       },
@@ -74,10 +74,10 @@ export function SharedProxiesSection({
         width: GRID_WIDTH.badgeGroup,
         cell: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+            <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-semibold text-sn-label2 dark:bg-white/[0.07]">
               {proxyProtocol(entry.maskedUrl)}
             </span>
-            <span className="truncate font-mono text-xs text-ink-2">{proxyEndpoint(entry)}</span>
+            <span className="truncate font-mono text-xs text-sn-label2">{proxyEndpoint(entry)}</span>
           </div>
         ),
       },
@@ -87,7 +87,7 @@ export function SharedProxiesSection({
         width: GRID_WIDTH.badge,
         cell: (entry) =>
           entry.enabled ? (
-            <span className="text-xs text-ink-2">{t("proxies.shared_status_enabled")}</span>
+            <span className="text-xs text-sn-label2">{t("proxies.shared_status_enabled")}</span>
           ) : (
             <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
               {t("proxies.disabled")}
@@ -100,7 +100,7 @@ export function SharedProxiesSection({
         width: GRID_WIDTH.badgeStacked,
         cell: (entry) =>
           entry.overridden ? (
-            <span className="text-xs text-ink-3">--</span>
+            <span className="text-xs text-sn-label3">--</span>
           ) : (
             <ProxyLatencyCell result={checkState[entry.id]} />
           ),
@@ -119,7 +119,7 @@ export function SharedProxiesSection({
                     status={egressStatusFor(egress.listing, entry.id, true)}
                   />
                 ) : (
-                  <span className="text-xs text-ink-3">--</span>
+                  <span className="text-xs text-sn-label3">--</span>
                 ),
             },
           ]
@@ -129,7 +129,7 @@ export function SharedProxiesSection({
         header: t("proxies.remark_label"),
         width: GRID_WIDTH.badgeGroup,
         cell: (entry) => (
-          <p className="truncate text-xs text-ink-2">{entry.description || "--"}</p>
+          <p className="truncate text-xs text-sn-label2">{entry.description || "--"}</p>
         ),
       },
       {

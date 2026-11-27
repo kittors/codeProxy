@@ -61,7 +61,7 @@ import {
 } from "./modelSelectionDraft";
 
 /** 有失效渠道的行淡淡染红（走 DataGrid 的行底色变量，冻结格一起变）。 */
-const STALE_ROW_TINT = "[--grid-bg:color-mix(in_srgb,var(--cp-backdrop)_95%,var(--color-rose-500))]";
+const STALE_ROW_TINT = "[--grid-bg:color-mix(in_srgb,var(--sn-backdrop)_95%,var(--color-rose-500))]";
 
 const SYSTEM_DEFAULT_GROUP_NAME = "default";
 const SYSTEM_DEFAULT_GROUP_ID = "system-default-root";
@@ -759,7 +759,7 @@ export function RoutingConfigEditor({
             : group.description.trim() || t("channel_groups_page.no_description");
           return (
             <OverflowTooltip content={description} className="block min-w-0">
-              <span className="block truncate whitespace-nowrap text-ink-3">{description}</span>
+              <span className="block truncate whitespace-nowrap text-sn-label3">{description}</span>
             </OverflowTooltip>
           );
         },
@@ -772,14 +772,14 @@ export function RoutingConfigEditor({
         cell: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex min-w-0 items-center truncate whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+              <span className="inline-flex min-w-0 items-center truncate whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
           }
           const channels = resolveGroupChannels(group);
           return (
-            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-900/30 colorful:dark:text-sky-300">
+            <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-900/30 colorful:dark:text-sky-300">
               {channels.length}
             </span>
           );
@@ -804,7 +804,7 @@ export function RoutingConfigEditor({
               onClick={() => setIssueGroup(group)}
               disabled={disabled}
               title={t("channel_groups_page.view_issue_reason")}
-              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-[background-color,box-shadow] hover:bg-rose-500/15 focus-visible:shadow-control-focus focus-visible:outline-none disabled:opacity-40 dark:text-rose-300"
+              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-[background-color,box-shadow] hover:bg-rose-500/15 focus-visible:border-sn-focus focus-visible:shadow-[0_0_0_3px_var(--sn-ring)] focus-visible:outline-none disabled:opacity-40 dark:text-rose-300"
             >
               <TriangleAlert size={13} />
               <span>{t("channel_groups_page.status_invalid")}</span>
@@ -820,7 +820,7 @@ export function RoutingConfigEditor({
         cell: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.system_default_route")}
               </span>
             );
@@ -830,7 +830,7 @@ export function RoutingConfigEditor({
               {t("channel_groups_page.default_scope_isolated")}
             </span>
           ) : (
-            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
               {t("channel_groups_page.default_scope_included")}
             </span>
           );
@@ -843,7 +843,7 @@ export function RoutingConfigEditor({
         cell: (group) => {
           if (group.system) {
             return (
-              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
                 {t("channel_groups_page.default_pool_label")}
               </span>
             );
@@ -852,7 +852,7 @@ export function RoutingConfigEditor({
           const names = channels.map((channel) => channel.name.trim()).filter(Boolean);
           if (names.length === 0) {
             return (
-              <span className="text-ink-3">
+              <span className="text-sn-label3">
                 {t("channel_groups_page.none")}
               </span>
             );
@@ -875,7 +875,7 @@ export function RoutingConfigEditor({
                 </div>
               }
             >
-              <span className="block min-w-0 truncate whitespace-nowrap text-ink-2">
+              <span className="block min-w-0 truncate whitespace-nowrap text-sn-label2">
                 {summarizeList(names, t("channel_groups_page.more_suffix"))}
               </span>
             </HoverTooltip>
@@ -901,7 +901,7 @@ export function RoutingConfigEditor({
             : schedulingLabel(t, scheduling);
           return (
             <OverflowTooltip content={summary} className="block min-w-0">
-              <span className="block truncate whitespace-nowrap text-ink-2">{summary}</span>
+              <span className="block truncate whitespace-nowrap text-sn-label2">{summary}</span>
             </OverflowTooltip>
           );
         },
@@ -912,13 +912,13 @@ export function RoutingConfigEditor({
         width: 220,
         cell: (group) => {
           if (group.system) {
-            return <span className="font-mono text-ink">/</span>;
+            return <span className="font-mono text-sn-label">/</span>;
           }
           const routes = routesByGroup.get(group.name.trim().toLowerCase()) ?? [];
           const routePaths = routes.map((route) => route.path.trim()).filter(Boolean);
           if (routePaths.length === 0) {
             return (
-              <span className="text-ink-3">
+              <span className="text-sn-label3">
                 {t("channel_groups_page.none")}
               </span>
             );
@@ -936,7 +936,7 @@ export function RoutingConfigEditor({
                 </div>
               }
             >
-              <span className="block min-w-0 truncate whitespace-nowrap text-ink-2">
+              <span className="block min-w-0 truncate whitespace-nowrap text-sn-label2">
                 {summarizeList(routePaths, t("channel_groups_page.more_suffix"))}
               </span>
             </HoverTooltip>
@@ -994,8 +994,8 @@ export function RoutingConfigEditor({
                     isStale
                       ? "text-rose-700 dark:text-rose-200"
                       : isDisabled
-                        ? "text-ink-3"
-                        : "text-ink"
+                        ? "text-sn-label3"
+                        : "text-sn-label"
                   }`}
                 >
                   <span className="truncate">{channel.name}</span>
@@ -1005,7 +1005,7 @@ export function RoutingConfigEditor({
                     </span>
                   ) : null}
                   {!isStale && isDisabled ? (
-                    <span className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]">
+                    <span className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
                       {t("channel_groups_page.disabled_badge")}
                     </span>
                   ) : null}
@@ -1015,7 +1015,7 @@ export function RoutingConfigEditor({
                     {displayTags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                       >
                         {tag}
                       </span>
@@ -1151,7 +1151,7 @@ export function RoutingConfigEditor({
       <div className="space-y-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 md:shrink-0">
           {title ? (
-            <h3 className="text-base font-semibold tracking-tight text-ink">{title}</h3>
+            <h3 className="text-base font-semibold tracking-tight text-sn-label">{title}</h3>
           ) : (
             <span aria-hidden="true" />
           )}
@@ -1175,7 +1175,7 @@ export function RoutingConfigEditor({
           empty={{ title: t("channel_groups_page.empty_groups") }}
           rowClassName={(group) =>
             group.system
-              ? "[--grid-bg:var(--cp-subtle)]"
+              ? "[--grid-bg:var(--sn-fill-subtle)]"
               : (staleChannelsByGroup.get(group.id)?.length ?? 0) > 0
                 ? STALE_ROW_TINT
                 : undefined
@@ -1258,7 +1258,7 @@ export function RoutingConfigEditor({
                 {draftStaleChannels.map((channel) => (
                   <span
                     key={channel.id}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-ink"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-sn-raised px-2.5 py-1 text-xs font-medium text-sn-label"
                   >
                     {channel.name}
                     <span className="rounded-full bg-rose-500/10 px-1.5 py-px text-2xs font-medium text-rose-700 dark:text-rose-300">
@@ -1368,11 +1368,11 @@ export function RoutingConfigEditor({
                         className="mt-0.5"
                       />
                       <span className="min-w-0">
-                        <span className="flex items-center gap-1.5 font-semibold text-ink">
+                        <span className="flex items-center gap-1.5 font-semibold text-sn-label">
                           <span>{t("channel_groups_page.sticky_enabled_label")}</span>
                           <InfoTooltip content={t("channel_groups_page.sticky_enabled_tooltip")} />
                         </span>
-                        <span className="mt-1 block text-xs leading-5 text-ink-3">
+                        <span className="mt-1 block text-xs leading-5 text-sn-label3">
                           {t("channel_groups_page.sticky_enabled_hint")}
                         </span>
                       </span>
@@ -1422,13 +1422,13 @@ export function RoutingConfigEditor({
                             className="mt-0.5"
                           />
                           <span className="min-w-0">
-                            <span className="flex items-center gap-1.5 font-semibold text-ink">
+                            <span className="flex items-center gap-1.5 font-semibold text-sn-label">
                               <span>{t("channel_groups_page.exclude_from_default_label")}</span>
                               <InfoTooltip
                                 content={t("channel_groups_page.exclude_from_default_tooltip")}
                               />
                             </span>
-                            <span className="mt-1 block text-xs leading-5 text-ink-3">
+                            <span className="mt-1 block text-xs leading-5 text-sn-label3">
                               {t("channel_groups_page.exclude_from_default_hint")}
                             </span>
                           </span>

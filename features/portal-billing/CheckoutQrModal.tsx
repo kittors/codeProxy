@@ -87,13 +87,13 @@ export function CheckoutQrModal({
     >
       <div className="flex flex-col items-center gap-4 py-1 text-center">
         <div className="space-y-1">
-          <div className="text-sm font-medium text-ink">
+          <div className="text-sm font-medium text-sn-label">
             {liveOrder.target_label} · {liveOrder.plan_name}
           </div>
-          <div className="font-mono text-3xl font-bold tracking-tight tabular-nums text-ink">
+          <div className="font-mono text-3xl font-bold tracking-tight tabular-nums text-sn-label">
             {formatYuan(liveOrder.amount_cents)}
           </div>
-          <div className="inline-flex items-center gap-1.5 text-xs text-ink-3">
+          <div className="inline-flex items-center gap-1.5 text-xs text-sn-label3">
             <span>{channelName}</span>
             <span>·</span>
             <span className="font-mono">{liveOrder.order_no}</span>
@@ -105,9 +105,9 @@ export function CheckoutQrModal({
             className={`${surface({ tone: "inset", radius: "2xl" })} flex w-full flex-col items-center gap-2 px-5 py-6`}
           >
             <CheckCircle2 size={44} className="text-emerald-500" />
-            <div className="text-base font-semibold text-ink">{t("billing.pay_success_title")}</div>
+            <div className="text-base font-semibold text-sn-label">{t("billing.pay_success_title")}</div>
             {liveOrder.fulfillment_summary ? (
-              <p className="text-xs text-ink-2">{liveOrder.fulfillment_summary}</p>
+              <p className="text-xs text-sn-label2">{liveOrder.fulfillment_summary}</p>
             ) : null}
           </div>
         ) : isExpired || isFailed ? (
@@ -115,14 +115,14 @@ export function CheckoutQrModal({
             className={`${surface({ tone: "inset", radius: "2xl" })} flex w-full flex-col items-center gap-2 px-5 py-6`}
           >
             <XCircle size={40} className="text-rose-500" />
-            <div className="text-sm font-semibold text-ink">{statusInfo.label}</div>
+            <div className="text-sm font-semibold text-sn-label">{statusInfo.label}</div>
             {liveOrder.fulfillment_error ? (
-              <p className="text-xs text-ink-3">{liveOrder.fulfillment_error}</p>
+              <p className="text-xs text-sn-label3">{liveOrder.fulfillment_error}</p>
             ) : null}
           </div>
         ) : (
           <>
-            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
+            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-sn-label/10">
               {liveOrder.qrcode_url && !imgFailed ? (
                 <img
                   src={liveOrder.qrcode_url}
@@ -133,15 +133,15 @@ export function CheckoutQrModal({
               ) : liveOrder.pay_url ? (
                 <QrCodeSvg value={liveOrder.pay_url} size={208} label={t("billing.scan_qr_alt")} />
               ) : (
-                <div className="flex h-52 w-52 items-center justify-center text-xs text-ink-3">
+                <div className="flex h-52 w-52 items-center justify-center text-xs text-sn-label3">
                   {t("billing.qr_unavailable")}
                 </div>
               )}
             </div>
 
-            <div className="space-y-1 text-xs text-ink-2">
+            <div className="space-y-1 text-xs text-sn-label2">
               <div className="flex items-center justify-center gap-1.5">
-                <Clock size={13} className="text-ink-3" />
+                <Clock size={13} className="text-sn-label3" />
                 <span>
                   {t("billing.scan_hint", {
                     channel: channelName,
@@ -149,7 +149,7 @@ export function CheckoutQrModal({
                   })}
                 </span>
               </div>
-              <p className="text-ink-3">{t("billing.auto_detect_hint")}</p>
+              <p className="text-sn-label3">{t("billing.auto_detect_hint")}</p>
             </div>
           </>
         )}
@@ -160,7 +160,7 @@ export function CheckoutQrModal({
               href={liveOrder.pay_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-ink/[0.06] px-3.5 text-xs font-medium text-ink transition hover:bg-ink/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.14]"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-sn-label/[0.06] px-3.5 text-xs font-medium text-sn-label transition hover:bg-sn-label/[0.1] dark:bg-white/[0.08] dark:hover:bg-white/[0.14]"
             >
               <ExternalLink size={14} />
               {t("billing.open_mobile_pay", { channel: channelName })}

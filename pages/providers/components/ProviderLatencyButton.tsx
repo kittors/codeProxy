@@ -29,11 +29,11 @@ export function ProviderLatencyButton({
   const { latencyMs } = entry;
   const latencyColor =
     latencyMs === null
-      ? "text-ink-3"
+      ? "text-sn-label3"
       : latencyMs < 200
         ? "text-emerald-700 dark:text-emerald-300"
         : latencyMs < 500
-          ? "text-ink-2 colorful:text-amber-700 colorful:dark:text-amber-300"
+          ? "text-sn-label2 colorful:text-amber-700 colorful:dark:text-amber-300"
           : "text-amber-700 dark:text-amber-300 colorful:text-rose-700 colorful:dark:text-rose-300";
   const label = baseUrl
     ? `Check latency: ${baseUrl}`
@@ -43,9 +43,9 @@ export function ProviderLatencyButton({
     <button
       type="button"
       className={[
-        "sn-btn !h-5 shrink-0 gap-1 !rounded-md !bg-ink/[0.05] !px-1.5 !text-2xs font-semibold leading-none tabular-nums !shadow-none hover:!bg-ink/[0.08] dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]",
+        "sn-btn !h-5 shrink-0 gap-1 !rounded-md !bg-sn-label/[0.05] !px-1.5 !text-2xs font-semibold leading-none tabular-nums !shadow-none hover:!bg-sn-label/[0.08] dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]",
         entry.loading
-          ? "!text-ink-3"
+          ? "!text-sn-label3"
           : entry.error
             ? "!text-rose-700 dark:!text-rose-300"
             : latencyColor,

@@ -24,7 +24,7 @@ const KNOWN_STAGES: ReadonlySet<string> = new Set(MONITOR_IN_FLIGHT_STAGES);
 // 阶段小标签：状态色淡底加同色圆点，深浅色由同一组类名覆盖（与请求详情的小标签同一套）。
 // 圆点是静止的：这张表每 5 秒刷新，任何闪烁、呼吸效果都会让整张表看起来在跳。
 const STAGE_TONE: Record<string, string> = {
-  preparing: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  preparing: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
   queued: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   waiting: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   upstream: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
@@ -171,8 +171,8 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         overflowTooltip: false,
         cell: (request) => (
           <span className="flex flex-col whitespace-nowrap" title={request.request_id || undefined}>
-            <span className="tabular-nums text-ink">{clockOf(request.started_at)}</span>
-            <span className="text-xs tabular-nums text-ink-3">
+            <span className="tabular-nums text-sn-label">{clockOf(request.started_at)}</span>
+            <span className="text-xs tabular-nums text-sn-label3">
               <Running baseMs={request.elapsed_ms}>
                 {(ms) => t("monitor_center.in_flight.elapsed", { duration: formatMonitorDuration(ms) })}
               </Running>
@@ -201,7 +201,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
                   return (
                     <span
                       data-slow={slow ? "true" : undefined}
-                      className={`mt-1 text-xs tabular-nums transition-colors duration-300 ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
+                      className={`mt-1 text-xs tabular-nums transition-colors duration-300 ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-sn-label3"}`}
                       title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
                     >
                       {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
@@ -225,16 +225,16 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
           return (
             <span className="flex min-w-0 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
-                <span className="truncate text-ink" title={request.model || undefined}>
+                <span className="truncate text-sn-label" title={request.model || undefined}>
                   {request.model || "—"}
                 </span>
                 {request.stream ? (
-                  <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 text-2xs leading-5 text-ink-2 dark:bg-white/[0.07]">
+                  <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs leading-5 text-sn-label2 dark:bg-white/[0.07]">
                     {t("monitor_center.in_flight.stream")}
                   </span>
                 ) : null}
               </span>
-              <span className="mt-0.5 truncate text-xs text-ink-3" title={route || undefined}>
+              <span className="mt-0.5 truncate text-xs text-sn-label3" title={route || undefined}>
                 {endpoint || route || "—"}
               </span>
             </span>
@@ -250,7 +250,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         cell: (request) => {
           const account = request.account;
           if (!account) {
-            return <span className="text-xs text-ink-3">{t("monitor_center.in_flight.no_account")}</span>;
+            return <span className="text-xs text-sn-label3">{t("monitor_center.in_flight.no_account")}</span>;
           }
           // 第一次尝试是常态，不写；重试了才写「第 n 次尝试」并标琥珀色。
           const retried = request.attempt > 1;
@@ -260,12 +260,12 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
           ].filter(Boolean);
           return (
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-ink" title={accountTitle(account)}>
+              <span className="truncate text-sn-label" title={accountTitle(account)}>
                 {account.label || account.auth_id}
-                {account.provider ? <span className="text-ink-3"> · {account.provider}</span> : null}
+                {account.provider ? <span className="text-sn-label3"> · {account.provider}</span> : null}
               </span>
               {retried || details.length > 0 ? (
-                <span className="mt-0.5 truncate text-xs text-ink-3">
+                <span className="mt-0.5 truncate text-xs text-sn-label3">
                   {retried ? (
                     <span className="font-medium text-amber-700 dark:text-amber-300">
                       {t("monitor_center.in_flight.attempt", { attempt: request.attempt })}
@@ -285,7 +285,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         width: 128,
         overflowTooltip: false,
         cell: (request) => (
-          <span className="truncate text-ink-2" title={request.api_key_id || undefined}>
+          <span className="truncate text-sn-label2" title={request.api_key_id || undefined}>
             {request.api_key_name || request.api_key_id || "—"}
           </span>
         ),

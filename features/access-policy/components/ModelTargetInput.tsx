@@ -110,7 +110,7 @@ export function ModelTargetInput({
             trimmed ? (
               <VendorIcon modelId={trimmed} size={14} />
             ) : (
-              <Bot size={14} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.violet)} />
+              <Bot size={14} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.violet)} />
             )
           }
           onChange={(event) => {
@@ -144,7 +144,7 @@ export function ModelTargetInput({
                   aria-selected={index === active}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs",
-                    index === active ? "bg-hover text-ink" : "text-ink-2",
+                    index === active ? "bg-sn-hover text-sn-label" : "text-sn-label2",
                   )}
                   onMouseEnter={() => setActive(index)}
                   onClick={() => choose(option.value)}

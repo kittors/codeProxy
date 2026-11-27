@@ -38,7 +38,7 @@ import {
 } from "./profileDraft";
 
 const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
-const NEUTRAL = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 function ScopeLine({ profile }: { profile: ApiKeyPermissionProfile }) {
   const { t } = useTranslation();
@@ -65,7 +65,7 @@ function ScopeLine({ profile }: { profile: ApiKeyPermissionProfile }) {
       : null,
   ].filter(Boolean);
   return (
-    <p className="truncate text-xs text-ink-3">
+    <p className="truncate text-xs text-sn-label3">
       {parts.length > 0 ? parts.join(" · ") : t("access_policy.scope_unrestricted")}
     </p>
   );
@@ -239,7 +239,7 @@ export function ApiKeyPermissionsPage() {
           <EmptyState
             title={t("api_key_permissions_page.empty_title")}
             description={t("api_key_permissions_page.empty_desc")}
-            icon={<ShieldCheck size={32} className={cn("text-ink-3", HUE_GLYPH.violet)} />}
+            icon={<ShieldCheck size={32} className={cn("text-sn-label3", HUE_GLYPH.violet)} />}
             action={
               <Button variant="primary" size="sm" onClick={() => openEditor(emptyDraft())}>
                 <Plus size={14} />
@@ -259,14 +259,14 @@ export function ApiKeyPermissionsPage() {
                     fill={false}
                     titleAdornment={
                       <span className={cn(CHIP, NEUTRAL, HUE_SOFT.violet)}>
-                        <Users size={12} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.violet)} />
+                        <Users size={12} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.violet)} />
                         {t("access_policy.bound_accounts", { count: bound })}
                       </span>
                     }
                     header={<ScopeLine profile={profile} />}
                     footer={
                       <>
-                        <span className="flex min-w-0 items-center gap-1 text-xs text-ink-3">
+                        <span className="flex min-w-0 items-center gap-1 text-xs text-sn-label3">
                           <MessageSquareText size={13} aria-hidden="true" className="shrink-0" />
                           <span className="truncate">
                             {profile["system-prompt"] || t("api_key_permissions_page.no_system_prompt")}
@@ -338,7 +338,7 @@ export function ApiKeyPermissionsPage() {
           deleteTarget ? (
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate font-medium">{deleteTarget.name}</span>
-              <span className="shrink-0 text-xs text-ink-3">
+              <span className="shrink-0 text-xs text-sn-label3">
                 {t("api_key_permissions_page.bound_count", { count: boundProfileCount(deleteTarget, accounts) })}
               </span>
             </span>

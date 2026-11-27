@@ -59,13 +59,13 @@ export function TagBindingConfirm({
               {preview.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
+                  className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label2 dark:bg-white/[0.07]"
                 >
                   {tag}
                 </span>
               ))}
             </span>
-            <span className="mt-1.5 block text-xs text-ink-3">
+            <span className="mt-1.5 block text-xs text-sn-label3">
               {t(`content_moderation.tag_mode_${preview.tagMode}`)}
             </span>
           </span>
@@ -118,14 +118,14 @@ export function RebindChannelsConfirm({
         operationCount !== null ? (
           <span className="block min-w-0">
             <span className="flex min-w-0 items-center gap-2.5">
-              <span className="shrink-0 text-ink-3">
+              <span className="shrink-0 text-sn-label3">
                 {t("content_moderation.channel_count", { count: operationCount })}
               </span>
-              <ArrowRight size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <ArrowRight size={14} className="shrink-0 text-sn-label3" aria-hidden="true" />
               <span className="min-w-0 truncate font-medium">{profileName}</span>
             </span>
             {shown.length ? (
-              <span className="mt-2 block space-y-0.5 text-xs text-ink-3">
+              <span className="mt-2 block space-y-0.5 text-xs text-sn-label3">
                 {shown.map((row) => (
                   <span key={`${row.channel_type}:${row.channel_id}`} className="block truncate">
                     {t("content_moderation.rebind_from", {

@@ -27,7 +27,7 @@ export interface OwnedApiKeyActions {
 }
 
 /** 次要标签（default、掩码 Key）：中性淡底，不描边；多彩风格下 default 叠回绿色。 */
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 export interface OwnedApiKeyColumnOptions {
   /**
@@ -80,7 +80,7 @@ const buildOwnedApiKeyColumns = ({
       <div className="min-w-0 font-medium">
         <div className="flex min-w-0 items-center gap-1.5">
           <OverflowTooltip content={row.name || row.id} className="block min-w-0">
-            <span className="block truncate text-ink">
+            <span className="block truncate text-sn-label">
               {row.name || t("api_keys_page.unnamed")}
             </span>
           </OverflowTooltip>
@@ -92,13 +92,13 @@ const buildOwnedApiKeyColumns = ({
             </span>
           ) : null}
           {compact && row.disabled ? (
-            <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+            <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label3 dark:bg-white/[0.07]">
               {t("common.disabled")}
             </span>
           ) : null}
         </div>
         {compact ? (
-          <code className="mt-0.5 block truncate font-mono text-2xs font-normal text-ink-3">
+          <code className="mt-0.5 block truncate font-mono text-2xs font-normal text-sn-label3">
             {row.key_masked || row.key || row.id}
           </code>
         ) : null}
@@ -125,7 +125,7 @@ const buildOwnedApiKeyColumns = ({
     width: GRID_WIDTH.badge,
     cell: (row) => (
       <span
-        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${row.disabled ? "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}
+        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${row.disabled ? "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"}`}
       >
         {row.disabled ? t("common.disabled") : t("common.enabled")}
       </span>
@@ -149,7 +149,7 @@ const buildOwnedApiKeyColumns = ({
     align: "end",
     width: GRID_WIDTH.compact,
     cell: (row) => (
-      <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+      <span className="truncate whitespace-nowrap tabular-nums text-sn-label2">
         {formatQuotaUsdAmount(row["daily-spending-used"])}
       </span>
     ),
@@ -160,7 +160,7 @@ const buildOwnedApiKeyColumns = ({
     align: "end",
     width: GRID_WIDTH.compact,
     cell: (row) => (
-      <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+      <span className="truncate whitespace-nowrap tabular-nums text-sn-label2">
         {formatQuotaUsdAmount(row["lifetime-spending-used"])}
       </span>
     ),
@@ -176,13 +176,13 @@ const buildOwnedApiKeyColumns = ({
         <button
           type="button"
           onClick={() => actions.onViewResetHistory?.(row)}
-          className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
+          className="tabular-nums font-medium text-sn-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
           aria-label={t("api_keys_page.view_reset_history")}
         >
           {count}
         </button>
       ) : (
-        <span className="tabular-nums text-ink-3">{count}</span>
+        <span className="tabular-nums text-sn-label3">{count}</span>
       );
     },
   },
@@ -191,7 +191,7 @@ const buildOwnedApiKeyColumns = ({
     header: t("api_keys_page.col_created"),
     width: GRID_WIDTH.timestamp,
     cell: (row) => (
-      <span className="truncate whitespace-nowrap text-xs text-ink-3">
+      <span className="truncate whitespace-nowrap text-xs text-sn-label3">
         {row.created_at ? new Date(row.created_at).toLocaleString() : "-"}
       </span>
     ),

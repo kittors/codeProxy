@@ -10,11 +10,11 @@ export function ForbiddenPage() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
       <div className="flex flex-col items-center">
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-hover text-ink-3">
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-sn-hover text-sn-label3">
           <ShieldX size={26} aria-hidden="true" />
         </div>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Access denied</h2>
-        <p className="mt-2 text-sm text-ink-3">
+        <h2 className="text-xl font-semibold tracking-tight text-sn-label">Access denied</h2>
+        <p className="mt-2 text-sm text-sn-label3">
           Your account does not have permission to open this page.
         </p>
         <Link to="/dashboard" className={`mt-6 ${buttonClassName({ variant: "primary" })}`}>

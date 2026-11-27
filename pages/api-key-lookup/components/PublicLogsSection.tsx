@@ -95,7 +95,7 @@ export function PublicLogsSection({
           }}
         />
         {lastUpdatedAt !== null ? (
-          <span className="text-xs text-ink-3">
+          <span className="text-xs text-sn-label3">
             {loading
               ? t("request_logs.refreshing")
               : t("request_logs.updated_at", { time: new Date(lastUpdatedAt).toLocaleTimeString() })}

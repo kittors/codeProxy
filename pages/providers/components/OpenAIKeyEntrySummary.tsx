@@ -26,7 +26,7 @@ export function OpenAIKeyEntrySummary({
 
   return (
     <div className="mt-2 space-y-1">
-      <p className="text-xs font-semibold text-ink-2">
+      <p className="text-xs font-semibold text-sn-label2">
         {t("providers.api_key_entries")}: {entries.length}
       </p>
       <div className="space-y-1">
@@ -37,19 +37,19 @@ export function OpenAIKeyEntrySummary({
             // 卡片里的一行：无边淡底，不再是卡片里再套一张描边白卡。
             <div
               key={`${entry.apiKey}:${entryIndex}`}
-              className="grid gap-2 rounded-inner bg-subtle px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-2 rounded-inner bg-sn-subtle px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div className="min-w-0">
-                <p className="truncate font-mono text-ink">
+                <p className="truncate font-mono text-sn-label">
                   {entryIndex + 1}. {maskApiKey(entry.apiKey)}
                 </p>
                 {entry.id ? (
-                  <p className="mt-0.5 truncate font-mono text-ink-3" title={entry.id}>
+                  <p className="mt-0.5 truncate font-mono text-sn-label3" title={entry.id}>
                     ID: {entry.id}
                   </p>
                 ) : null}
                 {entry.proxyUrl ? (
-                  <p className="mt-0.5 truncate font-mono text-ink-3">
+                  <p className="mt-0.5 truncate font-mono text-sn-label3">
                     proxy: {entry.proxyUrl}
                   </p>
                 ) : null}
@@ -60,20 +60,20 @@ export function OpenAIKeyEntrySummary({
                 <span
                   className={
                     entryEnabled
-                      ? "px-1 font-medium text-ink-3 colorful:rounded-full colorful:bg-emerald-600/10 colorful:px-2 colorful:py-0.5 colorful:font-semibold colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200"
+                      ? "px-1 font-medium text-sn-label3 colorful:rounded-full colorful:bg-emerald-600/10 colorful:px-2 colorful:py-0.5 colorful:font-semibold colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200"
                       : "rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300"
                   }
                 >
                   {entryEnabled ? t("providers.enabled") : t("providers.disabled")}
                 </span>
-                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-600/10 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200">
+                <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-600/10 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-200">
                   {t("providers.success_stats", { count: entryStats.success })}
                 </span>
                 <span
                   className={
                     entryStats.failure > 0
                       ? "rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-700 dark:text-rose-300"
-                      : "rounded-full bg-ink/[0.05] px-2 py-0.5 text-ink-2 dark:bg-white/[0.07] colorful:bg-rose-600/10 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
+                      : "rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-sn-label2 dark:bg-white/[0.07] colorful:bg-rose-600/10 colorful:text-rose-700 colorful:dark:bg-rose-500/15 colorful:dark:text-rose-200"
                   }
                 >
                   {t("providers.failed_stats", { count: entryStats.failure })}
@@ -91,7 +91,7 @@ export function OpenAIKeyEntrySummary({
         })}
       </div>
       {remaining > 0 ? (
-        <p className="text-xs font-medium text-ink-3">
+        <p className="text-xs font-medium text-sn-label3">
           +{remaining} {t("providers.api_key_entries").toLowerCase()}
         </p>
       ) : null}

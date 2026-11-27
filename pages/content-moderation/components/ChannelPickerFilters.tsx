@@ -64,7 +64,7 @@ export function ChannelPickerFilters({
             onChange={(event) => onQueryChange(event.currentTarget.value)}
             placeholder={t("content_moderation.search_channels")}
             aria-label={t("content_moderation.search_channels")}
-            startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+            startAdornment={<Search size={14} className="text-sn-label3" aria-hidden="true" />}
           />
         </div>
         <div className="w-full sm:w-44">
@@ -112,21 +112,21 @@ export function ChannelPickerFilters({
       {/* 两行之间靠留白分开，不画分隔线。 */}
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-2">
-            <Tags size={14} className={`text-ink-3 ${iconHueClass(Tags)}`} aria-hidden="true" />
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-sn-label2">
+            <Tags size={14} className={`text-sn-label3 ${iconHueClass(Tags)}`} aria-hidden="true" />
             {t("content_moderation.tags")}
           </span>
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] py-0.5 pr-1 pl-2.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-sn-label/[0.05] py-0.5 pr-1 pl-2.5 text-xs font-medium text-sn-label2 dark:bg-white/[0.07]"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => onRemoveTag(tag)}
                 aria-label={t("content_moderation.remove_filter_tag", { tag })}
-                className="rounded-full p-0.5 text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                className="rounded-full p-0.5 text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
               >
                 <X size={12} aria-hidden="true" />
               </button>
@@ -179,7 +179,7 @@ export function ChannelPickerFilters({
               : t("content_moderation.tag_bind")}
           </Button>
         </div>
-        <p className="mt-2 text-xs leading-5 text-ink-3">
+        <p className="mt-2 text-xs leading-5 text-sn-label3">
           {tags.length
             ? t("content_moderation.tag_bind_hint")
             : t("content_moderation.tag_filter_hint")}

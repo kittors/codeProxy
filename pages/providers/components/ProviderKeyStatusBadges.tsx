@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 const NEUTRAL_BADGE =
-  "rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]";
+  "rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs font-medium text-sn-label2 dark:bg-white/[0.07]";
 
 interface ProviderKeyStatusBadgesProps {
   editKeyEnabled: boolean;

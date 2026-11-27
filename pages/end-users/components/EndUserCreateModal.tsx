@@ -168,7 +168,7 @@ export function EndUserCreateModal({
                       <ShieldCheck
                         size={14}
                         aria-hidden="true"
-                        className="text-ink-3 icon-hue:text-violet-500 icon-hue:dark:text-violet-400"
+                        className="text-sn-label3 icon-hue:text-violet-500 icon-hue:dark:text-violet-400"
                       />
                       {profile.name}
                     </span>

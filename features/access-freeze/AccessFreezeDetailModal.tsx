@@ -58,15 +58,15 @@ function ActiveFreezeCard({
     },
   ];
   return (
-    <li className="rounded-xl bg-subtle p-4">
+    <li className="rounded-xl bg-sn-subtle p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <ProviderTag vendor={freeze.provider} withLogo>
           {freezeProviderName(t, freeze)}
         </ProviderTag>
-        <span className="text-xs text-ink-3">
+        <span className="text-xs text-sn-label3">
           {t("access_freeze.frozen_at", { time: formatFreezeTime(freeze.frozen_at, language) })}
         </span>
-        <span className="text-xs tabular-nums text-ink-3">
+        <span className="text-xs tabular-nums text-sn-label3">
           {t("access_freeze.strikes", { count: freeze.strike_count })}
         </span>
         {canWrite ? (
@@ -78,8 +78,8 @@ function ActiveFreezeCard({
       </div>
       {freeze.upstream_message ? (
         <div className="mt-3">
-          <div className="text-xs text-ink-3">{t("access_freeze.upstream_message")}</div>
-          <p className="mt-1 text-sm leading-6 text-ink-2 [overflow-wrap:anywhere]">
+          <div className="text-xs text-sn-label3">{t("access_freeze.upstream_message")}</div>
+          <p className="mt-1 text-sm leading-6 text-sn-label2 [overflow-wrap:anywhere]">
             {freeze.upstream_message}
           </p>
         </div>
@@ -88,10 +88,10 @@ function ActiveFreezeCard({
       {freeze.notice ? (
         // 被冻结方收到的就是这段话（中英双语）：管理员要知道用户读到的是什么，但它是附带信息，收起来。
         <details className="mt-3 text-sm">
-          <summary className="cursor-pointer select-none text-xs text-ink-3 hover:text-ink-2">
+          <summary className="cursor-pointer select-none text-xs text-sn-label3 hover:text-sn-label2">
             {t("access_freeze.notice_title")}
           </summary>
-          <p className="mt-1.5 whitespace-pre-line leading-6 text-ink-2 [overflow-wrap:anywhere]">
+          <p className="mt-1.5 whitespace-pre-line leading-6 text-sn-label2 [overflow-wrap:anywhere]">
             {freeze.notice}
           </p>
         </details>
@@ -110,14 +110,14 @@ function ReleasedFreezeRow({ freeze }: { freeze: AccessFreeze }) {
         <ProviderTag vendor={freeze.provider} withLogo>
           {freezeProviderName(t, freeze)}
         </ProviderTag>
-        <span className="text-xs text-ink-3">
+        <span className="text-xs text-sn-label3">
           {t("access_freeze.frozen_at", { time: formatFreezeTime(freeze.frozen_at, language) })}
         </span>
-        <span className="text-xs tabular-nums text-ink-3">
+        <span className="text-xs tabular-nums text-sn-label3">
           {t("access_freeze.strikes", { count: freeze.strike_count })}
         </span>
       </div>
-      <p className="mt-1.5 text-sm text-ink-2">
+      <p className="mt-1.5 text-sm text-sn-label2">
         {freeze.released_by
           ? t("access_freeze.released_by", {
               time: formatFreezeTime(freeze.released_at, language),
@@ -128,8 +128,8 @@ function ReleasedFreezeRow({ freeze }: { freeze: AccessFreeze }) {
             })}
       </p>
       {freeze.release_note ? (
-        <p className="mt-1 text-sm text-ink-2 [overflow-wrap:anywhere]">
-          <span className="text-ink-3">{t("access_freeze.release_note_label")}</span>
+        <p className="mt-1 text-sm text-sn-label2 [overflow-wrap:anywhere]">
+          <span className="text-sn-label3">{t("access_freeze.release_note_label")}</span>
           {" · "}
           {freeze.release_note}
         </p>
@@ -140,7 +140,7 @@ function ReleasedFreezeRow({ freeze }: { freeze: AccessFreeze }) {
 
 /** 等宽小字的取值（模型、上游账号、请求 ID）：截断时悬停看全文。 */
 const mono = (value: string | null | undefined) => (
-  <span className="truncate font-mono text-xs text-ink-2">{value || "—"}</span>
+  <span className="truncate font-mono text-xs text-sn-label2">{value || "—"}</span>
 );
 
 /** 每次被上游拒绝的证据：冻结是据此做出的，管理员解冻前要看的也是它。 */
@@ -155,7 +155,7 @@ function strikeColumns(
       width: 184,
       minWidth: 170,
       cell: (row) => (
-        <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+        <span className="truncate whitespace-nowrap tabular-nums text-sn-label2">
           {formatFreezeTime(row.created_at, language)}
         </span>
       ),
@@ -181,7 +181,7 @@ function strikeColumns(
       width: 192,
       minWidth: 160,
       grow: true,
-      cell: (row) => <span className="truncate text-ink-2">{row.upstream_message || "—"}</span>,
+      cell: (row) => <span className="truncate text-sn-label2">{row.upstream_message || "—"}</span>,
     },
     {
       id: "auth_label",
@@ -318,11 +318,11 @@ export function AccessFreezeDetailModal({
         ) : (
           <div className="space-y-6">
             <section aria-labelledby={`${headingId}-active`}>
-              <h3 id={`${headingId}-active`} className="mb-2 text-sm font-medium text-ink">
+              <h3 id={`${headingId}-active`} className="mb-2 text-sm font-medium text-sn-label">
                 {t("access_freeze.active_title")}
               </h3>
               {active.length === 0 ? (
-                <p className="text-sm text-ink-3">{t("access_freeze.active_empty")}</p>
+                <p className="text-sm text-sn-label3">{t("access_freeze.active_empty")}</p>
               ) : (
                 <ul className="space-y-3">
                   {active.map((freeze) => (
@@ -339,10 +339,10 @@ export function AccessFreezeDetailModal({
 
             {released.length > 0 ? (
               <section aria-labelledby={`${headingId}-released`}>
-                <h3 id={`${headingId}-released`} className="mb-2 text-sm font-medium text-ink">
+                <h3 id={`${headingId}-released`} className="mb-2 text-sm font-medium text-sn-label">
                   {t("access_freeze.released_title")}
                 </h3>
-                <ul className="divide-y divide-line">
+                <ul className="divide-y divide-sn-line">
                   {released.map((freeze) => (
                     <ReleasedFreezeRow key={freeze.id} freeze={freeze} />
                   ))}
@@ -351,7 +351,7 @@ export function AccessFreezeDetailModal({
             ) : null}
 
             <section aria-labelledby={`${headingId}-strikes`}>
-              <h3 id={`${headingId}-strikes`} className="mb-2 text-sm font-medium text-ink">
+              <h3 id={`${headingId}-strikes`} className="mb-2 text-sm font-medium text-sn-label">
                 {t("access_freeze.strikes_title")}
               </h3>
               {/* 弹窗里的小表：不再套外框（不要卡中卡），按行收高、最高 320px 后在表内滚动；

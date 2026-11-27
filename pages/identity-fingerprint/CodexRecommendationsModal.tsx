@@ -195,8 +195,8 @@ export function CodexRecommendationsModal({
         resizable: false,
         cell: (item) => (
           <div className="text-xs">
-            <div className="font-medium text-ink">{formatDateTime(item.last_seen_at)}</div>
-            <div className="mt-1 text-ink-3">
+            <div className="font-medium text-sn-label">{formatDateTime(item.last_seen_at)}</div>
+            <div className="mt-1 text-sn-label3">
               {t("identity_fingerprint.recommend_count", { count: item.count })}
             </div>
           </div>
@@ -209,7 +209,7 @@ export function CodexRecommendationsModal({
         resizable: false,
         overflowTooltip: (item) => item.headers.Originator || item.recommended.originator || "",
         cell: (item) => (
-          <span className="block truncate font-mono text-xs text-ink-2">
+          <span className="block truncate font-mono text-xs text-sn-label2">
             {item.headers.Originator || item.recommended.originator || "-"}
           </span>
         ),
@@ -222,7 +222,7 @@ export function CodexRecommendationsModal({
         resizable: false,
         overflowTooltip: (item) => item.recommended.version || item.headers.Version || "",
         cell: (item) => (
-          <span className="block truncate font-mono text-xs text-ink-2">
+          <span className="block truncate font-mono text-xs text-sn-label2">
             {item.recommended.version || item.headers.Version || "-"}
           </span>
         ),
@@ -320,7 +320,7 @@ export function CodexRecommendationsModal({
             <span className="block min-w-0">
               <span className="block truncate font-medium">{candidateName(selected)}</span>
               {selected.recommended["user-agent"] ? (
-                <span className="mt-0.5 block truncate font-mono text-xs text-ink-3">
+                <span className="mt-0.5 block truncate font-mono text-xs text-sn-label3">
                   {selected.recommended["user-agent"]}
                 </span>
               ) : null}
@@ -379,15 +379,15 @@ function RecommendationDetail({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-ink">{candidateName(item)}</h3>
-          <p className="mt-1 text-xs text-ink-3">
+          <h3 className="truncate text-sm font-semibold text-sn-label">{candidateName(item)}</h3>
+          <p className="mt-1 text-xs text-sn-label3">
             {t("identity_fingerprint.recommend_seen_range", {
               first: formatDateTime(item.first_seen_at),
               last: formatDateTime(item.last_seen_at),
             })}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-selected px-2 py-0.5 text-xs font-semibold text-ink-2 tabular-nums">
+        <span className="shrink-0 rounded-full bg-sn-active px-2 py-0.5 text-xs font-semibold text-sn-label2 tabular-nums">
           {t("identity_fingerprint.recommend_count", { count: item.count })}
         </span>
       </div>
@@ -398,7 +398,7 @@ function RecommendationDetail({
           <div className="space-y-2">
             {diffs.map((diff) => (
               <div key={diff.key} className="py-1">
-                <div className="text-xs font-medium text-ink-3">{diff.label}</div>
+                <div className="text-xs font-medium text-sn-label3">{diff.label}</div>
                 <div className="mt-1 grid gap-1 text-xs">
                   <DiffLine
                     label={t("identity_fingerprint.recommend_current")}
@@ -415,7 +415,7 @@ function RecommendationDetail({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-ink-3">{t("identity_fingerprint.recommend_same_detail")}</p>
+          <p className="text-xs text-sn-label3">{t("identity_fingerprint.recommend_same_detail")}</p>
         )}
       </DetailSection>
 
@@ -434,13 +434,13 @@ function RecommendationDetail({
           {item.samples.map((sample) => (
             <div
               key={`${sample.log_id}:${sample.timestamp}`}
-              className="py-1 text-xs text-ink-2"
+              className="py-1 text-xs text-sn-label2"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono">#{sample.log_id}</span>
                 <span>{formatDateTime(sample.timestamp)}</span>
               </div>
-              <div className="mt-1 truncate font-mono text-xs text-ink-3">
+              <div className="mt-1 truncate font-mono text-xs text-sn-label3">
                 {sample.method || "POST"} {sample.path || "-"}
               </div>
             </div>
@@ -454,7 +454,7 @@ function RecommendationDetail({
 function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-5">
-      <h4 className="mb-2 text-xs font-medium text-ink-3">{title}</h4>
+      <h4 className="mb-2 text-xs font-medium text-sn-label3">{title}</h4>
       {children}
     </section>
   );
@@ -468,16 +468,16 @@ function HeaderValueList({
   muted?: boolean;
 }) {
   const entries = Object.entries(values).filter(([, value]) => String(value ?? "").trim() !== "");
-  if (entries.length === 0) return <span className="text-xs text-ink-3">-</span>;
+  if (entries.length === 0) return <span className="text-xs text-sn-label3">-</span>;
   return (
     <div className="space-y-2">
       {entries.map(([key, value]) => (
         <div key={key} className="min-w-0 py-1">
-          <div className="text-xs font-medium text-ink-3">{key}</div>
+          <div className="text-xs font-medium text-sn-label3">{key}</div>
           <div
             className={[
               "mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-xs leading-relaxed",
-              muted ? "text-ink-3" : "text-ink",
+              muted ? "text-sn-label3" : "text-sn-label",
             ].join(" ")}
           >
             {value}
@@ -501,14 +501,14 @@ function DiffLine({
   const empty = !value || value === "-";
   return (
     <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-      <span className="text-ink-3">{label}</span>
+      <span className="text-sn-label3">{label}</span>
       <span
         className={[
           "min-w-0 break-words [overflow-wrap:anywhere] font-mono",
           empty
-            ? "text-ink-4"
+            ? "text-sn-label-off"
             : kind === "current"
-              ? "text-ink-3 line-through decoration-rose-400/70"
+              ? "text-sn-label3 line-through decoration-rose-400/70"
               : "text-emerald-700 dark:text-emerald-300",
         ].join(" ")}
       >

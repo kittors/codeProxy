@@ -1,34 +1,28 @@
 import type { ReactNode } from "react";
-import { HUE_GLYPH, hueForIconName, type MenuIconComponent } from "@code-proxy/ui";
+import { type MenuIconComponent } from "@code-proxy/ui";
 import { ACTIVE_ICON_STROKE } from "./navModel";
 
 /**
- * 侧边栏图标的颜色，跟随「外观 → 图标着色」：
- * - 多彩：按全站的「图标 → 色相」注册表取（与页面里同一个图标的颜色一致），扫一眼就分得出
- *   哪个是哪个；文字保持中性色，选中态靠白色小卡片表达；
- * - 单色：平时是弱化的墨色，只有当前页的图标用强调色，一列图标里只有一个带颜色。
+ * 侧边栏图标遵循 Satin 官方工作台克制双色调范式：
+ * 未激活态用中性三级墨色，激活态抬升至主墨色，彻底摒弃侧栏彩虹装饰染色。
  */
-export const sidebarIconClass = (icon: MenuIconComponent, active: boolean) =>
-  [
-    active ? "text-accent-ink" : "text-[var(--sn-label3)]",
-    HUE_GLYPH[hueForIconName((icon as { displayName?: string }).displayName ?? "")],
-  ].join(" ");
+export const sidebarIconClass = (_icon: MenuIconComponent, active: boolean) =>
+  active ? "text-[var(--sn-label)]" : "text-[var(--sn-label3)]";
 
 /**
- * 侧边栏选中项卡片（对齐 Satin `--sn-side-active` 与 `--sn-side-active-line`）：
- * 浅色为灰底上的清透白卡与细微托影，深色为半透明亮面与顶部微高光；
- * 保留 `bg-surface` 作为浅色基础类（兼容现有单测/E2E 语义检查）。
+ * 侧边栏选中项基础样式（对齐 Satin `--sn-side-active` 与 `--sn-side-active-line`）：
+ * 当导航区启用流体滑块 `.cp-side-hl` 时由滑块承载浮面卡片，保留 `bg-sn-raised` 类名以兼容既有单测语义。
  */
 export const SIDEBAR_ACTIVE_CARD =
-  "bg-surface text-[var(--sn-label)] shadow-[0_0_0_1px_var(--sn-side-active-line,rgba(0,0,0,0.06)),0_1px_3px_rgba(0,0,0,0.06)] dark:bg-[var(--sn-side-active)] dark:shadow-[inset_0_0_0_1px_var(--sn-side-active-line,rgba(255,255,255,0.06)),inset_0_1px_0_rgba(255,255,255,0.05)]";
+  "cp-side-active bg-sn-raised text-[var(--sn-label)] shadow-[0_0_0_1px_var(--sn-side-active-line,rgba(0,0,0,0.06)),0_1px_2px_rgba(0,0,0,0.04)] dark:bg-[var(--sn-side-active)] dark:shadow-[inset_0_0_0_1px_var(--sn-side-active-line,rgba(255,255,255,0.07))]";
 
 export const sidebarRowClass = (active: boolean) =>
   [
-    "flex h-8 w-full min-w-0 items-center rounded-lg text-left text-sm whitespace-nowrap outline-none",
-    "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.98]",
+    "relative z-[1] flex h-8 w-full min-w-0 items-center rounded-lg text-left text-sm whitespace-nowrap outline-none",
+    "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.985]",
     active
       ? `${SIDEBAR_ACTIVE_CARD} font-medium`
-      : "text-[var(--sn-label)] hover:bg-[var(--sn-fill-hover)]",
+      : "text-[var(--sn-label2)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]",
   ].join(" ");
 
 export function SidebarRowIcon({ icon: Icon, active }: { icon: MenuIconComponent; active: boolean }) {

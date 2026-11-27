@@ -140,12 +140,12 @@ export function MaskingFeed({
                   "sn-btn !h-auto gap-1.5 !rounded-full !px-3 !py-1 !text-xs !shadow-none",
                   active
                     ? "!bg-violet-500/12 !text-violet-700 dark:!bg-violet-400/20 dark:!text-violet-100"
-                    : "!bg-ink/[0.04] !text-ink-2 hover:!bg-ink/[0.07] dark:!bg-white/[0.06] dark:hover:!bg-white/[0.09]",
+                    : "!bg-sn-label/[0.04] !text-sn-label2 hover:!bg-sn-label/[0.07] dark:!bg-white/[0.06] dark:hover:!bg-white/[0.09]",
                 ].join(" ")}
               >
                 {f ? <span aria-hidden="true" className={`size-1.5 rounded-full ${FACET_DOT[f]}`} /> : null}
                 <span>{t(`privacy_masking.facet.${f || "all"}`)}</span>
-                <span className={`font-semibold tabular-nums ${active ? "" : "text-ink"}`}>
+                <span className={`font-semibold tabular-nums ${active ? "" : "text-sn-label"}`}>
                   {formatCompact(counts[f])}
                 </span>
               </button>
@@ -156,18 +156,18 @@ export function MaskingFeed({
       {mode === "value" ? (
         <MaskingValueRanking summary={summary} facet={facet} onPickKind={onPickKind} />
       ) : loading && records.length === 0 ? (
-        <div className="grid place-items-center py-16 text-ink-3">
+        <div className="grid place-items-center py-16 text-sn-label3">
           <Loader variant="arc" size={20} label={t("common.loading")} />
         </div>
       ) : records.length === 0 ? (
-        <p className="px-5 py-14 text-center text-sm text-ink-3">
+        <p className="px-5 py-14 text-center text-sm text-sn-label3">
           {filters.length > 0 || facet ? t("privacy_masking.feed.nothing_matches") : t("privacy_masking.feed.nothing_yet")}
         </p>
       ) : (
         <div className="pb-2">
           {groups.map((group) => (
             <div key={group.day}>
-              <h3 className="sticky top-0 z-[1] bg-surface/95 px-5 pt-3 pb-1.5 text-xs font-medium text-ink-3 backdrop-blur-sm">
+              <h3 className="sticky top-0 z-[1] bg-sn-raised/95 px-5 pt-3 pb-1.5 text-xs font-medium text-sn-label3 backdrop-blur-sm">
                 {group.label}
               </h3>
               <ul>
@@ -181,7 +181,7 @@ export function MaskingFeed({
       )}
 
       {mode === "request" ? (
-        <footer className="flex flex-wrap items-center gap-3 px-5 pt-1 pb-4 text-xs text-ink-3">
+        <footer className="flex flex-wrap items-center gap-3 px-5 pt-1 pb-4 text-xs text-sn-label3">
           <span>{t("privacy_masking.feed.kept_note")}</span>
           <span className="flex-1" />
           {hasMore ? (
@@ -202,7 +202,7 @@ export function MaskingFeed({
 function RowGlyph({
   vendor,
   fallback: Fallback,
-  fallbackClassName = "text-ink-3",
+  fallbackClassName = "text-sn-label3",
 }: {
   vendor?: string;
   fallback: SatinIconComponent;
@@ -241,10 +241,10 @@ function RecordRow({ record, onOpen }: { record: MaskRecord; onOpen: (record: Ma
       <button
         type="button"
         onClick={() => onOpen(record)}
-        className="group grid w-full grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-2.5 text-left transition-colors hover:bg-ink/[0.025] @min-[44rem]:grid-cols-[3.25rem_minmax(0,2fr)_minmax(6rem,1fr)_3rem_1rem] @min-[64rem]:grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(6rem,1.2fr)_3rem_1rem] dark:hover:bg-white/[0.04]"
+        className="group grid w-full grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-2.5 text-left transition-colors hover:bg-sn-label/[0.025] @min-[44rem]:grid-cols-[3.25rem_minmax(0,2fr)_minmax(6rem,1fr)_3rem_1rem] @min-[64rem]:grid-cols-[3.25rem_minmax(0,2fr)_minmax(0,1fr)_minmax(6rem,1.2fr)_3rem_1rem] dark:hover:bg-white/[0.04]"
       >
-        <span className="text-xs whitespace-nowrap text-ink-3 tabular-nums">{time}</span>
-        <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink">
+        <span className="text-xs whitespace-nowrap text-sn-label3 tabular-nums">{time}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm text-sn-label">
           {/* 客户端名都很短，不让它跟渠道名一起按比例收缩（会被挤成「C…」）；渠道名常是长 OAuth 邮箱，只截它。
               客户端这段最窄也放得下各语言的「其他客户端」，箭头和渠道名每行从同一处开始；没有 logo 的
               客户端、渠道画流向图同款的通用图标，名字不往左缩。 */}
@@ -252,7 +252,7 @@ function RecordRow({ record, onOpen }: { record: MaskRecord; onOpen: (record: Ma
             <RowGlyph vendor={client.vendor} fallback={TerminalSquare} />
             <span>{client.label ?? t("privacy_masking.client.other")}</span>
           </span>
-          <ArrowRight size={12} aria-hidden="true" className="shrink-0 text-ink-3" />
+          <ArrowRight size={12} aria-hidden="true" className="shrink-0 text-sn-label3" />
           {record.blocked ? (
             <>
               <RowGlyph fallback={Ban} fallbackClassName="text-rose-500 dark:text-rose-300" />
@@ -265,7 +265,7 @@ function RecordRow({ record, onOpen }: { record: MaskRecord; onOpen: (record: Ma
             </>
           )}
         </span>
-        <span className="hidden min-w-0 truncate text-xs text-ink-3 @min-[64rem]:block">{record.model}</span>
+        <span className="hidden min-w-0 truncate text-xs text-sn-label3 @min-[64rem]:block">{record.model}</span>
         <span className="col-span-2 col-start-2 flex min-w-0 flex-wrap items-center gap-1 @min-[44rem]:col-span-1 @min-[44rem]:col-start-auto @min-[44rem]:justify-end-safe">
           {record.blocked ? (
             <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-medium ${ACTION_CHIP.block}`}>
@@ -276,15 +276,15 @@ function RecordRow({ record, onOpen }: { record: MaskRecord; onOpen: (record: Ma
           {ranked.slice(0, 3).map(([kind, n]) => (
             <KindChip key={kind} kind={kind} count={n} />
           ))}
-          {ranked.length > 3 ? <span className="text-2xs text-ink-3">+{ranked.length - 3}</span> : null}
+          {ranked.length > 3 ? <span className="text-2xs text-sn-label3">+{ranked.length - 3}</span> : null}
         </span>
         <span
-          className="hidden text-right text-sm font-semibold text-ink tabular-nums @min-[44rem]:block"
+          className="hidden text-right text-sm font-semibold text-sn-label tabular-nums @min-[44rem]:block"
           title={t("privacy_masking.summary.places", { count: record.places })}
         >
           {formatCompact(record.places)}
         </span>
-        <ChevronRight size={14} aria-hidden="true" className="hidden text-ink-3 transition-transform group-hover:translate-x-0.5 @min-[44rem]:block" />
+        <ChevronRight size={14} aria-hidden="true" className="hidden text-sn-label3 transition-transform group-hover:translate-x-0.5 @min-[44rem]:block" />
       </button>
     </li>
   );

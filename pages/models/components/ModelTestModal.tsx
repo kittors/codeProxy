@@ -230,7 +230,7 @@ export function ModelTestModal({
     typeof displayDurationMs === "number" && Number.isFinite(displayDurationMs) ? (
       <span
         data-testid="model-test-duration"
-        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]"
       >
         <Timer size={11} className="shrink-0" aria-hidden />
         {t("models_page.test_duration", { duration: formatLatency(displayDurationMs) })}

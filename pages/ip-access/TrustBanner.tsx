@@ -65,11 +65,11 @@ export function TrustBanner({
 /** 同色系淡底 + 彩色图标，不描边；简约风格下文字保持中性色，多彩风格下叠回同色系的文字色。 */
 const TONE_CLASS = {
   danger: {
-    box: "bg-rose-500/[0.09] text-ink-2 colorful:text-rose-800 colorful:dark:text-rose-200",
+    box: "bg-rose-500/[0.09] text-sn-label2 colorful:text-rose-800 colorful:dark:text-rose-200",
     icon: "text-rose-600 dark:text-rose-400",
   },
   warning: {
-    box: "bg-amber-500/[0.1] text-ink-2 colorful:text-amber-800 colorful:dark:text-amber-200",
+    box: "bg-amber-500/[0.1] text-sn-label2 colorful:text-amber-800 colorful:dark:text-amber-200",
     icon: "text-amber-600 dark:text-amber-300",
   },
 } as const;
@@ -111,7 +111,7 @@ function Notice({
       type="button"
       data-ip-access-notice={tone}
       onClick={onClick}
-      className={`${className} cursor-pointer transition-shadow duration-150 hover:shadow-control`}
+      className={`${className} cursor-pointer transition-shadow duration-150 hover:border-sn-line-control`}
     >
       {body}
     </button>

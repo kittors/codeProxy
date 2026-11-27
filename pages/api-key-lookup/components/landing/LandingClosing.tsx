@@ -55,11 +55,11 @@ export function LandingClosing({
         <div className="mx-auto flex w-full max-w-screen-xl flex-col items-center gap-5 px-5 text-center sm:flex-row sm:justify-between sm:px-8 sm:text-left lg:px-10">
           <Wordmark
             markSize={22}
-            className="text-base text-ink"
+            className="text-base text-sn-label"
             textClassName="font-display text-base"
           />
-          <p className="font-display text-xs text-ink-3">{copy.footer.tagline}</p>
-          <p className="font-display text-xs text-ink-3">
+          <p className="font-display text-xs text-sn-label3">{copy.footer.tagline}</p>
+          <p className="font-display text-xs text-sn-label3">
             {BRAND_NAME} · {copy.footer.rights}
           </p>
         </div>

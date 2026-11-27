@@ -149,14 +149,14 @@ export function CcSwitchImportConfigModal({
         triggerLabel: (
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate font-semibold">{option.label}</span>
-            <span className="shrink-0 font-mono text-xs text-ink-3">{path}</span>
+            <span className="shrink-0 font-mono text-xs text-sn-label3">{path}</span>
           </span>
         ),
         searchText: `${option.label} ${path} ${option.description ?? ""}`,
         label: (
           <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-sm font-semibold text-ink">{option.label}</span>
-            <span className="truncate font-mono text-xs text-ink-3">
+            <span className="truncate text-sm font-semibold text-sn-label">{option.label}</span>
+            <span className="truncate font-mono text-xs text-sn-label3">
               {path}
               {option.description ? ` · ${option.description}` : ""}
             </span>
@@ -229,7 +229,7 @@ export function CcSwitchImportConfigModal({
       <div className="space-y-6">
         {mode === "create" ? (
           <div className="space-y-2.5">
-            <div id={appLabelId} className="text-sm font-medium text-ink">
+            <div id={appLabelId} className="text-sm font-medium text-sn-label">
               {t("ccswitch.config_app")}
             </div>
             <Tabs
@@ -352,7 +352,7 @@ export function CcSwitchImportConfigModal({
               // Without a group there is no route yet, so an endpoint here would be wrong.
               <p
                 data-testid="ccswitch-import-preview-pending"
-                className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3"
+                className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-sm text-sn-label3"
               >
                 {t("ccswitch.preview_pending_group")}
               </p>

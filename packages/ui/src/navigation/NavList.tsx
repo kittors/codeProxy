@@ -34,12 +34,12 @@ const LAYOUT = {
   sm: {
     root: "relative flex gap-1 overflow-x-auto px-3 pb-3 sm:grid sm:gap-0 sm:overflow-visible sm:px-3 sm:pb-4",
     group: "flex shrink-0 gap-1 sm:grid sm:gap-0.5",
-    label: "hidden px-2.5 pt-4 pb-1.5 text-2xs font-semibold tracking-wide text-ink-3 uppercase sm:block",
+    label: "hidden px-2.5 pt-4 pb-1.5 text-2xs font-semibold tracking-wide text-sn-label3 uppercase sm:block",
   },
   lg: {
     root: "relative flex gap-1 overflow-x-auto pb-1 lg:grid lg:gap-0 lg:overflow-visible lg:pb-0",
     group: "flex shrink-0 gap-1 lg:grid lg:gap-0.5",
-    label: "hidden px-2.5 pt-4 pb-1.5 text-2xs font-semibold tracking-wide text-ink-3 uppercase lg:block",
+    label: "hidden px-2.5 pt-4 pb-1.5 text-2xs font-semibold tracking-wide text-sn-label3 uppercase lg:block",
   },
 } as const;
 
@@ -259,7 +259,7 @@ export function NavList({
         ref={thumbRef}
         aria-hidden="true"
         data-nav-thumb=""
-        className="pointer-events-none absolute top-0 left-0 rounded-xl bg-elevated opacity-0 shadow-control"
+        className="pointer-events-none absolute top-0 left-0 rounded-xl border border-sn-line bg-sn-raised opacity-0 shadow-sn-card"
         style={{ transformOrigin: "top left" }}
       />
       {groups.map((group) => {
@@ -291,12 +291,12 @@ export function NavList({
                     : { "aria-current": selected ? ("true" as const) : undefined })}
                   onClick={() => onChange(item.id)}
                   className={cn(
-                    "relative z-[1] flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors duration-150 ease-soft",
+                    "relative z-[1] flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors duration-150 ease-[var(--sn-ease-out)]",
                     selected
                       ? thumbReady
-                        ? "text-ink"
-                        : "bg-elevated text-ink shadow-control"
-                      : "text-ink-2 hover:bg-hover hover:text-ink",
+                        ? "text-sn-label"
+                        : "border border-sn-line bg-sn-raised text-sn-label shadow-sn-card"
+                      : "text-sn-label2 hover:bg-sn-hover hover:text-sn-label",
                   )}
                 >
                   {item.icon ? (
@@ -313,7 +313,7 @@ export function NavList({
                   {item.dot ? (
                     <span
                       aria-hidden="true"
-                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-sky-500"
+                      className="relative h-1.5 w-1.5 shrink-0 rounded-full bg-sn-accent colorful:bg-sky-500"
                     />
                   ) : null}
                   {item.srHint ? <span className="sr-only">{item.srHint}</span> : null}

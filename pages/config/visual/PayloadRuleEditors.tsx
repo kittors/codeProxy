@@ -41,12 +41,12 @@ function RuleBlock({
     <div className={surface({ radius: "2xl" })}>
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pt-4 pb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+          <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
           {description || meta ? (
-            <p className="mt-0.5 text-xs leading-5 text-ink-3">
+            <p className="mt-0.5 text-xs leading-5 text-sn-label3">
               {description}
               {meta ? (
-                <code className="ml-1.5 rounded-md bg-subtle px-1.5 py-px font-mono text-2xs">
+                <code className="ml-1.5 rounded-md bg-sn-subtle px-1.5 py-px font-mono text-2xs">
                   {meta}
                 </code>
               ) : null}
@@ -238,7 +238,7 @@ export function PayloadRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
+        <div className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-sm text-sn-label3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -246,10 +246,10 @@ export function PayloadRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-4 rounded-xl bg-subtle p-4"
+              className="space-y-4 rounded-xl bg-sn-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-ink">
+                <div className="text-sm font-semibold text-sn-label">
                   {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
@@ -265,7 +265,7 @@ export function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-ink-2">
+                  <div className="text-xs font-medium text-sn-label2">
                     {t("visual_config.match_models")}
                   </div>
                   <Button
@@ -317,7 +317,7 @@ export function PayloadRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-ink-2">
+                  <div className="text-xs font-medium text-sn-label2">
                     {t("visual_config.override_params")}
                   </div>
                   <Button
@@ -332,7 +332,7 @@ export function PayloadRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="py-2 text-center text-xs text-ink-3">
+                  <div className="py-2 text-center text-xs text-sn-label3">
                     {t("visual_config.no_params")}
                   </div>
                 ) : (
@@ -485,7 +485,7 @@ export function PayloadFilterRulesEditor({
       }
     >
       {rules.length === 0 ? (
-        <div className="rounded-xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
+        <div className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-sm text-sn-label3">
           {t("visual_config.no_rules")}
         </div>
       ) : (
@@ -493,10 +493,10 @@ export function PayloadFilterRulesEditor({
           {rules.map((rule, ruleIndex) => (
             <div
               key={rule.id}
-              className="space-y-4 rounded-xl bg-subtle p-4"
+              className="space-y-4 rounded-xl bg-sn-subtle p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-ink">
+                <div className="text-sm font-semibold text-sn-label">
                   {t("visual_config.rule_n", { n: ruleIndex + 1 })}
                 </div>
                 <Button
@@ -512,7 +512,7 @@ export function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-ink-2">
+                  <div className="text-xs font-medium text-sn-label2">
                     {t("visual_config.match_models")}
                   </div>
                   <Button
@@ -564,7 +564,7 @@ export function PayloadFilterRulesEditor({
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-medium text-ink-2">
+                  <div className="text-xs font-medium text-sn-label2">
                     {t("visual_config.remove_param_paths")}
                   </div>
                   <Button
@@ -579,7 +579,7 @@ export function PayloadFilterRulesEditor({
                 </div>
 
                 {(rule.params || []).length === 0 ? (
-                  <div className="py-2 text-center text-xs text-ink-3">
+                  <div className="py-2 text-center text-xs text-sn-label3">
                     {t("visual_config.no_paths")}
                   </div>
                 ) : (

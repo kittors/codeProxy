@@ -147,7 +147,7 @@ function BillingWorkspace() {
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as BillingTabKey)} size="sm">
       <section className="flex flex-col gap-4">
-        <div className="sticky top-0 z-20 -mx-4 bg-canvas px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
+        <div className="sticky top-0 z-20 -mx-4 bg-sn-workspace px-4 pt-3 pb-1 sm:-mx-6 sm:px-6">
           <TabsList aria-label={t("shell.nav_billing")} className="max-w-full">
             <TabsTrigger value="gateway">{t("billing_admin.tab_gateway")}</TabsTrigger>
             <TabsTrigger value="plans">{t("billing_admin.tab_plans")}</TabsTrigger>

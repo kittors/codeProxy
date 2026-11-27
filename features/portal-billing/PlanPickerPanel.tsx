@@ -91,7 +91,7 @@ export function PlanPickerPanel({
 
   if (target.plans.length === 0) {
     return (
-      <div className={`${surface({ tone: "inset", radius: "2xl" })} p-5 text-sm text-ink-3`}>
+      <div className={`${surface({ tone: "inset", radius: "2xl" })} p-5 text-sm text-sn-label3`}>
         {t("billing.no_plans_for_target")}
       </div>
     );
@@ -127,11 +127,11 @@ export function PlanPickerPanel({
                 isSinglePlan
                   ? "flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
                   : "flex-col justify-between gap-3 p-4",
-                // 深色模式下 --cp-accent 会反转为近纯白，外扩 ring-2 ring-accent 会变成刺眼粗白框；
+                // 深色模式下 --sn-accent 会反转为近纯白，外扩 ring-2 ring-sn-accent 会变成刺眼粗白框；
                 // 与 ChoiceCards 一致改用内嵌半透明强调描边 + 轻提亮底色，明暗双主题保持克制清晰。
                 active
-                  ? "bg-surface-hover shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--cp-accent)_50%,transparent)]"
-                  : "hover:bg-surface-hover",
+                  ? "bg-sn-hover-solid shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--sn-accent)_50%,transparent)]"
+                  : "hover:bg-sn-hover-solid",
               )}
             >
               <div className={cn("space-y-2.5", isSinglePlan ? "min-w-0 flex-1" : null)}>
@@ -141,36 +141,36 @@ export function PlanPickerPanel({
                       className={cn(
                         "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors",
                         active
-                          ? "bg-accent-soft text-accent-ink"
-                          : "bg-ink/[0.06] text-ink-2 dark:bg-white/[0.08]",
+                          ? "bg-sn-accent-soft text-sn-accent-ink"
+                          : "bg-sn-label/[0.06] text-sn-label2 dark:bg-white/[0.08]",
                       )}
                     >
                       <PlanKindIcon kind={plan.kind} />
                     </span>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-ink">{plan.name}</span>
+                        <span className="text-sm font-semibold text-sn-label">{plan.name}</span>
                         {plan.badge ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-2xs font-medium text-accent-ink">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sn-accent-soft px-2 py-0.5 text-2xs font-medium text-sn-accent-ink">
                             <Sparkles size={11} />
                             {plan.badge}
                           </span>
                         ) : null}
                       </div>
-                      <div className="text-2xs text-ink-3">{planKindLabel(plan.kind, t)}</div>
+                      <div className="text-2xs text-sn-label3">{planKindLabel(plan.kind, t)}</div>
                     </div>
                   </div>
                 </div>
 
                 {!isSinglePlan ? (
                   <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-2xl font-bold tabular-nums text-ink">
+                    <span className="font-mono text-2xl font-bold tabular-nums text-sn-label">
                       {plan.kind === "custom_quota"
                         ? t("billing.custom_price_label")
                         : formatYuan(plan.price_cents)}
                     </span>
                     {plan.kind === "subscription" ? (
-                      <span className="text-xs text-ink-3">
+                      <span className="text-xs text-sn-label3">
                         / {t("billing.days_short", { days: plan.duration_days })}
                       </span>
                     ) : null}
@@ -178,10 +178,10 @@ export function PlanPickerPanel({
                 ) : null}
 
                 {plan.description ? (
-                  <p className="text-xs leading-relaxed text-ink-2">{plan.description}</p>
+                  <p className="text-xs leading-relaxed text-sn-label2">{plan.description}</p>
                 ) : null}
 
-                <ul className={cn("text-xs text-ink-2", isSinglePlan ? "flex flex-wrap gap-x-4 gap-y-1.5" : "space-y-1")}>
+                <ul className={cn("text-xs text-sn-label2", isSinglePlan ? "flex flex-wrap gap-x-4 gap-y-1.5" : "space-y-1")}>
                   {benefits.map((line) => (
                     <li key={line} className="flex items-center gap-1.5">
                       <Check size={13} className="shrink-0 text-emerald-500" />
@@ -192,23 +192,23 @@ export function PlanPickerPanel({
               </div>
 
               {isSinglePlan ? (
-                <div className="flex shrink-0 items-center justify-between gap-4 border-t border-line pt-3 sm:flex-col sm:items-end sm:justify-center sm:gap-2 sm:border-t-0 sm:pt-0">
+                <div className="flex shrink-0 items-center justify-between gap-4 border-t border-sn-line pt-3 sm:flex-col sm:items-end sm:justify-center sm:gap-2 sm:border-t-0 sm:pt-0">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-2xl font-bold tabular-nums text-ink">
+                    <span className="font-mono text-2xl font-bold tabular-nums text-sn-label">
                       {plan.kind === "custom_quota"
                         ? t("billing.custom_price_label")
                         : formatYuan(plan.price_cents)}
                     </span>
                     {plan.kind === "subscription" ? (
-                      <span className="text-xs text-ink-3">
+                      <span className="text-xs text-sn-label3">
                         / {t("billing.days_short", { days: plan.duration_days })}
                       </span>
                     ) : null}
                   </div>
-                  <span className="inline-flex items-center gap-1.5 text-2xs font-medium text-accent-ink">
+                  <span className="inline-flex items-center gap-1.5 text-2xs font-medium text-sn-accent-ink">
                     <span
                       aria-hidden="true"
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-accent text-accent-fg"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-sn-accent text-sn-on-primary"
                     >
                       <Check size={10} strokeWidth={3} />
                     </span>
@@ -217,14 +217,14 @@ export function PlanPickerPanel({
                 </div>
               ) : (
                 <div className="flex items-center justify-end gap-1.5 text-2xs font-medium">
-                  <span className={active ? "text-accent-ink" : "text-ink-3"}>
+                  <span className={active ? "text-sn-accent-ink" : "text-sn-label3"}>
                     {active ? t("billing.selected_plan") : t("billing.click_to_select")}
                   </span>
                   <span
                     aria-hidden="true"
                     className={cn(
                       "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors",
-                      active ? "bg-accent text-accent-fg" : "bg-field shadow-control",
+                      active ? "bg-sn-accent text-sn-on-primary" : "bg-sn-field border border-sn-line-control",
                     )}
                   >
                     {active ? <Check size={10} strokeWidth={3} /> : null}
@@ -241,7 +241,7 @@ export function PlanPickerPanel({
           className={`${surface({ tone: "inset", radius: "2xl" })} flex flex-wrap items-end justify-between gap-3 p-4`}
         >
           <div className="min-w-48 flex-1 space-y-1">
-            <label className="block text-xs font-medium text-ink-2">
+            <label className="block text-xs font-medium text-sn-label2">
               {t("billing.custom_amount_input_label", {
                 min: formatYuan(selectedPlan.min_amount_cents),
                 max: formatYuan(selectedPlan.max_amount_cents),
@@ -258,7 +258,7 @@ export function PlanPickerPanel({
             {customError ? <p className="text-xs text-rose-500">{customError}</p> : null}
           </div>
           <div className="text-right">
-            <div className="text-xs text-ink-3">
+            <div className="text-xs text-sn-label3">
               {t("billing.estimated_credit", { usd: estimatedCustomUsd })}
             </div>
             <div className="font-mono text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
@@ -272,7 +272,7 @@ export function PlanPickerPanel({
         className={`${surface({ tone: "card", radius: "2xl" })} flex flex-wrap items-center justify-between gap-4 p-4`}
       >
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-xs font-medium text-ink-2">{t("billing.pay_channel_label")}</span>
+          <span className="text-xs font-medium text-sn-label2">{t("billing.pay_channel_label")}</span>
           {channels.map((ch) => {
             const active = selectedChannel === ch;
             const channelDotClass =
@@ -284,19 +284,19 @@ export function PlanPickerPanel({
                 aria-pressed={active}
                 onClick={() => setSelectedChannel(ch)}
                 className={cn(
-                  // 禁止使用 bg-accent + text-white：深色模式下 --cp-accent 反转为近纯白会导致白底白字，
+                  // 禁止使用 bg-sn-accent + text-white：深色模式下 --sn-accent 反转为近纯白会导致白底白字，
                   // 且左侧渠道选择不应与右侧 primary 支付主按钮争夺视觉焦点。
                   "sn-btn !h-9 gap-2 !rounded-full !px-3.5 !text-xs font-medium",
                   active
-                    ? "!bg-accent-soft !text-ink !shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-accent)_45%,transparent)]"
-                    : "!bg-surface !text-ink-2 !shadow-control hover:!bg-surface-hover hover:!text-ink",
+                    ? "!bg-sn-accent-soft !text-sn-label !shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--sn-accent)_45%,transparent)]"
+                    : "!bg-sn-raised !text-sn-label2 !border !border-sn-line-control hover:!bg-sn-hover-solid hover:!text-sn-label",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors",
-                    active ? channelDotClass : "bg-field shadow-control",
+                    active ? channelDotClass : "bg-sn-field border border-sn-line-control",
                   )}
                 >
                   {active ? <Check size={10} strokeWidth={3} /> : null}

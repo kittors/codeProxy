@@ -11,7 +11,7 @@ export interface WordTestResultProps {
   result: WordTestOutcome;
 }
 
-const TEXT_BOX = `max-h-52 overflow-auto whitespace-pre-wrap break-words px-3 py-2.5 text-sm text-ink-2 ${surface({ tone: "inset", radius: "xl" })}`;
+const TEXT_BOX = `max-h-52 overflow-auto whitespace-pre-wrap break-words px-3 py-2.5 text-sm text-sn-label2 ${surface({ tone: "inset", radius: "xl" })}`;
 
 /**
  * 敏感词测试的结果：先给结论，再给依据——高亮标出原文里每一处命中，
@@ -34,7 +34,7 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
         header: t("content_moderation.words.col_layer"),
         width: 112,
         cell: (match) => (
-          <span className="truncate text-xs text-ink-2">
+          <span className="truncate text-xs text-sn-label2">
             {t(`content_moderation.words.scope_${match.layer}`)}
           </span>
         ),
@@ -46,11 +46,11 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
         grow: true,
         cell: (match) => (
           <span className="min-w-0 truncate text-xs">
-            <span className="mr-1.5 text-ink-3">{t(`content_moderation.words.kind_${match.kind}`)}</span>
+            <span className="mr-1.5 text-sn-label3">{t(`content_moderation.words.kind_${match.kind}`)}</span>
             {match.pattern_hidden ? (
-              <span className="text-ink-3">{t("content_moderation.words.pattern_hidden")}</span>
+              <span className="text-sn-label3">{t("content_moderation.words.pattern_hidden")}</span>
             ) : (
-              <span className="font-mono text-ink-2">{match.pattern}</span>
+              <span className="font-mono text-sn-label2">{match.pattern}</span>
             )}
           </span>
         ),
@@ -60,7 +60,7 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
         header: t("content_moderation.words.col_action"),
         width: 96,
         cell: (match) => (
-          <span className="truncate text-xs text-ink-2">
+          <span className="truncate text-xs text-sn-label2">
             {t(`content_moderation.words.action_${match.action}`)}
           </span>
         ),
@@ -70,7 +70,7 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
         header: t("content_moderation.words.col_matched"),
         width: 128,
         cell: (match) => (
-          <span className="truncate text-xs text-ink-3">
+          <span className="truncate text-xs text-sn-label3">
             {match.normalized_only
               ? t("content_moderation.words.matched_normalized")
               : t("content_moderation.words.matched_as_written")}
@@ -111,14 +111,14 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
         icon={verdict.icon}
         title={verdict.title}
         actions={
-          <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]">
+          <span className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]">
             {t("content_moderation.latency_value", { value: result.latency_ms })}
           </span>
         }
       >
-        <div className="space-y-0.5 text-xs text-ink-3">
+        <div className="space-y-0.5 text-xs text-sn-label3">
           {result.action === "block" && result.block_message ? (
-            <p className="text-sm text-ink-2">{result.block_message}</p>
+            <p className="text-sm text-sn-label2">{result.block_message}</p>
           ) : null}
           {result.action === "log" ? <p>{t("content_moderation.words.test_logged_hint")}</p> : null}
           {/* 替换挪不动的位置（对象的键、字符串里嵌套的 JSON……）时，放过去就等于没拦，所以整条拒绝。 */}
@@ -135,7 +135,7 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
 
       {result.matches.length > 0 ? (
         <div className="space-y-1.5">
-          <p className="text-sm font-medium text-ink">{t("content_moderation.words.test_hits_in_text")}</p>
+          <p className="text-sm font-medium text-sn-label">{t("content_moderation.words.test_hits_in_text")}</p>
           <div className={TEXT_BOX} data-testid="word-test-highlight">
             {segments.map((segment, index) =>
               segment.hits > 0 ? (
@@ -162,14 +162,14 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
             )}
           </div>
           {hasNormalizedOnly ? (
-            <p className="text-xs text-ink-3">{t("content_moderation.words.hit_normalized_legend")}</p>
+            <p className="text-xs text-sn-label3">{t("content_moderation.words.hit_normalized_legend")}</p>
           ) : null}
         </div>
       ) : null}
 
       {showOutput ? (
         <div className="space-y-1.5">
-          <p className="text-sm font-medium text-ink">{t("content_moderation.words.test_output")}</p>
+          <p className="text-sm font-medium text-sn-label">{t("content_moderation.words.test_output")}</p>
           <div className={TEXT_BOX} data-testid="word-test-output">
             {result.output}
           </div>
@@ -178,9 +178,9 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
 
       {result.reply_filter ? (
         <div className="space-y-1.5">
-          <p className="text-sm font-medium text-ink">{t("content_moderation.words.test_reply")}</p>
+          <p className="text-sm font-medium text-sn-label">{t("content_moderation.words.test_reply")}</p>
           {(result.reply_output ?? "") === input ? (
-            <p className="text-xs text-ink-3">{t("content_moderation.words.test_reply_unchanged")}</p>
+            <p className="text-xs text-sn-label3">{t("content_moderation.words.test_reply_unchanged")}</p>
           ) : (
             <div className={TEXT_BOX} data-testid="word-test-reply">
               {result.reply_output}
@@ -192,9 +192,9 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
       {result.matches.length > 0 ? (
         <div className="space-y-1.5">
           {/* 浅底框里的小表：不再套外框，最高 13rem 后表内滚动（表头吸顶）。
-              浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
+              浅底框不设 --sn-backdrop，这里补上，表格的行底色、悬停色才和框一致。 */}
           <div
-            className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
+            className={`overflow-hidden [--sn-backdrop:var(--sn-fill-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
           >
             <DataGrid<Match>
               frame={false}
@@ -207,7 +207,7 @@ export function WordTestResult({ input, result }: WordTestResultProps) {
             />
           </div>
           {result.match_count > result.matches.length ? (
-            <p className="text-xs text-ink-3">
+            <p className="text-xs text-sn-label3">
               {t("content_moderation.words.test_more_hits", {
                 shown: result.matches.length,
                 count: result.match_count,

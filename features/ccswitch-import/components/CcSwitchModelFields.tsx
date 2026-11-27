@@ -127,7 +127,7 @@ export function CcSwitchModelFields({
       }
       actions={
         modelsLoading ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-sn-label3">
             <LoaderCircle size={12} className="animate-spin" aria-hidden="true" />
             {t("ccswitch.import_model_loading")}
           </span>
@@ -180,7 +180,7 @@ export function CcSwitchModelFields({
               );
             })}
           </div>
-          <div className="space-y-1 text-xs leading-5 text-ink-3">
+          <div className="space-y-1 text-xs leading-5 text-sn-label3">
             <p>{t("ccswitch.config_claude_tiers_hint")}</p>
             {showsAliasNames ? <p>{t("ccswitch.config_alias_request_explain")}</p> : null}
           </div>
@@ -256,7 +256,7 @@ export function CcSwitchModelFields({
             </FormField>
           ) : null}
           {showsAliasNames ? (
-            <p className="text-xs leading-5 text-ink-3">
+            <p className="text-xs leading-5 text-sn-label3">
               {t("ccswitch.config_alias_request_explain")}
             </p>
           ) : null}
@@ -266,8 +266,8 @@ export function CcSwitchModelFields({
       {aliases.length > 0 ? (
         <div data-testid="ccswitch-alias-list" className="space-y-2 pt-2">
           <div>
-            <div className="text-sm font-medium text-ink">{t("ccswitch.config_aliases_title")}</div>
-            <p className="text-xs leading-5 text-ink-3">{t("ccswitch.config_aliases_hint")}</p>
+            <div className="text-sm font-medium text-sn-label">{t("ccswitch.config_aliases_title")}</div>
+            <p className="text-xs leading-5 text-sn-label3">{t("ccswitch.config_aliases_hint")}</p>
           </div>
           <ul className="space-y-1">
             {aliases.map((alias) => {
@@ -275,17 +275,17 @@ export function CcSwitchModelFields({
               return (
                 <li
                   key={`${alias.requestModel}::${alias.targetModel}`}
-                  className="flex items-center gap-2 rounded-xl bg-subtle py-1 pl-3 pr-1 font-mono text-xs text-ink-2"
+                  className="flex items-center gap-2 rounded-xl bg-sn-subtle py-1 pl-3 pr-1 font-mono text-xs text-sn-label2"
                 >
                   <span className="min-w-0 truncate" title={alias.requestModel}>
                     {alias.requestModel}
                   </span>
-                  <ArrowRight size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
+                  <ArrowRight size={12} className="shrink-0 text-sn-label3" aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate" title={alias.targetModel}>
                     {alias.targetModel}
                   </span>
                   {isDefault ? (
-                    <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-sans text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+                    <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 font-sans text-2xs font-medium text-sn-label3 dark:bg-white/[0.07]">
                       {t("ccswitch.config_alias_default")}
                     </span>
                   ) : null}

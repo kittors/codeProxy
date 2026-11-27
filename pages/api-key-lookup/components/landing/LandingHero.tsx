@@ -48,22 +48,22 @@ export function LandingHero({
       <div className="relative mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
         <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
           <div>
-            <p className="sn-fade-up font-display text-xs uppercase tracking-[0.1em] text-ink-3">
+            <p className="sn-fade-up font-display text-xs uppercase tracking-[0.1em] text-sn-label3">
               {copy.hero.badge}
             </p>
 
             <h1
-              className="sn-fade-up mt-7 font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-6xl"
+              className="sn-fade-up mt-7 font-display text-4xl font-bold leading-[1.1] tracking-tight text-sn-label sm:text-5xl lg:text-6xl"
               style={{ animationDelay: "60ms" }}
             >
               <span className="block">{copy.hero.titleLine1}</span>
-              <span className="mt-2 block text-ink-3">
+              <span className="mt-2 block text-sn-label3">
                 {copy.hero.titleLine2}
               </span>
             </h1>
 
             <p
-              className="sn-fade-up mt-8 max-w-2xl text-base leading-8 text-ink-2"
+              className="sn-fade-up mt-8 max-w-2xl text-base leading-8 text-sn-label2"
               style={{ animationDelay: "120ms" }}
             >
               {copy.hero.description}
@@ -75,7 +75,7 @@ export function LandingHero({
             >
               <LandingButton onClick={onLogin}>{copy.hero.primaryCta}</LandingButton>
 
-              <div className="cp-edge inline-flex h-12 items-center gap-3 rounded-[var(--sn-btn-r)] bg-[#0B0D13] pl-4 pr-2">
+              <div className="border border-sn-line inline-flex h-12 items-center gap-3 rounded-[var(--sn-btn-r)] bg-[#0B0D13] pl-4 pr-2">
                 <code className="max-w-[13rem] truncate font-mono text-xs text-slate-300 sm:max-w-none sm:text-sm">
                   <span className="text-white/45 colorful:text-emerald-400">$ </span>
                   {command}
@@ -113,24 +113,24 @@ export function LandingHero({
           </div>
 
           <aside className="sn-fade-up lg:pt-2" style={{ animationDelay: "220ms" }}>
-            <p className="font-display text-2xs uppercase tracking-[0.1em] text-ink-3">
+            <p className="font-display text-2xs uppercase tracking-[0.1em] text-sn-label3">
               {copy.hero.railTitle}
             </p>
             <ul className="mt-5">
               {RAIL_VENDORS.map((vendor) => (
                 <li
                   key={vendor.id}
-                  className="flex items-center gap-3 border-t border-line py-3 text-sm text-ink-2 first:border-t-0"
+                  className="flex items-center gap-3 border-t border-sn-line py-3 text-sm text-sn-label2 first:border-t-0"
                 >
                   <VendorIcon modelId={vendor.id} size={17} />
                   {vendor.label}
                 </li>
               ))}
-              <li className="border-t border-line pt-3">
+              <li className="border-t border-sn-line pt-3">
                 <button
                   type="button"
                   onClick={onBrowseModels}
-                  className="font-display text-xs text-ink-2 transition-colors duration-150 hover:text-ink"
+                  className="font-display text-xs text-sn-label2 transition-colors duration-150 hover:text-sn-label"
                 >
                   {copy.hero.railMore}
                 </button>

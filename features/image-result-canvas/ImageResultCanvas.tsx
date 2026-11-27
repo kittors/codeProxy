@@ -12,9 +12,9 @@ export interface CanvasImage {
 
 export type CanvasState = "idle" | "generating" | "ready" | "error";
 
-// 浮在画布 / 图片上的小部件（计时、计数、翻页、像素）：半透明浮层底 + 阴影描边（shadow-control），
+// 浮在画布 / 图片上的小部件（计时、计数、翻页、像素）：半透明浮层底 + 阴影描边（border border-sn-line-control），
 // 不画 border，任何底色上都看得清。
-const FLOATING = "bg-elevated/80 text-ink-2 shadow-control backdrop-blur-md";
+const FLOATING = "bg-sn-overlay/80 text-sn-label2 border border-sn-line-control backdrop-blur-md";
 const PILL = "absolute z-20 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums";
 
 /**
@@ -98,7 +98,7 @@ export function ImageResultCanvas({
       data-testid={`${testIdPrefix}-stage`}
       data-state={state}
       aria-live="polite"
-      className={["relative isolate overflow-hidden rounded-xl bg-subtle", className ?? ""].join(" ")}
+      className={["relative isolate overflow-hidden rounded-xl bg-sn-subtle", className ?? ""].join(" ")}
     >
       {state === "generating" ? (
         <>
@@ -146,10 +146,10 @@ export function ImageResultCanvas({
         <div className="relative z-10 flex h-full w-full items-center justify-center p-6 text-center">
           {state === "generating" ? (
             <div className="max-w-sm">
-              <p className="text-2xl font-semibold tracking-tight text-ink-2 sm:text-3xl">
+              <p className="text-2xl font-semibold tracking-tight text-sn-label2 sm:text-3xl">
                 {statusText}
               </p>
-              {statusDetail ? <p className="mt-2 text-sm text-ink-3">{statusDetail}</p> : null}
+              {statusDetail ? <p className="mt-2 text-sm text-sn-label3">{statusDetail}</p> : null}
             </div>
           ) : state === "error" ? (
             // 画布保持中性底，错误提示采用 Satin 语义横幅（.sn-banner.sn-bad + .sn-ic + .sn-msg），与全站保持同一语言。
@@ -160,7 +160,7 @@ export function ImageResultCanvas({
               <p className="sn-msg min-w-0 !py-0 break-words leading-6">{errorMessage}</p>
             </div>
           ) : (
-            <div className="flex max-w-xs flex-col items-center text-ink-3">
+            <div className="flex max-w-xs flex-col items-center text-sn-label3">
               <EmptyArt name="projects" className="opacity-85" />
               <p className="mt-2 text-sm leading-6">{idleText}</p>
             </div>
@@ -188,7 +188,7 @@ export function ImageResultCanvas({
               disabled={step < 0 ? activeIndex <= 0 : activeIndex >= images.length - 1}
               aria-label={t(key === "prev" ? "image_generation.prev_image" : "image_generation.next_image")}
               className={[
-                "sn-btn !absolute top-1/2 z-20 !h-8 !w-8 !p-0 -translate-y-1/2 !rounded-full hover:!bg-elevated disabled:pointer-events-none disabled:opacity-35",
+                "sn-btn !absolute top-1/2 z-20 !h-8 !w-8 !p-0 -translate-y-1/2 !rounded-full hover:!bg-sn-overlay disabled:pointer-events-none disabled:opacity-35",
                 FLOATING,
                 side,
               ].join(" ")}

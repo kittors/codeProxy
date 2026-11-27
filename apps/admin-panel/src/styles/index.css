@@ -12,16 +12,10 @@
 
 /*
  * 外观开关（系统设置 → 外观，模型见 packages/ui/src/theme/appearance.ts）。
- * 两个 HTML 入口在首屏绘制前把它们写到 <html> 上，默认都是多彩：
- * - data-palette="colorful | quiet"：页面里的语义色与装饰色——成功 / 信息标签、指标身份色、
- *   监控分类色、会员徽章的渐变与光效；
- * - data-icons="colorful | mono"：图标按名字着色（theme/hues 的注册表）还是统一中性灰；
- * - data-bars="semantic | accent"：额度 / 用量进度条按余量走绿 → 琥珀 → 红，还是统一强调色。
- *
- * 写法约定：简约形态是基础类名，多彩是叠在同一元素上的变体类（colorful:bg-emerald-50），
- * 切换开关不需要重新渲染。变体用 :where 保持零特异度——它们在生成的样式里排在 dark: 之后，
- * 能盖住同属性的基础类和 dark: 基础类，又不会压过 hover: / focus: 这类状态变体（特异度更高）。
- * 基础类带 dark: 的属性，多彩一侧要写成对的 colorful:dark:，否则深色下会沿用浅色的多彩值。
+ * 全站默认遵循 Satin 原生克制规范（data-palette="quiet" data-icons="mono" data-bars="semantic"）：
+ * - data-palette="quiet | colorful"：默认克制中性（颜色仅表达状态），可选多彩语义强调；
+ * - data-icons="mono | colorful"：默认 Satin 单色双色调 Solar Icons，可选按语义着色；
+ * - data-bars="semantic | accent"：配额进度条按余量绿 → 琥珀 → 红预警，或统一强调色。
  */
 @custom-variant colorful (&:where([data-palette="colorful"], [data-palette="colorful"] *));
 @custom-variant icon-hue (&:where([data-icons="colorful"], [data-icons="colorful"] *));
@@ -29,74 +23,50 @@
 
 @theme {
   /*
-   * 全局排版与圆角规范。页面只使用这些 Tailwind token，图表等非 DOM 渲染同样遵循对应像素值。
-   * 字号：10 / 12 / 14 / 16 / 18 / 20 / 24 / 30 / 36 / 48 / 60 px
-   * 圆角：2 / 4 / 6 / 8 / 12 / 16 / 24 / 32 px，以及 full
-   * 圆角的用法分三档：胶囊（按钮、输入框、分段控件、状态标签）、24px（弹窗）、
-   * 16px（卡片、菜单、浮动面板），列表选中块与表单内部用 8–12px。
-   */
-  /*
    * 字体栈按平台落到「该平台为屏幕调过的字体」上：
-   *   - macOS / iOS：-apple-system（SF Pro）+ 苹方，设计稿的基准观感；
-   *   - Windows：Segoe UI + 微软雅黑 UI。这两款带完整 hinting，是为 ClearType 调过的；
-   *     之前这里刻意绕开它们、改用自托管的 Inter + Noto Sans SC 可变字体，结果那两款 web 字体
-   *     没有 hinting，在 Windows 的小字号下发虚、锯齿明显（用户拿 mintimate.cn 对比——它用的正是
-   *     Segoe UI + 系统中文回退）；
-   *   - 其它平台（Linux 等）两边都没有，照旧落到自托管的 Inter + Noto（见 styles/fonts.css）。
-   * 浏览器只在真正渲染到某个字符时才下载对应字体，所以 macOS / Windows 上不会白下载 Inter/Noto。
+   *   - macOS / iOS：-apple-system（SF Pro）+ 苹方；
+   *   - Windows：Segoe UI + 微软雅黑 UI（带 ClearType hinting）；
+   *   - 其它平台回退到自托管 Inter Variable + Noto Sans SC Variable。
    */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei UI", "Microsoft YaHei", "Inter Variable", "Noto Sans SC Variable", system-ui,
     sans-serif;
-  /*
-   * 等宽字体必须带中文回退：表格里的时间、计数、模型名常和中文混排，等宽字体都没有中文字形，
-   * 没写回退时浏览器按 monospace 的系统默认补字——Windows 简体中文下是新宋体，小字号是点阵，
-   * 一行里中英文一清一糊。Windows 的等宽字体在下面按平台换成系统自带的 Cascadia Mono / Consolas。
-   */
   --font-mono: "JetBrains Mono Variable", "SFMono-Regular", Menlo, Consolas, "Liberation Mono",
     "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC Variable", monospace;
-  /*
-   * 展示级字体：落地页大标题、章节序号、eyebrow 标签统一用等宽。
-   * CliRelay 是 CLI / 网关类基础设施产品，等宽字形本身就是这类产品的视觉母语；
-   * 中文回落到 sans，避免等宽字体缺中文字形时出现豆腐块与参差基线。
-   */
   --font-display: "JetBrains Mono Variable", "SFMono-Regular", Menlo, "PingFang SC",
     "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC Variable", monospace;
 
-  /*
-   * 字号与字重都乘上「外观」里的偏好：--cp-pref-text-scale 只放大缩小文字（不动间距与控件尺寸，
-   * 和整体缩放 --ui-scale 是两回事），--cp-pref-weight-shift 给所有字重统一加减（可变字体逐级变化，
-   * Windows 的系统字体只有几档字重，会就近取档）。没设置时两者分别是 1 和 0，与原来完全一致。
-   */
-  --text-2xs: calc(0.625rem * var(--cp-pref-text-scale, 1));
-  --text-2xs--line-height: calc(0.875rem * var(--cp-pref-text-scale, 1));
-  --text-xs: calc(0.75rem * var(--cp-pref-text-scale, 1));
-  --text-xs--line-height: calc(1rem * var(--cp-pref-text-scale, 1));
-  --text-sm: calc(0.875rem * var(--cp-pref-text-scale, 1));
-  --text-sm--line-height: calc(1.25rem * var(--cp-pref-text-scale, 1));
-  --text-base: calc(1rem * var(--cp-pref-text-scale, 1));
-  --text-base--line-height: calc(1.5rem * var(--cp-pref-text-scale, 1));
-  --text-lg: calc(1.125rem * var(--cp-pref-text-scale, 1));
-  --text-lg--line-height: calc(1.75rem * var(--cp-pref-text-scale, 1));
-  --text-xl: calc(1.25rem * var(--cp-pref-text-scale, 1));
-  --text-xl--line-height: calc(1.75rem * var(--cp-pref-text-scale, 1));
-  --text-2xl: calc(1.5rem * var(--cp-pref-text-scale, 1));
-  --text-2xl--line-height: calc(2rem * var(--cp-pref-text-scale, 1));
-  --text-3xl: calc(1.875rem * var(--cp-pref-text-scale, 1));
-  --text-3xl--line-height: calc(2.25rem * var(--cp-pref-text-scale, 1));
-  --text-4xl: calc(2.25rem * var(--cp-pref-text-scale, 1));
-  --text-4xl--line-height: calc(2.5rem * var(--cp-pref-text-scale, 1));
-  --text-5xl: calc(3rem * var(--cp-pref-text-scale, 1));
+  /* 字号与字重跟随 Satin 外观偏好（--sn-pref-text-scale / --sn-pref-weight-shift）。 */
+  --text-2xs: calc(0.625rem * var(--sn-pref-text-scale, 1));
+  --text-2xs--line-height: calc(0.875rem * var(--sn-pref-text-scale, 1));
+  --text-xs: calc(0.75rem * var(--sn-pref-text-scale, 1));
+  --text-xs--line-height: calc(1rem * var(--sn-pref-text-scale, 1));
+  --text-sm: calc(0.875rem * var(--sn-pref-text-scale, 1));
+  --text-sm--line-height: calc(1.25rem * var(--sn-pref-text-scale, 1));
+  --text-base: calc(1rem * var(--sn-pref-text-scale, 1));
+  --text-base--line-height: calc(1.5rem * var(--sn-pref-text-scale, 1));
+  --text-lg: calc(1.125rem * var(--sn-pref-text-scale, 1));
+  --text-lg--line-height: calc(1.75rem * var(--sn-pref-text-scale, 1));
+  --text-xl: calc(1.25rem * var(--sn-pref-text-scale, 1));
+  --text-xl--line-height: calc(1.75rem * var(--sn-pref-text-scale, 1));
+  --text-2xl: calc(1.5rem * var(--sn-pref-text-scale, 1));
+  --text-2xl--line-height: calc(2rem * var(--sn-pref-text-scale, 1));
+  --text-3xl: calc(1.875rem * var(--sn-pref-text-scale, 1));
+  --text-3xl--line-height: calc(2.25rem * var(--sn-pref-text-scale, 1));
+  --text-4xl: calc(2.25rem * var(--sn-pref-text-scale, 1));
+  --text-4xl--line-height: calc(2.5rem * var(--sn-pref-text-scale, 1));
+  --text-5xl: calc(3rem * var(--sn-pref-text-scale, 1));
   --text-5xl--line-height: 1;
-  --text-6xl: calc(3.75rem * var(--cp-pref-text-scale, 1));
+  --text-6xl: calc(3.75rem * var(--sn-pref-text-scale, 1));
   --text-6xl--line-height: 1;
 
-  --font-weight-light: calc(300 + var(--cp-pref-weight-shift, 0));
-  --font-weight-normal: calc(400 + var(--cp-pref-weight-shift, 0));
-  --font-weight-medium: calc(500 + var(--cp-pref-weight-shift, 0));
-  --font-weight-semibold: calc(600 + var(--cp-pref-weight-shift, 0));
-  --font-weight-bold: calc(700 + var(--cp-pref-weight-shift, 0));
+  --font-weight-light: calc(300 + var(--sn-pref-weight-shift, 0));
+  --font-weight-normal: calc(400 + var(--sn-pref-weight-shift, 0));
+  --font-weight-medium: calc(500 + var(--sn-pref-weight-shift, 0));
+  --font-weight-semibold: calc(600 + var(--sn-pref-weight-shift, 0));
+  --font-weight-bold: calc(700 + var(--sn-pref-weight-shift, 0));
 
+  /* 圆角刻度对齐 Satin (--sn-r-xs: 4 / sm: 6 / md: 8 / lg: 12 / xl: 16 / full: 9999)。 */
   --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -108,68 +78,8 @@
   --radius-full: 9999px;
 
   /*
-   * 中性色板。页面里 slate-* 用于浅色语境的文字、浅底和描边（2400+ 处），
-   * neutral-* 主要用于深色语境的卡片与浮层背景（dark:bg-neutral-950 等）。
-   * 两套都重定义为不带色相的中性灰：灰仍然是灰，只是去掉了原来 slate 的蓝调，
-   * 现有类名不用改就能落到新的配色上。neutral 只出现在 dark: 变体里，承担的是深色「表面」
-   * 而不是「文字」，所以它的深色端与下面的深色语义令牌一一对齐：950 = 内容区、900 = 卡片、
-   * 800 = 卡片上再提一档（表头、悬停）。深色端带一点点冷调，近黑底上读起来更「干净」，
-   * 不再是 #212121 / #2a2a2a 那种发闷的中灰。
-   */
-  --color-slate-50: #f9f9f9;
-  --color-slate-100: #f3f3f3;
-  --color-slate-200: #ebebeb;
-  --color-slate-300: #d6d6d6;
-  --color-slate-400: #a3a3a3;
-  --color-slate-500: #767676;
-  --color-slate-600: #5d5d5d;
-  --color-slate-700: #404040;
-  --color-slate-800: #2b2b2b;
-  --color-slate-900: #171717;
-  --color-slate-950: #0d0d0d;
-
-  --color-gray-50: #f9f9f9;
-  --color-gray-100: #f3f3f3;
-  --color-gray-200: #ebebeb;
-  --color-gray-300: #d6d6d6;
-  --color-gray-400: #a3a3a3;
-  --color-gray-500: #767676;
-  --color-gray-600: #5d5d5d;
-  --color-gray-700: #404040;
-  --color-gray-800: #2b2b2b;
-  --color-gray-900: #171717;
-  --color-gray-950: #0d0d0d;
-
-  --color-zinc-50: #f9f9f9;
-  --color-zinc-100: #f3f3f3;
-  --color-zinc-200: #ebebeb;
-  --color-zinc-300: #d6d6d6;
-  --color-zinc-400: #a3a3a3;
-  --color-zinc-500: #767676;
-  --color-zinc-600: #5d5d5d;
-  --color-zinc-700: #404040;
-  --color-zinc-800: #2b2b2b;
-  --color-zinc-900: #171717;
-  --color-zinc-950: #0d0d0d;
-
-  --color-neutral-50: #f7f7f8;
-  --color-neutral-100: #ececef;
-  --color-neutral-200: #d4d4d8;
-  --color-neutral-300: #b4b4bc;
-  --color-neutral-400: #8b8b94;
-  --color-neutral-500: #74747c;
-  --color-neutral-600: #4a4a52;
-  --color-neutral-700: #33333a;
-  --color-neutral-800: #222227;
-  --color-neutral-900: #18181c;
-  --color-neutral-950: #111114;
-
-  /*
-   * 状态色板：成功 / 错误 / 警告 / 信息各一套色阶，500 是基准色。
-   * 同一语义的几个色名（emerald 与 green、rose 与 red、sky 与 blue）收敛到同一套，
-   * 之前它们在不同页面被混用来表达同一件事，颜色却各不相同。
-   * 紫色系（indigo / violet / purple / fuchsia）刻意不在这里重定义——它们是界面里
-   * 「AI 味」的主要来源，页面适配时逐处换成语义令牌，而不是让 indigo-600 实际显示成黑色。
+   * 状态色板（支持外观抽屉自定义状态色覆盖 --color-emerald/green/rose/red/amber-*）。
+   * 基准色收敛到与 Satin 语义一致的克制明度。
    */
   --color-emerald-50: #ecf8f4;
   --color-emerald-100: #d2f0e6;
@@ -200,36 +110,36 @@
   --color-rose-200: #f6c6c8;
   --color-rose-300: #ef9da0;
   --color-rose-400: #e96f74;
-  --color-rose-500: #e5484d;
-  --color-rose-600: #cf3338;
-  --color-rose-700: #ac282d;
-  --color-rose-800: #8a2327;
-  --color-rose-900: #721f22;
-  --color-rose-950: #400d0f;
+  --color-rose-500: #d92d20;
+  --color-rose-600: #c4291d;
+  --color-rose-700: #a42319;
+  --color-rose-800: #852019;
+  --color-rose-900: #6e1c16;
+  --color-rose-950: #3e0c09;
 
   --color-red-50: #fdf2f2;
   --color-red-100: #fbe3e4;
   --color-red-200: #f6c6c8;
   --color-red-300: #ef9da0;
   --color-red-400: #e96f74;
-  --color-red-500: #e5484d;
-  --color-red-600: #cf3338;
-  --color-red-700: #ac282d;
-  --color-red-800: #8a2327;
-  --color-red-900: #721f22;
-  --color-red-950: #400d0f;
+  --color-red-500: #d92d20;
+  --color-red-600: #c4291d;
+  --color-red-700: #a42319;
+  --color-red-800: #852019;
+  --color-red-900: #6e1c16;
+  --color-red-950: #3e0c09;
 
   --color-amber-50: #fdf7ec;
   --color-amber-100: #faedd2;
   --color-amber-200: #f4d8a2;
   --color-amber-300: #edbe68;
   --color-amber-400: #e6a53c;
-  --color-amber-500: #e08e1f;
-  --color-amber-600: #c47515;
-  --color-amber-700: #a05c13;
-  --color-amber-800: #824915;
-  --color-amber-900: #6b3d15;
-  --color-amber-950: #3d2008;
+  --color-amber-500: #d97706;
+  --color-amber-600: #b25000;
+  --color-amber-700: #92400e;
+  --color-amber-800: #78350f;
+  --color-amber-900: #622d0c;
+  --color-amber-950: #381805;
 
   --color-sky-50: #f0f5fe;
   --color-sky-100: #dee9fc;
@@ -254,267 +164,98 @@
   --color-blue-800: #1a3e88;
   --color-blue-900: #19356d;
   --color-blue-950: #102244;
-
-  /*
-   * 动效（严格对齐 Satin `tokens.css` 与 `packages/ui/src/utils/motion.ts`）：
-   * soft 对应 --sn-ease-out；pop 对应 --sn-ease-out-strong；spring 对应 --sn-ease-overshoot。
-   */
-  --ease-soft: cubic-bezier(0, 0, 0.58, 1);
-  --ease-pop: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /*
- * 语义令牌。组件、外壳和页面适配统一用这些名字，深浅色只在下面两段变量里切换。
- * 用 `@theme inline` 是为了让工具类直接引用运行时变量，切换 .dark 时无需重新生成样式。
- *
- * hover / selected 是半透明叠层而不是实色：同一个菜单项、按钮可能落在白卡片、灰侧栏、
- * 深色弹层上，实色在深色弹层（#2f2f2f）上会比底色还暗或几乎看不出来，叠层在任何底上
- * 都是「比底色深/亮一档」。需要盖住下层内容的地方（表格冻结列）不要用它们，另取实色。
- * surface-hover 是 hover 叠在 surface 上的「实色结果」，专给必须不透明的地方用（表格冻结列）。
- * track 是分段控件、进度条这类「槽」的实色底：分段控件会被做成吸顶条（模型广场的厂商标签），
- * 半透明的槽会透出下面滚过的内容。
- * field 是输入框和下拉触发器的底：浅色纯白靠描边成形，深色用轻微提亮，放在画布、
- * 卡片、弹窗里都比所在容器亮一点，读起来是「可以填的格子」。
+ * Satin 原生语义令牌直通 Tailwind v4 工具类（唯一令牌真源：vendor/satin-ui/css/foundation/tokens.css）。
+ * 彻底移除旧 --cp-* / text-ink / bg-surface / shadow-control / cp-edge 体系。
  */
 @theme inline {
-  --color-rail: var(--cp-rail);
-  --color-panel: var(--cp-panel);
-  --color-canvas: var(--cp-canvas);
-  --color-surface: var(--cp-surface);
-  --color-surface-hover: var(--cp-surface-hover);
-  --color-track: var(--cp-track);
-  --color-elevated: var(--cp-elevated);
-  --color-subtle: var(--cp-subtle);
-  --color-field: var(--cp-field);
-  --color-hover: var(--cp-hover);
-  --color-selected: var(--cp-selected);
-  --color-ink: var(--cp-ink);
-  --color-ink-2: var(--cp-ink-2);
-  --color-ink-3: var(--cp-ink-3);
-  --color-ink-4: var(--cp-ink-4);
-  --color-line: var(--cp-line);
-  --color-line-strong: var(--cp-line-strong);
-  --color-accent: var(--cp-accent);
-  --color-accent-hover: var(--cp-accent-hover);
-  --color-accent-fg: var(--cp-accent-fg);
-  --color-accent-ink: var(--cp-accent-ink);
-  --color-accent-soft: var(--cp-accent-soft);
-  --color-backdrop: var(--cp-backdrop);
-  --color-ok: var(--color-emerald-500);
-  --color-warn: var(--color-amber-500);
-  --color-err: var(--color-rose-500);
+  --color-sn-shell: var(--sn-shell);
+  --color-sn-workspace: var(--sn-workspace);
+  --color-sn-canvas: var(--sn-canvas);
+  --color-sn-raised: var(--sn-raised);
+  --color-sn-overlay: var(--sn-overlay);
+  --color-sn-sunken: var(--sn-sunken);
+  --color-sn-field: var(--sn-field);
+  --color-sn-subtle: var(--sn-fill-subtle);
+  --color-sn-hover: var(--sn-fill-hover);
+  --color-sn-hover-solid: var(--sn-fill-hover-solid);
+  --color-sn-active: var(--sn-fill-active);
+  --color-sn-label: var(--sn-label);
+  --color-sn-label2: var(--sn-label2);
+  --color-sn-label3: var(--sn-label3);
+  --color-sn-label-off: var(--sn-label-off);
+  --color-sn-line: var(--sn-line);
+  --color-sn-line-control: var(--sn-line-control);
+  --color-sn-line-control-hover: var(--sn-line-control-hover);
+  --color-sn-card-line: var(--sn-card-line);
+  --color-sn-accent: var(--sn-accent);
+  --color-sn-accent-hover: var(--sn-b-primary-hover);
+  --color-sn-on-primary: var(--sn-on-primary);
+  --color-sn-accent-ink: var(--sn-accent-ink);
+  --color-sn-accent-soft: var(--sn-accent-soft);
+  --color-sn-focus: var(--sn-focus);
+  --color-sn-backdrop: var(--sn-backdrop);
+  --color-sn-success: var(--sn-success);
+  --color-sn-warning: var(--sn-warning);
+  --color-sn-danger: var(--sn-danger);
+  --color-ok: var(--sn-success);
+  --color-warn: var(--sn-warning);
+  --color-err: var(--sn-danger);
   --color-info: var(--color-sky-500);
 
-  --shadow-card: var(--cp-shadow-card);
-  --shadow-lift: var(--cp-shadow-lift);
-  --shadow-pop: var(--cp-shadow-pop);
-  --shadow-dialog: var(--cp-shadow-dialog);
-  --shadow-control: var(--cp-shadow-control);
-  --shadow-control-hover: var(--cp-shadow-control-hover);
-  --shadow-control-focus: var(--cp-shadow-control-focus);
+  --shadow-sn-card: var(--sn-card-shadow);
+  --shadow-sn-e1: var(--sn-e1);
+  --shadow-sn-e2: var(--sn-e2);
+  --shadow-sn-menu: var(--sn-menu-shadow);
+  --shadow-sn-lift: var(--sn-lift-shadow);
+
+  --ease-sn-out: var(--sn-ease-out);
+  --ease-sn-strong: var(--sn-ease-out-strong);
+  --ease-sn-open: var(--sn-ease-open);
+  --ease-sn-overshoot: var(--sn-ease-overshoot);
 }
 
-/*
- * 配色与层级（2026-10 起）：
- *
- * - 强调色（主按钮、选中、开关、链接、路由进度条）由「外观」设置决定：默认的多彩风格是墨色
- *   （浅色下黑、深色下白，颜色留给图标、状态和数据），简约风格是蓝，也可以自选。下面写的是
- *   墨色默认值；选了别的强调色时，外观设置在 <html> 上写 --cp-pref-accent* 这组变量盖过它们
- *   （浅色、深色各一套，派生的悬停色 / 文字色 / 淡底由 theme/appearance.ts 按对比度算好）。
- * - 不用 border 画盒子。卡片、浮层的细边是 .cp-edge 伪元素上的内嵌阴影，立体感由元素自身的
- *   多层堆叠投影给（shadow-card / pop / dialog）；控件（input 不能挂伪元素）用 shadow-control
- *   这组「阴影描边 + 1px 投影」。line / line-strong 只留给分隔线这类真正的「线」。
- * - 深色是近黑底带一点冷调：之前的 #212121 / #2a2a2a 落在 13%–18% 亮度的中灰带里，层与层只差
- *   3%，整页读起来灰蒙蒙的；现在内容区 #111114、卡片 #18181c，文字 #f2f2f4，对比拉开。
- * - accent 是填充色（accent-fg 压在上面 ≥ 4.5:1）；accent-ink 是写在普通底色上的强调色文字，
- *   深色下要更亮才够对比度，所以单独一个令牌，不要直接拿 text-accent 当文字色。
- * - focus 是键盘焦点环与选区的颜色：墨色强调色下用信息蓝（黑色焦点环和主按钮混在一起），
- *   选了彩色强调色时跟随强调色。
- */
-:root {
-  --cp-rail: var(--sn-shell, #eff0f3);
-  --cp-panel: var(--sn-side-bg, #eff0f3);
-  --cp-canvas: var(--sn-workspace, #ffffff);
-  --cp-surface: var(--sn-raised, #ffffff);
-  --cp-surface-hover: var(--sn-fill-hover-solid, #f5f5f7);
-  --cp-track: var(--sn-sunken, #e8e8ed);
-  --cp-elevated: var(--sn-overlay, #ffffff);
-  --cp-subtle: var(--sn-fill-subtle, rgb(0 0 0 / 0.05));
-  --cp-field: var(--sn-field, #ffffff);
-  --cp-hover: var(--sn-fill-hover, rgb(0 0 0 / 0.04));
-  --cp-selected: var(--sn-fill-active, rgb(0 0 0 / 0.07));
-  --cp-ink: var(--sn-label, #1d1d1f);
-  --cp-ink-2: var(--sn-label2, #424245);
-  --cp-ink-3: var(--sn-label3, #6e6e73);
-  --cp-ink-4: var(--sn-label-off, #aeaeb2);
-  --cp-line: var(--sn-line, rgb(0 0 0 / 0.08));
-  --cp-line-strong: var(--sn-line-control, rgb(0 0 0 / 0.14));
-  --cp-accent: var(--cp-pref-accent, var(--sn-accent, #1d1d1f));
-  --cp-accent-hover: var(--cp-pref-accent-hover, var(--sn-b-primary-hover, #2c2c31));
-  --cp-accent-fg: var(--cp-pref-accent-fg, var(--sn-on-primary, #ffffff));
-  --cp-accent-ink: var(--cp-pref-accent-ink, var(--sn-accent, #1d1d1f));
-  --cp-accent-soft: var(--cp-pref-accent-soft, var(--sn-fill-subtle, rgb(0 0 0 / 0.05)));
-  --cp-focus: var(--cp-pref-focus, var(--sn-focus, rgb(0 0 0 / 0.4)));
-  /* 细边与层次严格对齐 Satin 规范：卡片只靠 1px 细描边与明度差分层（不加脏阴影），阴影只留给浮层（--sn-e1 / --sn-e2）。 */
-  --cp-edge: var(--sn-line, rgb(0 0 0 / 0.08));
-  --cp-edge-highlight: rgb(255 255 255 / 0);
-  --cp-shadow-card: none;
-  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.16));
-  --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.06));
-  --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.16), 0 0 0 1px rgb(0 0 0 / 0.06));
-  --cp-shadow-control: 0 0 0 1px var(--sn-line-control, rgb(0 0 0 / 0.14)), var(--sn-b-lift, 0 1px 2px rgb(0 0 0 / 0.05));
-  --cp-shadow-control-hover: 0 0 0 1px var(--sn-line-control-hover, rgb(0 0 0 / 0.24)), var(--sn-b-lift, 0 1px 2px rgb(0 0 0 / 0.05));
-  --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 55%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--cp-focus) 14%, transparent);
-}
-
-.dark,
-[data-theme="dark"] {
-  --cp-rail: var(--sn-shell, #0b0b0e);
-  --cp-panel: var(--sn-side-bg, #0b0b0e);
-  --cp-canvas: var(--sn-workspace, #16161a);
-  --cp-surface: var(--sn-raised, #1c1c1e);
-  --cp-surface-hover: var(--sn-fill-hover-solid, #262629);
-  --cp-track: var(--sn-sunken, #0e0e10);
-  --cp-elevated: var(--sn-overlay, #2c2c2e);
-  --cp-subtle: var(--sn-fill-subtle, rgb(255 255 255 / 0.08));
-  --cp-field: var(--sn-field, #1c1c1e);
-  --cp-hover: var(--sn-fill-hover, rgb(255 255 255 / 0.06));
-  --cp-selected: var(--sn-fill-active, rgb(255 255 255 / 0.1));
-  --cp-ink: var(--sn-label, #f5f5f7);
-  --cp-ink-2: var(--sn-label2, #aeaeb2);
-  --cp-ink-3: var(--sn-label3, #86868b);
-  --cp-ink-4: var(--sn-label-off, #48484a);
-  --cp-line: var(--sn-line, rgb(255 255 255 / 0.09));
-  --cp-line-strong: var(--sn-line-control, rgb(255 255 255 / 0.14));
-  --cp-accent: var(--cp-pref-accent-dark, var(--sn-accent, #f5f5f7));
-  --cp-accent-hover: var(--cp-pref-accent-hover-dark, var(--sn-b-primary-hover, #ffffff));
-  --cp-accent-fg: var(--cp-pref-accent-fg-dark, var(--sn-on-primary, #000000));
-  --cp-accent-ink: var(--cp-pref-accent-ink-dark, var(--sn-accent, #f5f5f7));
-  --cp-accent-soft: var(--cp-pref-accent-soft-dark, var(--sn-fill-subtle, rgb(255 255 255 / 0.08)));
-  --cp-focus: var(--cp-pref-focus-dark, var(--sn-focus, rgb(255 255 255 / 0.5)));
-  --cp-edge: var(--sn-line, rgb(255 255 255 / 0.09));
-  --cp-edge-highlight: rgb(255 255 255 / 0.04);
-  --cp-shadow-card: none;
-  --cp-shadow-lift: var(--sn-lift-shadow, 0 12px 28px -10px rgb(0 0 0 / 0.48));
-  --cp-shadow-pop: var(--sn-e1, 0 8px 24px rgb(0 0 0 / 0.5), inset 0 0 0 1px rgb(255 255 255 / 0.09));
-  --cp-shadow-dialog: var(--sn-e2, 0 24px 64px rgb(0 0 0 / 0.7), inset 0 0 0 1px rgb(255 255 255 / 0.1));
-  --cp-shadow-control: 0 0 0 1px var(--sn-line-control, rgb(255 255 255 / 0.14));
-  --cp-shadow-control-hover: 0 0 0 1px var(--sn-line-control-hover, rgb(255 255 255 / 0.24));
-  --cp-shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--cp-focus) 70%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--cp-focus) 20%, transparent);
-}
-
-/*
- * 「当前所在底色」：表格冻结列、冻结格悬停这类必须不透明、又要和周围底色一致的地方读它。
- * 内容区上是 canvas（压平后的页面直接把表格放在内容区上），卡片里是 surface（见 Surface.tsx），
- * 弹窗 / 抽屉里是 elevated。自定义属性会继承，所以放在哪层容器里就自动拿到哪层的颜色，
- * 各页面不必再各自猜冻结列该写 bg-surface 还是 bg-canvas——猜错了深色下就露出一道亮边。
- */
-:root {
-  --cp-backdrop: var(--cp-canvas);
-}
-
-/* 冻结格的悬停色：所在底色上叠一层悬停（与 bg-hover 同档），但必须是不透明的实色。 */
-@utility bg-backdrop-hover {
-  background-color: color-mix(in srgb, var(--cp-backdrop) 95.5%, #000);
+/* 冻结格的悬停色：基于所在容器底色 --sn-backdrop 混出不透明悬停底。 */
+@utility bg-sn-backdrop-hover {
+  background-color: color-mix(in srgb, var(--sn-backdrop) 95.5%, #000);
 
   @variant dark {
-    background-color: color-mix(in srgb, var(--cp-backdrop) 94%, #fff);
+    background-color: color-mix(in srgb, var(--sn-backdrop) 94%, #fff);
   }
 }
 
-/*
- * 盒子的细边：画在 ::after 上的内嵌阴影，而不是 border。
- *
- * - 压在内容之上：表头、冻结列、图片这类自带底色的子元素贴边时，不会把边线盖掉；
- * - 画在盒子内部：滚动容器、overflow-hidden 的祖先都裁不到它（以前改用 border 正是因为
- *   外描边的 ring 会被裁掉，见 Surface.tsx）；
- * - 不占布局，换成它不会让任何盒子的尺寸变化。
- *
- * 放在 components 层：position: relative 是伪元素定位的前提，但调用方写的 absolute / sticky /
- * fixed 是 utilities 层，天然盖过它，不会把浮动的卡片改成相对定位。
- */
-/*
- * 同心内圆角：Card 按自己的内边距导出 --cp-inner-radius（外圆角 − 内边距），贴在卡片角落的
- * 子块（淡底块、表头、图片）用 rounded-inner 取这个值，两条圆弧同一个圆心，间距处处相等。
- * 不在卡片里时退回 8px。
- */
+/* 同心内圆角：Card 按内边距导出 --sn-inner-radius（外圆角 − 内边距）。 */
 @utility rounded-inner {
-  border-radius: var(--cp-inner-radius, var(--radius-lg));
+  border-radius: var(--sn-inner-radius, var(--sn-r-md));
 }
 
-/*
- * 进度条的粗细（额度、用量、监控仪表）。「外观」里按像素调，默认 8px；乘 rem 是为了和整体
- * 缩放保持比例。h-bar-sm 给表格行、紧凑卡片里的小条，固定为常规粗细的 3/4，最细 2px。
- */
+/* 进度条粗细（跟随外观偏好 --sn-pref-bar，默认 8px）。 */
 :root {
-  --cp-bar-h: calc(var(--cp-pref-bar, 8) / 16 * 1rem);
-}
-
-@utility h-bar {
-  height: var(--cp-bar-h);
-}
-
-@utility h-bar-sm {
-  height: max(2px, calc(var(--cp-bar-h) * 0.75));
-}
-
-/*
- * 额度「健康」段的颜色，给写不了变体类的地方用（内联的 conic-gradient 圆环）：语义进度条是绿，
- * 强调色进度条跟随强调色。与 QuotaBar 的 bar-semantic: 类同一个开关。
- */
-:root {
-  --cp-bar-healthy: var(--cp-accent);
+  --sn-bar-h: calc(var(--sn-pref-bar, 8) / 16 * 1rem);
+  --sn-bar-healthy: var(--sn-accent);
 }
 
 :root[data-bars="semantic"] {
-  --cp-bar-healthy: #10b981;
+  --sn-bar-healthy: var(--sn-success);
 }
 
-@layer components {
-  .cp-edge {
-    position: relative;
-  }
+@utility h-bar {
+  height: var(--sn-bar-h);
+}
 
-  .cp-edge::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    box-shadow:
-      inset 0 0 0 1px var(--cp-edge),
-      inset 0 1px 0 var(--cp-edge-highlight);
-  }
+@utility h-bar-sm {
+  height: max(2px, calc(var(--sn-bar-h) * 0.75));
 }
 
 @layer base {
-  /*
-   * 全局视觉密度。间距、字号、圆角这套 token 全部建立在 rem 上，所以调根字号就等于
-   * 等比缩放整个面板，不必逐个组件改尺寸。
-   *
-   * 刻意不用 zoom / transform: scale——面板里的下拉、日期选择器、Tooltip 都是 portal 到
-   * body 再用 getBoundingClientRect 定位的，缩放上下文会让读到的坐标和写回去的坐标不在
-   * 同一个尺度上，浮层会整体偏移。改根字号没有这个问题。
-   *
-   * 用 % 而不是 px：用户在浏览器里调过默认字号时，这个比例仍然作用在他们自己的基准上。
-   * 「外观」里选了界面缩放时，--cp-pref-ui-scale 盖过下面按平台给的默认值。
-   */
   :root {
-    --ui-scale: var(--cp-pref-ui-scale, 0.9);
+    --ui-scale: var(--sn-pref-ui-scale, 0.9);
   }
 
-  /*
-   * Windows 用 1.0（正文 14px、小字 12px）。0.9 档下小字只有 10.8px / 9px：macOS 的高分屏和
-   * 字形平滑撑得住，Windows 的 ClearType 在这个字号下中文笔画糊成一团——微软雅黑的 hinting
-   * 是按 12px 起调的。同样的取舍 VS Code 也有：非 macOS 平台默认字号更大。
-   * data-os 由两个 HTML 入口在首屏绘制前写上（见 index.html / manage.html）；等宽与展示字体
-   * 一并换成系统自带、带 hinting 的 Cascadia Mono / Consolas（JetBrains Mono 的 web 版没有）。
-   */
   :root[data-os="windows"] {
-    --ui-scale: var(--cp-pref-ui-scale, 1);
+    --ui-scale: var(--sn-pref-ui-scale, 1);
     --font-mono: "Cascadia Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", monospace;
     --font-display: "Cascadia Mono", Consolas, "Microsoft YaHei UI", "Microsoft YaHei", monospace;
   }
@@ -523,23 +264,10 @@
     font-size: calc(100% * var(--ui-scale));
   }
 
-  /*
-   * 图标尺寸是以 px 写在 svg 的 width/height 属性上的（lucide 的 size prop），不吃根字号；
-   * 界面整体收紧后它们会相对显大，读起来比文字更抢眼。用同一个比例补回来。
-   *
-   * 用 zoom 而不是 transform: scale——zoom 会一并缩掉布局盒，图标周围的间距关系保持原样；
-   * scale 只改绘制，会在原尺寸的位置留下空洞。前面对整个页面排除 zoom 是因为浮层定位要读
-   * getBoundingClientRect，而图标是叶子节点，不参与任何定位计算，这里没有那个风险。
-   */
   :where(svg.lucide, svg.sn-ic) {
     zoom: var(--ui-scale);
   }
 
-  /*
-   * 图标统一线宽 1.75：lucide 默认 2 在这套中性配色里偏粗、偏抢眼。
-   * 只改「仍是默认值 2」的图标——显式传过 strokeWidth 的地方（例如刻意加粗的对勾）保持原样，
-   * 因为 presentation attribute 会被任何作者样式覆盖，不加这个属性选择器就会误伤它们。
-   */
   svg.lucide[stroke-width="2"] {
     stroke-width: 1.75;
   }
@@ -549,8 +277,8 @@
     font-weight: var(--font-weight-normal);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
-    color: var(--cp-ink);
-    background-color: var(--cp-rail);
+    color: var(--sn-label);
+    background-color: var(--sn-shell);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -563,15 +291,11 @@
   }
 
   ::selection {
-    background-color: color-mix(in srgb, var(--cp-focus) 20%, transparent);
+    background-color: color-mix(in srgb, var(--sn-accent) 18%, transparent);
   }
 
-  /*
-   * 焦点环：只在键盘导航时出现（:focus-visible），颜色取 --cp-focus 的半透明——墨色强调色下是
-   * 信息蓝，在黑白界面里足够醒目又不会和主按钮的黑色混在一起。组件可以按需覆盖。
-   */
   :focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--cp-focus) 65%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--sn-focus) 72%, transparent);
     outline-offset: 2px;
   }
 }
@@ -585,7 +309,6 @@ html.theme-transition-lock *::after {
   transition-delay: 0s !important;
 }
 
-/* 统一交互元素鼠标样式，便于用户识别可点击区域 */
 :where(
   a[href],
   button,
@@ -627,10 +350,7 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
-/*
- * 路由进度条：一条 2px 的强调色细条，不用渐变和发光。
- * 时序保持不变（最短停留与淡出由外壳控制），只换外观。
- */
+/* 路由进度条：2px Satin 强调色细条，无渐变和发光。 */
 .rp {
   position: fixed;
   inset: 0 0 auto;
@@ -646,17 +366,17 @@ html.theme-transition-lock *::after {
   position: absolute;
   inset: 0;
   transform-origin: left;
-  background: var(--cp-accent);
-  animation: rp-load 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  background: var(--sn-accent);
+  animation: rp-load 1.2s var(--sn-ease-out-strong) forwards;
 }
 
 .rp-done {
   opacity: 0;
-  transition: opacity 220ms ease 120ms;
+  transition: opacity 220ms var(--sn-ease-out) 120ms;
 }
 
 .rp-done::before {
-  animation: rp-done 180ms ease-out forwards;
+  animation: rp-done 180ms var(--sn-ease-out) forwards;
 }
 
 @keyframes rp-load {
@@ -703,13 +423,9 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
-/* 滚动条：浅色与深色都用细的圆角滑块，轨道透明 */
+/* 滚动条跟随 Satin 滚动条滑块令牌。 */
 :root {
-  scrollbar-color: rgb(0 0 0 / 0.18) transparent;
-}
-
-.dark {
-  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+  scrollbar-color: var(--sn-sa-thumb) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -723,25 +439,16 @@ html.theme-transition-lock *::after {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(0 0 0 / 0.18);
-  border-radius: var(--radius-full);
+  background-color: var(--sn-sa-thumb);
+  border-radius: var(--sn-r-full);
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(0 0 0 / 0.3);
+  background-color: var(--sn-sa-thumb-hover);
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background-color: rgb(255 255 255 / 0.2);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(255 255 255 / 0.35);
-}
-
-/* Loading 淡入动画 */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -753,7 +460,7 @@ html.theme-transition-lock *::after {
   }
 }
 
-/* 生图任务进行中的占位动画：点阵缓慢漂移 + 一层很淡的流光，表达「正在生成」 */
+/* 生图任务进行中的占位动画 */
 @keyframes imageGenerationDotsDrift {
   0% {
     transform: translate3d(0, 0, 0);
@@ -821,31 +528,14 @@ html.theme-transition-lock *::after {
     radial-gradient(circle at 72% 62%, rgb(255 255 255 / 0.06), transparent 24%);
 }
 
-/*
- * 全屏加载（PageLoader 的 initial / restoring）：中性底色 + 一个细环，不再铺模糊光斑。
- * index.html / manage.html 里内联了同一套变量，保证 React 接管前后没有色差。
- */
+/* 全屏加载占位与首屏 HTML 保持零色差 */
 :root {
-  --pl-bg: #ffffff;
-  --pl-ring-track: rgb(13 13 13 / 0.1);
-  --pl-ring: #111113;
-  --pl-text: #76767d;
+  --pl-bg: var(--sn-workspace);
+  --pl-ring-track: var(--sn-line);
+  --pl-ring: var(--sn-label);
+  --pl-text: var(--sn-label3);
 }
 
-.dark {
-  --pl-bg: #111114;
-  --pl-ring-track: rgb(255 255 255 / 0.12);
-  --pl-ring: #f2f2f4;
-  --pl-text: #86868f;
-}
-
-/*
- * 落地页动效。
- *
- * landing-marquee：厂商墙渲染两份相同序列，位移 -50% 时第二份刚好补到第一份的起点，
- * 因此循环无缝，且不需要 JS 参与测量。
- * landing-flow：中继示意图的连线用 dash 位移表现「流量在走」，比逐点动画省一个数量级的合成开销。
- */
 @keyframes landing-marquee {
   from {
     transform: translate3d(0, 0, 0);
@@ -861,28 +551,24 @@ html.theme-transition-lock *::after {
   }
 }
 
-/* 隐私脱敏按天柱条首次出现时从 0 长到实际高度（只写 from，终点是行内的 height） */
 @keyframes pm-bar-grow {
   from {
     height: 0;
   }
 }
 
-/* 隐私脱敏流向图的细线首次出现时从起点画到终点（路径的 pathLength 是 1） */
 @keyframes pm-draw {
   to {
     stroke-dashoffset: 0;
   }
 }
 
-/* 额度条、资源条首次出现时从 0 长到实际宽度（只写 from，终点就是行内的 width） */
 @keyframes quota-bar-grow {
   from {
     width: 0;
   }
 }
 
-/* 监控中心的迷你趋势线首次出现时从左到右展开（裁剪而不是缩放，线宽不会被拉变形） */
 @keyframes monitor-sparkline-reveal {
   from {
     clip-path: inset(0 100% 0 0);
@@ -892,7 +578,6 @@ html.theme-transition-lock *::after {
   }
 }
 
-/* 实时状态点外圈的呼吸光晕 */
 @keyframes monitor-live-ping {
   0% {
     transform: scale(1);
@@ -905,7 +590,6 @@ html.theme-transition-lock *::after {
   }
 }
 
-/* 骨架屏微光：只改透明度，避免 background-position 动画在长列表里造成重绘压力 */
 @keyframes skeleton-sweep {
   0%,
   100% {

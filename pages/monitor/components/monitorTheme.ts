@@ -62,9 +62,9 @@ export function successHue(rate: number): MonitorHue {
 
 /** 成功率文字色：正常保持墨色（不必满屏绿），出问题才上色。 */
 export function successTextClass(rate: number, requests: number): string {
-  if (requests <= 0) return "text-ink-3";
+  if (requests <= 0) return "text-sn-label3";
   const level = successLevel(rate);
   if (level === "critical") return "text-rose-600 dark:text-rose-300";
   if (level === "warn") return "text-amber-600 dark:text-amber-300";
-  return "text-ink";
+  return "text-sn-label";
 }

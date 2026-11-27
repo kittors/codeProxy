@@ -40,7 +40,7 @@ function HeaderLabel({
           </span>
         }
       >
-        <span className="truncate underline decoration-ink-4 decoration-dotted underline-offset-[3px]">
+        <span className="truncate underline decoration-sn-label-off decoration-dotted underline-offset-[3px]">
           {header}
         </span>
       </GridCellTooltip>

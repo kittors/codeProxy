@@ -52,7 +52,7 @@ export function LoginStatusBar({
   let pulse = true;
   let text: string;
   let remaining: string | null = null;
-  let remainingTone = "text-ink-3";
+  let remainingTone = "text-sn-label3";
 
   if (phase.name === "waiting") {
     text = waitingLabel;
@@ -87,14 +87,14 @@ export function LoginStatusBar({
             <span className={`relative h-2 w-2 rounded-full ${dot}`} />
           </>
         ) : (
-          <Loader2 size={14} className="animate-spin text-ink-2" />
+          <Loader2 size={14} className="animate-spin text-sn-label2" />
         )}
       </span>
       <p
         key={text}
         className={[
           "sn-fade-up min-w-0 flex-1 text-sm",
-          phase.name === "failed" ? "text-rose-700 dark:text-rose-300" : "text-ink-2",
+          phase.name === "failed" ? "text-rose-700 dark:text-rose-300" : "text-sn-label2",
         ].join(" ")}
       >
         {text}

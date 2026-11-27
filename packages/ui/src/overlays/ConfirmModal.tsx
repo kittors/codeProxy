@@ -111,7 +111,7 @@ export function ConfirmModal({
       {hasBody ? (
         <div className="space-y-4">
           {subject ? (
-            <div className="rounded-xl bg-subtle px-3.5 py-2.5 text-sm text-ink">
+            <div className="rounded-xl bg-sn-subtle px-3.5 py-2.5 text-sm text-sn-label">
               {subject}
             </div>
           ) : null}
@@ -119,7 +119,7 @@ export function ConfirmModal({
             <ul
               className={[
                 "space-y-1.5 text-sm",
-                variant === "danger" ? "sn-impact !list-none !ml-0" : "text-ink-2",
+                variant === "danger" ? "sn-impact !list-none !ml-0" : "text-sn-label2",
               ].join(" ")}
             >
               {consequences.map((item, index) => (
@@ -128,7 +128,7 @@ export function ConfirmModal({
                     aria-hidden="true"
                     className={[
                       "mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full",
-                      variant === "danger" ? "bg-[var(--sn-danger)]" : "bg-ink-4",
+                      variant === "danger" ? "bg-[var(--sn-danger)]" : "bg-sn-label-off",
                     ].join(" ")}
                   />
                   <span className="min-w-0">{item}</span>
@@ -145,7 +145,7 @@ export function ConfirmModal({
                 confirm();
               }}
             >
-              <label htmlFor={phraseId} className="block text-sm text-ink-2">
+              <label htmlFor={phraseId} className="block text-sm text-sn-label2">
                 {t("common.confirm_phrase_label", {
                   phrase: confirmPhrase,
                   defaultValue: "输入 {{phrase}} 以确认",
