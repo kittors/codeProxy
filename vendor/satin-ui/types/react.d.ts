@@ -27,10 +27,10 @@ export const Pager: React.ForwardRefExoticComponent<Base & Controlled<number, "p
 export const Collapse: React.ForwardRefExoticComponent<Base & Controlled<number[], "open"> & { items: { title: string; content?: string; html?: string }[]; single?: boolean; onToggle?(e: { index: number; open: boolean }): void; onChange?(open: number[]): void } & React.RefAttributes<SatinInstance>>;
 export const TagInput: React.ForwardRefExoticComponent<Base & Controlled<string[], "tags"> & { max?: number; placeholder?: string; hint?: string; onChange?(tags: string[]): void } & React.RefAttributes<SatinInstance>>;
 export const Stepper: React.ForwardRefExoticComponent<Base & Controlled<number> & { min?: number; max?: number; unit?: string; label?: string; onChange?(value: number): void } & React.RefAttributes<SatinInstance>>;
-/** 表格的列（React 版：render 可以返回 React 节点，画进这一格里的一个小 React 根，拿不到外面的 Context） */
+/** 表格的列（React 版：render 可返回任意 React 节点，经 createPortal 挂载并完整共享外部 Context） */
 export type TableColumnReact<R = any> = Omit<TableColumn<R>, "render"> & { render?(value: any, row: R, ctx: TableCellContext): React.ReactNode | string | number | Node | void };
-/** 表格的属性：columns + data（树形用 children）；selected / expandedKeys / sort 受控（defaultXxx 非受控，"传进来的值换了"才跟着变）；事件 onXxx；ref 拿到实例 */
-export type TableProps<R = any> = Base & Omit<TableOptions<R>, "columns"> & { columns: TableColumnReact<R>[] };
+/** 表格的属性：columns + data（树形用 children）；detail 支持返回 React 节点；selected / expandedKeys / sort 受控；事件 onXxx；ref 拿到实例 */
+export type TableProps<R = any> = Base & Omit<TableOptions<R>, "columns" | "detail"> & { columns: TableColumnReact<R>[]; detail?(row: R, ctx: import("./components").TableDetailContext): React.ReactNode | string | number | Node | false | null | undefined };
 export const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<SatinInstance & TableApi>>;
 export const Password: React.ForwardRefExoticComponent<Base & Controlled<string> & { label?: string; help?: string; name?: string; placeholder?: string; meter?: boolean; size?: "sm" | "lg" | "xl"; autocomplete?: string; onChange?(value: string): void } & React.RefAttributes<SatinInstance>>;
 /** 搜索框：search(q) 返回结果数（或数组、Promise），超过 300ms 放大镜换成转圈；onSearch(q)；id 写在输入框上 */

@@ -147,7 +147,24 @@ export function initSeg(seg, onChange, start = 0) {
 // ———— 3. Tooltip：首次悬停 500ms 后出现，刚关掉 300ms 内移到相邻元素立即出现；键盘聚焦也出现（09 号 §5.2） ————
 // 页面里没有提示气泡的容器就自己建一个（官网、库的使用者不用在 HTML 里写）
 let tip = null, tipTimer = 0, lastHide = 0, tipFor = null, described = null, tipWait = null, shown = "", dismissed = null;
-const tipEl = () => (tip ??= document.getElementById("sn-tip") || document.body.appendChild(Object.assign(document.createElement("div"), { className: "sn-tip", id: "sn-tip", popover: "manual" })));
+// 仅在宿主原生支持 Popover API 时启用 popover="manual" 顶层展示，避免不支持 Popover 的运行环境/jsdom
+// 给普通元素写入无效的 popover JS 属性并触发 :popover-open 计算异常。
+const supportsPopoverApi = () =>
+  typeof HTMLElement !== "undefined" &&
+  "popover" in HTMLElement.prototype &&
+  typeof HTMLElement.prototype.showPopover === "function";
+const tipEl = () => {
+  if (tip?.isConnected) return tip;
+  tip = document.getElementById("sn-tip");
+  if (!tip) {
+    const el = document.createElement("div");
+    el.className = "sn-tip";
+    el.id = "sn-tip";
+    if (supportsPopoverApi()) el.popover = "manual";
+    tip = document.body.appendChild(el);
+  }
+  return tip;
+};
 // 读屏：提示层 role="tooltip"，显示时元素 aria-describedby 指向它（提示和 aria-label 一样时不再重复读）
 const undescribe = () => { described?.removeAttribute("aria-describedby"); described = null; };
 const positionTip = (el) => {
@@ -163,7 +180,7 @@ const positionTip = (el) => {
 };
 export function showTip(el, text) {
   clearTimeout(tipTimer); tipWait = null;
-  tipEl(); if (!tip.matches(":popover-open")) tip.showPopover();
+  tipEl(); if (supportsPopoverApi() && !tip.matches(":popover-open")) tip.showPopover();
   tip.setAttribute("role", "tooltip"); if (described !== el || el.getAttribute("aria-label") === text) undescribe();
   if (!described && !el.hasAttribute("aria-describedby") && el.getAttribute("aria-label") !== text) { el.setAttribute("aria-describedby", tip.id); described = el; }
   tip.textContent = shown = text; if (el.dataset.kbd && !matchMedia("(hover: none)").matches) { const k = document.createElement("kbd"); k.textContent = el.dataset.kbd; tip.append(k); } // 触屏上不写快捷键
@@ -181,7 +198,7 @@ export const retip = (el) => {
   if (tipFor === el && t !== shown) { if (t) showTip(el, t); else hideTip(); }
 };
 // 弹窗进入顶层后，Tooltip 要重新放进顶层才能盖在弹窗上面
-export const resetTipLayer = () => { hideTip(); if (tip?.matches(":popover-open")) tip.hidePopover(); };
+export const resetTipLayer = () => { hideTip(); if (supportsPopoverApi() && tip?.matches(":popover-open")) tip.hidePopover(); };
 const tipText = (el) => el.dataset.tip || (el.hasAttribute("data-tip-full") && el.scrollWidth > el.clientWidth ? el.textContent : "");
 // 页面级：悬停 / 聚焦带 data-tip 的元素出提示。setup() 里装一次（展示页在 main.js 开头按原来的顺序装）
 export function installTooltips() {

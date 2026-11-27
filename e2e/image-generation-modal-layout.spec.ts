@@ -185,6 +185,12 @@ async function openDialog(page: Page, result: { width: number; height: number })
   await open.click();
   const dialog = page.getByRole("dialog", { name: "测试生成" });
   await expect(dialog).toBeVisible();
+  // 等 Satin 弹窗 300ms 1/3 原点缩放进场动画落定，再测量弹窗静止几何高度。
+  await page.waitForFunction(() => {
+    const el = document.querySelector<HTMLElement>('dialog[role="dialog"][open]');
+    if (!el || !el.classList.contains("sn-shown")) return false;
+    return el.getAnimations().every((anim) => anim.playState === "finished");
+  });
   return dialog;
 }
 

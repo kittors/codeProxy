@@ -737,14 +737,27 @@ describe("AppShell mobile sidebar", () => {
     expect(aside?.parentElement).toBe(document.body);
     expect(backdrop.parentElement).toBe(document.body);
     expect(aside).toHaveAttribute("data-mobile-open", "false");
-    expect(aside).toHaveClass("-translate-x-full", "will-change-transform", "motion-safe:duration-200");
+    expect(aside).toHaveClass(
+      "-translate-x-full",
+      "will-change-transform",
+      "motion-safe:duration-[220ms]",
+      "motion-safe:ease-[var(--sn-ease-in)]",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Expand Sidebar|展开侧边栏/i }));
 
-    // 打开走 320ms 指数减速，关闭走 200ms ease-in（与弹窗、抽屉同一套节奏）。
+    // 打开走 Satin 320ms 指数减速，关闭走 Satin 220ms ease-in（与抽屉同一套节奏）。
     expect(aside).toHaveAttribute("data-mobile-open", "true");
-    expect(aside).toHaveClass("translate-x-0", "motion-safe:duration-[320ms]", "motion-safe:ease-pop");
-    expect(backdrop).toHaveClass("opacity-100", "motion-safe:duration-[320ms]");
+    expect(aside).toHaveClass(
+      "translate-x-0",
+      "motion-safe:duration-[320ms]",
+      "motion-safe:ease-[var(--sn-ease-open)]",
+    );
+    expect(backdrop).toHaveClass(
+      "opacity-100",
+      "motion-safe:duration-200",
+      "motion-safe:ease-[var(--sn-ease-out)]",
+    );
     // 抽屉和桌面侧边栏是同一套分区导航：分区可以展开，点开就能看到下面的页面。
     const drawer = within(aside as HTMLElement);
     fireEvent.click(drawer.getByRole("button", { name: ACCESS }));

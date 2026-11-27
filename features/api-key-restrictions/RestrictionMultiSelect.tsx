@@ -12,6 +12,7 @@ import { Check, ChevronDown } from "@code-proxy/ui/icons";
 import {
   floatingPanelSurface,
   getSelectTriggerBase,
+  resolvePortalContainer,
   selectTriggerState,
   type MultiSelectOption,
   ScrollFade,
@@ -275,7 +276,7 @@ export function RestrictionMultiSelect({
                       checked ? "text-ink" : "text-ink-2"
                     }`}
                   >
-                    {/* 勾选框的 1px 描边是控件轮廓，与共享 Checkbox（Checkbox.css）一致，不是盒子描边。 */}
+                    {/* 勾选框的 1px 描边是控件轮廓，与共享 Satin Checkbox 一致，不是盒子描边。 */}
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                         checked
@@ -293,7 +294,7 @@ export function RestrictionMultiSelect({
             )}
           </ScrollFade>
         </div>,
-        document.body,
+        resolvePortalContainer(triggerRef.current),
       )
     : null;
 

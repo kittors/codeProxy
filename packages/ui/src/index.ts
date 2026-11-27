@@ -34,12 +34,12 @@ export {
   Spinner,
   Stepper,
   Steps as SatinSteps,
-  Table as SatinTable,
   Tabs as SatinTabs,
   TagInput,
   Text as SatinText,
   Upload,
 } from "satin-ui/react";
+export { Table as SatinTable } from "satin-ui/react/table";
 
 export * from "./data-grid";
 
@@ -99,11 +99,15 @@ export { Modal } from "./overlays/Modal";
 export {
   drawerPanelMotion,
   overlayBackdropMotion,
-  overlayBackdropVariants,
   overlayPanelMotion,
-  overlayPanelVariants,
   useOverlayPresence,
 } from "./overlays/overlayMotion";
+export {
+  resolvePortalContainer,
+  showTopLayerPopover,
+  hideTopLayerPopover,
+  notifyTopLayerDialogOpened,
+} from "./overlays/portalContainer";
 export {
   TooltipBubble,
   HoverTooltip,
@@ -244,11 +248,17 @@ export {
   selectTriggerState,
 } from "./utils/selectStyles";
 export {
+  DRAWER_ENTER_MS,
+  DRAWER_EXIT_MS,
   EASE_IN,
+  EASE_OPEN,
   EASE_OUT,
   EASE_POP,
+  EASE_SPRING,
+  OVERLAY_BACKDROP_ENTER_MS,
   OVERLAY_ENTER_MS,
   OVERLAY_EXIT_MS,
+  OVERLAY_NUDGE_MS,
   OVERLAY_PANEL_EXIT_MS,
   OVERLAY_TRANSFORM_ENTER_MS,
   popoverEnterTransition,

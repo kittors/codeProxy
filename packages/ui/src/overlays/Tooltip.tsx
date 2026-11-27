@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { resolvePortalContainer } from "./portalContainer";
 
 export type TooltipPlacement = "top" | "right" | "bottom" | "left";
 
@@ -298,7 +299,7 @@ export function TooltipBubble({
         {content}
       </span>
     </span>,
-    document.body,
+    resolvePortalContainer(anchorElement ?? anchorRef?.current),
   );
 }
 

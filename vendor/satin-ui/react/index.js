@@ -5,8 +5,7 @@
 // · SSR 安全：服务端输出和浏览器第一帧一样的标记（createXxx.html），水合以后再接交互；导入时不碰 document
 // · StrictMode 下挂两次、卸载一次也不漏：每次挂载都配对一次 destroy
 // · 第一次挂载任何组件时自动调 setup()（Tooltip、浮层栈这些页面级行为），最后一个组件卸载时撤掉
-import { createElement as h, forwardRef, useEffect, useRef, useState, useId, useCallback, useMemo, cloneElement, isValidElement, Children } from "react";
-import { createRoot } from "react-dom/client";
+import { createElement as h, forwardRef, useEffect, useRef, useState, useId, useCallback, cloneElement, isValidElement, Children } from "react";
 import * as S from "../src/components.js";
 import { setup } from "../src/setup.js";
 import { get as getTheme, set as setThemeChoice, reset as resetThemeChoice, paint as paintTheme, applyTheme, onChange as onThemeChange, getMode, setMode, DEFAULTS as THEME_DEFAULTS } from "../src/foundation/theme.js";
@@ -51,32 +50,8 @@ export const CountInput = /* @__PURE__ */ wrap(S.createCount, { passId: true, di
 export const LongText = /* @__PURE__ */ wrap(S.createLongText, { events: ["change", "submit"], passId: true, displayName: "LongText" });
 // 提示词输入框：onSend({ text, files }) 返回 Promise——发送后进入"生成中"（发送键变停止），Promise 结束回到可发送；onStop
 export const Composer = /* @__PURE__ */ wrap(S.createComposer, { events: ["send", "stop", "modelChange", "modeChange", "contextChange", "contextClick"], displayName: "Composer" });
-// 表格：columns + data（树形用 children）。勾选 selected + onSelect 受控（defaultSelected 非受控）；展开 expandedKeys + onExpandChange 受控（defaultExpandedKeys 非受控）；
-// sort + onSort（defaultSort）；拖行、拖列、改宽、改行高、改格子、重试：onRowReorder、onColumnReorder、onColumnResize、onRowResize、onCellEdit、onRetry。
-// 受控的值"传进来的值换了（按值比）"才跟过去；ref 拿到实例（expand、expandAll、select、refresh、edit……）。
-// 列的 render 可以返回 React 节点：每个格子一个小的 React 根（拿不到外面的 Context，要用就把值放进行数据里）；服务端和第一帧先空着，挂上以后画
-const TABLE_EVENTS = ["sort", "select", "rowClick", "expandChange", "rowReorder", "columnReorder", "columnResize", "rowResize", "cellEdit", "pageChange", "retry", "layout"];
-const TableInstance = /* @__PURE__ */ wrap(S.createTable, { valueKey: "selected", events: TABLE_EVENTS, displayName: "TableInstance" });
-// 格子 → React 根记在这里（不挂在格子元素上：StrictMode 里表格销毁再挂时会清掉元素上的 _xxx）；模拟卸载后马上又挂上时不卸，
-// 真卸载了才在微任务里统一卸；整表重画换下来的格子，在微任务里卸掉它们的根
-function useTableCells(columns) {
-  const box = useRef(null); if (box.current === null) box.current = { roots: new Map(), alive: true, sweep: false };
-  useEffect(() => { const b = box.current; b.alive = true; return () => { b.alive = false; queueMicrotask(() => { if (b.alive) return; for (const r of b.roots.values()) r.unmount(); b.roots.clear(); }); }; }, []);
-  return useMemo(() => (columns || []).map((c) => (typeof c.render !== "function" ? c : { ...c, render: (v, row, ctx) => {
-    const out = c.render(v, row, ctx);
-    if (!isValidElement(out)) return out;
-    if (!ctx.cell) return ""; // 字符串阶段（服务端、第一帧）：先空着
-    const b = box.current; let root = b.roots.get(ctx.cell);
-    if (!root) {
-      ctx.cell.replaceChildren(); root = createRoot(ctx.cell); b.roots.set(ctx.cell, root);
-      if (!b.sweep) { b.sweep = true; queueMicrotask(() => { b.sweep = false; for (const [el, r] of b.roots) if (!el.isConnected) { r.unmount(); b.roots.delete(el); } }); }
-    }
-    root.render(out); return undefined;
-  } })), [columns]);
-}
-export const Table = /* @__PURE__ */ forwardRef(function Table({ columns, ...rest }, ref) {
-  return h(TableInstance, { ...rest, columns: useTableCells(columns), ref });
-});
+// 表格独立拆分至 ./table.js，主入口保持同名转出以兼容既有调用方；按需拆包请直接导入 satin-ui/react/table。
+export { Table } from "./table.js";
 // 日期、时间、地址选择器：kind（date | range | time | datetime | region）、placeholder、label；onChange({ text }) 拿到触发框里显示的文字。
 // today / now 固定"今天""现在"（测试、截图用）。kind、placeholder、label 只在创建时用：要换种类就换 key 重新挂
 export const DatePicker = /* @__PURE__ */ wrap(S.createPicker, { displayName: "DatePicker" });
@@ -111,13 +86,33 @@ export const Button = /* @__PURE__ */ forwardRef(function Button({ variant = "se
     ? [h("span", { className: "sn-sheen", key: "sheen" }), h("span", { className: "sn-label", key: "label" }, h("span", { className: "sn-spin" }), h(Tick), h("span", { className: "sn-txt" }, lead, children, tail))]
     : [lead, children, tail]), badgeOf(badge));
 });
+// 缓存图标与空态插画的 dangerouslySetInnerHTML 对象引用：避免 React 19 在父组件重渲染时
+// 因对象引用变化重写 svg.innerHTML，进而销毁 mousedown 命中的 <path> 导致吞掉按钮 click。
+const ICON_HTML_CACHE = new Map();
+const EMPTY_ART_HTML_CACHE = new Map();
+function getIconHtml(name) {
+  let cached = ICON_HTML_CACHE.get(name);
+  if (!cached) {
+    cached = { __html: ICONS[name] || "" };
+    ICON_HTML_CACHE.set(name, cached);
+  }
+  return cached;
+}
+function getEmptyArtHtml(name) {
+  let cached = EMPTY_ART_HTML_CACHE.get(name);
+  if (!cached) {
+    cached = { __html: emptyArtSvg(name) };
+    EMPTY_ART_HTML_CACHE.set(name, cached);
+  }
+  return cached;
+}
 // 图标：satin-ui/icons 里的名字。直接渲染 <svg class="sn-ic">（和 icon() 生成的一模一样，按钮里 .sn-btn > .sn-ic 这类选择器照样命中）
 export function Icon({ name, size = 16, className, style, ...rest }) {
-  return h("svg", { ...rest, style, className: cx("sn-ic", className), "data-icon": name, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": rest["aria-label"] ? undefined : (rest["aria-hidden"] ?? "true"), dangerouslySetInnerHTML: { __html: ICONS[name] || "" } });
+  return h("svg", { ...rest, style, className: cx("sn-ic", className), "data-icon": name, width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": rest["aria-label"] ? undefined : (rest["aria-hidden"] ?? "true"), dangerouslySetInnerHTML: getIconHtml(name) });
 }
 // 空状态场景插画：<EmptyArt name="projects" />（projects / search / error / inbox / folder / lock），纯中性语义令牌 SVG，SSR 零闪烁直出
 export function EmptyArt({ name = "projects", label, className, style, id } = {}) {
-  return h("span", { id, style, className: cx("sn-empty-art", className), role: label ? "img" : undefined, "aria-label": label, "aria-hidden": label ? undefined : "true", dangerouslySetInnerHTML: { __html: emptyArtSvg(name) } });
+  return h("span", { id, style, className: cx("sn-empty-art", className), role: label ? "img" : undefined, "aria-label": label, "aria-hidden": label ? undefined : "true", dangerouslySetInnerHTML: getEmptyArtHtml(name) });
 }
 export const Input = /* @__PURE__ */ forwardRef(function Input({ size, invalid, className, ...rest }, ref) {
   return h("input", { ref, ...rest, className: cx("sn-input", size && size !== "md" && `sn-${size}`, className), "aria-invalid": invalid ? "true" : undefined });

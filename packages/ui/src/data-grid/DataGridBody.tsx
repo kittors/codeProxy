@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { Icon } from "satin-ui/react";
 import {
   Fragment,
@@ -16,7 +15,6 @@ import { EmptyState } from "../feedback/EmptyState";
 import { Skeleton } from "../feedback/Skeleton";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
-import { EASE_OUT } from "../utils/motion";
 import { pinEdge, pinStyle } from "./DataGridHeader";
 import { GridCellTooltip } from "./GridCellTooltip";
 import { resolveCellTooltip } from "./gridCellText";
@@ -84,10 +82,12 @@ function SkeletonCell({ shape, seed, align }: { shape: string; seed: number; ali
 }
 
 /**
- * 展开行：详情面板高度从 0 长到内容高，收起时反过来、动画结束再卸载。
+ * 展开行：对齐 Satin `.sn-tbl-detail-bd` 的 CSS `grid-template-rows` 推合动画（240ms `--sn-ease-open`，零 framer-motion）。
  * 面板本身 sticky 在视口左缘、宽度等于视口：表格横向滚到哪儿，详情都完整地待在眼前，
  * 不会跟着很宽的表格一起被滚出去一半。
  */
+const DETAIL_COLLAPSE_MS = 240;
+
 function ExpandedRow({
   open,
   colSpan,
@@ -101,26 +101,41 @@ function ExpandedRow({
   render: () => ReactNode;
 }) {
   const [present, setPresent] = useState(open);
-  const reduceMotion = useReducedMotion();
+  const [shown, setShown] = useState(false);
+
   useEffect(() => {
-    if (open) setPresent(true);
+    if (open) {
+      setPresent(true);
+      let raf2 = 0;
+      const raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => setShown(true));
+      });
+      return () => {
+        window.cancelAnimationFrame(raf1);
+        if (raf2) window.cancelAnimationFrame(raf2);
+      };
+    }
+
+    setShown(false);
+    const timer = window.setTimeout(() => setPresent(false), DETAIL_COLLAPSE_MS);
+    return () => window.clearTimeout(timer);
   }, [open]);
+
   if (!present) return null;
   return (
-    <tr className="cp-grid-detail-row" data-grid-detail="">
+    <tr
+      className={["cp-grid-detail-row sn-tbl-detail", shown ? "sn-open" : ""]
+        .filter(Boolean)
+        .join(" ")}
+      data-grid-detail=""
+    >
       <td colSpan={colSpan} className="cp-grid-cell p-0 [--grid-cell-bg:var(--grid-row-expanded)]">
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={open ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.26, ease: EASE_OUT }}
-          onAnimationComplete={() => {
-            if (!open) setPresent(false);
-          }}
-          className="sticky left-0 overflow-hidden"
+        <div
+          className="cp-grid-detail-bd sticky left-0"
           style={{ width: width || undefined }}
         >
-          {render()}
-        </motion.div>
+          <div className="cp-grid-detail-in">{render()}</div>
+        </div>
       </td>
     </tr>
   );

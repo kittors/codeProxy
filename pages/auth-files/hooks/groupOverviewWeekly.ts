@@ -1,19 +1,25 @@
 import type { TFunction } from "i18next";
 import { parseAdditionalQuotaWindowLabel } from "@code-proxy/domain";
 import type { QuotaCardSlot } from "./quotaCardSlots";
+import { toQuotaUsedPercent } from "./trendQuotaSummary";
 
 export const WEEKLY_WINDOW_SECONDS = 7 * 24 * 60 * 60;
 
 export type GroupWeeklyFamily = {
   id: string;
   label: string;
+  /** 组内各账号当前剩余周限百分比的均值（兼容保留）。 */
   remainingPercent: number | null;
+  /** 组内总量已消耗百分比：sum(100 - remaining_i) / N，与单账号详情图消耗口径一致。 */
+  usedPercent: number | null;
   sampleCount: number;
 };
 
 export type GroupOverviewSummary = {
   totalCalls: number;
+  /** 组内 5h 额度总量已消耗百分比。 */
   averageFiveHour: number | null;
+  /** 组内周限总量已消耗百分比。 */
   averageWeekly: number | null;
   weeklyFamilies: GroupWeeklyFamily[];
   quotaSampleCount: number;
@@ -23,7 +29,9 @@ export type GroupTrendPoint = {
   date: string;
   label: string;
   calls: number;
+  /** 当日主周限总量已消耗百分比（0-100）。 */
   weeklyPercent: number | null;
+  /** 当日各周限系列的总量已消耗百分比（0-100）。 */
   weeklyPercents: Record<string, number | null>;
 };
 
@@ -55,13 +63,19 @@ export const collectWeeklyFamilies = (slotsByFile: QuotaCardSlot[][]): GroupWeek
   return order.map((id) => {
     const bucket = buckets.get(id);
     if (!bucket) {
-      return { id, label: id, remainingPercent: null, sampleCount: 0 };
+      return { id, label: id, remainingPercent: null, usedPercent: null, sampleCount: 0 };
     }
-    const sum = bucket.values.reduce((total, value) => total + value, 0);
+    const sumRemaining = bucket.values.reduce((total, value) => total + value, 0);
+    const remainingPercent = sumRemaining / bucket.values.length;
+    const sumUsed = bucket.values.reduce(
+      (total, value) => total + (toQuotaUsedPercent(value) ?? 0),
+      0,
+    );
     return {
       id,
       label: bucket.label,
-      remainingPercent: sum / bucket.values.length,
+      remainingPercent,
+      usedPercent: sumUsed / bucket.values.length,
       sampleCount: bucket.values.length,
     };
   });

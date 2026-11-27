@@ -23,6 +23,7 @@ import {
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -290,7 +291,7 @@ export function Select({
                 })}
               </div>
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

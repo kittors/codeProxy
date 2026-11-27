@@ -1,15 +1,16 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { popoverEnterTransition, popoverExitTransition } from "../utils/motion";
+import { useOverlayPresence } from "../overlays/overlayMotion";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { POPOVER_EXIT_MS } from "../utils/motion";
 
 /**
- * 表头筛选、筛选区分面、视图设置共用的浮层。
+ * 表头筛选、筛选区分面、视图设置共用的 Satin 浮层（零 framer-motion）。
  *
- * 一律 portal 到 body：表格视口有滚动、遮罩和 overflow 裁剪，浮层放在里面会被裁掉
- * （见计划 104 引用的「浮层一律 portal」）。定位读锚点的 getBoundingClientRect，
- * 下方放不下就翻到上方，左右夹在视口内；表格横向滚动、窗口缩放时跟着锚点走。
- * 打开时把焦点移进浮层（优先 data-autofocus），关闭时还给触发按钮；Esc 与点外部关闭。
+ * - 使用 Satin 原生 `.sn-pop` / `.sn-open` / `.sn-up` 双向弹性微动效（160ms 淡入、220ms `--sn-ease-out-strong` 落位）；
+ * - 经 `resolvePortalContainer(anchor)` 挂载，普通页面挂到 `document.body`，位于原生 `<dialog>` 弹窗内时自动挂进
+ *   Top Layer 宿主，永远不被表格滚动视口裁切，也不被 `<dialog>` 遮挡；
+ * - 打开时把焦点移进浮层（优先 `data-autofocus`），关闭时还给触发按钮；Esc 与点外部关闭。
  */
 
 const GAP = 6;
@@ -35,11 +36,18 @@ export function GridPopover({
   className,
   children,
 }: GridPopoverProps) {
+  const { mounted, visible } = useOverlayPresence(open, POPOVER_EXIT_MS);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number; origin: string } | null>(
-    null,
-  );
-  const reduceMotion = useReducedMotion();
+  const lastAnchorRef = useRef<HTMLElement | null>(anchor);
+  if (anchor) lastAnchorRef.current = anchor;
+  const activeAnchor = anchor ?? lastAnchorRef.current;
+
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+    origin: string;
+    up: boolean;
+  } | null>(null);
 
   const updatePosition = useCallback(() => {
     const panel = panelRef.current;
@@ -59,16 +67,17 @@ export function GridPopover({
     );
     const originX = align === "end" ? "right" : "left";
     const origin = `${fitsBelow ? "top" : "bottom"} ${originX}`;
+    const up = !fitsBelow;
     setPosition((prev) =>
-      prev && prev.top === top && prev.left === left && prev.origin === origin
+      prev && prev.top === top && prev.left === left && prev.origin === origin && prev.up === up
         ? prev
-        : { top, left, origin },
+        : { top, left, origin, up },
     );
   }, [align, anchor]);
 
   useLayoutEffect(() => {
     // 关闭时不清位置：退场动画期间浮层还在原处淡出，清掉会让它闪到屏幕外。
-    if (!open) return undefined;
+    if (!open || !mounted) return undefined;
     updatePosition();
     const panel = panelRef.current;
     const observer =
@@ -81,12 +90,11 @@ export function GridPopover({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, updatePosition]);
+  }, [mounted, open, updatePosition]);
 
   // 打开后把焦点放进浮层；关闭时还给锚点（锚点还在文档里才还）。
   useEffect(() => {
-    if (!open) return undefined;
-    // 打开期间面板节点不变（退场动画时也还在），在这里取一次，清理时用同一个节点判断焦点。
+    if (!open || !mounted) return undefined;
     const panel = panelRef.current;
     const frame = window.requestAnimationFrame(() => {
       if (!panel || panel.contains(document.activeElement)) return;
@@ -103,7 +111,7 @@ export function GridPopover({
         anchor.focus({ preventScroll: true });
       }
     };
-  }, [anchor, open]);
+  }, [anchor, mounted, open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -115,6 +123,7 @@ export function GridPopover({
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      event.preventDefault();
       event.stopPropagation();
       onClose();
     };
@@ -126,42 +135,33 @@ export function GridPopover({
     };
   }, [anchor, onClose, open]);
 
-  if (typeof document === "undefined") return null;
+  if (typeof document === "undefined" || !mounted) return null;
+
+  const isShown = visible && open && Boolean(position);
 
   return createPortal(
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          key="grid-popover"
-          ref={panelRef}
-          role="dialog"
-          aria-label={label}
-          data-grid-popover=""
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
-          animate={{ opacity: 1, scale: 1, y: 0, transition: popoverEnterTransition }}
-          exit={
-            reduceMotion
-              ? { opacity: 0, transition: popoverExitTransition }
-              : { opacity: 0, scale: 0.98, y: -2, transition: popoverExitTransition }
-          }
-          className={[
-            "fixed z-[1000] rounded-[var(--sn-r-lg)] border border-[var(--sn-line)] bg-[var(--sn-overlay)] text-[var(--sn-label)] shadow-[var(--sn-e1)]",
-            "[--cp-backdrop:var(--sn-overlay)]",
-            className,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          style={{
-            top: position?.top ?? -9999,
-            left: position?.left ?? -9999,
-            transformOrigin: position?.origin ?? "top left",
-            visibility: position ? "visible" : "hidden",
-          }}
-        >
-          {children}
-        </motion.div>
-      ) : null}
-    </AnimatePresence>,
-    document.body,
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label={label}
+      data-grid-popover=""
+      data-state={isShown ? "open" : "closed"}
+      className={[
+        "sn-pop !z-[1000] border border-[var(--sn-line)] [--cp-backdrop:var(--sn-overlay)]",
+        position?.up ? "sn-up" : "",
+        isShown ? "sn-open" : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        top: position?.top ?? -9999,
+        left: position?.left ?? -9999,
+        transformOrigin: position?.origin ?? "top left",
+      }}
+    >
+      {children}
+    </div>,
+    resolvePortalContainer(activeAnchor),
   );
 }

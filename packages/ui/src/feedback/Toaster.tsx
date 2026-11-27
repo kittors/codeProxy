@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
+import {
+  hideTopLayerPopover,
+  showTopLayerPopover,
+  TOP_LAYER_DIALOG_OPEN_EVENT,
+} from "../overlays/portalContainer";
 import {
   dismissToast,
   getToasts,
@@ -38,9 +43,39 @@ export function Toaster() {
   const { t } = useTranslation();
   const records = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
   const [paused, setPaused] = useState(false);
+  const hostRef = useRef<HTMLElement | null>(null);
+  const hasRecords = records.length > 0;
+  const hasRecordsRef = useRef(hasRecords);
+  hasRecordsRef.current = hasRecords;
+
+  // 通过原生 Popover API 进入浏览器 Top Layer，保证 Toast 始终叠在原生 <dialog> 弹窗之上。
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    if (hasRecords) {
+      // 先退后进确保新 Toast 压在最近打开的 <dialog> 之上。
+      hideTopLayerPopover(host);
+      showTopLayerPopover(host);
+    } else {
+      hideTopLayerPopover(host);
+    }
+  }, [hasRecords, records.length]);
+
+  useEffect(() => {
+    const onDialogOpen = () => {
+      const host = hostRef.current;
+      if (!host || !hasRecordsRef.current) return;
+      hideTopLayerPopover(host);
+      showTopLayerPopover(host);
+    };
+    window.addEventListener(TOP_LAYER_DIALOG_OPEN_EVENT, onDialogOpen);
+    return () => window.removeEventListener(TOP_LAYER_DIALOG_OPEN_EVENT, onDialogOpen);
+  }, []);
 
   return (
     <section
+      ref={hostRef}
+      data-toaster-layer=""
       aria-label={t("common.notifications", { defaultValue: "Notifications" })}
       className="pointer-events-none fixed inset-x-0 top-5 z-[10020] flex justify-center px-4"
     >

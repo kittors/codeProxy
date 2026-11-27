@@ -1,4 +1,3 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   useCallback,
   useEffect,
@@ -11,9 +10,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { reduced } from "satin-ui";
 import { Progress } from "satin-ui/react";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import { Button } from "../primitives/Button";
-import { popoverEnterTransition, popoverExitTransition } from "../utils/motion";
 import "./DataGrid.css";
 import { DataGridBody } from "./DataGridBody";
 import { DataGridHeader } from "./DataGridHeader";
@@ -107,7 +107,13 @@ export function DataGrid<T>({
   className,
 }: DataGridProps<T>) {
   const { t, i18n } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = (() => {
+    try {
+      return reduced();
+    } catch {
+      return false;
+    }
+  })();
   const rootRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -634,35 +640,29 @@ export function DataGrid<T>({
           </div>
         ) : null}
 
-        {/* 有选中行时，表头换成选择条（复选框列留在原位，仍可全选 / 取消）。 */}
-        <AnimatePresence>
-          {selectable && selectedCount > 0 ? (
-            <motion.div
-              key="selection-bar"
-              data-grid-selection-bar=""
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0, transition: popoverEnterTransition }}
-              exit={{ opacity: 0, y: reduceMotion ? 0 : -4, transition: popoverExitTransition }}
-              className="absolute right-0 top-0 z-[9] flex items-center gap-3 bg-[var(--grid-head-bg)] pr-3 shadow-[inset_0_-1px_0_var(--sn-line)]"
-              style={{ left: selectionBarLeft, height: viewport.headerHeight }}
-            >
-              <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-[var(--sn-label)]">
-                {t("data_grid.selected_rows", { count: selectedCount })}
+        {/* 有选中行时，表头换成选择条（复选框列留在原位，仍可全选 / 取消；纯 CSS Satin 微动效）。 */}
+        {selectable && selectedCount > 0 ? (
+          <div
+            data-grid-selection-bar=""
+            className="cp-grid-selection-bar absolute right-0 top-0 z-[9] flex items-center gap-3 bg-[var(--grid-head-bg)] pr-3 shadow-[inset_0_-1px_0_var(--sn-line)]"
+            style={{ left: selectionBarLeft, height: viewport.headerHeight }}
+          >
+            <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-[var(--sn-label)]">
+              {t("data_grid.selected_rows", { count: selectedCount })}
+            </span>
+            {selectionSummary ? (
+              <span className="min-w-0 truncate text-xs text-[var(--sn-label3)]">
+                {selectionSummary({ count: selectedCount, clear: clearSelection })}
               </span>
-              {selectionSummary ? (
-                <span className="min-w-0 truncate text-xs text-[var(--sn-label3)]">
-                  {selectionSummary({ count: selectedCount, clear: clearSelection })}
-                </span>
-              ) : null}
-              <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                {selectionActions?.({ count: selectedCount, clear: clearSelection })}
-                <Button size="xs" variant="ghost" onClick={clearSelection}>
-                  {t("data_grid.clear_selection")}
-                </Button>
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+            ) : null}
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              {selectionActions?.({ count: selectedCount, clear: clearSelection })}
+              <Button size="xs" variant="ghost" onClick={clearSelection}>
+                {t("data_grid.clear_selection")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {guideX !== null && sizing.resizing ? (
           <>
@@ -776,7 +776,7 @@ export function DataGrid<T>({
             >
               {columnDrag.header}
             </div>,
-            document.body,
+            resolvePortalContainer(rootRef.current),
           )
         : null}
     </div>
