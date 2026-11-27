@@ -27,7 +27,7 @@ export const sidebarRowClass = (active: boolean) =>
 
 export function SidebarRowIcon({ icon: Icon, active }: { icon: MenuIconComponent; active: boolean }) {
   return (
-    <span className="grid size-8 shrink-0 place-items-center">
+    <span className="grid h-8 w-[36px] shrink-0 place-items-center">
       <Icon
         size={17}
         strokeWidth={active ? ACTIVE_ICON_STROKE : undefined}
@@ -40,24 +40,33 @@ export function SidebarRowIcon({ icon: Icon, active }: { icon: MenuIconComponent
 
 /**
  * 收起时只剩图标格，格子以外的东西（文字、箭头、产品名）都用这一套淡入淡出：
- * 收起时立刻淡出（150ms）；展开时等宽度先让出一段再淡入（延迟 100ms），不会挤在半截里出现。
+ * 收起时在前 100ms 干脆清场，避免宽度收缩时文字或箭头被右边缘硬切；
+ * 展开时等侧栏宽度拉开过半（延迟 120ms）再柔和浮现。
  */
 export const sidebarFadeClass = (collapsed: boolean) =>
   [
-    "transition-opacity ease-[var(--sn-ease-out)] motion-reduce:transition-none",
-    collapsed ? "opacity-0 duration-150" : "opacity-100 delay-100 duration-200",
+    "transition-opacity ease-sn-out motion-reduce:transition-none",
+    collapsed ? "pointer-events-none opacity-0 duration-100" : "opacity-100 delay-120 duration-160",
   ].join(" ");
 
 /**
- * 行内文字。收起时改成直接裁切而不是省略号——否则宽度收缩的那几帧会闪出一串「…」。
- * 收起后文字仍留在 DOM 里，链接和按钮的可访问名称不受影响。
+ * 行内文字。收起时归零右侧内边距并直接裁切（不出「…」），彻底消除对图标槽的挤压；
+ * 展开态由 trailingSpace 给右侧绝对定位箭头预留安全空间。
  */
-export function SidebarRowLabel({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
+export function SidebarRowLabel({
+  collapsed,
+  trailingSpace = false,
+  children,
+}: {
+  collapsed: boolean;
+  trailingSpace?: boolean;
+  children: ReactNode;
+}) {
   return (
     <span
       className={[
-        "min-w-0 flex-1 pr-2.5",
-        collapsed ? "overflow-hidden" : "truncate",
+        "min-w-0 flex-1",
+        collapsed ? "overflow-hidden pr-0" : trailingSpace ? "truncate pr-7" : "truncate pr-2.5",
         sidebarFadeClass(collapsed),
       ].join(" ")}
     >

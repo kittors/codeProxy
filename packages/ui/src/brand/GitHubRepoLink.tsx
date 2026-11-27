@@ -62,7 +62,8 @@ const ICON_SIZE: Record<NonNullable<GitHubRepoLinkProps["size"]>, number> = {
 
 /**
  * 统一的 GitHub 开源项目直达入口：
- * - `topbar`：控制台与门户顶栏专用，带细描边胶囊底色与 GitHub 图标，视觉醒目而不喧宾夺主；
+ * - `topbar`：控制台与门户顶栏专用，遵循 Satin 简约原则（无边框、无胶囊底、无冗余文字），
+ *   以纯图标 ghost 按钮与语言、主题、外观入口保持同等轻盈权重，文字说明交给 tooltip 与 aria-label；
  * - `pill`：登录页右上角与系统信息页操作按钮专用，与 Satin 按钮同高齐平；
  * - `badge`：登录页 Hero 区开源项目地址胶囊徽标，直显 `kittors/CliRelay`；
  * - `icon`：紧凑纯图标入口。
@@ -126,7 +127,7 @@ export function GitHubRepoLink({
         data-tip={resolvedTooltip}
         data-tip-side="bottom"
         data-github-repo-link="icon"
-        className={cn("sn-btn sn-secondary sn-ibtn", SIZE_CLASS[size], className)}
+        className={cn("sn-btn sn-ghost sn-ibtn text-[var(--sn-label2)]", SIZE_CLASS[size], className)}
         {...props}
       >
         <GitHubIcon size={ICON_SIZE[size]} />
@@ -144,14 +145,10 @@ export function GitHubRepoLink({
         data-tip={resolvedTooltip}
         data-tip-side="bottom"
         data-github-repo-link="topbar"
-        className={cn(
-          "sn-btn sn-secondary sn-sm !gap-1.5 max-sm:!w-8 max-sm:!px-0 font-semibold text-[var(--sn-label)]",
-          className,
-        )}
+        className={cn("sn-btn sn-ghost sn-sm sn-ibtn text-[var(--sn-label2)]", className)}
         {...props}
       >
-        <GitHubIcon size={15} />
-        <span className={cn("text-xs leading-none", labelVisibilityClass)}>{resolvedLabel}</span>
+        <GitHubIcon size={16} />
       </a>
     );
   }

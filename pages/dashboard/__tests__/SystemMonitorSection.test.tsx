@@ -68,17 +68,17 @@ describe("SystemMonitorSection", () => {
 
     const [sysCpu, sysMem, svcCpu, svcMem] = screen.getAllByTestId("monitor-meter-fill");
     expect(sysCpu).toHaveStyle({ width: "23%" });
-    // 简约风格（基础类）：正常档一律强调色，颜色只在出问题的那一张卡上出现。
-    expect(sysCpu).toHaveClass("bg-sn-accent");
+    // 系统监控默认采用分类语义色（CPU 天蓝、内存紫），告警档覆盖成琥珀 / 红。
+    expect(sysCpu).toHaveClass("bg-sky-500");
     expect(sysMem).toHaveClass("bg-amber-500");
     expect(svcCpu).toHaveClass("bg-rose-500");
-    expect(svcMem).toHaveClass("bg-sn-accent");
-    // 多彩风格（colorful: 变体）：正常档用指标的分类色——CPU 天蓝、内存紫——告警档覆盖成琥珀 / 红。
+    expect(svcMem).toHaveClass("bg-violet-500");
+    // 多彩外观（colorful: 变体）叠加同色系渐变。
     expect(sysCpu).toHaveClass("colorful:from-sky-400", "colorful:to-blue-500");
     expect(svcMem).toHaveClass("colorful:from-violet-400");
     expect(sysMem).toHaveClass("colorful:from-amber-300");
     expect(svcCpu).toHaveClass("colorful:from-rose-400");
-    expect(sysCpu.parentElement).toHaveClass("bg-sn-sunken", "colorful:bg-sky-500/10");
+    expect(sysCpu.parentElement).toHaveClass("bg-sky-500/12", "colorful:bg-sky-500/12");
     // 进度条首次出现从 0 长到实际值，减少动态效果时关掉。
     expect(sysCpu.className).toContain("motion-safe:animate-[quota-bar-grow");
     expect(screen.getByRole("img", { name: "Critical" })).toBeInTheDocument();

@@ -57,6 +57,7 @@
     "last_page": "Last page",
     "page_n": "Page {{page}}",
     "rows_per_page": "Rows per page",
+    "page_size_option": "{{count}} / page",
     "go_to_page": "Go to",
     "clear_search": "Clear search",
     "active_filters": "Active filters",

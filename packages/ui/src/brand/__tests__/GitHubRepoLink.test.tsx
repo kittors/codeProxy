@@ -9,7 +9,7 @@ import {
 } from "../GitHubRepoLink";
 
 describe("GitHubRepoLink", () => {
-  test("renders topbar link pointing to CliRelay repository with GitHub icon and safe attrs", () => {
+  test("renders topbar link pointing to CliRelay repository as a borderless icon-only ghost button", () => {
     render(<GitHubRepoLink variant="topbar" />);
 
     const link = screen.getByRole("link");
@@ -17,8 +17,11 @@ describe("GitHubRepoLink", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(link).toHaveAttribute("data-tip");
+    expect(link).toHaveAttribute("aria-label");
+    expect(link).toHaveClass("sn-btn", "sn-ghost", "sn-sm", "sn-ibtn");
+    expect(link).not.toHaveClass("sn-secondary");
     expect(link.querySelector("svg")).not.toBeNull();
-    expect(link).toHaveTextContent("GitHub");
+    expect(link.textContent).toBe("");
   });
 
   test("renders badge variant showing repository slug by default and allows custom href", () => {

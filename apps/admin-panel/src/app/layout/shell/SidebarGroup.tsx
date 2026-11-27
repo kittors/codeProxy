@@ -179,13 +179,19 @@ export function SidebarGroup({
         className={sidebarRowClass(active && !listVisible)}
       >
         <SidebarRowIcon icon={section.icon} active={active} />
-        <SidebarRowLabel collapsed={collapsed}>{label}</SidebarRowLabel>
-        <span className={`grid shrink-0 place-items-center ${sidebarFadeClass(collapsed)}`}>
+        <SidebarRowLabel collapsed={collapsed} trailingSpace>
+          {label}
+        </SidebarRowLabel>
+        {/* 绝对定位脱离 flex 流：收起前 100ms 原地淡出，绝不向左挤压图标或伸出侧栏右缘被裁切。 */}
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute right-2 top-1/2 grid -translate-y-1/2 place-items-center ${sidebarFadeClass(collapsed)}`}
+        >
           <Icon
             name="chevron-right"
             size={14}
             className={[
-              "mr-2.5 text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none",
+              "text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none",
               open ? "rotate-90" : "",
             ].join(" ")}
           />
@@ -195,19 +201,17 @@ export function SidebarGroup({
         id={listId}
         role="group"
         aria-label={label}
+        data-list-visible={listVisible ? "true" : "false"}
         inert={!listVisible}
-        className={[
-          "grid transition-[grid-template-rows,opacity] duration-300 ease-sn-out motion-reduce:transition-none",
-          listVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        ].join(" ")}
+        className="cp-side-group-body"
       >
         {/*
           折叠动画要靠 overflow-hidden 把收起的行裁掉，但裁剪框若和行一样宽，选中项白卡片的描边
           与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
         */}
         <div className="-mx-1 min-h-0 overflow-hidden px-1">
-          {/* 对齐 Satin 工作台侧栏：去掉陈旧树形竖线，用干净留白与一致左缩进区分层级。 */}
-          <div className="my-0.5 space-y-0.5 pl-6">
+          {/* 对齐 Satin 工作台侧栏：子项文字左缘精确对齐父级图标右侧（36px - 10px 内边距 = 26px 缩进）。 */}
+          <div className="my-0.5 space-y-0.5 pl-[26px]">
             {section.items.map((item) => (
               <SidebarItemLink
                 key={item.to}
