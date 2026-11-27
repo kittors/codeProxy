@@ -24,7 +24,7 @@ dialog.sn-lb-dialog::backdrop { background: transparent; }
 .sn-lb-stage { position: fixed; inset: 0; z-index: 61; overflow: hidden; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
 .sn-lightbox { position: absolute; transform-origin: 0 0; }
 .sn-lb-img { position: absolute; inset: 0; border-radius: var(--sn-r-md); background: var(--sn-g0, rgb(255 255 255 / .06)); background-size: cover; background-position: center; background-repeat: no-repeat; box-shadow: 0 30px 80px rgba(0, 0, 0, .4); transform-origin: 50% 50%; cursor: zoom-in; }
-img.sn-lb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+img.sn-lb-img { max-width: none; width: 100%; height: 100%; object-fit: cover; display: block; }
 div.sn-lb-img::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sn-g); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity .3s var(--sn-ease-out); }
 div.sn-lb-img.sn-loading::before, div.sn-lb-img.sn-failed::before { opacity: 0; }
 img.sn-lb-img.sn-failed { opacity: 0; }

@@ -176,7 +176,7 @@ export function openLightbox(items, n, { thumbOf = () => null, enabled = () => t
     } else {
       if (it.url) {
         const imageEl = document.createElement("img");
-        imageEl.className = "sn-lb-img";
+        imageEl.className = "sn-lb-img max-w-none";
         imageEl.src = it.url;
         imageEl.alt = it.alt || "";
         imageEl.draggable = false;
