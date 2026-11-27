@@ -139,10 +139,10 @@ async function mockAdmin(page: Page, { endUsers = 6, portalUsers = 33, platformR
   });
 }
 
-/** 表格的结构（DataGrid）：外框 .cp-grid，内部滚动的视口 .cp-grid-viewport，分页在框底的 nav。 */
+/** 表格的结构（Satin Table）：外框 .sn-tbl-wrap，内部滚动的视口 .sn-tbl-sc，分页在框底的 nav。 */
 const ROWS = "tr[data-row-key]";
-const FRAME = ".cp-grid";
-const VIEWPORT = ".cp-grid-viewport";
+const FRAME = ".sn-tbl-wrap";
+const VIEWPORT = ".sn-tbl-sc";
 const PAGER = 'nav[aria-label="分页"]';
 const SKELETON_ROWS = "tbody[aria-hidden='true'] tr";
 
@@ -191,11 +191,11 @@ test.describe("整页列表：表格占满剩余高度，框不随行数变", ()
     expect(pager.bottom).toBeLessThanOrEqual(frame.bottom);
     expect(800 - frame.bottom).toBeLessThan(48);
     expect(await outerOverflow(page)).toBeLessThanOrEqual(1);
-    // 横向滚动条（有的话）在自己的通道里，紧贴表体视口的底边，不跟着最后一行跑到页面中间。
-    const lane = page.locator("[data-grid-x-lane]");
-    if ((await lane.count()) > 0) {
-      const laneTop = await lane.evaluate((el) => el.getBoundingClientRect().top);
-      expect(Math.abs(laneTop - viewport.bottom)).toBeLessThanOrEqual(1);
+    // Satin 原生横向滚动条（有的话）紧贴表体视口底边，不跟着最后一行跑到页面中间。
+    const barX = page.locator(".sn-tbl-wrap > .sn-sa > .sn-sa-bar.sn-x:not([hidden])");
+    if ((await barX.count()) > 0) {
+      const barBottom = await barX.evaluate((el) => el.getBoundingClientRect().bottom);
+      expect(Math.abs(barBottom - viewport.bottom)).toBeLessThanOrEqual(6);
     }
   });
 

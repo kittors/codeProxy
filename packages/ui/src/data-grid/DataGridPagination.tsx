@@ -1,17 +1,12 @@
-import { useRef, useState, type ReactNode } from "react";
-import { Icon } from "satin-ui/react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Pager as SatinPager, Select as SatinSelect } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
-import { getPaginationItems } from "./gridPagination";
-import { Select } from "../primitives/Select";
-import { useSatinFluidThumb } from "../utils/satinMotion";
 import { formatInteger } from "./gridFormat";
 import { getPageCount } from "./gridModel";
 
 /**
- * 基于 Satin 流体滑块与按钮微动效的表格分页器：
- * - 翻页按钮与每页下拉、跳页输入全部对齐 Satin `sn-sm`（2rem）与 `var(--sn-btn-r)`（8px）圆角家族；
- * - 当前页滑块由 Satin `edgeFrames` Web Animations 驱动（前缘先走、后缘跟上、落定轻压），
- *   按钮自身在滑块就位后保持透明，彻底避免滑块与实底按钮互相遮挡。
+ * 基于 Satin 原生 `Pager`（`mountPager` + 流体 `.sn-cur` 滑块）与原生 `Select`（`mountSelect` 向上弹性下拉）
+ * 的统一分页栏，同时服务于 `<DataGrid>` 贴底页脚与独立卡片列表分页。
  */
 export interface DataGridPaginationProps {
   page: number;
@@ -29,9 +24,6 @@ export interface DataGridPaginationProps {
 const ARROW_BUTTON =
   "sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0 text-[var(--sn-label2)]";
 
-const PAGE_BUTTON = "sn-pg";
-
-/** 首尾页双箭头：复用 Satin Solar chevron 曲线与 .sn-ic-d 双色调层，避免额外引入 lucide。 */
 function DoubleChevron({ direction }: { direction: "left" | "right" }) {
   return (
     <svg
@@ -74,16 +66,11 @@ export function DataGridPagination({
 }: DataGridPaginationProps) {
   const { t, i18n } = useTranslation();
   const [jump, setJump] = useState("");
-  const pagesHostRef = useRef<HTMLSpanElement | null>(null);
-  const thumbRef = useRef<HTMLSpanElement | null>(null);
   const pageCount = getPageCount(total, pageSize);
   const current = Math.min(pageCount, Math.max(1, Math.trunc(page)));
   const start = total === 0 ? 0 : (current - 1) * pageSize + 1;
   const end = Math.min(current * pageSize, total);
-  const items = getPaginationItems(current, pageCount);
   const locale = i18n.resolvedLanguage;
-
-  useSatinFluidThumb(pagesHostRef, thumbRef, '[aria-current="page"]', `${current}:${pageCount}`);
 
   const go = (target: number) => {
     const next = Math.min(pageCount, Math.max(1, Math.trunc(target)));
@@ -95,6 +82,16 @@ export function DataGridPagination({
     if (Number.isFinite(value) && value >= 1) go(value);
     setJump("");
   };
+
+  const pageSizeItems = useMemo(
+    () => pageSizeOptions.map((size) => ({ value: String(size), label: String(size) })),
+    [pageSizeOptions],
+  );
+
+  const pageLabel = useMemo(
+    () => (pageNum: number) => t("data_grid.page_n", { page: pageNum }),
+    [t],
+  );
 
   return (
     <nav
@@ -117,7 +114,7 @@ export function DataGridPagination({
           {info}
         </div>
 
-        <div className="sn-pager">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
@@ -127,69 +124,14 @@ export function DataGridPagination({
           >
             <DoubleChevron direction="left" />
           </button>
-          <button
-            type="button"
-            className={ARROW_BUTTON}
-            onClick={() => go(current - 1)}
-            disabled={current <= 1}
-            aria-label={t("data_grid.prev_page")}
-          >
-            <Icon name="chevron-left" size={14} />
-          </button>
-          <span
-            className="px-2 text-xs font-medium text-[var(--sn-label2)] tabular-nums @xl:hidden"
-            aria-hidden="true"
-          >
-            {current} / {pageCount}
-          </span>
-          <span
-            ref={pagesHostRef}
-            className="sn-pages group/pages hidden @xl:flex"
-          >
-            <span
-              ref={thumbRef}
-              aria-hidden="true"
-              className="sn-cur pointer-events-none origin-left opacity-0 will-change-transform"
-            />
-            {items.map((item, index) =>
-              item === "..." ? (
-                <span
-                  key={`gap-${index}`}
-                  className="sn-pg sn-gap select-none text-xs text-[var(--sn-label-off)]"
-                  aria-hidden="true"
-                >
-                  …
-                </span>
-              ) : (
-                <button
-                  key={item}
-                  type="button"
-                  aria-current={item === current ? "page" : undefined}
-                  aria-label={t("data_grid.page_n", { page: item })}
-                  onClick={() => go(item)}
-                  className={[
-                    PAGE_BUTTON,
-                    item === current
-                      ? "sn-on font-semibold !bg-[var(--sn-accent)] !text-[var(--sn-on-primary)] hover:!bg-transparent hover:!text-[var(--sn-on-primary)] group-data-[thumb-ready=true]/pages:!bg-transparent"
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <span className="relative">{item}</span>
-                </button>
-              ),
-            )}
-          </span>
-          <button
-            type="button"
-            className={ARROW_BUTTON}
-            onClick={() => go(current + 1)}
-            disabled={current >= pageCount}
-            aria-label={t("data_grid.next_page")}
-          >
-            <Icon name="chevron-right" size={14} />
-          </button>
+          <SatinPager
+            total={pageCount}
+            page={current}
+            prevLabel={t("data_grid.prev_page")}
+            nextLabel={t("data_grid.next_page")}
+            pageLabel={pageLabel}
+            onChange={(nextPage) => go(nextPage)}
+          />
           <button
             type="button"
             className={`${ARROW_BUTTON} hidden @2xl:inline-flex`}
@@ -207,18 +149,16 @@ export function DataGridPagination({
               <span className="hidden whitespace-nowrap @2xl:inline">
                 {t("data_grid.rows_per_page")}
               </span>
-              <Select
-                fullWidth={false}
-                size="sm"
-                value={String(pageSize)}
-                onChange={(value) => onPageSizeChange(Number(value))}
-                options={pageSizeOptions.map((size) => ({
-                  value: String(size),
-                  label: String(size),
-                }))}
-                aria-label={t("data_grid.rows_per_page")}
-                className="w-18"
-              />
+              <span className="sn-tbl-ps inline-flex w-20">
+                <SatinSelect
+                  size="sm"
+                  up
+                  value={String(pageSize)}
+                  items={pageSizeItems}
+                  label={t("data_grid.rows_per_page")}
+                  onChange={(value) => onPageSizeChange(Number(value))}
+                />
+              </span>
             </label>
           ) : null}
           {pageCount > 7 ? (

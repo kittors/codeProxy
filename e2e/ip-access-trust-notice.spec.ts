@@ -85,7 +85,7 @@ const offsets = (page: Page) =>
     const header = document.querySelector("[data-ip-access-header]")?.getBoundingClientRect();
     return {
       tabs: top('[role="tablist"]'),
-      grid: top(".cp-grid"),
+      grid: top(".sn-tbl-wrap"),
       headerHeight: header?.height ?? null,
     };
   });

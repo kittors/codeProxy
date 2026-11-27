@@ -392,36 +392,34 @@ export function OrdersTab({
         </div>
       </div>
 
-      <div className="sn-tbl-wrap">
-        {items.length === 0 && !loading ? (
+      {items.length === 0 && !loading ? (
+        <div className="sn-tbl-wrap">
           <EmptyState
             scene="inbox"
             title={t("billing.no_orders_title")}
             description={t("billing_admin.no_orders_desc")}
           />
-        ) : (
-          <SatinTable
-            plain
-            rowKey="id"
-            label={t("billing_admin.col_order_no")}
-            loading={loading && items.length === 0}
-            columns={orderColumns}
-            data={items}
-          />
-        )}
-
-        {totalOrders > 0 ? (
-          <div className="cp-grid-footer px-4 py-2.5">
-            <DataGridPagination
-              page={page}
-              pageSize={20}
-              total={totalOrders}
-              pending={loading && !data}
-              onPageChange={setPage}
-            />
-          </div>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <SatinTable
+          rowKey="id"
+          label={t("billing_admin.col_order_no")}
+          loading={loading && items.length === 0}
+          columns={orderColumns}
+          data={items}
+          footer={
+            totalOrders > 0 ? (
+              <DataGridPagination
+                page={page}
+                pageSize={20}
+                total={totalOrders}
+                pending={loading && !data}
+                onPageChange={setPage}
+              />
+            ) : undefined
+          }
+        />
+      )}
 
       <Modal
         open={manualOpen}

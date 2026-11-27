@@ -65,8 +65,8 @@ const measure = (page: Page) =>
      * 的死区」。钉高页改为检查页面根撑到底：高度链完整，表格才有一块确定的高度可以封顶。
      */
     const paints = (el: Element) => {
-      // 滚动区与 DataGrid 的外框 / 视口都算「画出来的内容」：行少时空白留在表格框里。
-      if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility], .cp-grid, .cp-grid-viewport")) {
+      // 滚动区与 Satin 表格外框 / 视口都算「画出来的内容」：行少时空白留在表格框里。
+      if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility], .sn-tbl-wrap, .sn-tbl-sc")) {
         return true;
       }
       const s = getComputedStyle(el);

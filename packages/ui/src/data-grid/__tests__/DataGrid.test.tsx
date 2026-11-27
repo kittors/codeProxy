@@ -112,11 +112,12 @@ describe("DataGrid header", () => {
     const name = screen.getByRole("columnheader", { name: /Name/ });
     const status = screen.getByRole("columnheader", { name: /Status/ });
     expect(name).toHaveAttribute("data-pin", "start");
+    expect(name).toHaveClass("sn-pin-l", "sn-pin-l-end");
     // 复选框 40 + 展开 28 个设计像素，jsdom 根字号 16px 时比例为 1
-    expect(name.style.left).toBe("68px");
-    expect(status.style.right).toBe("0px");
-    expect(name).toHaveAttribute("data-pin-edge", "start");
-    expect(status).toHaveAttribute("data-pin-edge", "end");
+    expect(name.style.getPropertyValue("--sn-pin-x")).toBe("68px");
+    expect(status).toHaveAttribute("data-pin", "end");
+    expect(status).toHaveClass("sn-pin-r", "sn-pin-r-start");
+    expect(status.style.getPropertyValue("--sn-pin-x")).toBe("0px");
   });
 
   test("列宽把手可以用方向键调整并持久化，回车按内容自适应", async () => {
@@ -255,15 +256,16 @@ describe("DataGrid states", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  test("默认是 Satin .sn-tbl-wrap 封闭圆角外框并支持网格线切换，嵌入小表可以关掉", () => {
+  test("默认是 Satin .sn-tbl-wrap 封闭圆角外框并支持网格线切换，嵌入小表切为 .sn-plain 无框模式", () => {
     const { container, rerender } = render(<Harness />);
-    const root = container.querySelector(".cp-grid");
-    expect(root).toHaveClass("sn-tbl-wrap", "cp-grid-frame", "overflow-hidden");
+    const root = container.querySelector(".sn-tbl-wrap");
+    expect(root).not.toBeNull();
+    expect(root).not.toHaveClass("sn-plain");
     expect(root).toHaveAttribute("data-lines", "row");
     rerender(<Harness lines="grid" />);
-    expect(container.querySelector(".cp-grid")).toHaveAttribute("data-lines", "grid");
+    expect(container.querySelector(".sn-tbl-wrap")).toHaveAttribute("data-lines", "grid");
     rerender(<Harness frame={false} />);
-    expect(container.querySelector(".cp-grid")).not.toHaveClass("cp-grid-frame", "sn-tbl-wrap");
+    expect(container.querySelector(".sn-tbl-wrap")).toHaveClass("sn-plain");
   });
 
   test("空态可以在标题和操作之间写出补充内容（例如生效的筛选条件）", () => {

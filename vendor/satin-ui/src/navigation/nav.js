@@ -199,32 +199,35 @@ tl.addEventListener("keydown", (e) => { if (e.key === "ArrowRight" || e.key === 
   return (root._tabs = { select: (i) => tabs[i]?.click(), get index() { return ti; } });
 }
 // ———— 5. 分页 ————
-// mountPager(.pager, { total, page, onChange(page) })：当前页的底色滑到新页码；页码多时中间用省略。返回 { go(p), page }
-export function mountPager(pager, { total = 1, page = 1, onChange } = {}) {
+// mountPager(.pager, { total, page, onChange(page), pageLabel })：当前页的底色滑到新页码；页码多时中间用省略。返回 { go(p), page }
+export function mountPager(pager, { total = 1, page = 1, onChange, pageLabel } = {}) {
   if (pager._pg) return pager._pg;
-  const pages = $(".sn-pages", pager); let TOTAL = Math.max(1, total); // 总页数可以变（筛选以后变少）：setTotal
-const seq = (p) => { const s = new Set([1, TOTAL, p - 1, p, p + 1].filter((x) => x >= 1 && x <= TOTAL)); const a = [...s].sort((x, y) => x - y), out = []; a.forEach((x, i) => { if (i && x - a[i - 1] > 1) out.push("…"); out.push(x); }); return out; };
-function renderPager(animate) {
-  const curEl = $(".sn-cur", pages), oldLeft = curEl ? curEl.getBoundingClientRect().left : null;
-  pages.innerHTML = '<span class="sn-cur"></span>' + seq(page).map((x) => x === "…" ? '<span class="sn-pg sn-gap">…</span>' : `<button class="sn-pg${x === page ? " sn-on" : ""}" data-p="${x}" aria-current="${x === page ? "page" : "false"}">${x}</button>`).join("");
-  const on = $(".sn-pg.sn-on", pages), c = $(".sn-cur", pages);
-  if (on && c && on.offsetWidth > 0) { c.style.width = on.offsetWidth + "px"; c.style.translate = `${on.offsetLeft}px 0`; }
-  if (animate && oldLeft != null && !reduced()) { const dx = oldLeft - c.getBoundingClientRect().left; c.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }], { duration: 270, easing: IN_OUT }); }
-}
-renderPager(false);
-if (typeof ResizeObserver !== "undefined") {
-  new ResizeObserver(() => {
+  const pages = $(".sn-pages", pager), prevBtn = $('[data-pg="prev"]', pager), nextBtn = $('[data-pg="next"]', pager); let TOTAL = Math.max(1, total); // 总页数可以变（筛选以后变少）：setTotal
+  const seq = (p) => { const s = new Set([1, TOTAL, p - 1, p, p + 1].filter((x) => x >= 1 && x <= TOTAL)); const a = [...s].sort((x, y) => x - y), out = []; a.forEach((x, i) => { if (i && x - a[i - 1] > 1) out.push("…"); out.push(x); }); return out; };
+  let labelFn = typeof pageLabel === "function" ? pageLabel : null;
+  function renderPager(animate) {
+    const curEl = $(".sn-cur", pages), oldLeft = curEl ? curEl.getBoundingClientRect().left : null;
+    pages.innerHTML = '<span class="sn-cur"></span>' + seq(page).map((x) => x === "…" ? '<span class="sn-pg sn-gap" aria-hidden="true">…</span>' : `<button type="button" class="sn-pg${x === page ? " sn-on" : ""}" data-p="${x}"${x === page ? ' aria-current="page"' : ""}${labelFn ? ` aria-label="${String(labelFn(x)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])}"` : ""}>${x}</button>`).join("");
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page >= TOTAL;
     const on = $(".sn-pg.sn-on", pages), c = $(".sn-cur", pages);
     if (on && c && on.offsetWidth > 0) { c.style.width = on.offsetWidth + "px"; c.style.translate = `${on.offsetLeft}px 0`; }
-  }).observe(pages);
-}
-pager.addEventListener("click", (e) => {
-  const b = e.target.closest("[data-p],[data-pg]"); if (!b) return;
-  const np = b.dataset.p ? Number(b.dataset.p) : Math.max(1, Math.min(TOTAL, page + (b.dataset.pg === "next" ? 1 : -1)));
-  if (np !== page) { page = np; renderPager(true); onChange?.(page); }
-});
+    if (animate && oldLeft != null && !reduced()) { const dx = oldLeft - c.getBoundingClientRect().left; c.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }], { duration: 270, easing: IN_OUT }); }
+  }
+  renderPager(false);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => {
+      const on = $(".sn-pg.sn-on", pages), c = $(".sn-cur", pages);
+      if (on && c && on.offsetWidth > 0) { c.style.width = on.offsetWidth + "px"; c.style.translate = `${on.offsetLeft}px 0`; }
+    }).observe(pages);
+  }
+  pager.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-p],[data-pg]"); if (!b || b.disabled) return;
+    const np = b.dataset.p ? Number(b.dataset.p) : Math.max(1, Math.min(TOTAL, page + (b.dataset.pg === "next" ? 1 : -1)));
+    if (np !== page) { page = np; renderPager(true); onChange?.(page); }
+  });
   // go(p, silent)：silent 不发 onChange（外面受控地改页码时用，不回声）；setTotal(n)：总页数变了，当前页超出就停在最后一页
-  return (pager._pg = { go: (p, silent) => { const np = Math.max(1, Math.min(TOTAL, p)); if (np !== page) { page = np; renderPager(true); if (!silent) onChange?.(page); } }, setTotal: (t) => { t = Math.max(1, Math.round(t) || 1); if (t === TOTAL) return; TOTAL = t; if (page > TOTAL) page = TOTAL; renderPager(false); }, get page() { return page; }, get total() { return TOTAL; } });
+  return (pager._pg = { go: (p, silent) => { const np = Math.max(1, Math.min(TOTAL, p)); if (np !== page) { page = np; renderPager(true); if (!silent) onChange?.(page); } }, setTotal: (t) => { t = Math.max(1, Math.round(t) || 1); if (t === TOTAL) return; TOTAL = t; if (page > TOTAL) page = TOTAL; renderPager(false); }, setLabels: (fn) => { labelFn = typeof fn === "function" ? fn : null; renderPager(false); }, get page() { return page; }, get total() { return TOTAL; } });
 }
 // ———— 6. 步骤：setStep(.steps, i)——第 i 步是当前，前面的都完成（连线跟着填满） ————
 export function setStep(steps, i) {

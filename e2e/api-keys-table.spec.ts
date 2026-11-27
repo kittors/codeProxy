@@ -31,8 +31,8 @@ const API_KEYS_URL = `/#/access/api-keys?endUserId=${END_USER_ID}`;
 /** 旧 DataTable 存这张表列宽的键：第一次打开时迁到新偏好（实际像素换成设计像素），再删掉。 */
 const LEGACY_WIDTHS_KEY = "codeProxy.dataTable.columnWidths.v3.owned-api-keys";
 const GRID_PREFS_KEY = "cp-grid:owned-api-keys:v1";
-/** 冻结列边缘阴影的宽度（DataGrid.css 里的 22px）。 */
-const PIN_SHADOW_WIDTH = 22;
+/** Satin 原生固定列边缘采用 1px 细线 + 柔雾 box-shadow 投影，杜绝旧版 22px 遮罩盖字。 */
+const PIN_EDGE_WIDTH = "1px";
 
 type SetAuthedOptions = {
   /** 旧表格存下的这张表的列宽（实际像素）。 */
@@ -166,13 +166,14 @@ const openPortalAccounts = async (page: Page) => {
     .waitFor({ state: "visible" });
 };
 
-/** 横向滚动到指定位置，等两帧让滚动状态（data-x-*）和阴影落定。 */
+/** 横向滚动到指定位置，等两帧让滚动状态和阴影落定。 */
 const scrollGridTo = async (page: Page, where: "start" | "middle" | "end") =>
   page.evaluate(async (position) => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     if (!viewport) throw new Error("Missing grid viewport");
     const max = viewport.scrollWidth - viewport.clientWidth;
     viewport.scrollLeft = position === "start" ? 0 : position === "end" ? max : Math.round(max / 2);
+    viewport.dispatchEvent(new Event("scroll"));
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     return { scrollLeft: viewport.scrollLeft, max };
@@ -192,6 +193,7 @@ type EndPinnedGeometry = {
   endShadow: string;
   shadowLeft: string;
   shadowWidth: string;
+  shadowBox: string;
   actionsHeaderBorderLeft: string;
   actionsCellBorderLeft: string;
 };
@@ -199,7 +201,7 @@ type EndPinnedGeometry = {
 /** 读 API Key 表右侧冻结区的几何：操作列、它左边的最后一列（创建时间）、阴影。 */
 const readEndPinnedGeometry = (page: Page): Promise<EndPinnedGeometry> =>
   page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     const row = document.querySelector<HTMLElement>("tr[data-row-key]");
     const actionsHeader = document.querySelector<HTMLElement>('th[data-col="actions"]');
     const actionsCell = row?.querySelector<HTMLElement>('td[data-col="actions"]');
@@ -213,7 +215,7 @@ const readEndPinnedGeometry = (page: Page): Promise<EndPinnedGeometry> =>
     const lastRect = lastColumn.getBoundingClientRect();
     const columnAt = (x: number, y: number) =>
       document.elementFromPoint(x, y)?.closest<HTMLElement>("td[data-col]")?.dataset.col ?? null;
-    const shadow = getComputedStyle(actionsCell, "::after");
+    const shadow = getComputedStyle(actionsCell, "::before");
     return {
       scrollLeft: viewport.scrollLeft,
       maxScrollLeft: viewport.scrollWidth - viewport.clientWidth,
@@ -228,6 +230,7 @@ const readEndPinnedGeometry = (page: Page): Promise<EndPinnedGeometry> =>
       endShadow: shadow.opacity,
       shadowLeft: shadow.left,
       shadowWidth: shadow.width,
+      shadowBox: shadow.boxShadow,
       actionsHeaderBorderLeft: getComputedStyle(actionsHeader).borderLeftWidth,
       actionsCellBorderLeft: getComputedStyle(actionsCell).borderLeftWidth,
     };
@@ -240,9 +243,10 @@ const expectActionsHugTheRightEdge = (state: EndPinnedGeometry) => {
   expect(state.actionsHeaderRight).toBeGreaterThanOrEqual(state.viewportRight - 1);
   expect(state.actionsHeaderRight).toBeLessThanOrEqual(state.viewportRight + 1);
   expect(Math.abs(state.actionsHeaderLeft - state.actionsLeft)).toBeLessThanOrEqual(1);
-  // 阴影贴着操作列外侧；冻结格盖住的第一个像素已经属于操作列，底下滚过去的列透不上来。
-  expect(state.shadowLeft).toBe(`-${PIN_SHADOW_WIDTH}px`);
-  expect(state.shadowWidth).toBe(`${PIN_SHADOW_WIDTH}px`);
+  // Satin 原生 1px 细线 + 柔和 box-shadow 离边投影，绝不覆盖相邻列；冻结格盖住的第一个像素已经属于操作列。
+  expect(state.shadowLeft).toBe("0px");
+  expect(state.shadowWidth).toBe(PIN_EDGE_WIDTH);
+  expect(state.shadowBox).not.toBe("none");
   expect(state.edgeHit).toBe("actions");
 };
 
@@ -259,7 +263,7 @@ test("API Keys: dark hover keeps the pinned action column opaque above scrolled 
 
   // 悬停在中间滚动区的格子上：整行进入悬停态，冻结的操作列跟着换悬停底色。
   const hoverPoint = await page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     const row = document.querySelector<HTMLElement>("tr[data-row-key]");
     if (!viewport || !row) throw new Error("Missing grid rows");
     const rowRect = row.getBoundingClientRect();
@@ -404,7 +408,7 @@ test("API Keys: the resize guide does not paint over the pinned action column", 
   await page.mouse.move(dragStart.actionsLeft + 80, dragStart.y, { steps: 8 });
 
   const state = await page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     const columnHeader = document.querySelector<HTMLElement>('th[data-col="created"]');
     const actionsHeader = document.querySelector<HTMLElement>('th[data-col="actions"]');
     if (!viewport || !columnHeader || !actionsHeader) throw new Error("Missing resize geometry");
@@ -500,8 +504,9 @@ test("API Keys: the pinned action column stays put while dragging the horizontal
   await mockOwnedApiKeysApis(page);
   await openApiKeys(page);
 
-  // 横向滚动条单独占一条通道（[data-grid-x-lane]），在视口下面。
-  const thumb = page.locator('[data-grid-x-lane] [data-grid-scrollbar="x"] > div');
+  // Satin 原生横向悬浮滚动条（.sn-sa-bar.sn-x）叠在视口外。
+  await page.locator(".sn-tbl-wrap > .sn-sa").first().hover();
+  const thumb = page.locator(".sn-tbl-wrap > .sn-sa > .sn-sa-bar.sn-x .sn-sa-thumb").first();
   await thumb.waitFor({ state: "visible" });
   const dragStart = await thumb.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -515,13 +520,14 @@ test("API Keys: the pinned action column stays put while dragging the horizontal
 
   const thumbDragging = await page.evaluate(
     () =>
-      document.querySelector('[data-grid-scrollbar="x"]')?.getAttribute("data-dragging") ?? null,
+      document.querySelector(".sn-tbl-wrap > .sn-sa > .sn-sa-bar.sn-x")?.classList.contains("sn-drag") ??
+      false,
   );
   const state = await readEndPinnedGeometry(page);
 
   await page.mouse.up();
 
-  expect(thumbDragging).toBe("true");
+  expect(thumbDragging).toBe(true);
   expect(state.scrollLeft).toBeGreaterThan(0);
   expect(state.scrollLeft).toBeLessThan(state.maxScrollLeft);
   // 中途右侧阴影在：右边还有没滚到的列。
@@ -609,8 +615,8 @@ test("Portal Accounts: the start-pinned columns stay at the left edge while scro
 
   const read = () =>
     page.evaluate(() => {
-      const root = document.querySelector<HTMLElement>(".cp-grid");
-      const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+      const root = document.querySelector<HTMLElement>(".sn-tbl-wrap");
+      const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
       const row = document.querySelector<HTMLElement>("tr[data-row-key]");
       const selectHeader = document.querySelector<HTMLElement>(
         'thead th[data-pin="start"]:not([data-col])',
@@ -739,24 +745,26 @@ test("Portal Accounts: the pinned account column carries its edge with it while 
       accountHeaderWidth: accountHeaderRect.width,
       accountCellRight: accountCellRect.right,
       accountCellWidth: accountCellRect.width,
-      accountHeaderEdge: accountHeader.dataset.pinEdge ?? null,
-      accountCellEdge: accountCell.dataset.pinEdge ?? null,
-      selectCellEdge: selectCell.dataset.pinEdge ?? null,
+      accountHeaderEdge: accountHeader.classList.contains("sn-pin-l-end"),
+      accountCellEdge: accountCell.classList.contains("sn-pin-l-end"),
+      selectCellEdge: selectCell.classList.contains("sn-pin-l-end"),
       edgeRight: edge.right,
       edgeWidth: edge.width,
+      edgeShadow: edge.boxShadow,
     };
   });
 
   await page.mouse.up();
 
-  // 冻结的账号列整列跟着变宽：表头和每一行同宽、右缘对齐；冻结区的边缘（阴影）挂在账号列上，
+  // 冻结的账号列整列跟着变宽：表头和每一行同宽、右缘对齐；冻结区的边缘（1px 细线 + 柔雾投影）挂在账号列上，
   // 跟着它走，不停在勾选列后面。
   expect(state.accountHeaderWidth).toBeGreaterThanOrEqual(before + 148);
   expect(Math.abs(state.accountCellWidth - state.accountHeaderWidth)).toBeLessThanOrEqual(1);
   expect(Math.abs(state.accountCellRight - state.accountHeaderRight)).toBeLessThanOrEqual(1);
-  expect(state.accountHeaderEdge).toBe("start");
-  expect(state.accountCellEdge).toBe("start");
-  expect(state.selectCellEdge).toBeNull();
-  expect(state.edgeRight).toBe(`-${PIN_SHADOW_WIDTH}px`);
-  expect(state.edgeWidth).toBe(`${PIN_SHADOW_WIDTH}px`);
+  expect(state.accountHeaderEdge).toBe(true);
+  expect(state.accountCellEdge).toBe(true);
+  expect(state.selectCellEdge).toBe(false);
+  expect(state.edgeRight).toBe("0px");
+  expect(state.edgeWidth).toBe(PIN_EDGE_WIDTH);
+  expect(state.edgeShadow).not.toBe("none");
 });

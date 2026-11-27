@@ -1,6 +1,7 @@
 // satin-ui/react
 import type * as React from "react";
 import type { SatinInstance, Item, AvatarOptions, EmptyArtOptions, ProgressOptions, LoaderOptions, ToastOptions, ToastHandle, NotifyOptions, PickerOptions, PickDetail, TableOptions, TableColumn, TableCellContext, TableApi, ComposerParts, ComposerPartEvents } from "./components";
+export type { SatinInstance, TableApi };
 import type { SatinIntrinsicElements } from "./elements";
 import type { ThemeChoice } from "./theme";
 declare module "react" {
@@ -19,18 +20,29 @@ export const Avatar: React.ForwardRefExoticComponent<Base & AvatarOptions & Reac
 export const Segmented: React.ForwardRefExoticComponent<Base & Controlled<string> & { items: Item[]; size?: "sm" | "md"; label?: string; onChange?(value: string): void } & React.RefAttributes<SatinInstance>>;
 export const Slider: React.ForwardRefExoticComponent<Base & Controlled<number> & { max?: number; label?: string; onChange?(value: number): void } & React.RefAttributes<SatinInstance>>;
 /** 下拉选择的属性：value 受控、defaultValue 非受控 */
-export type SelectProps = Base & Controlled<string> & { items: Item[]; placeholder?: string; label?: string; onChange?(value: string): void };
+export type SelectProps = Base & Controlled<string> & { items: Item[]; placeholder?: string; label?: string; size?: "sm" | "md" | "lg"; up?: boolean; onChange?(value: string): void };
 export const Select: React.ForwardRefExoticComponent<SelectProps & React.RefAttributes<SatinInstance>>;
 export const Otp: React.ForwardRefExoticComponent<Base & { length?: number; /** 密码隐藏模式（掩码圆点显示） */ mask?: boolean; /** 是否显示明文/密文切换眼睛按钮（开启 mask 时默认为 true） */ reveal?: boolean; onComplete?(code: string): void } & React.RefAttributes<SatinInstance>>;
 export const Tabs: React.ForwardRefExoticComponent<Base & Controlled<number> & { tabs: { label: string; badge?: string | number; content?: string; html?: string }[]; onChange?(index: number): void } & React.RefAttributes<SatinInstance>>;
-export const Pager: React.ForwardRefExoticComponent<Base & Controlled<number, "page"> & { total: number; count?: number; onChange?(page: number): void } & React.RefAttributes<SatinInstance>>;
+export const Pager: React.ForwardRefExoticComponent<Base & Controlled<number, "page"> & { total: number; count?: number; prevLabel?: string; nextLabel?: string; pageLabel?(page: number): string; onChange?(page: number): void } & React.RefAttributes<SatinInstance>>;
 export const Collapse: React.ForwardRefExoticComponent<Base & Controlled<number[], "open"> & { items: { title: string; content?: string; html?: string }[]; single?: boolean; onToggle?(e: { index: number; open: boolean }): void; onChange?(open: number[]): void } & React.RefAttributes<SatinInstance>>;
 export const TagInput: React.ForwardRefExoticComponent<Base & Controlled<string[], "tags"> & { max?: number; placeholder?: string; hint?: string; onChange?(tags: string[]): void } & React.RefAttributes<SatinInstance>>;
 export const Stepper: React.ForwardRefExoticComponent<Base & Controlled<number> & { min?: number; max?: number; unit?: string; label?: string; onChange?(value: number): void } & React.RefAttributes<SatinInstance>>;
-/** 表格的列（React 版：render 可返回任意 React 节点，经 createPortal 挂载并完整共享外部 Context） */
-export type TableColumnReact<R = any> = Omit<TableColumn<R>, "render"> & { render?(value: any, row: R, ctx: TableCellContext): React.ReactNode | string | number | Node | void };
-/** 表格的属性：columns + data（树形用 children）；detail 支持返回 React 节点；selected / expandedKeys / sort 受控；事件 onXxx；ref 拿到实例 */
-export type TableProps<R = any> = Base & Omit<TableOptions<R>, "columns" | "detail"> & { columns: TableColumnReact<R>[]; detail?(row: R, ctx: import("./components").TableDetailContext): React.ReactNode | string | number | Node | false | null | undefined };
+/** 表格的列（React 版：render 与 headerRender 均可返回任意 React 节点，经 createPortal 挂载并完整共享外部 Context） */
+export type TableColumnReact<R = any> = Omit<TableColumn<R>, "render" | "headerRender"> & {
+  render?(value: any, row: R, ctx: TableCellContext): React.ReactNode | string | number | Node | void;
+  headerRender?(col: TableColumn<R>, ctx: import("./components").TableHeaderContext): React.ReactNode | string | number | Node | void;
+};
+/** 表格的属性：columns + data（树形用 children）；detail / empty / errorContent / bulk / footer 均支持 React 节点 */
+export type TableProps<R = any> = Base & Omit<TableOptions<R>, "columns" | "detail" | "empty"> & {
+  columns: TableColumnReact<R>[];
+  detail?(row: R, ctx: import("./components").TableDetailContext): React.ReactNode | string | number | Node | false | null | undefined;
+  empty?: React.ReactNode | ((ctx: { filtered: boolean }) => React.ReactNode | string);
+  errorContent?: React.ReactNode | ((ctx: { error: boolean | string; retry: () => void }) => React.ReactNode);
+  bulk?: React.ReactNode;
+  footer?: React.ReactNode;
+  refreshIndicator?: React.ReactNode;
+};
 export const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<SatinInstance & TableApi>>;
 export const Password: React.ForwardRefExoticComponent<Base & Controlled<string> & { label?: string; help?: string; name?: string; placeholder?: string; meter?: boolean; size?: "sm" | "lg" | "xl"; autocomplete?: string; onChange?(value: string): void } & React.RefAttributes<SatinInstance>>;
 /** 搜索框：search(q) 返回结果数（或数组、Promise），超过 300ms 放大镜换成转圈；onSearch(q)；id 写在输入框上 */

@@ -228,7 +228,9 @@ describe("RoutingSimulatorDialog", () => {
     // 读屏只播报结论这一句，和结果的标题是同一句话。
     // 表格自己也有一个播报区（排序、移动列时用）；这里看的是弹窗的结论播报。
     const conclusion = () =>
-      screen.getAllByRole("status").find((node) => !node.closest(".cp-grid"));
+      screen
+        .getAllByRole("status")
+        .find((node) => !node.closest(".sn-tbl-wrap") && !node.hasAttribute("data-grid-announcer"));
     await waitFor(() => expect(conclusion()).toHaveTextContent("Served by Team A"));
     expect(screen.getAllByText("Served by Team A")).toHaveLength(2);
     expect(screen.getByText("Group: team · Model sent upstream: gpt-5-codex")).toBeInTheDocument();

@@ -198,11 +198,11 @@ export const createSlider = /* @__PURE__ */ defineComponent({
 // ———— 下拉选择 ————
 export const createSelect = /* @__PURE__ */ defineComponent({
   name: "select",
-  defaults: { items: [], placeholder: "" },
+  defaults: { items: [], placeholder: "", size: "md", up: false },
   html: (o) => {
     const list = items(o.items), cur = list.find((x) => x.value === String(o.value));
-    return `<div class="sn-select" data-select><button type="button" class="sn-trigger" aria-haspopup="listbox" aria-expanded="false"${attrs({ "aria-label": o.label })}><span class="sn-val">${esc(cur ? cur.label : o.placeholder)}</span>${svg(chevronDown, 16, "chevron-down")}</button>`
-      + `<div class="sn-menu" role="listbox">${list.map((it) => `<div class="${cx("sn-item", cur === it && "sn-sel", it.disabled && "sn-is-off")}" role="option" aria-selected="${cur === it}" data-v="${esc(it.value)}">${esc(it.label)}<span class="sn-chk">${svg(check, 16, "check")}</span></div>`).join("")}</div></div>`;
+    return `<div class="${cx("sn-select", o.size && o.size !== "md" && `sn-${o.size}`, o.up && "sn-up")}" data-select><button type="button" class="sn-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false"${attrs({ "aria-label": o.label })}><span class="sn-val">${esc(cur ? cur.label : o.placeholder)}</span>${svg(chevronDown, 16, "chevron-down")}</button>`
+      + `<div class="${cx("sn-menu", o.up && "sn-up")}" role="listbox" aria-hidden="true">${list.map((it) => `<div class="${cx("sn-item", cur === it && "sn-sel", it.disabled && "sn-is-off")}" role="option" aria-selected="${cur === it}" data-v="${esc(it.value)}">${esc(it.label)}<span class="sn-chk">${svg(check, 16, "check")}</span></div>`).join("")}</div></div>`;
   },
   mount(el, o, api) {
     let s = mountSelect(el, { onChange: (v) => api.emit("change", v) }), sig = JSON.stringify(items(o.items));
@@ -261,11 +261,21 @@ export const createTabs = /* @__PURE__ */ defineComponent({
 export const createPager = /* @__PURE__ */ defineComponent({
   name: "pager",
   defaults: { total: 1, page: 1, count: null },
-  html: (o) => `<div class="sn-pager">${o.count != null ? `<span class="sn-total">${tt("components.16", { p0: esc(o.count) })}</span>` : ""}<button class="sn-btn sn-ghost sn-sm sn-ibtn" data-pg="prev" aria-label="${tt("components.0")}">${svg(chevronLeft, 16, "chevron-left")}</button><div class="sn-pages"></div><button class="sn-btn sn-ghost sn-sm sn-ibtn" data-pg="next" aria-label="${tt("components.1")}">${svg(chevronRight, 16, "chevron-right")}</button></div>`,
+  html: (o) => `<div class="sn-pager">${o.count != null ? `<span class="sn-total">${tt("components.16", { p0: esc(o.count) })}</span>` : ""}<button type="button" class="sn-btn sn-ghost sn-sm sn-ibtn" data-pg="prev" aria-label="${esc(o.prevLabel ?? tt("components.0"))}">${svg(chevronLeft, 16, "chevron-left")}</button><div class="sn-pages"></div><button type="button" class="sn-btn sn-ghost sn-sm sn-ibtn" data-pg="next" aria-label="${esc(o.nextLabel ?? tt("components.1"))}">${svg(chevronRight, 16, "chevron-right")}</button></div>`,
   mount(el, o, api) {
-    const p = mountPager(el, { total: o.total, page: o.page, onChange: (n) => api.emit("change", n) });
+    const p = mountPager(el, { total: o.total, page: o.page, pageLabel: o.pageLabel, onChange: (n) => api.emit("change", n) });
     const total = () => el.querySelector(".sn-total");
-    return { update(n, prev) { if (n.total != null && n.total !== prev.total) p.setTotal(n.total); if (n.page != null && n.page !== prev.page && n.page !== p.page) p.go(n.page, true); if (n.count != null && total()) total().textContent = tt("components.16", { p0: n.count }); }, get page() { return p.page; }, get total() { return p.total; }, go: p.go, destroy() { delete el._pg; } };
+    return {
+      update(n, prev) {
+        if (n.prevLabel !== prev.prevLabel) el.querySelector('[data-pg="prev"]')?.setAttribute("aria-label", n.prevLabel ?? tt("components.0"));
+        if (n.nextLabel !== prev.nextLabel) el.querySelector('[data-pg="next"]')?.setAttribute("aria-label", n.nextLabel ?? tt("components.1"));
+        if (n.pageLabel !== prev.pageLabel) p.setLabels(n.pageLabel);
+        if (n.total != null && n.total !== prev.total) p.setTotal(n.total);
+        if (n.page != null && n.page !== prev.page && n.page !== p.page) p.go(n.page, true);
+        if (n.count != null && total()) total().textContent = tt("components.16", { p0: n.count });
+      },
+      get page() { return p.page; }, get total() { return p.total; }, go: p.go, destroy() { delete el._pg; },
+    };
   },
 });
 

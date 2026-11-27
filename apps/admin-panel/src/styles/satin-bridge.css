@@ -163,6 +163,14 @@
   --sn-tip-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   --sn-menu-shadow: 0 18px 34px rgba(0, 0, 0, 0.42), 0 2px 4px rgba(0, 0, 0, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sn-tbl-pin-shadow: rgba(0, 0, 0, 0.48);
+  --sn-sa-thumb: rgba(255, 255, 255, 0.28);
+  --sn-sa-thumb-hover: rgba(255, 255, 255, 0.48);
+  --sn-sk-shine: rgba(255, 255, 255, 0.07);
+  --sn-sel-ring: color-mix(in srgb, var(--sn-accent) 45%, transparent);
+  --sn-guide-line: color-mix(in srgb, var(--sn-label) 48%, transparent);
+  --sn-tree-line: color-mix(in srgb, var(--sn-label) 12%, transparent);
+  --sn-lift-shadow: inset 0 0 0 1px var(--sn-line-control), 0 12px 28px -10px rgba(0, 0, 0, 0.48), 0 2px 6px -2px rgba(0, 0, 0, 0.24);
 }
 
 @layer satin {

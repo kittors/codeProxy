@@ -61,7 +61,7 @@ export interface SegmentedOptions { items?: Item[]; value?: string; size?: "sm" 
 export const createSegmented: SatinFactory<SegmentedOptions, { readonly value: string; select(value: string): void }>;
 export interface SliderOptions { value?: number; max?: number; label?: string; onChange?(value: number): void }
 export const createSlider: SatinFactory<SliderOptions, { readonly value: number }>;
-export interface SelectOptions { items?: Item[]; value?: string; placeholder?: string; label?: string; onChange?(value: string): void }
+export interface SelectOptions { items?: Item[]; value?: string; placeholder?: string; label?: string; size?: "sm" | "md" | "lg"; up?: boolean; onChange?(value: string): void }
 export const createSelect: SatinFactory<SelectOptions, { readonly value: string | null; open(): void; close(refocus?: boolean): void }>;
 export interface OtpOptions { length?: number; /** 密码隐藏模式（掩码圆点显示） */ mask?: boolean; /** 是否显示明文/密文切换眼睛按钮（开启 mask 时默认为 true） */ reveal?: boolean; onComplete?(code: string): void }
 export const createOtp: SatinFactory<OtpOptions, { readonly value: string; readonly masked: boolean; setMask(masked: boolean): void; clear(): void }>;
@@ -90,7 +90,7 @@ export interface BrowserTabsApi {
 export const createBrowserTabs: SatinFactory<BrowserTabsOptions, BrowserTabsApi>;
 export function browserTabsHTML(o?: BrowserTabsOptions): string;
 export function mountBrowserTabs(root: HTMLElement, o?: BrowserTabsOptions): BrowserTabsApi & { update(next?: Partial<BrowserTabsOptions>, prev?: BrowserTabsOptions): void; destroy(): void };
-export interface PagerOptions { total?: number; page?: number; count?: number; onChange?(page: number): void }
+export interface PagerOptions { total?: number; page?: number; count?: number; prevLabel?: string; nextLabel?: string; pageLabel?(page: number): string; onChange?(page: number): void }
 /** 分页：update({ total }) 总页数可以变（筛选以后），当前页超出就停在最后一页；update({ page }) 改页码不触发 onChange */
 export const createPager: SatinFactory<PagerOptions, { readonly page: number; readonly total: number; go(page: number, silent?: boolean): void }>;
 export interface CollapseOptions { items?: { title: string; content?: string; html?: string }[]; single?: boolean; /** 展开的序号；update 里换了（按值比）就照它开合 */ open?: number[]; onToggle?(e: { index: number; open: boolean }): void; /** 一次操作以后现在展开的序号 */ onChange?(open: number[]): void }
@@ -322,17 +322,24 @@ export function bindPickers(root?: ParentNode, options?: Pick<PickerOptions, "to
 // ———— 表格（真数据） ————
 /** render 的第三个参数：cell 是这一格（字符串阶段——服务端渲染、第一帧——是 null，返回 HTML 字符串或先空着）；index 是现在的顺序里第几行（树形按整棵树数）；level 是第几级（0 起） */
 export interface TableCellContext { cell: HTMLElement | null; key: string; index: number; level: number }
+export interface TableHeaderContext { cell: HTMLElement | null; key: string; sort: "asc" | "desc" | null }
 export interface TableColumn<R = any> {
   /** 取行里的哪个字段；拖列、改宽、合并、事件都按它认列 */ key: string;
   /** 表头文字 */ title?: string;
+  /** 表头读屏名称（默认 title） */ ariaLabel?: string;
   /** "actions"：行末的操作列（固定在最右边，不排序、不拖、不改宽；悬停这一行时按钮才变实） */ type?: "actions";
-  /** 数字列 "right"：右对齐 + 等宽数字 */ align?: "left" | "right";
+  /** 对齐方式；数字列 "right" 自动带等宽数字 */ align?: "left" | "center" | "right";
   /** 列宽；开了改宽 / 拖列时写数字（px），不写是弹性列（分剩下的宽度） */ width?: number | string;
   /** 拖边线改宽时最窄多少（px），默认 64 */ minWidth?: number;
+  /** 拖边线改宽时最宽多少（px） */ maxWidth?: number;
+  /** 无障碍分隔符读数（设计像素） */ designWidth?: number; minDesignWidth?: number; maxDesignWidth?: number;
+  /** 改宽手柄的 aria-label */ resizeLabel?: string;
+  /** 骨架行占位形状 */ skeleton?: "text" | "two-line" | "number" | "pill" | "box";
   sortable?: boolean;
   /** 第一次点按哪个方向排（时间列常用 "desc"：先看最新的） */ sortFirst?: "asc" | "desc";
   /** 自定义排序（升序时 a 在 b 前面返回负数） */ sort?(a: R, b: R): number;
-  /** 拖表头右边缘改宽（双击按内容定宽）：左边这列宽多少，右边那列就窄多少 */ resizable?: boolean;
+  /** 拖表头右边缘改宽（双击按内容定宽） */ resizable?: boolean;
+  /** 允许单独禁止该列拖动换位 */ reorderable?: boolean;
   /** 开了 draggableColumns 时这一列不能拖；传 "left" / "right" 还可横向滚动固定到左 / 右边缘（带自动边缘投影） */ fixed?: boolean | "left" | "right";
   /** 树形时展开箭头放在这一列（默认第一列） */ primary?: boolean;
   /** 双击（或选中后回车）改这一格，改完发 onCellEdit */ editable?: boolean;
@@ -340,6 +347,7 @@ export interface TableColumn<R = any> {
   /** 显示的文字（会转义） */ format?(value: any, row: R): string | number;
   /** 显示的 HTML（标签、头像这类标记；自己保证安全） */ html?(value: any, row: R): string;
   /** 自己画格子：返回 HTML 字符串、节点，或者自己改好 ctx.cell 返回 undefined */ render?(value: any, row: R, ctx: TableCellContext): string | number | Node | void;
+  /** 自定义表头渲染 */ headerRender?(col: TableColumn<R>, ctx: TableHeaderContext): string | number | Node | void;
   num?: boolean; className?: string;
 }
 /** spans 返回的一块合并：row 是看得见的行里第几行，key 是从哪一列开始，往下 rowSpan 行、往右 colSpan 列（按现在的列顺序） */
@@ -376,7 +384,27 @@ export interface TableOptions<R = any> {
   /** 一开始展开的行（非受控） */ defaultExpandedKeys?: (string | number)[];
   sort?: TableSort | null; defaultSort?: TableSort | null;
   /** 默认在表格里排；false：只发 onSort，由外面排好再 update({ data }) */ sortLocal?: boolean;
+  /** 点击表头排序支持三态取消（首向 → 反向 → 无排序） */ sortClearable?: boolean;
   selectable?: boolean; selected?: (string | number)[]; defaultSelected?: (string | number)[];
+  /** 独立展开箭头列（宽 32px，位于前导区） */ expandColumn?: boolean;
+  /** 前导列是否强制固定在左侧 */ leadFixed?: boolean;
+  /** 列宽调整模式：adjacent（相邻联动，默认）| single（单列独立调宽并联动总宽） */ resizeMode?: "adjacent" | "single";
+  /** 初始/受控列顺序 */ columnOrder?: string[];
+  /** 表格总宽度（px 或 CSS 长度，用于 fitColumns / grow 精确布局） */ tableWidth?: number | string;
+  selectColWidth?: number; expandColWidth?: number; reorderColWidth?: number;
+  /** 行级键盘漫游导航与 role="grid" */ rowNavigation?: boolean; gridRole?: boolean;
+  /** 行更新动效策略 */ rowMotion?: "page" | "live";
+  /** 变化时滚回顶部 */ resetScrollKey?: string | number;
+  /** 已有数据时的刷新态 */ refreshing?: boolean;
+  /** 密度档位 */ density?: "compact" | "default" | "comfortable";
+  rowLabel?(row: R): string;
+  rowClassName?(row: R): string | undefined;
+  rowTone?(row: R): "danger" | "warning" | "muted" | undefined;
+  isRowActive?(row: R): boolean;
+  rowDragDisabled?: boolean;
+  selectPageLabel?: string; selectRowLabel?: string; selectNamedLabel?(name: string): string;
+  rowOrderLabel?: string; reorderRowLabel?(index: number): string;
+  expandLabel?: string; expandRowLabel?: string; collapseRowLabel?: string;
   /** 筛选：显示匹配的行和它的所有上级（上级自动展开）；null 不筛 */ filter?: ((row: R) => boolean) | null;
   /** 合并规则：拿看得见的行，返回要合并的块（排序、展开、筛选、拖行以后都重算）；只在网格线下合并 */ spans?(rows: R[]): TableSpan[];
   /** 拖左边的把手换行的位置（同一个上级里，整棵子树一起走） */ draggableRows?: boolean;
@@ -387,14 +415,17 @@ export interface TableOptions<R = any> {
   /** 没有数据时那一行：字符串按文字放；函数返回 HTML（filtered：是筛选以后没有结果） */ empty?: string | ((ctx: { filtered: boolean }) => string);
   loading?: boolean; skeleton?: number;
   /** 出错：true 或说明文字；那一行带"重试"（发 onRetry） */ error?: boolean | string;
-  label?: string; striped?: boolean; compact?: boolean; plain?: boolean; fill?: boolean; lines?: "row" | "grid"; maxHeight?: number | string; pagination?: boolean | TablePagination;
+  label?: string; wrapClassName?: string; striped?: boolean; compact?: boolean; plain?: boolean; fill?: boolean; lines?: "row" | "grid"; maxHeight?: number | string; pagination?: boolean | TablePagination;
   onSort?(sort: TableSort | null): void;
   onSelect?(keys: string[]): void;
+  onSelectChange?(e: { keys: string[]; key?: string; range?: boolean; all?: boolean; checked?: boolean; clear?: boolean }): void;
   onRowClick?(row: R): void;
   onExpandChange?(e: TableExpandEvent): void;
-  onRowReorder?(e: TableRowReorderEvent): void;
+  onRowReorder?(e: TableRowReorderEvent & { viaKeyboard?: boolean }): void;
   onColumnReorder?(e: { keys: string[] }): void;
   onColumnResize?(e: { key: string; width: number; widths: Record<string, number> }): void;
+  onColumnResizeBy?(e: { key: string; delta: number }): void;
+  onAutoFitColumn?(e: { key: string }): void;
   onRowResize?(e: { key: string; height: number | null }): void;
   onCellEdit?(e: TableCellEditEvent<R>): void;
   onPageChange?(e: TablePageEvent): void;
@@ -407,10 +438,12 @@ export interface TableApi {
   readonly sort: TableSort | null;
   readonly expanded: string[];
   readonly columnOrder: string[];
+  readonly scroller: HTMLElement | null;
   isExpanded(key: string | number): boolean;
   expand(keys: string | number | (string | number)[], open?: boolean): void;
   expandAll(open?: boolean): void;
   select(keys: (string | number)[]): void;
+  moveColumn(key: string, toIndex: number): void;
   refresh(): void;
   edit(key: string | number, colKey?: string): void;
 }

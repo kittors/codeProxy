@@ -370,8 +370,8 @@ test("API Keys: table should scroll vertically when many keys are listed", async
   await page.goto("/#/access/api-keys?endUserId=end-user-1");
   await expect(page.getByText("Scroll Key 01")).toBeVisible();
 
-  // DataGrid 的表体视口：整页列表铺满剩余高度、在自己的视口里滚动。
-  const tableScroller = page.locator(".cp-grid-viewport").first();
+  // Satin 表格视口：整页列表铺满剩余高度、在自己的视口里滚动。
+  const tableScroller = page.locator(".sn-tbl-sc").first();
   await expect(tableScroller).toBeVisible();
 
   await expect
