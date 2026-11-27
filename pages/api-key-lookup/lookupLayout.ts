@@ -18,7 +18,7 @@ export function lookupShellClassName(showLanding: boolean, pinned: boolean): str
   return [
     "relative min-h-dvh pt-14",
     showLanding ? "" : "bg-sn-workspace",
-    pinned && !showLanding ? "md:flex md:h-dvh md:flex-col" : "",
+    pinned && !showLanding ? "md:flex md:h-dvh md:flex-col md:overflow-hidden" : "",
   ].join(" ");
 }
 
@@ -26,6 +26,6 @@ export function lookupMainClassName(showLanding: boolean, pinned: boolean): stri
   if (showLanding) return "w-full";
   // flex 子项带 mx-auto 时不会被横向拉伸，要显式 w-full 才能撑到 max-w-screen-xl。
   return pinned
-    ? "mx-auto flex w-full max-w-screen-xl flex-col gap-5 px-4 py-6 sm:px-6 md:min-h-0 md:flex-1"
-    : "mx-auto max-w-screen-xl space-y-5 px-4 py-6 sm:px-6";
+    ? "mx-auto flex w-full max-w-screen-xl flex-col gap-3 px-4 py-3 sm:px-6 md:min-h-0 md:flex-1"
+    : "mx-auto max-w-screen-xl space-y-5 px-4 py-5 sm:px-6";
 }

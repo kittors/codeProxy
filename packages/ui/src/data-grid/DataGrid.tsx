@@ -112,7 +112,9 @@ export function DataGrid<T>({
   const { t, i18n } = useTranslation();
   const idBase = useId();
   const tableRef = useRef<(SatinInstance & TableApi) | null>(null);
-  const [viewportWidth, setViewportWidth] = useState(0);
+  // 视口宽度保存在 ref 而非 state：侧边栏收起/展开或窗口缩放期间直接通过 SatinTable.setLayoutWidths
+  // 更新 <colgroup> 与 table 宽度，避免每帧触发 React 重渲染与 500 单元格重建。
+  const viewportWidthRef = useRef(0);
   const [scale, setScale] = useState(readRootScale);
   const [menu, setMenu] = useState<{ columnId: string; anchor: HTMLElement } | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -157,27 +159,6 @@ export function DataGrid<T>({
     [reorderEnabled, visibleColumns],
   );
 
-  // ---------- 视口宽度与根字号缩放观测 ----------
-  useLayoutEffect(() => {
-    const inst = tableRef.current;
-    const scroller = inst?.scroller ?? inst?.el ?? null;
-    if (!scroller) return undefined;
-    const sync = () => {
-      const nextWidth = scroller.clientWidth || inst?.el?.clientWidth || 0;
-      const nextScale = readRootScale();
-      setViewportWidth((prev) => (Math.abs(prev - nextWidth) > 0.5 ? nextWidth : prev));
-      setScale((prev) => (Math.abs(prev - nextScale) > 0.001 ? nextScale : prev));
-    };
-    sync();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
-    ro?.observe(scroller);
-    window.addEventListener("resize", sync);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", sync);
-    };
-  }, []);
-
   // ---------- 列宽布局计算（设计像素 × scale，支持 fitColumns / grow） ----------
   const designWidths = useMemo(() => {
     const map: Record<string, number> = {};
@@ -201,8 +182,8 @@ export function DataGrid<T>({
     return leading;
   }, [expandable, rowReorder, selectable]);
 
-  const layout = useMemo(() => {
-    const list: GridLayoutColumn[] = [
+  const layoutColumns = useMemo<GridLayoutColumn[]>(
+    () => [
       ...leadingColumns,
       ...visibleColumns.map((column) => ({
         id: column.id,
@@ -216,9 +197,72 @@ export function DataGrid<T>({
           !column.pin &&
           widthOverrides[column.id] === undefined,
       })),
-    ];
-    return computeGridLayout(list, scale, viewportWidth);
-  }, [designWidths, fitColumns, leadingColumns, scale, viewportWidth, visibleColumns, widthOverrides]);
+    ],
+    [designWidths, fitColumns, leadingColumns, visibleColumns, widthOverrides],
+  );
+
+  const layout = useMemo(
+    () => computeGridLayout(layoutColumns, scale, viewportWidthRef.current),
+    [layoutColumns, scale],
+  );
+
+  const layoutSpecRef = useRef({ layoutColumns, scale });
+  layoutSpecRef.current = { layoutColumns, scale };
+
+  // ---------- 视口宽度与根字号缩放观测（零 React 重渲染直写列宽） ----------
+  useLayoutEffect(() => {
+    const inst = tableRef.current;
+    const scroller = inst?.scroller ?? inst?.el ?? null;
+    if (!scroller) return undefined;
+    const applyViewportWidths = (nextWidth: number, nextScale: number) => {
+      const nextLayout = computeGridLayout(layoutSpecRef.current.layoutColumns, nextScale, nextWidth);
+      tableRef.current?.setLayoutWidths?.({
+        widths: nextLayout.widths,
+        tableWidth: nextLayout.totalWidth || "100%",
+        fluidColumnId: nextLayout.fluidColumnId,
+        selectColWidth: nextLayout.widths[GRID_SELECT_COLUMN_ID] ?? SELECT_COLUMN_WIDTH,
+        expandColWidth: nextLayout.widths[GRID_EXPAND_COLUMN_ID] ?? EXPAND_COLUMN_WIDTH,
+        reorderColWidth: nextLayout.widths[GRID_REORDER_COLUMN_ID] ?? REORDER_COLUMN_WIDTH,
+      });
+    };
+    const sync = () => {
+      const currentInst = tableRef.current;
+      const currentScroller = currentInst?.scroller ?? currentInst?.el ?? scroller;
+      const nextWidth = currentScroller.clientWidth || currentInst?.el?.clientWidth || 0;
+      const nextScale = readRootScale();
+      const widthChanged = Math.abs(viewportWidthRef.current - nextWidth) > 0.5;
+      const scaleChanged = Math.abs(layoutSpecRef.current.scale - nextScale) > 0.001;
+      if (widthChanged) viewportWidthRef.current = nextWidth;
+      if (scaleChanged) {
+        setScale(nextScale);
+      } else if (widthChanged) {
+        applyViewportWidths(nextWidth, layoutSpecRef.current.scale);
+      }
+    };
+    sync();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+    ro?.observe(scroller);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
+  // 列集合 / 用户拖宽覆盖 / 缩放变更时，按当前视口宽度同步最新列宽
+  useLayoutEffect(() => {
+    const vw = viewportWidthRef.current;
+    if (vw <= 0) return;
+    const nextLayout = computeGridLayout(layoutColumns, scale, vw);
+    tableRef.current?.setLayoutWidths?.({
+      widths: nextLayout.widths,
+      tableWidth: nextLayout.totalWidth || "100%",
+      fluidColumnId: nextLayout.fluidColumnId,
+      selectColWidth: nextLayout.widths[GRID_SELECT_COLUMN_ID] ?? SELECT_COLUMN_WIDTH,
+      expandColWidth: nextLayout.widths[GRID_EXPAND_COLUMN_ID] ?? EXPAND_COLUMN_WIDTH,
+      reorderColWidth: nextLayout.widths[GRID_REORDER_COLUMN_ID] ?? REORDER_COLUMN_WIDTH,
+    });
+  }, [layoutColumns, scale]);
 
   const commitWidth = useCallback(
     (columnId: string, designPx: number | null) => {

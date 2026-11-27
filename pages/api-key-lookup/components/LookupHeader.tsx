@@ -49,27 +49,17 @@ export function LookupHeader({
       aria-hidden={collapsed || undefined}
       className={[
         "fixed inset-x-0 top-0 z-30",
-        "motion-safe:transition-[translate,opacity,padding] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
-        // 落地页与登录后的门户共用「浮岛」顶栏：从视口边缘脱开，滚动后再收紧一点，
-        // 比贴边硬条有呼吸感，也让登录前后的视觉是连续的。
-        scrolled ? "px-3 pt-2" : "px-4 pt-4",
-        // 顶栏收起是为了给结果页的 sticky tabs 让出视口；落地页没有 tabs，
-        // 且导航与 CTA 需要全程可达，因此落地态下始终保持展开。
+        "motion-safe:transition-[transform,opacity,background-color,border-color] motion-safe:duration-250 motion-safe:ease-[cubic-bezier(0.22,1,0.36,1)]",
+        showLanding
+          ? scrolled
+            ? "border-b border-sn-line bg-zinc-50/95 dark:bg-[#08080A]/95"
+            : "border-b border-transparent bg-transparent"
+          : "border-b border-sn-line bg-sn-workspace",
+        // 顶栏收起是为了给长页面（如使用统计）的 sticky tabs 让出视口；落地页始终保持展开。
         collapsed ? "pointer-events-none -translate-y-full opacity-0" : "translate-y-0 opacity-100",
       ].join(" ")}
     >
-      {/*
-        浮岛的轮廓是伪元素细边（border border-sn-line），不画 border；滚动后底色加实一点、再给卡片投影，
-        和页面内容拉开前后层次。底色用卡片色的半透明：深色下是近黑的卡片色，不再是一层发灰的白。
-      */}
-      <div
-        className={[
-          "border border-sn-line mx-auto flex h-14 max-w-screen-xl items-center justify-between",
-          "motion-safe:transition-[background-color,box-shadow] motion-safe:duration-300",
-          "rounded-2xl px-4 backdrop-blur-xl sm:px-5",
-          scrolled ? "bg-sn-raised/85 shadow-sn-e1" : "bg-sn-raised/60",
-        ].join(" ")}
-      >
+      <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-3 px-4 sm:px-6">
         <LookupBrand showLanding={showLanding} title={t("apikey_lookup.title")} />
 
         <div className="flex items-center gap-1.5">
@@ -80,16 +70,16 @@ export function LookupHeader({
                   type="button"
                   aria-label={displayName}
                   data-testid="apikey-lookup-account-menu"
-                  className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-sn-label2 transition-colors duration-150 hover:bg-sn-hover hover:text-sn-label sm:max-w-56"
+                  className="group inline-flex h-8 max-w-[36vw] items-center gap-1.5 rounded-lg border border-sn-line bg-sn-raised px-2.5 text-xs font-medium text-sn-label2 transition-[background-color,border-color,color,transform] duration-150 hover:border-sn-line-control hover:bg-sn-hover hover:text-sn-label active:scale-[0.98] sm:max-w-56 sm:text-sm"
                 >
-                  <Key size={14} className="shrink-0" />
+                  <Key size={13} className="shrink-0 text-sn-label3 transition-colors group-hover:text-sn-label" />
                   <span className="min-w-0 truncate">{displayName}</span>
                   {extraKeyCount > 0 ? (
-                    <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07]">
+                    <span className="shrink-0 rounded-md bg-sn-label/[0.06] px-1.5 py-0.5 font-mono text-2xs font-medium tabular-nums text-sn-label2 dark:bg-white/[0.08]">
                       +{extraKeyCount}
                     </span>
                   ) : null}
-                  <ChevronRight size={14} className="shrink-0 rotate-90 text-sn-label3" />
+                  <ChevronRight size={13} className="shrink-0 rotate-90 text-sn-label3 transition-transform duration-150 group-data-[state=open]:-rotate-90" />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>

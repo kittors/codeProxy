@@ -1005,20 +1005,16 @@ export function ApiKeyLookupPage() {
               {portalUser ? <PortalAccessFreezes enabled={portalCaps.accessFreezes} accountId={portalUser.id} /> : null}
               <LookupResultsToolbar
                 t={t}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
+                activeTab={activeTab} setActiveTab={setActiveTab}
+                timeRange={timeRange} setTimeRange={setTimeRange}
                 handleRefresh={handleRefresh}
-                loading={loading || portalKeysLoading}
-                chartLoading={chartLoading}
-                modelsLoading={modelsLoading}
-                quotaLimits={quotaLimits}
-                quotaScopes={quotaScopes}
+                loading={loading || portalKeysLoading} chartLoading={chartLoading} modelsLoading={modelsLoading}
+                quotaLimits={quotaLimits} quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
                 showBillingTab={Boolean(portalUser) && portalGrants.billing}
                 showWordsTab={Boolean(portalUser) && portalGrants.words}
                 showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking}
+                pinned={pinnedTab}
               />
 
               {activeTab === "usage" && usageReady ? (

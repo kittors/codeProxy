@@ -5,7 +5,7 @@
     "features/model-availability/modelAvailability.ts": 1271,
     "features/routing-config-editor/RoutingConfigEditor.tsx": 1592,
     "packages/domain/src/auth-files/authFiles.ts": 1985,
-    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1225,
+    "pages/api-key-lookup/ApiKeyLookupPage.tsx": 1221,
     "pages/api-keys/ApiKeysPage.tsx": 1024,
     "pages/auth-files/AuthFilesPage.tsx": 1011,
     "pages/auth-files/components/AuthFileDetailModal.tsx": 1715,

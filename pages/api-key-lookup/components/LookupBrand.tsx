@@ -11,16 +11,16 @@ export function LookupBrand({ showLanding, title }: { showLanding: boolean; titl
     return (
       <Wordmark
         markSize={26}
-        className="text-base text-sn-label"
+        className="shrink-0 text-base text-sn-label"
         textClassName="text-base"
       />
     );
   }
 
   return (
-    <div className="flex items-center gap-2.5">
-      <LogoMark size={26} />
-      <span className="font-display text-base font-bold tracking-tight text-sn-label">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <LogoMark size={26} className="shrink-0" />
+      <span className="truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sn-label sm:text-base">
         {title}
       </span>
     </div>

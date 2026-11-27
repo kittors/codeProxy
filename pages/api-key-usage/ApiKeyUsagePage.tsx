@@ -1,12 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronRight, Key, KeyRound, LogOut, Wallet } from "@code-proxy/ui/icons";
+import { CalendarClock, ChevronRight, KeyRound, LogOut, Wallet } from "@code-proxy/ui/icons";
+import { LogoMark } from "@code-proxy/assets";
 import {
   apiKeyBillingApi,
   isApiClientError,
   type APIKeyBillingOverview,
 } from "@code-proxy/api-client";
-import { Button, DropdownMenu, LanguageSelector, PageBackground, PageLoader, Reveal, ThemeToggleButton, cn, surface } from "@code-proxy/ui";
+import { Button, DropdownMenu, LanguageSelector, PageBackground, PageLoader, Reveal, ThemeToggleButton, cn } from "@code-proxy/ui";
 import type { TimeRange } from "@features/monitor-widgets/monitor-constants";
 import { fetchPublicLogs, fetchPublicUsageSummary } from "../api-key-lookup/api";
 import {
@@ -398,25 +399,29 @@ export function ApiKeyUsagePage() {
   }, [billingOverview]);
 
   const displayName = apiKeyName || (queriedKey ? t("apikey_lookup.unnamed_key") : "");
+  // 桌面端「请求日志」态锁定整屏高度，对齐控制台请求日志页：内部滚动 + 底部分页条始终贴底，彻底消除整页滚动割裂感。
+  const pinnedLogs = Boolean(queriedKey) && activeTab === "logs";
 
   return (
     <PageBackground variant="app">
-      <div className="relative min-h-dvh pt-14">
-        {/* 顶栏是页面底色的半透明毛玻璃，不画底边线：内容滚到下面时靠模糊和页面拉开。 */}
+      <div
+        className={cn(
+          "relative min-h-dvh bg-sn-workspace pt-14",
+          pinnedLogs && "md:flex md:h-dvh md:flex-col md:overflow-hidden",
+        )}
+      >
         <header
           data-testid="apikey-usage-header"
-          className="fixed inset-x-0 top-0 z-30 bg-sn-workspace/80 backdrop-blur-xl"
+          className="fixed inset-x-0 top-0 z-30 border-b border-sn-line bg-sn-workspace"
         >
           <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sn-label">
-                <Key size={16} className="text-sn-workspace" />
-              </div>
-              <span className="truncate text-base font-bold tracking-tight text-sn-label">
+              <LogoMark size={26} className="shrink-0" />
+              <span className="truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sn-label sm:text-base">
                 {t("apikey_usage.title")}
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               {queriedKey ? (
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
@@ -424,11 +429,11 @@ export function ApiKeyUsagePage() {
                       type="button"
                       aria-label={displayName}
                       data-testid="apikey-usage-key-menu"
-                      className="inline-flex max-w-[34vw] items-center gap-1.5 rounded-xl px-1 py-1 text-sm font-medium text-sn-label2 transition hover:bg-sn-hover hover:text-sn-label sm:max-w-56"
+                      className="group inline-flex h-8 max-w-[36vw] items-center gap-1.5 rounded-lg border border-sn-line bg-sn-raised px-2.5 text-xs font-medium text-sn-label2 transition-[background-color,border-color,color,transform] duration-150 hover:border-sn-line-control hover:bg-sn-hover hover:text-sn-label active:scale-[0.98] sm:max-w-56 sm:text-sm"
                     >
-                      <KeyRound size={14} className="shrink-0" />
+                      <KeyRound size={13} className="shrink-0 text-sn-label3 transition-colors group-hover:text-sn-label" />
                       <span className="min-w-0 truncate">{displayName}</span>
-                      <ChevronRight size={14} className="shrink-0 rotate-90 text-sn-label3" />
+                      <ChevronRight size={13} className="shrink-0 rotate-90 text-sn-label3 transition-transform duration-150 group-data-[state=open]:-rotate-90" />
                     </button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
@@ -453,7 +458,7 @@ export function ApiKeyUsagePage() {
               ) : (
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="primary"
                   data-testid="apikey-usage-open-modal"
                   onClick={() => setKeyModalOpen(true)}
                 >
@@ -466,9 +471,16 @@ export function ApiKeyUsagePage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-screen-xl space-y-4 px-4 py-6 sm:px-6">
+        <main
+          className={cn(
+            "mx-auto w-full max-w-screen-xl px-4 sm:px-6",
+            pinnedLogs
+              ? "flex flex-col gap-3 py-3 md:min-h-0 md:flex-1"
+              : "space-y-4 py-5",
+          )}
+        >
           {error && queriedKey ? (
-            <div className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+            <div className="shrink-0 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           ) : null}
@@ -493,25 +505,25 @@ export function ApiKeyUsagePage() {
                 quotaScopes={quotaScopes}
                 showBillingTab={showBillingTab}
                 tabs={showBillingTab ? ["logs", "billing", "quickImport"] : ["logs", "quickImport"]}
+                pinned={pinnedLogs}
               />
 
               {activeTab !== "billing" && (expiryMeta || billingOverview?.enabled) ? (
                 <div
                   data-testid="apikey-usage-billing-banner"
                   className={cn(
-                    surface({ tone: "card", radius: "2xl" }),
-                    "flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs",
+                    "shrink-0 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-xs",
                     expiryMeta?.expired
-                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                      ? "border-rose-500/20 bg-rose-500/8 text-rose-700 dark:text-rose-300"
                       : expiryMeta?.soon
-                        ? "bg-amber-500/10 text-amber-800 dark:text-amber-300"
-                        : "text-sn-label2",
+                        ? "border-amber-500/20 bg-amber-500/8 text-amber-800 dark:text-amber-300"
+                        : "border-sn-line bg-sn-raised text-sn-label2",
                   )}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {expiryMeta ? (
                       <>
-                        <CalendarClock size={15} className="shrink-0" />
+                        <CalendarClock size={14} className="shrink-0" />
                         <span>
                           {expiryMeta.expired
                             ? t("billing.expiry_banner_expired", { date: expiryMeta.formatted })
@@ -523,7 +535,7 @@ export function ApiKeyUsagePage() {
                       </>
                     ) : (
                       <>
-                        <Wallet size={15} className="shrink-0 text-sn-accent-ink" />
+                        <Wallet size={14} className="shrink-0 text-sn-accent-ink" />
                         <span>
                           {t("billing.key_banner_plans_available", {
                             count: billingOverview?.target.plans.length ?? 0,
@@ -592,18 +604,16 @@ export function ApiKeyUsagePage() {
           ) : (
             <div
               data-testid="apikey-usage-empty"
-              className="rounded-xl bg-sn-subtle px-6 py-16 text-center"
+              className="sn-fade-up mx-auto flex min-h-[calc(100dvh-10rem)] max-w-md flex-col items-center justify-center px-4 text-center"
             >
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]">
-                <KeyRound size={22} />
-              </div>
-              <h2 className="mt-4 text-lg font-semibold text-sn-label">
+              <LogoMark size={44} className="shrink-0" />
+              <h2 className="mt-6 text-xl font-semibold tracking-tight text-sn-label">
                 {t("apikey_usage.empty_title")}
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm text-sn-label3">
+              <p className="mt-2.5 text-sm leading-6 text-sn-label3">
                 {t("apikey_usage.empty_desc")}
               </p>
-              <div className="mt-6">
+              <div className="mt-7">
                 <Button variant="primary" onClick={() => setKeyModalOpen(true)}>
                   {t("apikey_lookup.query")}
                 </Button>

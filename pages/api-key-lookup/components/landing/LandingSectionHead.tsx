@@ -19,21 +19,21 @@ export function LandingSectionHead({
     <LandingFade className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       <div
         className={[
-          "flex items-center gap-3 font-display text-2xs uppercase tracking-[0.28em]",
+          "flex items-center gap-2.5 text-xs font-medium text-sn-label3",
           centered ? "justify-center" : "",
         ].join(" ")}
       >
-        <span className="text-sn-label">{index}</span>
-        <span className="h-px w-8 bg-sn-line-control" aria-hidden />
-        <span className="tracking-[0.1em] text-sn-label3">{eyebrow}</span>
+        <span className="font-mono tabular-nums text-sn-label2">{index}</span>
+        <span className="h-px w-5 bg-sn-line-control" aria-hidden />
+        <span>{eyebrow}</span>
       </div>
 
-      <h2 className="mt-6 font-display text-3xl font-bold leading-tight tracking-tight text-sn-label sm:text-4xl">
+      <h2 className="mt-3.5 font-sans text-2xl font-semibold leading-tight tracking-[-0.025em] text-sn-label sm:text-3xl">
         {title}
       </h2>
 
       {subtitle ? (
-        <p className="mt-5 text-base leading-8 text-sn-label2">{subtitle}</p>
+        <p className="mt-3 text-sm leading-7 text-sn-label2 sm:text-base">{subtitle}</p>
       ) : null}
     </LandingFade>
   );

@@ -1,10 +1,9 @@
 import { VendorIcon } from "@code-proxy/assets";
-import { surface } from "@code-proxy/ui";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy } from "./landingCopy";
 
 /**
- * 走马灯里的厂商取自实际已接入的图标集，不是宣传性列举——页面上出现的每一个都能在
+ * 厂商墙取自实际已接入的图标集，不是宣传性列举——页面上出现的每一个都能在
  * `packages/assets/src/icons` 找到对应资源，避免落地页承诺超出实现范围。
  */
 const PROVIDERS = [
@@ -31,42 +30,31 @@ const PROVIDERS = [
 ] as const;
 
 export function LandingProviders({ copy }: { copy: LandingCopy }) {
-  // 整段换一层底色和上下段分开，不再在上下边各画一条通栏分隔线。
   return (
-    <section className="bg-white py-28 dark:bg-white/[0.015] lg:py-40">
-      <div className="mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
+    <section className="border-t border-sn-line py-16 lg:py-20">
+      <div className="mx-auto w-full max-w-screen-xl px-4 sm:px-6">
         <LandingSectionHead
           index="01"
           eyebrow={copy.providers.eyebrow}
           title={copy.providers.title}
         />
-      </div>
 
-      {/* 两侧渐隐遮罩，让循环滚动的接缝落在不可见区域。 */}
-      <div className="relative mt-14 overflow-hidden [mask-image:linear-gradient(to_right,transparent,#000_10%,#000_90%,transparent)]">
-        <div className="flex w-max motion-safe:animate-[landing-marquee_52s_linear_infinite] motion-reduce:animate-none">
-          {/* 渲染两份完全相同的序列，第一份滚完 50% 时第二份刚好接上，形成无缝循环。 */}
-          {[0, 1].map((copyIndex) => (
-            <ul
-              key={copyIndex}
-              className="flex shrink-0 items-center gap-4 pr-4"
-              aria-hidden={copyIndex === 1}
+        {/* 严丝合缝 1px 发丝网格（gap-px 无双边线）：20 家已接入上游与客户端一目了然 */}
+        <ul className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-sn-line bg-sn-line sm:grid-cols-4 lg:grid-cols-5">
+          {PROVIDERS.map((provider) => (
+            <li
+              key={provider.id}
+              className="group flex items-center gap-2.5 bg-sn-raised px-4 py-3.5 transition-colors duration-150 hover:bg-sn-hover/70"
             >
-              {PROVIDERS.map((provider) => (
-                <li
-                  key={`${copyIndex}-${provider.id}`}
-                  // 厂商块是卡片（伪元素细边 + 投影），不描 ring；颜色只留在厂商 logo 上。
-                  className={`${surface({ radius: "2xl" })} inline-flex items-center gap-3 px-6 py-4`}
-                >
-                  <VendorIcon modelId={provider.id} size={22} />
-                  <span className="font-display text-sm font-medium text-sn-label2">
-                    {provider.label}
-                  </span>
-                </li>
-              ))}
-            </ul>
+              <span className="inline-flex shrink-0 transition-transform duration-150 group-hover:-translate-y-0.5">
+                <VendorIcon modelId={provider.id} size={18} />
+              </span>
+              <span className="truncate font-sans text-sm font-medium text-sn-label2 transition-colors duration-150 group-hover:text-sn-label">
+                {provider.label}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

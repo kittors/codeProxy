@@ -439,6 +439,14 @@ export interface TableApi {
   readonly expanded: string[];
   readonly columnOrder: string[];
   readonly scroller: HTMLElement | null;
+  setLayoutWidths?(opts: {
+    widths?: Record<string, number>;
+    tableWidth?: number | string;
+    fluidColumnId?: string | null;
+    selectColWidth?: number;
+    expandColWidth?: number;
+    reorderColWidth?: number;
+  }): void;
   isExpanded(key: string | number): boolean;
   expand(keys: string | number | (string | number)[], open?: boolean): void;
   expandAll(open?: boolean): void;

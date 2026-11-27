@@ -41,22 +41,33 @@ export function scrollArea(el, options = {}) {
 
   const bar = (axis) => { const b = document.createElement("div"); b.className = `sn-sa-bar sn-${axis}`; b.innerHTML = '<i class="sn-sa-thumb"></i>'; b.hidden = true; b.setAttribute("aria-hidden", "true"); box.append(b); return b; };
   const by = bar("y"), bx = bar("x");
-  const geo = { y: { th: 24, tr: 0 }, x: { th: 24, tr: 0 } };
+  const geo = { y: { th: 0, tr: 0 }, x: { th: 0, tr: 0 } };
   const js = !SD; // 不支持滚动时间线时，JS 驱动滑块和渐隐
-  let raf = 0;
+  let raf = 0, last = "";
+  const syncAxis = (b, ax, hide, tr0, vis, tot) => {
+    if (b.hidden !== hide) { b.hidden = hide; if (o.bar === "gutter") box.classList.toggle("sn-ov-" + ax, !hide); }
+    if (hide) return;
+    const tr = Math.max(24, tr0 || (vis - 6)), th = Math.max(24, Math.min(tr, tr * vis / tot)), g = geo[ax];
+    if (Math.abs(th - g.th) > .25) b.style.setProperty("--sn-thumb", th + "px");
+    if (Math.abs(tr - g.tr) > .25) b.style.setProperty("--sn-track", tr + "px");
+    g.th = th; g.tr = tr;
+  };
   const measure = () => {
     raf = 0;
     const ch = vp.clientHeight, sh = vp.scrollHeight, cw = vp.clientWidth, sw = vp.scrollWidth;
-    by.hidden = sh <= ch + 1; bx.hidden = sw <= cw + 1;
-    box.classList.toggle("sn-ov-y", !by.hidden); box.classList.toggle("sn-ov-x", !bx.hidden); // 常驻（gutter）模式按这两个类留出滚动条那一条
-    if (!by.hidden) { const tr = Math.max(24, by.clientHeight || (ch - 6)), th = Math.max(24, Math.min(tr, tr * ch / sh)); geo.y = { th, tr }; by.style.setProperty("--sn-thumb", th + "px"); by.style.setProperty("--sn-track", tr + "px"); }
-    if (!bx.hidden) { const tr = Math.max(24, bx.clientWidth || (cw - 6)), th = Math.max(24, Math.min(tr, tr * cw / sw)); geo.x = { th, tr }; bx.style.setProperty("--sn-thumb", th + "px"); bx.style.setProperty("--sn-track", tr + "px"); }
+    const sig = `${ch},${sh},${cw},${sw}`;
+    if (sig === last && !js) return;
+    last = sig;
+    syncAxis(by, "y", sh <= ch + 1, by.clientHeight, ch, sh);
+    syncAxis(bx, "x", sw <= cw + 1, bx.clientWidth, cw, sw);
     if (js) paint();
     axes();
   };
   const later = () => { if (!raf) raf = requestAnimationFrame(measure); };
-  new ResizeObserver(later).observe(vp);
-  new MutationObserver(later).observe(vp, { childList: true, subtree: true, characterData: true });
+  const saRo = typeof ResizeObserver !== "undefined" ? new ResizeObserver(later) : null;
+  saRo?.observe(vp);
+  const saMo = typeof MutationObserver !== "undefined" ? new MutationObserver(later) : null;
+  saMo?.observe(vp, { childList: true, subtree: true, characterData: true });
   if (vp.tagName === "TEXTAREA") vp.addEventListener("input", later); // 输入框的内容变了不会触发 DOM 变化：按输入重新量滑块
   // 不支持滚动时间线时，JS 每帧写滑块位置和渐隐宽度
   const fadeW = () => parseFloat(getComputedStyle(box).getPropertyValue("--sn-sa-fade")) || 24;
@@ -126,6 +137,8 @@ export function scrollArea(el, options = {}) {
     if (on("left") !== on("right")) vp.classList.add(on("left") ? "sn-no-r" : "sn-no-l");
     if (o.size != null) box.style.setProperty("--sn-sa-fade", o.size + "px");
     box.dataset.bar = o.bar; box.dataset.over = o.overscroll;
+    box.classList.toggle("sn-ov-y", o.bar === "gutter" && !by.hidden);
+    box.classList.toggle("sn-ov-x", o.bar === "gutter" && !bx.hidden);
     box.style.setProperty("--sn-sa-bar", o.barSize + "px"); box.style.setProperty("--sn-sa-inset", o.barInset + "px");
     axes();
     if (o.wheel === "x" && !wheelingX) { vp.addEventListener("wheel", onWheelX, { passive: false }); wheelingX = true; }
@@ -138,7 +151,7 @@ export function scrollArea(el, options = {}) {
   let dead = false;
   const destroy = () => {
     if (dead) return; dead = true;
-    cancelAnimationFrame(raf); raf = 0; ela.release?.();
+    cancelAnimationFrame(raf); raf = 0; saRo?.disconnect(); saMo?.disconnect(); ela.release?.();
     by.remove(); bx.remove();
     if (o.inner) { while (vp.firstChild) el.insertBefore(vp.firstChild, vp); vp.remove(); el.style.padding = elPad0; el.style.overflow = elOv0; el.style.position = elPos0; }
     else if (box.parentNode) { box.parentNode.insertBefore(el, box); box.remove(); }
@@ -153,7 +166,7 @@ export function scrollArea(el, options = {}) {
     }
     delete el._sa; delete vp._sa;
   };
-  const api = { box, vp, refresh: measure, set(next) { Object.assign(o, next); apply(); later(); }, destroy, get options() { return { ...o }; } };
+  const api = { box, vp, refresh: measure, refreshLater: later, set(next) { Object.assign(o, next); apply(); later(); }, destroy, get options() { return { ...o }; } };
   el._sa = api; vp._sa = api;
   onCleanup(destroy); // 在组件挂载或 enhance() 里建的：撤销时拆掉（直接调 scrollArea 的不受影响）
   return api;

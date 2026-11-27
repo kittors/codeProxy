@@ -442,6 +442,19 @@ export function tableHTML(o = {}) {
 // 列"长什么样"（拆掉纯宽度字段，避免窗口缩窄/拖宽触发整表重建销毁 DOM 与 React Portal）
 const colSig = (cols = []) => cols.map((c) => [c.key, c.title, c.ariaLabel, c.type, c.align, c.sortable, c.sortFirst, c.resizable, c.reorderable, c.fixed, c.primary, c.editable, c.num, c.className, "merge" in c, !!c.format, !!c.html, !!c.render, !!c.headerRender].join("\u0001")).join("\u0002");
 const widthSig = (cols = []) => cols.map((c) => [c.key, c.width, c.minWidth, c.maxWidth, c.designWidth, c.minDesignWidth, c.maxDesignWidth, c.resizeLabel].join("\u0001")).join("\u0002");
+// 判断列的单元格/表头渲染函数是否真正变化：纯列宽变化不重画所有单元格，避免 50×10 单元格逐帧全量重绘
+const sameColRenderers = (prev = [], next = []) => {
+  if (prev === next) return true;
+  if (!Array.isArray(prev) || !Array.isArray(next) || prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i++) {
+    const a = prev[i], b = next[i];
+    if (!a || !b) return false;
+    if ((a._snOrigRender ?? a.render) !== (b._snOrigRender ?? b.render)) return false;
+    if ((a._snOrigHeaderRender ?? a.headerRender) !== (b._snOrigHeaderRender ?? b.headerRender)) return false;
+    if (a.format !== b.format || a.html !== b.html) return false;
+  }
+  return true;
+};
 const mergeSig = (cols = []) => cols.map((c) => (typeof c.merge === "function" ? "f" : String(c.merge))).join(",");
 const FLAGS = ["selectable", "draggableRows", "draggableColumns", "resizableRows", "cellSelect", "detail", "expandColumn", "leadFixed", "gridRole", "rowNavigation"];
 
@@ -504,6 +517,9 @@ export function mountTable(wrap, o0 = {}, emit) {
   const CSK = new Set(); // 用过 colSpan 的列（被横着盖住的格子要重置）
   const isOpen = (nd) => (q ? qOpen.get(nd.key) ?? true : open.has(nd.key));
   const isDetailOpen = (nd) => DTR.has(nd.key) && (q && qOpen.has(nd.key) ? qOpen.get(nd.key) : open.has(nd.key));
+  // 视口度量与固定列偏移缓存（必须在 syncDetailRow / paintStateSlots 之前初始化，避免初始挂载空态或错误态时触发 TDZ）
+  let lastVw = -1, lastHeadH = -1, lastEmptyH = -1, lastXOv = "", lastYOv = "", lastYSc = "", lastTw = -1;
+  const lastPinX = new Map();
   const paintDetail = (nd, force = false) => {
     const dtr = DTR.get(nd.key); if (!dtr || (!force && detPainted.has(nd.key))) return;
     const box = $(".sn-tbl-detail-in", dtr); if (!box) return;
@@ -520,6 +536,9 @@ export function mountTable(wrap, o0 = {}, emit) {
     tr?.classList.toggle("sn-detail-open", !!want);
     if (want) {
       paintDetail(nd);
+      // 仅对可见详情面板局部写入视口宽，避免在根容器写继承变量引起全表 RecalcStyle
+      const bd = $(".sn-tbl-detail-bd", dtr);
+      if (bd && lastVw > 0) bd.style.setProperty("--sn-tbl-vw", lastVw + "px");
       if (!animate || reduced()) {
         dtr.hidden = false; dtr.classList.add("sn-open");
       } else {
@@ -557,6 +576,8 @@ export function mountTable(wrap, o0 = {}, emit) {
     if (o.error && typeof o.errorRender === "function") {
       const box = $(".sn-tbl-err .sn-tbl-empty-box", tbody);
       if (box) {
+        if (lastVw > 0) box.style.setProperty("--sn-tbl-vw", lastVw + "px");
+        if (lastEmptyH > 0) box.style.setProperty("--sn-tbl-empty-h", lastEmptyH + "px");
         const out = o.errorRender({ cell: box, error: o.error, retry: () => fire("retry") });
         if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
         else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
@@ -567,6 +588,8 @@ export function mountTable(wrap, o0 = {}, emit) {
       let box = $(".sn-tbl-empty-box", emptyRow);
       if (!box) { emptyRow.firstElementChild.innerHTML = '<div class="sn-tbl-empty-box"></div>'; box = $(".sn-tbl-empty-box", emptyRow); }
       if (box) {
+        if (lastVw > 0) box.style.setProperty("--sn-tbl-vw", lastVw + "px");
+        if (lastEmptyH > 0) box.style.setProperty("--sn-tbl-empty-h", lastEmptyH + "px");
         const out = o.emptyRender({ cell: box, filtered: !!q });
         if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
         else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
@@ -845,59 +868,98 @@ export function mountTable(wrap, o0 = {}, emit) {
     for (const nd of T.top) walk(nd, true, [], nd === lastTop);
     syncFooter();
   }
-  // ———— 固定列位置、离边投影与视口度量 ————
+  // ———— 固定列位置、离边投影与视口度量（严格读写分离 + 脏值跳过 + 局部自定义属性，避免全表 RecalcStyle 风暴） ————
+  const applyLocalViewportVars = (cw, emptyH) => {
+    if (cw > 0) {
+      for (const dtr of DTR.values()) {
+        if (dtr.hidden) continue;
+        const bd = $(".sn-tbl-detail-bd", dtr);
+        if (bd) bd.style.setProperty("--sn-tbl-vw", cw + "px");
+      }
+    }
+    const emptyVisible = (emptyRow && !emptyRow.hidden) || !!o.error;
+    if (emptyVisible) {
+      const box = $(".sn-tbl-empty-box", tbody);
+      if (box) {
+        if (cw > 0) box.style.setProperty("--sn-tbl-vw", cw + "px");
+        box.style.setProperty("--sn-tbl-empty-h", emptyH + "px");
+      }
+    }
+  };
   const syncViewportMetrics = () => {
     if (!scEl) return;
-    const cw = scEl.clientWidth, ch = scEl.clientHeight, hh = thead?.getBoundingClientRect().height || 40;
-    if (cw > 0) wrap.style.setProperty("--sn-tbl-vw", cw + "px");
-    wrap.style.setProperty("--sn-tbl-head-h", hh + "px");
+    // 纯读阶段：先一次性读取所有几何属性，避免读写交错触发强制同步布局
+    const cw = scEl.clientWidth, ch = scEl.clientHeight, sw = scEl.scrollWidth, sh = scEl.scrollHeight, stTop = scEl.scrollTop;
+    const hh = thead?.offsetHeight || 40;
     const emptyH = o.fill ? Math.max(180, ch - hh) : 220;
-    wrap.style.setProperty("--sn-tbl-empty-h", emptyH + "px");
-    wrap.dataset.xOverflow = scEl.scrollWidth > cw + 1 ? "true" : "false";
-    wrap.dataset.yOverflow = scEl.scrollHeight > ch + 1 ? "true" : "false";
-    wrap.dataset.yScrolled = scEl.scrollTop > 1 ? "true" : "false";
+    const xOv = sw > cw + 1 ? "true" : "false";
+    const yOv = sh > ch + 1 ? "true" : "false";
+    const ySc = stTop > 1 ? "true" : "false";
+    // 纯写阶段：仅在值确实发生变化时写入，且绝不在根 .sn-tbl-wrap 写高频变化的 --sn-tbl-vw
+    if (hh !== lastHeadH) { lastHeadH = hh; wrap.style.setProperty("--sn-tbl-head-h", hh + "px"); }
+    if (cw !== lastVw || emptyH !== lastEmptyH) {
+      lastVw = cw;
+      lastEmptyH = emptyH;
+      applyLocalViewportVars(cw, emptyH);
+    }
+    if (xOv !== lastXOv) { lastXOv = xOv; wrap.dataset.xOverflow = xOv; }
+    if (yOv !== lastYOv) { lastYOv = yOv; wrap.dataset.yOverflow = yOv; }
+    if (ySc !== lastYSc) { lastYSc = ySc; wrap.dataset.yScrolled = ySc; }
   };
   const syncPinScroll = () => {
     if (!scEl) return;
     syncViewportMetrics();
     if (!M.hasPin) { wrap.classList.remove("sn-pin-scrolled-l", "sn-pin-scrolled-r"); return; }
     const sl = scEl.scrollLeft, max = scEl.scrollWidth - scEl.clientWidth;
-    wrap.classList.toggle("sn-pin-scrolled-l", sl > 1);
-    wrap.classList.toggle("sn-pin-scrolled-r", max > 1 && sl < max - 1);
+    const onL = sl > 1, onR = max > 1 && sl < max - 1;
+    if (wrap.classList.contains("sn-pin-scrolled-l") !== onL) wrap.classList.toggle("sn-pin-scrolled-l", onL);
+    if (wrap.classList.contains("sn-pin-scrolled-r") !== onR) wrap.classList.toggle("sn-pin-scrolled-r", onR);
   };
-  const syncPinned = () => {
-    wrap.classList.toggle("sn-has-pin", M.hasPin);
+  const syncPinned = (force = false) => {
+    if (wrap.classList.contains("sn-has-pin") !== M.hasPin) wrap.classList.toggle("sn-has-pin", M.hasPin);
     syncViewportMetrics();
     if (!M.hasPin) { syncPinScroll(); return; }
     const thRow = $(":scope > tr", thead); if (!thRow) return;
     if (thRow.offsetWidth === 0) { syncPinScroll(); return; } // 隐藏容器或 jsdom 中保留初始有效偏移
-    const widths = new Map();
-    const actTh = M.acts ? $(":scope > th.sn-acts", thRow) : null;
+    // 纯读阶段：先读完所有固定表头的 offsetWidth，再统一写发生变化的固定列单元格
+    const pendingWrites = [];
     let lx = 0;
     if (M.leadPin) {
       for (const kind of M.leadCols) {
         const sel = kind === "ck-only" || kind === "ck" ? "th.sn-ck" : kind === "pick" ? "th.sn-tbl-pick" : "th.sn-tbl-exp";
         const cellSel = kind === "ck-only" || kind === "ck" ? ".sn-ck" : kind === "pick" ? ".sn-tbl-pick" : ".sn-tbl-exp";
         const th = $(`:scope > ${sel}`, thRow);
-        for (const el of $$(cellSel, table)) { el.style.setProperty("--sn-pin-x", lx + "px"); el.style.left = lx + "px"; }
+        const key = `__lead_${kind}__`;
+        if (force || lastPinX.get(key) !== lx) {
+          pendingWrites.push({ key, sel: cellSel, side: "left", pxv: lx });
+        }
         lx += th?.offsetWidth || leadWidthOf(kind, M.o);
       }
     }
     for (const c of M.dcols) if (M.pinL.has(c.key)) {
-      widths.set(c.key, lx);
       const th = $(`th[data-c="${CSS.escape(c.key)}"]`, thRow);
+      if (force || lastPinX.get(c.key) !== lx) {
+        pendingWrites.push({ key: c.key, sel: `th[data-c="${CSS.escape(c.key)}"], td[data-c="${CSS.escape(c.key)}"]`, side: "left", pxv: lx });
+      }
       lx += th?.offsetWidth || CW[c.key] || MINW[c.key] || 120;
     }
+    const actTh = M.acts ? $(":scope > th.sn-acts", thRow) : null;
     let rx = M.actsPin ? (actTh?.offsetWidth || actsWidthOf(M.acts)) : 0;
     for (let i = M.dcols.length - 1; i >= 0; i--) {
       const c = M.dcols[i]; if (!M.pinR.has(c.key)) continue;
-      widths.set(c.key, rx);
       const th = $(`th[data-c="${CSS.escape(c.key)}"]`, thRow);
+      if (force || lastPinX.get(c.key) !== rx) {
+        pendingWrites.push({ key: c.key, sel: `th[data-c="${CSS.escape(c.key)}"], td[data-c="${CSS.escape(c.key)}"]`, side: "right", pxv: rx });
+      }
       rx += th?.offsetWidth || CW[c.key] || MINW[c.key] || 100;
     }
-    for (const [k, pxv] of widths) {
-      const side = M.pinR.has(k) ? "right" : "left";
-      for (const el of $$(`th[data-c="${CSS.escape(k)}"], td[data-c="${CSS.escape(k)}"]`, table)) { el.style.setProperty("--sn-pin-x", pxv + "px"); el.style[side] = pxv + "px"; }
+    for (const item of pendingWrites) {
+      lastPinX.set(item.key, item.pxv);
+      const val = item.pxv + "px";
+      for (const el of $$(item.sel, table)) {
+        el.style.setProperty("--sn-pin-x", val);
+        el.style[item.side] = val;
+      }
     }
     syncPinScroll();
   };
@@ -1651,20 +1713,28 @@ export function mountTable(wrap, o0 = {}, emit) {
   };
   const unbind = () => { for (const [el, t, f, opt] of on.splice(0)) el.removeEventListener(t, f, opt); };
   bind();
-  let ro = null;
+  let ro = null, roRaf = 0;
+  const runLayoutSync = () => {
+    roRaf = 0;
+    if (o.resizableRows) {
+      const tw = table.offsetWidth;
+      if (tw !== lastTw) { lastTw = tw; wrap.style.setProperty("--sn-tw", tw + "px"); }
+    }
+    syncViewportMetrics();
+    if (M.hasPin) syncPinned();
+  };
+  const scheduleLayoutSync = () => {
+    if (!roRaf) roRaf = requestAnimationFrame(runLayoutSync);
+  };
   if (typeof ResizeObserver !== "undefined") {
-    ro = new ResizeObserver(() => {
-      if (o.resizableRows) wrap.style.setProperty("--sn-tw", table.offsetWidth + "px");
-      syncViewportMetrics();
-      if (M.hasPin) syncPinned();
-    });
+    ro = new ResizeObserver(scheduleLayoutSync);
     ro.observe(table);
     if (scEl) ro.observe(scEl);
   }
   const initialSkeleton = !!(o.loading && T.top.length === 0);
   if (!initialSkeleton && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
   syncViewportMetrics();
-  if (M.hasPin) syncPinned();
+  if (M.hasPin) syncPinned(true);
   syncRowTabIndex();
 
   // ———— 整表重画：列结构换了、加载中 / 出错切换。表格元素本身留着（监听、滚动区域、合计行都还在） ————
@@ -1673,6 +1743,7 @@ export function mountTable(wrap, o0 = {}, emit) {
   function render() {
     clearDetTimers(); clearLeaveTimers();
     if (lay) stopLay(); dragNow?.flush(); colLand?.(); selTd = null; editing = null;
+    lastPinX.clear();
     M = modelOf(o, cur()); const tmp = document.createElement("div"); tmp.innerHTML = tableInner(M, CW, MINW, MAXW); const nt = tmp.firstElementChild;
     for (const a of ["role", "tabindex", "aria-label", "aria-busy", "aria-multiselectable", "style"]) { if (nt.hasAttribute(a)) { if (table.getAttribute(a) !== nt.getAttribute(a)) table.setAttribute(a, nt.getAttribute(a)); } else table.removeAttribute(a); }
     const tf = $(":scope > tfoot", table); unbind();
@@ -1681,14 +1752,15 @@ export function mountTable(wrap, o0 = {}, emit) {
     const isSk = !!(o.loading && T.top.length === 0);
     if (!isSk && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
     syncViewportMetrics();
-    if (M.hasPin) syncPinned();
+    if (M.hasPin) syncPinned(true);
     syncRowTabIndex();
-    saInst?.refresh();
+    (saInst?.refreshLater ?? saInst?.refresh)?.();
   }
   // 仅重建 <tbody>（骨架 ↔ 数据 ↔ 错误态切换），完整保留原 <thead> 与 <colgroup>，不销毁表头节点与焦点
   function renderBody() {
     clearDetTimers(); clearLeaveTimers();
     if (lay) stopLay(); dragNow?.flush(); colLand?.(); selTd = null; editing = null;
+    lastPinX.clear();
     M = modelOf(o, cur());
     const PINS = M.hasPin ? pinOffsets(M, CW, MINW) : null;
     const tmp = document.createElement("table");
@@ -1708,9 +1780,9 @@ export function mountTable(wrap, o0 = {}, emit) {
     if (!isSk && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
     syncSel();
     syncViewportMetrics();
-    if (M.hasPin) syncPinned();
+    if (M.hasPin) syncPinned(true);
     syncRowTabIndex();
-    saInst?.refresh();
+    (saInst?.refreshLater ?? saInst?.refresh)?.();
   }
   // 增量行调和：扁平表数据更新时复用既有 <tr> 节点（不销毁不重播入场），新行按需微浮入，离开行在 live 模式下淡出再移除
   function setData(list) {
@@ -1787,8 +1859,9 @@ export function mountTable(wrap, o0 = {}, emit) {
     if (reorderOnly) relayout(() => { placeTree(); applyVis(); syncEmpty(); });
     else { placeTree(); applyVis(); syncEmpty(); }
     syncSel(); syncRowTabIndex();
-    if (M.hasPin) syncPinned();
-    saInst?.refresh();
+    if (enteringCount > 0) lastPinX.clear();
+    if (M.hasPin) syncPinned(enteringCount > 0);
+    (saInst?.refreshLater ?? saInst?.refresh)?.();
   }
   // 每一行按签名比一遍：内容变了的格子换掉（只换变了的文字）；render 的列都重画一次
   function refreshAll() {
@@ -1803,6 +1876,52 @@ export function mountTable(wrap, o0 = {}, emit) {
     get expanded() { return [...open]; },
     get columnOrder() { return [...order]; },
     get scroller() { return scEl; },
+    /**
+     * 高频宽幅变化（如侧边栏收起/展开、窗口缩放）的零重建列宽更新通道：
+     * 直接写 <colgroup> 与 table.style.width，不经过 React 状态更新、不重画任何单元格，
+     * 把 50 行表格在侧栏动画期的每帧耗时从 ~80ms 压至 <1ms。
+     */
+    setLayoutWidths({ widths, tableWidth, fluidColumnId, selectColWidth, expandColWidth, reorderColWidth } = {}) {
+      let changed = false;
+      if (widths) {
+        for (const c of M.dcols0) {
+          const nextW = typeof widths[c.key] === "number" ? widths[c.key] : CW[c.key];
+          if (nextW !== CW[c.key]) { CW[c.key] = nextW; changed = true; }
+        }
+      }
+      if (selectColWidth != null && selectColWidth !== o.selectColWidth) { o.selectColWidth = selectColWidth; changed = true; }
+      if (expandColWidth != null && expandColWidth !== o.expandColWidth) { o.expandColWidth = expandColWidth; changed = true; }
+      if (reorderColWidth != null && reorderColWidth !== o.reorderColWidth) { o.reorderColWidth = reorderColWidth; changed = true; }
+      const nextTableWidth = fluidColumnId ? "100%" : tableWidth;
+      if (nextTableWidth != null && nextTableWidth !== o.tableWidth) { o.tableWidth = nextTableWidth; changed = true; }
+      if (fluidColumnId !== o._fluidColumnId) { o._fluidColumnId = fluidColumnId; changed = true; }
+      if (!changed) return;
+      if (M.useCols) {
+        const cg = $(":scope > colgroup", table);
+        if (cg) {
+          for (const col of cg.children) {
+            const k = col.dataset.c;
+            if (k) {
+              const target = fluidColumnId === k ? "" : (CW[k] ? CW[k] + "px" : "");
+              if (col.style.width !== target) col.style.width = target;
+            } else if (col.classList.contains("sn-c-pick") && selectColWidth != null) {
+              const target = selectColWidth + "px";
+              if (col.style.width !== target) col.style.width = target;
+            } else if (col.classList.contains("sn-c-exp") && expandColWidth != null) {
+              const target = expandColWidth + "px";
+              if (col.style.width !== target) col.style.width = target;
+            } else if (col.classList.contains("sn-c-ck-only") && reorderColWidth != null) {
+              const target = reorderColWidth + "px";
+              if (col.style.width !== target) col.style.width = target;
+            }
+          }
+        }
+        const targetTw = o.tableWidth != null ? px(o.tableWidth) : minWidthOf(M, CW, MINW) + "px";
+        if (table.style.width !== targetTw) table.style.width = targetTw;
+      }
+      scheduleLayoutSync();
+      (saInst?.refreshLater ?? saInst?.refresh)?.();
+    },
     isExpanded(key) { const nd = T.nodes.get(String(key)); return isRowExpanded(nd); },
     expand(keys, want = true) { setOpen((keyList(keys) ?? []).map((k) => TR.get(k)).filter(Boolean), !!want, false); },
     expandAll(want = true) { setOpen(parents().map((nd) => TR.get(nd.key)), !!want, false); },
@@ -1889,7 +2008,7 @@ export function mountTable(wrap, o0 = {}, emit) {
         if (M.useCols) applyW();
       }
       if (dataChanged) { if (fq) { dragNow?.flush(); setQ(); } setData(dataNext); }
-      else if (next.columns !== prev.columns && !skNow && !o.error) refreshAll();
+      else if (next.columns !== prev.columns && !sameColRenderers(prev.columns, o.columns) && !skNow && !o.error) refreshAll();
       else if (sortChanged) { headSync(); sortNow(); }
       if (sortChanged) headSync();
       if (selChanged) syncSel();
@@ -1949,15 +2068,17 @@ export function mountTable(wrap, o0 = {}, emit) {
           relayout(fq || reopen ? () => { applyVis(); if (fq) syncEmpty(); } : undefined);
         }
       }
-      syncViewportMetrics();
-      if (M.hasPin) syncPinned();
-      saInst?.refresh();
+      if (widthsChanged || dataChanged || orderChanged || lines || mg || reopen || pgChanged) {
+        syncViewportMetrics();
+        if (M.hasPin) syncPinned(orderChanged);
+        (saInst?.refreshLater ?? saInst?.refresh)?.();
+      }
     },
     destroy() {
       clearDetTimers(); clearLeaveTimers();
       psInst?.dispose(); psInst = null;
       saInst?.destroy();
-      if (lay) { clearLay(lay); lay = null; } dragNow?.flush(); colLand?.(); stopCW?.(); cancelAnimationFrame(colRaf); ro?.disconnect(); unbind();
+      if (lay) { clearLay(lay); lay = null; } dragNow?.flush(); colLand?.(); stopCW?.(); cancelAnimationFrame(colRaf); cancelAnimationFrame(roRaf); ro?.disconnect(); unbind();
     },
   };
 }
