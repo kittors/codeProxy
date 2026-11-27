@@ -35,12 +35,12 @@ export function MobileSidebar({
         type="button"
         data-testid="app-shell-mobile-sidebar-backdrop"
         className={[
-          "fixed inset-0 z-30 bg-black/25 dark:bg-black/55",
+          // 对齐 Satin .sn-drawer-scrim 轻压暗遮罩与 200ms / 220ms 淡入淡出节奏
+          "fixed inset-0 z-30 bg-black/15 dark:bg-black/45",
           "motion-reduce:transition-none motion-safe:transition-opacity",
-          // 与弹窗、抽屉同一套节奏：打开 320ms 指数减速，关闭 200ms ease-in。
           open
-            ? "opacity-100 motion-safe:duration-[320ms] motion-safe:ease-pop"
-            : "pointer-events-none opacity-0 motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.4,0,1,1)]",
+            ? "opacity-100 motion-safe:duration-200 motion-safe:ease-[var(--sn-ease-out)]"
+            : "pointer-events-none opacity-0 motion-safe:duration-[220ms] motion-safe:ease-[var(--sn-ease-in)]",
         ].join(" ")}
         aria-label={t("common.close")}
         aria-hidden={!open}
@@ -52,11 +52,12 @@ export function MobileSidebar({
         aria-hidden={!open}
         inert={!open}
         className={[
-          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col bg-rail py-2 shadow-dialog",
+          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col bg-rail py-2 shadow-[var(--sn-e2)]",
           "will-change-transform motion-reduce:transition-none motion-safe:transition-transform",
+          // 对齐 Satin .sn-drawer：打开 320ms --sn-ease-open，关闭 220ms --sn-ease-in
           open
-            ? "translate-x-0 motion-safe:duration-[320ms] motion-safe:ease-pop"
-            : "pointer-events-none -translate-x-full motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.4,0,1,1)]",
+            ? "translate-x-0 motion-safe:duration-[320ms] motion-safe:ease-[var(--sn-ease-open)]"
+            : "pointer-events-none -translate-x-full motion-safe:duration-[220ms] motion-safe:ease-[var(--sn-ease-in)]",
         ].join(" ")}
       >
         <div className="flex h-11 shrink-0 items-center gap-2 px-3">

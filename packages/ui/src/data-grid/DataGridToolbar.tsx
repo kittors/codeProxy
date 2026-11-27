@@ -1,9 +1,7 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Icon } from "satin-ui/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
-import { EASE_POP } from "../utils/motion";
 import { GridPopover } from "./GridPopover";
 import { OptionsFilterEditor } from "./GridFilterEditors";
 import { listGridFilterChips } from "./gridFilterText";
@@ -273,7 +271,6 @@ export function GridFilterChips<T>({
   placeholder?: string;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const chips = [
     ...(extra ?? []).map((chip) => ({
       id: `extra:${chip.id}`,
@@ -289,69 +286,45 @@ export function GridFilterChips<T>({
 
   return (
     <div className="relative h-7 min-w-0">
-      <AnimatePresence initial={false}>
-        {chips.length === 0 ? (
-          <motion.p
-            key="placeholder"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 flex items-center px-1 text-xs text-ink-3"
-          >
-            {placeholder ?? t("data_grid.no_active_filters")}
-          </motion.p>
-        ) : null}
-      </AnimatePresence>
+      {chips.length === 0 ? (
+        <p className="absolute inset-0 flex items-center px-1 text-xs text-ink-3 transition-opacity duration-150 ease-soft">
+          {placeholder ?? t("data_grid.no_active_filters")}
+        </p>
+      ) : null}
       <ul
         className="flex h-7 min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label={t("data_grid.active_filters")}
       >
-        <AnimatePresence initial={false}>
-          {chips.map((chip) => (
-            <motion.li
-              key={chip.id}
-              layout={reduceMotion ? false : "position"}
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.18, ease: EASE_POP }}
-              className="sn-chip sn-tag !h-7 max-w-[22rem] shrink-0 !gap-1.5 !text-xs"
+        {chips.map((chip) => (
+          <li
+            key={chip.id}
+            className="sn-chip sn-tag sn-pop-in !h-7 max-w-[22rem] shrink-0 !gap-1.5 !text-xs"
+          >
+            <span className="min-w-0 truncate">{chip.label}</span>
+            <button
+              type="button"
+              onClick={chip.onRemove}
+              aria-label={t("data_grid.remove_filter", { filter: chip.label })}
+              className="sn-x"
             >
-              <span className="min-w-0 truncate">{chip.label}</span>
-              <button
-                type="button"
-                onClick={chip.onRemove}
-                aria-label={t("data_grid.remove_filter", { filter: chip.label })}
-                className="sn-x"
-              >
-                <Icon name="x" size={11} />
-              </button>
-            </motion.li>
-          ))}
-          {chips.length > 0 ? (
-            <motion.li
-              key="clear-all"
-              layout={reduceMotion ? false : "position"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="shrink-0"
+              <Icon name="x" size={11} />
+            </button>
+          </li>
+        ))}
+        {chips.length > 0 ? (
+          <li key="clear-all" className="shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                onFiltersChange({});
+                for (const chip of extra ?? []) chip.onRemove();
+              }}
+              className="sn-btn sn-ghost sn-sm !h-7 whitespace-nowrap"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  onFiltersChange({});
-                  for (const chip of extra ?? []) chip.onRemove();
-                }}
-                className="sn-btn sn-ghost sn-sm !h-7 whitespace-nowrap"
-              >
-                {t("data_grid.clear_all_filters")}
-              </button>
-            </motion.li>
-          ) : null}
-        </AnimatePresence>
+              {t("data_grid.clear_all_filters")}
+            </button>
+          </li>
+        ) : null}
       </ul>
     </div>
   );

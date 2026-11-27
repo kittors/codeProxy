@@ -8,6 +8,7 @@ import {
   STORAGE_KEY_LANGUAGE,
   type Language,
 } from "@code-proxy/i18n";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import { cn } from "../utils/selectStyles";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
@@ -243,7 +244,7 @@ export function LanguageSelector({
                 );
               })}
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

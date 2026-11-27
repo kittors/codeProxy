@@ -57,7 +57,14 @@ import {
   type SatinIconComponent,
 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
-import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
+import {
+  TextInput,
+  floatingPanelSurface,
+  resolveMenuIcon,
+  resolvePortalContainer,
+  iconHueClass,
+  ScrollFade,
+} from "@code-proxy/ui";
 
 
 type IconOption = { name: string; icon: SatinIconComponent };
@@ -290,7 +297,7 @@ export function MenuIconPicker({
                 )}
               </ScrollFade>
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

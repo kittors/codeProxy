@@ -8,6 +8,7 @@
   background: var(--sn-menu-bg, var(--sn-overlay));
   box-shadow: var(--sn-menu-shadow, var(--sn-e1));
   border-radius: var(--sn-r-lg, 12px);
+  pointer-events: auto;
   will-change: transform, opacity;
 }
 

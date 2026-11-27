@@ -175,14 +175,14 @@ export function GroupOverviewModal({
                         {family.label}
                       </span>
                       <span className="shrink-0 text-lg">
-                        {formatAveragePercent(family.remainingPercent)}
+                        {formatAveragePercent(family.usedPercent)}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
                 formatAveragePercent(
-                  activeGroupOverview.weeklyFamilies[0]?.remainingPercent ??
+                  activeGroupOverview.weeklyFamilies[0]?.usedPercent ??
                     activeGroupOverview.averageWeekly,
                 )
               )

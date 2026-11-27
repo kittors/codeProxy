@@ -26,6 +26,7 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import { ScrollArea } from "./ScrollArea";
 
 export interface SearchableCheckboxMultiSelectOption {
@@ -689,7 +690,7 @@ export function SearchableCheckboxMultiSelect({
                 </div>
               ) : null}
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

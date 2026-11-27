@@ -542,8 +542,8 @@ export function ConfigPage() {
       data-page-fill="always"
       className={
         visualLayoutEnabled
-          ? "flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden"
-          : "space-y-6 overflow-x-hidden"
+          ? "-mx-1 flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden px-1"
+          : "-mx-1 space-y-6 overflow-x-hidden px-1"
       }
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>

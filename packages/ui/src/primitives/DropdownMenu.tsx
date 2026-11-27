@@ -20,6 +20,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../utils/selectStyles";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import type { ControlSize } from "../utils/controlStyles";
 
 type MenuSide = "top" | "right" | "bottom" | "left";
@@ -179,8 +180,9 @@ function Portal({
   children,
   container,
 }: PropsWithChildren<{ container?: HTMLElement | null; forceMount?: boolean }>) {
+  const ctx = useContext(DropdownMenuContext);
   if (typeof document === "undefined") return null;
-  return createPortal(children, container ?? document.body);
+  return createPortal(children, container ?? resolvePortalContainer(ctx?.triggerRef.current));
 }
 
 const Group = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(function DropdownMenuGroup(

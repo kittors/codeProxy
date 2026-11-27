@@ -25,6 +25,7 @@ import {
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 
 export interface MultiSelectOption {
   value: string;
@@ -273,7 +274,7 @@ export function MultiSelect({
             )}
           </div>
         </div>,
-        document.body,
+        resolvePortalContainer(triggerRef.current),
       )
     : null;
 

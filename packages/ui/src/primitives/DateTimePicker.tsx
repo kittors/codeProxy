@@ -10,6 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { Icon } from "satin-ui/react";
 import { TextInput } from "../primitives/Input";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import { cn, floatingPanelSurface } from "../utils/selectStyles";
 
 export interface DateTimePickerLabels {
@@ -440,7 +441,7 @@ export function DateTimePicker({
                 </button>
               </div>
             </div>,
-            document.body,
+            resolvePortalContainer(rootRef.current),
           )
         : null}
     </div>

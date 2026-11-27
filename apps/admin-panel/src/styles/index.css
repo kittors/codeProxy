@@ -256,13 +256,12 @@
   --color-blue-950: #102244;
 
   /*
-   * 动效（与 packages/ui/src/utils/motion.ts 同一组数值）：
-   * soft 用于绝大多数过渡；pop 是弹出物（下拉、菜单、弹窗、抽屉）进场的指数减速曲线，
-   * 一下到位再轻轻落稳、不越过终点；spring 的轻回弹只留给开关、勾选这类有物理感的小控件。
+   * 动效（严格对齐 Satin `tokens.css` 与 `packages/ui/src/utils/motion.ts`）：
+   * soft 对应 --sn-ease-out；pop 对应 --sn-ease-out-strong；spring 对应 --sn-ease-overshoot。
    */
-  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.3, 1.25, 0.5, 1);
+  --ease-soft: cubic-bezier(0, 0, 0.58, 1);
+  --ease-pop: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /*
@@ -914,36 +913,5 @@ html.theme-transition-lock *::after {
   }
   50% {
     opacity: 0.45;
-  }
-}
-
-/*
- * 弹窗「拒绝关闭」的轻晃：填写过内容后点遮罩不会关闭弹窗，面板横向轻晃两下，
- * 告诉用户「这里还有没保存的内容，用按钮关闭」。只动 translate（独立属性，不和进场用的
- * scale / translate 过渡互相覆盖——动画结束后回到 translate-y-0 的静止值）。
- */
-@keyframes overlay-nudge {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  20% {
-    translate: -6px 0;
-  }
-  45% {
-    translate: 5px 0;
-  }
-  70% {
-    translate: -2px 0;
-  }
-}
-
-.overlay-nudge {
-  animation: overlay-nudge 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .overlay-nudge {
-    animation: none;
   }
 }

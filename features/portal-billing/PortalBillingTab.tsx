@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "satin-ui/react";
+import type { TableColumnReact } from "satin-ui/react";
 import {
   portalBillingApi,
   type BillingOrder,
   type PortalBillingOverview,
   type PortalBillingPlan,
 } from "@code-proxy/api-client";
-import { Button, Callout, Card, EmptyState, PageLoader, Select, cn, surface, useToast } from "@code-proxy/ui";
+import {
+  Button,
+  Callout,
+  Card,
+  EmptyState,
+  PageLoader,
+  SatinTable,
+  Select,
+  cn,
+  surface,
+  useToast,
+} from "@code-proxy/ui";
 import { formatExpiryRemaining, formatYuan, orderStatusMeta } from "./billingFormat";
 import { CheckoutQrModal } from "./CheckoutQrModal";
 import { PlanPickerPanel } from "./PlanPickerPanel";
@@ -87,6 +99,75 @@ export function PortalBillingTab({
       setSubmitting(false);
     }
   };
+
+  const orderColumns = useMemo<TableColumnReact<BillingOrder>[]>(
+    () => [
+      {
+        key: "paid_at",
+        title: t("billing.col_time"),
+        sortable: true,
+        sortFirst: "desc",
+        sort: (a, b) =>
+          new Date(a.paid_at || a.created_at).getTime() -
+          new Date(b.paid_at || b.created_at).getTime(),
+        className: "sn-num text-[var(--sn-label3)]",
+        format: (_, order) => new Date(order.paid_at || order.created_at).toLocaleString(),
+      },
+      {
+        key: "target_label",
+        title: t("billing.col_target"),
+        className: "font-medium text-[var(--sn-label)]",
+      },
+      {
+        key: "plan_name",
+        title: t("billing.col_plan"),
+        render: (_, order) => (
+          <div className="py-1.5">
+            <div>{order.plan_name}</div>
+            {order.fulfillment_summary ? (
+              <div className="text-2xs text-[var(--sn-label3)]">{order.fulfillment_summary}</div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        key: "amount_cents",
+        title: t("billing.col_amount"),
+        align: "right",
+        sortable: true,
+        className: "font-mono font-semibold text-[var(--sn-label)]",
+        format: (_, order) => formatYuan(order.amount_cents),
+      },
+      {
+        key: "status",
+        title: t("billing.col_status"),
+        render: (_, order) => {
+          const status = orderStatusMeta(order.status, t);
+          return (
+            <span className={`sn-tag sn-sm ${status.tagTone}`}>
+              <i />
+              {status.label}
+            </span>
+          );
+        },
+      },
+      {
+        key: "actions",
+        title: t("billing.col_action"),
+        align: "right",
+        render: (_, order) =>
+          order.status === "pending" && (order.qrcode_url || order.pay_url) ? (
+            <Button size="sm" variant="secondary" onClick={() => setActiveOrder(order)}>
+              <Icon name="scan" size={13} />
+              {t("billing.continue_pay")}
+            </Button>
+          ) : (
+            <span className="font-mono text-2xs text-[var(--sn-label3)]">{order.order_no}</span>
+          ),
+      },
+    ],
+    [t],
+  );
 
   if (loading && !overview) {
     return (
@@ -222,70 +303,13 @@ export function PortalBillingTab({
             description={t("billing.no_orders_desc")}
           />
         ) : (
-          <div className="sn-tbl-wrap sn-plain">
-            <div className="sn-tbl-sc">
-              <table className="sn-tbl min-w-[640px]">
-                <thead>
-                  <tr>
-                    <th>{t("billing.col_time")}</th>
-                    <th>{t("billing.col_target")}</th>
-                    <th>{t("billing.col_plan")}</th>
-                    <th className="sn-r">{t("billing.col_amount")}</th>
-                    <th>{t("billing.col_status")}</th>
-                    <th className="sn-r">{t("billing.col_action")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => {
-                    const status = orderStatusMeta(order.status, t);
-                    return (
-                      <tr key={order.id}>
-                        <td className="sn-num text-[var(--sn-label3)]">
-                          {new Date(order.paid_at || order.created_at).toLocaleString()}
-                        </td>
-                        <td className="font-medium text-[var(--sn-label)]">{order.target_label}</td>
-                        <td>
-                          <div className="py-1.5">
-                            <div>{order.plan_name}</div>
-                            {order.fulfillment_summary ? (
-                              <div className="text-2xs text-[var(--sn-label3)]">
-                                {order.fulfillment_summary}
-                              </div>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="sn-r sn-num font-mono font-semibold text-[var(--sn-label)]">
-                          {formatYuan(order.amount_cents)}
-                        </td>
-                        <td>
-                          <span className={`sn-tag sn-sm ${status.tagTone}`}>
-                            <i />
-                            {status.label}
-                          </span>
-                        </td>
-                        <td className="sn-r">
-                          {order.status === "pending" && (order.qrcode_url || order.pay_url) ? (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setActiveOrder(order)}
-                            >
-                              <Icon name="scan" size={13} />
-                              {t("billing.continue_pay")}
-                            </Button>
-                          ) : (
-                            <span className="font-mono text-2xs text-[var(--sn-label3)]">
-                              {order.order_no}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <SatinTable
+            plain
+            rowKey="id"
+            label={t("billing.my_orders_title")}
+            columns={orderColumns}
+            data={orders}
+          />
         )}
       </Card>
 

@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon as SatinIcon } from "satin-ui/react";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 import { cn } from "../utils/selectStyles";
 
 const THEME_STORAGE_KEY = "code-proxy-admin-theme";
@@ -383,7 +384,7 @@ export function ThemeToggleButton({
                 );
               })}
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

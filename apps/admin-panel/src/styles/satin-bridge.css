@@ -409,6 +409,145 @@
     transition: none;
   }
 
+  /* Satin 原生弹窗（dialog.sn-dlg）业务宽度与移动端贴底适配 */
+  dialog.sn-dlg.cp-modal-panel {
+    width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    border-radius: var(--sn-r-xl);
+    background: var(--sn-overlay);
+    color: var(--sn-label);
+    box-shadow: var(--sn-e2);
+    overflow: visible;
+    outline: none;
+  }
+  dialog.sn-dlg.cp-modal-panel:not([open]) {
+    display: none;
+  }
+  dialog.sn-dlg.cp-modal-panel[open] {
+    display: flex;
+    flex-direction: column;
+  }
+  /* 弹窗 showModal() 后的首两帧（等待测量触发器几何原点）先透明，避免闪帧且不写行内 opacity。 */
+  dialog.sn-dlg.cp-modal-panel[data-modal-entering="true"] {
+    opacity: 0;
+  }
+  /* 还原业务弹窗内表单的自然盒模型（覆盖 overlay.css `.sn-dlg form { display: contents }`） */
+  dialog.sn-dlg.cp-modal-panel form {
+    display: block;
+  }
+  dialog.sn-dlg.cp-modal-panel .sn-hd {
+    padding: 1.25rem 1rem 0.25rem 1.25rem;
+  }
+  @media (max-width: 639px) {
+    dialog.sn-dlg.cp-modal-panel {
+      width: 100vw;
+      max-width: 100vw;
+      max-height: calc(100dvh - 0.5rem);
+      margin: auto auto 0;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    dialog.sn-dlg.cp-modal-panel .sn-hd {
+      cursor: default;
+      touch-action: auto;
+    }
+  }
+
+  /* 弹窗内 Top Layer 浮层宿主：挂在 <dialog> 内故非 inert，同时处于 Top Layer 弹窗之上且视口定位不受拖拽影响。 */
+  [data-modal-portal-host] {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  /* Toaster 顶层宿主（Popover API）：清除浏览器默认 popover 边框与底色，压在原生 <dialog> 之上。 */
+  [data-toaster-layer][popover] {
+    position: fixed;
+    inset: 1.25rem 0 auto 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 1rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 10020;
+  }
+
+  /* Satin 原生抽屉适配（对齐 overlay.css `.sn-drawer` / `.sn-drawer-scrim` 并兼容仅带 .dark 的场景） */
+  .sn-drawer-scrim.cp-drawer-scrim {
+    z-index: 200;
+    border: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity 220ms var(--sn-ease-in);
+  }
+  .sn-drawer-scrim.cp-drawer-scrim.sn-open {
+    transition: opacity 200ms var(--sn-ease-out);
+  }
+  .dark:not([data-theme="dark"]) .sn-drawer-scrim {
+    background: rgba(0, 0, 0, 0.4);
+  }
+  .sn-drawer.cp-drawer-panel {
+    z-index: 201;
+    max-width: calc(100vw - 1rem);
+    overflow: hidden;
+    outline: none;
+    color: var(--sn-label);
+  }
+  @media (max-width: 639px) {
+    .sn-drawer.cp-drawer-panel {
+      inset: 0;
+      max-width: 100vw;
+      border-radius: 0;
+    }
+  }
+
+  /* 图片大图预览原生 <dialog>：全屏 Top Layer，叠在任意 <Modal> 之上 */
+  dialog.cp-image-preview {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    overflow: hidden;
+    outline: none;
+  }
+  dialog.cp-image-preview:not([open]) {
+    display: none;
+  }
+  dialog.cp-image-preview::backdrop {
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 180ms var(--sn-ease-in);
+  }
+  dialog.cp-image-preview.sn-shown::backdrop {
+    opacity: 1;
+    transition: opacity 200ms var(--sn-ease-out);
+  }
+
   /* 兼容 React 表单弹窗里高 z-index 浮层栈，让 Satin Tooltip / CommandPalette / Toast 分层有序。 */
   .sn-cmdk-scrim {
     z-index: 10008;
@@ -611,14 +750,20 @@
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: none;
     }
   }
   .sn-fade-up {
-    animation: sn-fade-up 0.32s var(--sn-ease-out-strong) both;
+    /* 使用 backwards 而非 both：进场前保持首帧隐藏，播完后释放 transform 回到 none，不残留层叠上下文。 */
+    animation: sn-fade-up 0.32s var(--sn-ease-out-strong) backwards;
   }
 
   /* 复制/状态切换按钮图标原地交叉缩放微动效（同时支持 .sn-swapped 与 [data-swapped="true"]）。 */
+  /* 按钮内纯装饰图标与切换层不截获鼠标事件，确保 mousedown/mouseup 始终落在 <button> 本体。 */
+  .sn-btn .sn-ic,
+  .sn-btn .sn-swap {
+    pointer-events: none;
+  }
   .sn-swap {
     position: relative;
     display: inline-grid;

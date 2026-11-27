@@ -98,6 +98,9 @@ export default defineConfig({
             ) {
               return "vendor-satin-grid";
             }
+            if (id.includes("/src/data/table.js") || id.includes("/react/table.js")) {
+              return "vendor-satin-table";
+            }
             if (
               id.includes("/src/markdown.js") ||
               id.includes("/src/data/markdown.js") ||

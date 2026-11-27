@@ -149,7 +149,7 @@ function modelOf(o, st) {
   const firstPinR = pinR.size ? dcols.find((c) => pinR.has(c.key))?.key : (actsPin ? "__acts__" : null);
   const useCols = !!o.draggableColumns || dcols0.some((c) => c.resizable) || hasPin;
   const merging = dcols0.some((c) => "merge" in c) || typeof o.spans === "function";
-  const useDataC = T.tree || hasDetail || useCols || merging || !!o.cellSelect || dcols0.some((c) => c.editable);
+  const useDataC = T.tree || hasDetail || useCols || merging || !!o.cellSelect || dcols0.some((c) => c.editable || typeof c.render === "function");
   return { o, st, dcols, dcols0, acts, order, prim, hasCk, hasPick, hasDetail, hasExp, pinL, pinR, hasPin, leadPin, actsPin, lastPinL, firstPinR, useCols, useDataC, T, byKey, n: dcols.length + (hasCk || hasPick ? 1 : 0) + (acts ? 1 : 0) };
 }
 // 列宽（有 colgroup 的交互表格）：width 是数字的列固定宽度，没写的是弹性列（分剩下的宽度）；minWidth 是拖边线时最窄多少

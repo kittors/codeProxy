@@ -131,7 +131,7 @@
   z-index: 3;
   background-color: var(--grid-head-bg);
   box-shadow: inset 0 -1px 0 var(--sn-line);
-  transition: box-shadow 160ms var(--ease-soft);
+  transition: box-shadow 160ms var(--sn-ease-out);
 }
 
 .cp-grid-head-cell[data-pin] {
@@ -148,7 +148,7 @@
 /* 表头列之间的分隔线平时不画，悬停表头时才浮现，提示「这里可以拖」。 */
 .cp-grid-head-row .cp-grid-resize-line {
   opacity: 0;
-  transition: opacity 160ms var(--ease-soft);
+  transition: opacity 160ms var(--sn-ease-out);
 }
 
 .cp-grid-head-row:hover .cp-grid-resize-line,
@@ -182,7 +182,7 @@
 .cp-grid-cell {
   background-color: var(--grid-cell-bg);
   box-shadow: inset 0 -1px 0 var(--grid-row-line);
-  transition: background-color 120ms var(--ease-soft);
+  transition: background-color 120ms var(--sn-ease-out);
 }
 
 .cp-grid-row:last-child > .cp-grid-cell {
@@ -210,7 +210,7 @@
   border-radius: 0 3px 3px 0;
   background-color: var(--sn-accent);
   transform: scaleY(0);
-  transition: transform 180ms var(--sn-ease-open, var(--ease-pop));
+  transition: transform 180ms var(--sn-ease-open);
   pointer-events: none;
 }
 
@@ -265,7 +265,7 @@
 .cp-grid-cell[data-dragging="true"] > [data-cell-inner],
 .cp-grid-row[data-dragging="true"] > .cp-grid-cell > * {
   opacity: 0.35;
-  transition: opacity 120ms var(--ease-soft);
+  transition: opacity 120ms var(--sn-ease-out);
 }
 
 /* 表头上沿的拖动把手贴着表格顶边：焦点环往里收，不被外框裁掉。 */
@@ -296,7 +296,7 @@ body[data-grid-dragging="true"] * {
   width: 22px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 180ms var(--ease-soft);
+  transition: opacity 180ms var(--sn-ease-out);
   --grid-pin-fade: var(--grid-cell-bg, var(--grid-bg));
 }
 
@@ -323,29 +323,48 @@ body[data-grid-dragging="true"] * {
   opacity: 1;
 }
 
-/* ---------- 加载：表头下沿一条来回走的细进度条 ---------- */
+/* ---------- 表头选择条与展开详情行（纯 CSS Satin 微动效，零 framer-motion） ---------- */
 
-.cp-grid-progress {
-  overflow: hidden;
-}
-
-.cp-grid-progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, transparent, var(--cp-focus), transparent);
-  animation: cp-grid-progress 1.1s var(--ease-soft) infinite;
-}
-
-@keyframes cp-grid-progress {
+@keyframes cp-grid-selection-in {
   from {
-    transform: translateX(-100%);
+    opacity: 0;
+    transform: translateY(-4px);
   }
   to {
-    transform: translateX(260%);
+    opacity: 1;
+    transform: none;
   }
+}
+
+.cp-grid-selection-bar {
+  animation: cp-grid-selection-in 200ms var(--sn-ease-out-strong) both;
+}
+
+.cp-grid-detail-bd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 240ms var(--sn-ease-open),
+    opacity 180ms var(--sn-ease-out);
+}
+
+.cp-grid-detail-row.sn-open .cp-grid-detail-bd {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.cp-grid-detail-in {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  transition: transform 240ms var(--sn-ease-open);
+}
+
+.cp-grid-detail-row.sn-open .cp-grid-detail-in {
+  transform: none;
 }
 
 /*
@@ -358,7 +377,7 @@ body[data-grid-dragging="true"] * {
  */
 
 .cp-grid-body > .cp-grid-row[data-entering="true"] {
-  animation: cp-grid-row-in 260ms var(--ease-pop) both;
+  animation: cp-grid-row-in 260ms var(--sn-ease-out-strong) both;
   animation-delay: calc(min(var(--row-index, 0), 14) * 14ms);
 }
 
@@ -392,7 +411,7 @@ body[data-grid-dragging="true"] * {
 
 .cp-grid-body > .cp-grid-row[data-leaving="true"] {
   animation:
-    cp-grid-row-fade-out 160ms var(--ease-soft) forwards,
+    cp-grid-row-fade-out 160ms var(--sn-ease-out) forwards,
     cp-grid-row-collapse 280ms var(--grid-fold-ease) var(--motion-delay, 120ms) forwards;
   pointer-events: none;
 }
@@ -408,7 +427,7 @@ body[data-grid-dragging="true"] * {
 .cp-grid-body > .cp-grid-row[data-entering="live"] {
   animation:
     cp-grid-row-grow 280ms var(--grid-fold-ease) var(--motion-delay, 0ms) backwards,
-    cp-grid-row-fade-in 240ms var(--ease-soft) calc(var(--motion-delay, 0ms) + 140ms) backwards;
+    cp-grid-row-fade-in 240ms var(--sn-ease-out) calc(var(--motion-delay, 0ms) + 140ms) backwards;
 }
 
 .cp-grid-body > .cp-grid-row[data-entering="live"] > td {
@@ -493,8 +512,11 @@ body[data-grid-dragging="true"] * {
   .cp-grid-cell,
   .cp-grid-head-cell,
   .cp-grid [data-pin-edge]::after,
-  .cp-grid-row > .cp-grid-cell:first-child::before {
+  .cp-grid-row > .cp-grid-cell:first-child::before,
+  .cp-grid-detail-bd,
+  .cp-grid-detail-in {
     transition: none;
+    transform: none;
   }
 
   .cp-grid-body > .cp-grid-row[data-entering="true"],
@@ -504,7 +526,7 @@ body[data-grid-dragging="true"] * {
   .cp-grid-body > .cp-grid-row[data-entering="live"],
   .cp-grid-body > .cp-grid-row[data-entering="live"] > td,
   .cp-grid-body > .cp-grid-row[data-entering="live"] [data-cell-inner],
-  .cp-grid-progress::before {
+  .cp-grid-selection-bar {
     animation: none;
   }
 }

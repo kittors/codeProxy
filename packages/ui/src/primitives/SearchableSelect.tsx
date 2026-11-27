@@ -26,6 +26,7 @@ import {
 import type { ControlSize } from "../utils/controlStyles";
 import { useTranslation } from "react-i18next";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { resolvePortalContainer } from "../overlays/portalContainer";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -445,7 +446,7 @@ export function SearchableSelect({
                 )}
               </div>
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

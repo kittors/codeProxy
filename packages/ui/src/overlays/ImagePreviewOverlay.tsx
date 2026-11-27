@@ -1,7 +1,11 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { hideTip, resetTipLayer } from "satin-ui";
 import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
+import { OVERLAY_EXIT_MS } from "../utils/motion";
+import { useOverlayPresence } from "./overlayMotion";
+import { notifyTopLayerDialogOpened } from "./portalContainer";
 import { useDialogBehavior } from "./useDialogBehavior";
 
 const MIN_SCALE = 1;
@@ -70,6 +74,7 @@ export function ImagePreviewOverlay({
   const canGoPrev = resolvedImages.length > 1 && resolvedActiveIndex > 0;
   const canGoNext = resolvedImages.length > 1 && resolvedActiveIndex < resolvedImages.length - 1;
 
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{
     pointerId: number;
@@ -94,16 +99,37 @@ export function ImagePreviewOverlay({
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [viewportSize, setViewportSize] = useState({ width: 1280, height: 800 });
 
+  // 没有图时组件什么也不渲染，也就不能占着叠层的最上层（否则下面弹窗的 Esc 会失灵）。
+  const shown = open && Boolean(resolvedImageSrc);
+  const { mounted, visible } = useOverlayPresence(shown, OVERLAY_EXIT_MS);
+
+  // 关闭退场期间快照当前图片，防止父组件清空 src 导致画面瞬间消失。
+  const snapshotRef = useRef({
+    src: resolvedImageSrc,
+    alt: resolvedImageAlt,
+    title,
+    downloadName: resolvedDownloadName,
+  });
+  if (shown && resolvedImageSrc) {
+    snapshotRef.current = {
+      src: resolvedImageSrc,
+      alt: resolvedImageAlt,
+      title,
+      downloadName: resolvedDownloadName,
+    };
+  }
+  const snapshot = snapshotRef.current;
+
   useEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     setScale(1);
     setQuarterTurns(0);
     dragRef.current = null;
     previousMetricsRef.current = null;
-  }, [resolvedImageSrc, open]);
+  }, [resolvedImageSrc, shown]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     const updateViewport = () => {
       setViewportSize({
         width: window.innerWidth || 1280,
@@ -113,14 +139,62 @@ export function ImagePreviewOverlay({
     updateViewport();
     window.addEventListener("resize", updateViewport);
     return () => window.removeEventListener("resize", updateViewport);
-  }, [open]);
+  }, [shown]);
 
-  // 预览常常是从弹窗里打开的（日志内容、生图测试）：登记进同一个叠层，Esc 只关预览，
-  // 下面的弹窗不跟着关；Tab 留在预览里，关闭后焦点回到被点开的那张图。
-  // 没有图时组件什么也不渲染，也就不能占着叠层的最上层（否则下面弹窗的 Esc 会失灵）。
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const shown = open && Boolean(resolvedImageSrc);
-  useDialogBehavior({ open: shown, visible: shown, panelRef, onEscape: onClose, initialFocus: "panel" });
+  // 预览常常是从弹窗里打开的（日志内容、生图测试）：原生 <dialog>.showModal() 天然叠在
+  // 下层 <Modal> 之上，同时登记进同一个叠层管理 Esc、Tab 循环与焦点归还。
+  useDialogBehavior({
+    open: shown,
+    visible: shown && visible,
+    panelRef: dialogRef,
+    onEscape: onClose,
+    initialFocus: "panel",
+  });
+
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!mounted || !dialog) return;
+
+    if (shown) {
+      if (!dialog.open) {
+        try {
+          resetTipLayer();
+        } catch {
+          // ignore
+        }
+        if (typeof dialog.showModal === "function") {
+          try {
+            dialog.showModal();
+          } catch {
+            dialog.setAttribute("open", "");
+          }
+        } else {
+          dialog.setAttribute("open", "");
+        }
+        notifyTopLayerDialogOpened();
+      }
+    } else {
+      try {
+        hideTip();
+      } catch {
+        // ignore
+      }
+    }
+  }, [mounted, shown]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const dialog = dialogRef.current;
+    return () => {
+      if (dialog?.open && typeof dialog.close === "function") {
+        try {
+          dialog.close();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [mounted]);
 
   const geometry = useMemo(() => {
     const naturalWidth = naturalSize.width || 1;
@@ -150,7 +224,7 @@ export function ImagePreviewOverlay({
   ]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!shown) return;
     const element = scrollRef.current;
     if (!element) return;
 
@@ -188,9 +262,9 @@ export function ImagePreviewOverlay({
       scrollLeft: element.scrollLeft,
       scrollTop: element.scrollTop,
     };
-  }, [geometry.boxHeight, geometry.boxWidth, open, quarterTurns, scale]);
+  }, [geometry.boxHeight, geometry.boxWidth, quarterTurns, scale, shown]);
 
-  if (!open || !resolvedImageSrc) return null;
+  if (!mounted || !snapshot.src) return null;
 
   const canZoomOut = scale > MIN_SCALE;
   const canZoomIn = scale < MAX_SCALE;
@@ -237,174 +311,189 @@ export function ImagePreviewOverlay({
   const controlButtonClass = "sn-pb disabled:cursor-not-allowed disabled:opacity-35";
 
   return createPortal(
-    <div
-      ref={panelRef}
+    <dialog
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={snapshot.title}
       tabIndex={-1}
       data-variant="image-only"
-      className="fixed inset-0 z-[220] bg-black/75 outline-none backdrop-blur-sm dark:bg-black/80"
+      onCancel={(event) => event.preventDefault()}
+      className={[
+        "cp-image-preview",
+        visible ? "sn-shown" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div className="sn-glass absolute top-4 right-4 z-20 rounded-full p-1 sm:top-5 sm:right-5">
-        <button
-          type="button"
-          onClick={onClose}
-          className="sn-pb !rounded-full"
-          aria-label={t("common.close")}
-        >
-          <Icon name="x" size={18} />
-        </button>
-      </div>
-
       <div
-        ref={scrollRef}
-        className="h-full w-full cursor-grab overflow-auto overscroll-contain active:cursor-grabbing"
-        onClick={(event) => {
-          if (event.target !== event.currentTarget && !movedRef.current) return;
-          if (movedRef.current) {
-            movedRef.current = false;
-            return;
-          }
-          onClose();
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={stopDragging}
-        onPointerCancel={stopDragging}
-        onScroll={() => {
-          const element = scrollRef.current;
-          const previous = previousMetricsRef.current;
-          if (!element || !previous) return;
-          previousMetricsRef.current = {
-            ...previous,
-            scrollWidth: element.scrollWidth,
-            scrollHeight: element.scrollHeight,
-            clientWidth: element.clientWidth,
-            clientHeight: element.clientHeight,
-            scrollLeft: element.scrollLeft,
-            scrollTop: element.scrollTop,
-          };
-        }}
+        className={[
+          "relative h-full w-full transition-[opacity,transform] motion-reduce:transition-none",
+          visible
+            ? "scale-100 opacity-100 duration-[260ms] ease-[var(--sn-ease-out-strong)]"
+            : "scale-[0.97] opacity-0 duration-[180ms] ease-[var(--sn-ease-in)]",
+        ].join(" ")}
       >
-        <div className="inline-flex min-h-full min-w-full items-center justify-center p-6 sm:p-10">
-          <div
-            className="relative shrink-0"
-            style={{ width: geometry.boxWidth, height: geometry.boxHeight }}
+        <div className="sn-glass absolute top-4 right-4 z-20 rounded-full p-1 sm:top-5 sm:right-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="sn-pb !rounded-full"
+            aria-label={t("common.close")}
           >
-            <img
-              src={resolvedImageSrc}
-              alt={resolvedImageAlt}
-              draggable={false}
-              onLoad={(event) => {
-                const image = event.currentTarget;
-                setNaturalSize({
-                  width: image.naturalWidth || image.width || 1,
-                  height: image.naturalHeight || image.height || 1,
-                });
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+
+        <div
+          ref={scrollRef}
+          className="h-full w-full cursor-grab overflow-auto overscroll-contain active:cursor-grabbing"
+          onClick={(event) => {
+            if (event.target !== event.currentTarget && !movedRef.current) return;
+            if (movedRef.current) {
+              movedRef.current = false;
+              return;
+            }
+            onClose();
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
+          onScroll={() => {
+            const element = scrollRef.current;
+            const previous = previousMetricsRef.current;
+            if (!element || !previous) return;
+            previousMetricsRef.current = {
+              ...previous,
+              scrollWidth: element.scrollWidth,
+              scrollHeight: element.scrollHeight,
+              clientWidth: element.clientWidth,
+              clientHeight: element.clientHeight,
+              scrollLeft: element.scrollLeft,
+              scrollTop: element.scrollTop,
+            };
+          }}
+        >
+          <div className="inline-flex min-h-full min-w-full items-center justify-center p-6 sm:p-10">
+            <div
+              className="relative shrink-0"
+              style={{ width: geometry.boxWidth, height: geometry.boxHeight }}
+            >
+              <img
+                src={snapshot.src}
+                alt={snapshot.alt}
+                draggable={false}
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  setNaturalSize({
+                    width: image.naturalWidth || image.width || 1,
+                    height: image.naturalHeight || image.height || 1,
+                  });
+                }}
+                className="absolute top-1/2 left-1/2 block max-w-none select-none"
+                style={{
+                  width: geometry.imageWidth,
+                  height: geometry.imageHeight,
+                  transform: `translate(-50%, -50%) rotate(${rotationDegrees(quarterTurns)}deg)`,
+                  transformOrigin: "center",
+                  transition: "transform 160ms var(--sn-ease-out), width 160ms var(--sn-ease-out), height 160ms var(--sn-ease-out)",
+                }}
+                onClick={(event) => event.stopPropagation()}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
+          <div className="sn-glass pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5">
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => changeImage(resolvedActiveIndex - 1)}
+              disabled={!canGoPrev}
+              title={t("common.prev")}
+              aria-label={t("common.prev")}
+            >
+              <Icon name="chevron-left" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => changeImage(resolvedActiveIndex + 1)}
+              disabled={!canGoNext}
+              title={t("common.next")}
+              aria-label={t("common.next")}
+            >
+              <Icon name="chevron-right" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => setScale((current) => clamp(current - SCALE_STEP, MIN_SCALE, MAX_SCALE))}
+              disabled={!canZoomOut}
+              title={t("common.zoom_out")}
+              aria-label={t("common.zoom_out")}
+            >
+              <Icon name="zoom-out" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => setScale((current) => clamp(current + SCALE_STEP, MIN_SCALE, MAX_SCALE))}
+              disabled={!canZoomIn}
+              title={t("common.zoom_in")}
+              aria-label={t("common.zoom_in")}
+            >
+              <Icon name="zoom-in" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => setQuarterTurns((current) => current - 1)}
+              title={t("common.rotate_left")}
+              aria-label={t("common.rotate_left")}
+            >
+              <Icon name="rotate-ccw" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => setQuarterTurns((current) => current + 1)}
+              title={t("common.rotate_right")}
+              aria-label={t("common.rotate_right")}
+            >
+              <Icon name="rotate-cw" size={17} />
+            </button>
+            <button
+              type="button"
+              className={controlButtonClass}
+              onClick={() => {
+                setScale(1);
+                setQuarterTurns((current) => nearestUprightQuarterTurns(current));
+                if (scrollRef.current) {
+                  scrollRef.current.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+                }
               }}
-              className="absolute top-1/2 left-1/2 block max-w-none select-none"
-              style={{
-                width: geometry.imageWidth,
-                height: geometry.imageHeight,
-                transform: `translate(-50%, -50%) rotate(${rotationDegrees(quarterTurns)}deg)`,
-                transformOrigin: "center",
-                transition: "transform 160ms ease, width 160ms ease, height 160ms ease",
-              }}
+              title={t("common.reset_image")}
+              aria-label={t("common.reset_image")}
+            >
+              <Icon name="scan" size={17} />
+            </button>
+            <a
+              className={controlButtonClass}
+              href={snapshot.src ?? undefined}
+              download={snapshot.downloadName}
+              title={t("log_content.download")}
+              aria-label={t("log_content.download")}
               onClick={(event) => event.stopPropagation()}
-            />
+            >
+              <Icon name="download" size={17} />
+            </a>
           </div>
         </div>
       </div>
-
-      <div className="pointer-events-none absolute right-0 bottom-5 left-0 z-20 flex justify-center px-4">
-        <div className="sn-glass pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5">
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => changeImage(resolvedActiveIndex - 1)}
-            disabled={!canGoPrev}
-            title={t("common.prev")}
-            aria-label={t("common.prev")}
-          >
-            <Icon name="chevron-left" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => changeImage(resolvedActiveIndex + 1)}
-            disabled={!canGoNext}
-            title={t("common.next")}
-            aria-label={t("common.next")}
-          >
-            <Icon name="chevron-right" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => setScale((current) => clamp(current - SCALE_STEP, MIN_SCALE, MAX_SCALE))}
-            disabled={!canZoomOut}
-            title={t("common.zoom_out")}
-            aria-label={t("common.zoom_out")}
-          >
-            <Icon name="zoom-out" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => setScale((current) => clamp(current + SCALE_STEP, MIN_SCALE, MAX_SCALE))}
-            disabled={!canZoomIn}
-            title={t("common.zoom_in")}
-            aria-label={t("common.zoom_in")}
-          >
-            <Icon name="zoom-in" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => setQuarterTurns((current) => current - 1)}
-            title={t("common.rotate_left")}
-            aria-label={t("common.rotate_left")}
-          >
-            <Icon name="rotate-ccw" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => setQuarterTurns((current) => current + 1)}
-            title={t("common.rotate_right")}
-            aria-label={t("common.rotate_right")}
-          >
-            <Icon name="rotate-cw" size={17} />
-          </button>
-          <button
-            type="button"
-            className={controlButtonClass}
-            onClick={() => {
-              setScale(1);
-              setQuarterTurns((current) => nearestUprightQuarterTurns(current));
-              if (scrollRef.current) {
-                scrollRef.current.scrollTo({ left: 0, top: 0, behavior: "smooth" });
-              }
-            }}
-            title={t("common.reset_image")}
-            aria-label={t("common.reset_image")}
-          >
-            <Icon name="scan" size={17} />
-          </button>
-          <a
-            className={controlButtonClass}
-            href={resolvedImageSrc ?? undefined}
-            download={resolvedDownloadName}
-            title={t("log_content.download")}
-            aria-label={t("log_content.download")}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Icon name="download" size={17} />
-          </a>
-        </div>
-      </div>
-    </div>,
+    </dialog>,
     document.body,
   );
 }

@@ -134,7 +134,10 @@ export function useDialogBehavior({
     if (!isTopOverlay(idRef.current)) return;
     const panel = panelRef.current;
     if (!panel) return;
-    if (panel.contains(document.activeElement)) return;
+    // 原生 <dialog>.showModal() 可能在进场两帧前先把焦点落到 <dialog> 自身上；
+    // 只有子组件主动 autoFocus 到内部具体控件时才跳过，避免盖掉 initialFocus="auto" 聚焦首个输入框。
+    const active = document.activeElement;
+    if (active && active !== panel && panel.contains(active)) return;
     const field =
       initialFocus === "auto" && !prefersNoAutoFocus()
         ? Array.from(panel.querySelectorAll<HTMLElement>(FIRST_FIELD)).find(isVisible)

@@ -22,6 +22,7 @@ import {
   type GroupTrendPoint,
 } from "./groupOverviewWeekly";
 import type { QuotaCardSlot } from "./quotaCardSlots";
+import { toQuotaUsedPercent } from "./trendQuotaSummary";
 
 interface UseAuthFilesGroupOverviewArgs {
   filter: string;
@@ -118,13 +119,13 @@ export function useAuthFilesGroupOverview({
 
         const slots = resolveQuotaCardSlots(provider, items);
         weeklySlotsByFile.push(slots);
-        const fiveHour = resolveSlotWindowPercent(slots, "5h");
-        if (fiveHour !== null) fiveHourValues.push(fiveHour);
+        const fiveHourUsed = toQuotaUsedPercent(resolveSlotWindowPercent(slots, "5h"));
+        if (fiveHourUsed !== null) fiveHourValues.push(fiveHourUsed);
       });
 
       const weeklyFamilies = collectWeeklyFamilies(weeklySlotsByFile);
-      const weeklyValues = weeklyFamilies
-        .map((family) => family.remainingPercent)
+      const weeklyUsedValues = weeklyFamilies
+        .map((family) => family.usedPercent)
         .filter((value): value is number => typeof value === "number");
       const average = (values: number[]) =>
         values.length === 0
@@ -134,7 +135,10 @@ export function useAuthFilesGroupOverview({
       return {
         totalCalls,
         averageFiveHour: average(fiveHourValues),
-        averageWeekly: weeklyFamilies.length === 1 ? weeklyFamilies[0]?.remainingPercent ?? null : average(weeklyValues),
+        averageWeekly:
+          weeklyFamilies.length === 1
+            ? (weeklyFamilies[0]?.usedPercent ?? null)
+            : average(weeklyUsedValues),
         weeklyFamilies,
         quotaSampleCount: Math.max(fiveHourValues.length, ...weeklyFamilies.map((family) => family.sampleCount), 0),
       };
@@ -174,8 +178,8 @@ export function useAuthFilesGroupOverview({
           return {
             name: resolveAuthFileDisplayName(file) || file.name,
             totalCalls: stats.success + stats.failure,
-            averageFiveHour: resolveSlotWindowPercent(slots, "5h"),
-            averageWeekly: resolveSlotWindowPercent(slots, "week"),
+            averageFiveHour: toQuotaUsedPercent(resolveSlotWindowPercent(slots, "5h")),
+            averageWeekly: toQuotaUsedPercent(resolveSlotWindowPercent(slots, "week")),
             hasQuota: items.length > 0,
           };
         })
@@ -269,18 +273,25 @@ export function useAuthFilesGroupOverview({
           if (callsByDay.has(point.date)) callsByDay.set(point.date, point.requests ?? 0);
         });
         const rawSeries = normalizeGroupTrendSeries(resp.quota_series, resp.quota_points);
-        const seriesMeta = rawSeries.map((item, index) => ({
-          id: item.quota_key || `weekly_${index}`,
-          label: formatWeeklySeriesLabel(item.quota_key ?? "", item.quota_label ?? "", t),
-        }));
+        const usedSuffix = t("auth_files.trend_quota_used_suffix");
+        const seriesMeta = rawSeries.map((item, index) => {
+          const baseLabel = formatWeeklySeriesLabel(item.quota_key ?? "", item.quota_label ?? "", t);
+          return {
+            id: item.quota_key || `weekly_${index}`,
+            label:
+              usedSuffix && !baseLabel.toLowerCase().endsWith(usedSuffix.toLowerCase())
+                ? `${baseLabel} ${usedSuffix}`.trim()
+                : baseLabel,
+          };
+        });
         const percentsBySeries = new Map<string, Map<string, number | null>>();
         rawSeries.forEach((item, index) => {
           const id = seriesMeta[index]?.id ?? `weekly_${index}`;
           const byDay = new Map(axis.map((day) => [day.date, null as number | null]));
           (item.points || []).forEach((point) => {
             if (!byDay.has(point.date)) return;
-            const percent = point.percent;
-            byDay.set(point.date, typeof percent === "number" && Number.isFinite(percent) ? percent : null);
+            // 后端每日聚合值为组内账号平均剩余百分比，这里统一换算为总量已消耗百分比（100 - remaining%）。
+            byDay.set(point.date, toQuotaUsedPercent(point.percent));
           });
           percentsBySeries.set(id, byDay);
         });

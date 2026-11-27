@@ -152,6 +152,25 @@ describe("AddAccountDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  test("renders callback check chips in a dedicated non-overlapping footer bar for long URLs", async () => {
+    const user = userEvent.setup();
+    mocks.submitCallback.mockImplementation(() => new Promise(() => undefined));
+    const { dialog } = renderDialog();
+
+    await user.click(dialog.getByRole("button", { name: "Sign in with Codex" }));
+    const box = await dialog.findByRole("textbox", { name: "Callback address" });
+    const longUrl =
+      "http://localhost:1455/auth/callback?code=ac.1.AABqBWGRIGYpmrCYLV7hggVtmPNup57n5xhLDYFisQdIJ11KWs0CfzzFv2XgP6nVpTp9qAx_UTXm_7iHdejeh7KpZF1eYVkk_STfBoyqlt09ztDu-bGmUXadFDI&scope=openid+email+profile+offline_access&state=s1&iss=https%3A%2F%2Fauth.openai.com";
+    pasteInto(box, longUrl);
+
+    const footer = document.querySelector<HTMLElement>("[data-callback-footer]");
+    expect(footer).not.toBeNull();
+    expect(footer).not.toHaveClass("absolute");
+    expect(box.parentElement).toBe(footer?.parentElement);
+    expect(box).toHaveAttribute("rows", "4");
+    expect(footer).toHaveTextContent(/Code/i);
+  });
+
   test("explains that the sign-in page address is not the callback", async () => {
     const user = userEvent.setup();
     const { dialog } = renderDialog();
