@@ -65,11 +65,11 @@ export function ToggleSwitch({
     >
       <div className="min-w-0">
         {label ? (
-          <label htmlFor={resolvedId} className="block text-sm font-medium text-ink">
+          <label htmlFor={resolvedId} className="block text-sm font-medium text-[var(--sn-label)]">
             {label}
           </label>
         ) : null}
-        {description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}
+        {description ? <p className="mt-0.5 text-xs text-[var(--sn-label3)]">{description}</p> : null}
       </div>
       {control}
     </div>

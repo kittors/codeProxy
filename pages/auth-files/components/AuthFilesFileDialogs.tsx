@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { FileJson, Layers, Loader2, Upload } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
@@ -48,7 +47,6 @@ export function UploadProgressDialog({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const counts = [
     { key: "success", dot: "bg-emerald-500", label: t("auth_files.upload_progress_success", { count: progress.success }) },
     { key: "failed", dot: "bg-rose-500", label: t("auth_files.upload_progress_failed", { count: progress.failed }) },
@@ -86,11 +84,9 @@ export function UploadProgressDialog({
             aria-valuenow={percent}
             className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track"
           >
-            <motion.div
-              className="h-full rounded-full bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-teal-400 bar-semantic:to-sky-500"
-              initial={false}
-              animate={{ width: `${percent}%` }}
-              transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-450 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none bar-semantic:bg-gradient-to-r bar-semantic:from-teal-400 bar-semantic:to-sky-500"
+              style={{ width: `${percent}%` }}
             />
           </div>
           <p className="mt-2 text-xs text-ink-3" data-testid="auth-files-upload-progress-detail">

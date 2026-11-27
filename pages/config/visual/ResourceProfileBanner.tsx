@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronDown, Gauge, Leaf } from "@code-proxy/ui/icons";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -140,34 +139,24 @@ export function ResourceProfileBanner({
           {active ? t("resource_config.applied") : t("resource_config.apply_recommended")}
         </Button>
       </div>
-      <AnimatePresence initial={false}>
-        {open && !active ? (
-          <motion.div
-            id={listId}
-            key="changes"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <ul className="grid gap-x-6 gap-y-1.5 px-4 pb-4 text-sm sm:grid-cols-2 sm:px-5 sm:pb-5">
-              {changes.map(({ field, from, to }) => (
-                <li key={field.id} className="flex min-w-0 items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-ink-2">{t(fieldLabelKey(field))}</span>
-                  <span className="shrink-0 font-mono text-xs text-ink-3 line-through decoration-ink-4">
-                    {formatValue(from)}
-                  </span>
-                  <ArrowRight size={12} className="shrink-0 text-ink-3 colorful:text-emerald-500" aria-hidden="true" />
-                  <span className="shrink-0 font-mono text-xs font-medium text-ink">
-                    {formatValue(to)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {open && !active ? (
+        <div id={listId} className="sn-fade-up overflow-hidden">
+          <ul className="grid gap-x-6 gap-y-1.5 px-4 pb-4 text-sm sm:grid-cols-2 sm:px-5 sm:pb-5">
+            {changes.map(({ field, from, to }) => (
+              <li key={field.id} className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-ink-2">{t(fieldLabelKey(field))}</span>
+                <span className="shrink-0 font-mono text-xs text-ink-3 line-through decoration-ink-4">
+                  {formatValue(from)}
+                </span>
+                <ArrowRight size={12} className="shrink-0 text-ink-3 colorful:text-emerald-500" aria-hidden="true" />
+                <span className="shrink-0 font-mono text-xs font-medium text-ink">
+                  {formatValue(to)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

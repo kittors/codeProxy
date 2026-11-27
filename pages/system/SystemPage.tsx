@@ -78,14 +78,13 @@ function InfoCard({
           aria-label={t("system_page.copy")}
         >
           <span
-            className={copied ? "sn-swap sn-swapped" : "sn-swap"}
-            data-swapped={copied ? "true" : "false"}
+            className={copied ? "sn-swap sn-on" : "sn-swap"}
             aria-hidden="true"
           >
-            <span className="sn-swap-a">
+            <span className="sn-a">
               <SatinIcon name="copy" size={13} />
             </span>
-            <span className="sn-swap-b text-emerald-500">
+            <span className="sn-b text-emerald-500">
               <SatinIcon name="check" size={13} />
             </span>
           </span>

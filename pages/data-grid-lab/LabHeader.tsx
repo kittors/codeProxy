@@ -6,13 +6,12 @@ import {
   formatPercent,
   formatUsd,
 } from "@code-proxy/ui";
-import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { initSeg } from "satin-ui";
 import type { LabStatus, LabSummary } from "./labData";
 
-/** 分段控件（时间范围、演示状态、状态页签共用）：选中块在选项之间滑动。 */
+/** 分段控件（时间范围、演示状态、状态页签共用）：直连 Satin 原生 initSeg 流体滑块。 */
 export function Segmented<V extends string | number>({
-  id,
   value,
   options,
   onChange,
@@ -26,55 +25,64 @@ export function Segmented<V extends string | number>({
   label: string;
   role?: "radiogroup" | "tablist";
 }) {
-  const reduceMotion = useReducedMotion();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const segRef = useRef<ReturnType<typeof initSeg> | null>(null);
+  const activeIdx = options.findIndex((option) => option.value === value);
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
+  const sig = options.map((option) => String(option.value)).join("\u001f");
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const api = initSeg(el, undefined, activeIdxRef.current, {
+      role: role === "tablist" ? "tab" : "radio",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    segRef.current = api;
+    return () => {
+      api.destroy();
+      if (segRef.current === api) segRef.current = null;
+    };
+  }, [role, sig]);
+
+  useLayoutEffect(() => {
+    segRef.current?.sync(activeIdx, false);
+  }, [activeIdx, sig]);
+
   return (
-    <LayoutGroup id={id}>
-      <div
-        role={role}
-        aria-label={label}
-        className="inline-flex items-center gap-0.5 rounded-full bg-track p-1"
-      >
-        {options.map((option) => {
-          const active = option.value === value;
-          return (
-            <button
-              key={String(option.value)}
-              type="button"
-              role={role === "tablist" ? "tab" : "radio"}
-              aria-selected={role === "tablist" ? active : undefined}
-              aria-checked={role === "radiogroup" ? active : undefined}
-              title={option.title}
-              onClick={() => onChange(option.value)}
-              className={[
-                "relative inline-flex h-7 items-center rounded-full px-3 text-xs font-medium transition-colors duration-150",
-                active ? "text-ink" : "text-ink-2 hover:text-ink",
-              ].join(" ")}
-            >
-              {active ? (
-                <motion.span
-                  layoutId="segment"
-                  aria-hidden="true"
-                  className="absolute inset-0 rounded-full bg-surface shadow-control"
-                  transition={
-                    reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }
-                  }
-                />
-              ) : null}
-              <span className="relative inline-flex items-center gap-1.5 whitespace-nowrap">
-                {option.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </LayoutGroup>
+    <div
+      ref={containerRef}
+      role={role}
+      aria-label={label}
+      className="sn-seg sn-sm bg-track !inline-flex items-center gap-0.5"
+    >
+      <span aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <button
+            key={String(option.value)}
+            type="button"
+            role={role === "tablist" ? "tab" : "radio"}
+            aria-selected={role === "tablist" ? active : undefined}
+            aria-checked={role === "radiogroup" ? active : undefined}
+            title={option.title}
+            onClick={() => onChange(option.value)}
+            className="relative inline-flex h-7 items-center px-3 text-xs font-medium"
+          >
+            <span className="relative inline-flex items-center gap-1.5 whitespace-nowrap">
+              {option.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-/**
- * 汇总里的一项。数值占一个固定的最小宽度（等宽数字），筛选后「1,354」变成「263」时
- * 后面几项不会往左挪——之前整行跟着数字长短一起跳（用户 11-18 反馈）。
- */
 function Stat({
   label,
   value,
@@ -96,7 +104,6 @@ function Stat({
   );
 }
 
-/** 标题下的一行汇总：跟随当前筛选重算，悬停每一项看口径。 */
 export function LabSummaryStrip({
   summary,
   pending,
@@ -164,7 +171,6 @@ export function StatusTabs({
 }: {
   value: StatusTab | null;
   counts: Record<StatusTab, number>;
-  /** 不加筛选时的条数（筛选只会让条数变少）：按它的位数给每个页签的计数留宽。 */
   maxCounts: Record<StatusTab, number>;
   onChange: (value: StatusTab) => void;
 }) {
@@ -176,8 +182,6 @@ export function StatusTabs({
           <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[key]}`} aria-hidden="true" />
         ) : null}
         {label}
-        {/* 条数按「不筛选时的最大值」的位数占固定宽度（等宽数字）：筛选后位数变少，页签宽度也不变，
-            选中块不会被挤得错位；也不会给只有个位数的页签留一大段空白。 */}
         <span
           className="inline-block text-left tabular-nums text-ink-3"
           style={{ minWidth: `${formatInteger(maxCounts[key]).length}ch` }}

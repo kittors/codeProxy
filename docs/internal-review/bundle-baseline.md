@@ -1,6 +1,6 @@
 # codeProxy Bundle Baseline
 
-更新时间：2026-11-25 16:17 +0800（全面 Satin UI 重构：同步最新上游 `satin-ui` 全套组件样式与 149 枚 Satin Solar 双色调图标，彻底移除 `lucide-react` 依赖，全面重构 DataGrid/分页/状态胶囊/头像/控件圆角与业务页面）
+更新时间：2026-11-27 20:42 +0800（彻底卸载 `framer-motion` 并统一全部 Select/DateTimePicker/ScrollArea 到 Satin 原生浮层与微动效体系，消除 122.21 kB / 40.36 kB gzip 的 `vendor-animation` chunk）
 
 ## 当前构建命令
 
@@ -14,11 +14,10 @@ bun run build
 | Chunk                   |       Size |      Gzip | 备注                                                                        |
 | ----------------------- | ---------: | --------: | --------------------------------------------------------------------------- |
 | `vendor-echarts`        | 1118.03 kB | 375.96 kB | 图表主依赖，明显过大；6.1.0 为 XSS 安全修复（GHSA-fgmj-fm8m-jvvx）后的体积 |
-| `vendor-satin`          |  130.96 kB |  45.61 kB | Satin UI 核心引擎（含 149 枚 Solar 双色调图标、Avatar、Progress、NumberFlow、EmptyArt、Loader、CommandPalette 等） |
+| `vendor-satin`          |  126.76 kB |  43.70 kB | Satin UI 核心引擎（含 149 枚 Solar 双色调图标、浮层定位/关闭栈、Avatar、Progress、NumberFlow、ScrollArea、EmptyArt、Loader、CommandPalette 等） |
 | `vendor-satin-markdown` |   35.45 kB |  14.42 kB | 按需懒加载的零依赖 Satin Markdown 渲染器（取代原 263.84 kB gzip 的 `vendor-markdown`，净减重 -249.42 kB gzip） |
-| `vendor-animation`      |  122.21 kB |  40.36 kB | 动画依赖独立 vendor chunk（已移除 `gsap` 及核心 UI 控件中的 `framer-motion`） |
-| `index`                 |  326.14 kB | 102.27 kB | 主入口脚本（彻底移除 `lucide-react` 改用 Satin Solar 图标后净减重 -1.96 kB gzip） |
-| `index.css`             |  763.96 kB | 136.59 kB | 入口样式表；同步最新 Satin 全部 15 个样式模块（补齐 `picker.css` / `list.css` / `header.css` / `charts.css` 与表格网格线/胶囊圆角联动，+5.61 kB gzip，被移除 `lucide-react` 后各业务 chunk 合计 -6.95 kB gzip 净减重抵消） |
+| `index`                 |  329.29 kB | 103.80 kB | 主入口脚本（彻底卸载 `framer-motion`，消除 122.21 kB / 40.36 kB gzip 的 `vendor-animation` chunk） |
+| `index.css`             |  759.31 kB | 135.70 kB | 入口样式表（移除 `FloatingPanel.css` 与旧 `.sn-swapped` 补丁，净减重 -0.89 kB gzip） |
 | `ConfigPage`            |  141.41 kB |  42.53 kB | 接入 Satin 分组流体滑块、表单控件与 Solar 图标（-0.91 kB gzip）；低于 `< 80 kB gzip` 页面预算 |
 | `AuthFilesPage`         |  254.67 kB |  73.70 kB | 接入 Satin 复选框/加载器/胶囊选择器与 Solar 图标（-1.80 kB gzip）；低于 `< 80 kB gzip` 页面预算 |
 | `ProvidersPage`         |  125.80 kB |  33.83 kB | 接入 Satin 控件、复制翻转/测速加载微动效与 Solar 图标（-0.86 kB gzip）；低于 `< 80 kB gzip` 页面预算 |

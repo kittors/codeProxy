@@ -112,10 +112,8 @@ vi.mock("@code-proxy/ui", () => ({
     </button>
   ),
   useToast: () => toastMocks,
-  // 动效与键盘状态钩子：这里只测提交流程，给出不带副作用的替身。
   useCapsLock: () => ({ capsLock: false, onKeyDown: () => {}, onKeyUp: () => {}, onBlur: () => {} }),
-  useShake: () => ({ controls: undefined, shake: () => {} }),
-  useStaggerVariants: () => ({ container: {}, item: {} }),
+  usePrefersReducedMotion: () => true,
 }));
 
 // 品牌名常量走真实导出，避免 mock 漂移后测试仍然「通过」却断言了错误的品牌。

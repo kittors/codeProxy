@@ -1,8 +1,7 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { DialogIcon, Modal, ScrollFade } from "@code-proxy/ui";
+import { DialogIcon, Modal, ScrollFade, SegmentedControl } from "@code-proxy/ui";
 import { useProxyPoolChecks } from "@features/proxy-pool";
 import type { AddedAccount } from "../model/addedAccount";
 import {
@@ -26,7 +25,6 @@ import { PROVIDER_PANEL_ID, ProviderGlyph, ProviderList, providerTabId } from ".
 import { SuccessPanel } from "./SuccessPanel";
 
 const EMPTY_OPTIONS: LoginOptionValues = { proxyId: "", projectId: "", usingApi: false };
-const EASE = [0.2, 0.8, 0.2, 1] as const;
 
 interface SuccessState {
   providerId: AccountProviderId;
@@ -61,42 +59,17 @@ function MethodSwitch({
   onChange: (method: AccountMethod) => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   return (
-    <div
-      role="radiogroup"
-      aria-label={t("add_account.methods.label")}
-      className="flex rounded-full bg-subtle p-0.5"
-    >
-      {methods.map((method) => {
-        const selected = method === value;
-        return (
-          <button
-            key={method}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onChange(method)}
-            className={[
-              "relative rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              selected ? "text-ink" : "text-ink-3 hover:text-ink",
-            ].join(" ")}
-          >
-            {selected ? (
-              <motion.span
-                layoutId="add-account-method"
-                aria-hidden="true"
-                className="absolute inset-0 rounded-full bg-elevated shadow-xs"
-                transition={
-                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 40 }
-                }
-              />
-            ) : null}
-            <span className="relative">{t(`add_account.methods.${method}`)}</span>
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedControl
+      ariaLabel={t("add_account.methods.label")}
+      size="sm"
+      value={value}
+      onChange={(next) => onChange(next as AccountMethod)}
+      options={methods.map((method) => ({
+        value: method,
+        label: t(`add_account.methods.${method}`),
+      }))}
+    />
   );
 }
 
@@ -118,7 +91,6 @@ export function AddAccountDialog({
   onImportAuthFiles,
 }: AddAccountDialogProps) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const providers = useMemo(
     () =>
       ACCOUNT_PROVIDERS.filter(
@@ -323,18 +295,9 @@ export function AddAccountDialog({
               ) : null}
             </header>
           )}
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={panelKey}
-              className="flex min-h-0 flex-1 flex-col"
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: EASE }}
-            >
-              {renderPanel()}
-            </motion.div>
-          </AnimatePresence>
+          <div key={panelKey} className="sn-fade-up flex min-h-0 flex-1 flex-col">
+            {renderPanel()}
+          </div>
         </section>
       </div>
     </Modal>

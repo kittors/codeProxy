@@ -1,5 +1,4 @@
 import { useLocation, useOutlet } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
 import { Reveal } from "@code-proxy/ui";
 import { pendingPageCode } from "@pages/registry";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
@@ -26,8 +25,7 @@ export function DashboardLayout() {
 
   return (
     <AppShell onLogout={() => auth?.actions?.logout?.()}>
-      <AnimatePresence mode="wait">
-        {/*
+      {/*
          * 页面内容的唯一包装层，也是「底部留白等于其余三边」这条约束的落点。
          *
          * 页面有两种高度模式，由页面根元素上的 data-page-fill 声明，外壳用 :has() 读取：
@@ -56,18 +54,17 @@ export function DashboardLayout() {
          * flex-basis 会盖掉页面根自己写的 height，这也正是各页面能摘掉
          * h-[calc(100dvh-…)] 这类魔数的前提。
          */}
-        <Reveal
-          key={`${location.pathname}:${tenantKey}`}
-          className={[
-            "flex flex-1 flex-col [&>*:only-child]:flex-1",
-            "has-[>[data-page-fill=always]]:min-h-0 [&>[data-page-fill=always]]:min-h-0",
-            "md:has-[>[data-page-fill=md]]:min-h-0 md:[&>[data-page-fill=md]]:min-h-0",
-            "lg:has-[>[data-page-fill=lg]]:min-h-0 lg:[&>[data-page-fill=lg]]:min-h-0",
-          ].join(" ")}
-        >
-          {outlet}
-        </Reveal>
-      </AnimatePresence>
+      <Reveal
+        key={`${location.pathname}:${tenantKey}`}
+        className={[
+          "flex flex-1 flex-col [&>*:only-child]:flex-1",
+          "has-[>[data-page-fill=always]]:min-h-0 [&>[data-page-fill=always]]:min-h-0",
+          "md:has-[>[data-page-fill=md]]:min-h-0 md:[&>[data-page-fill=md]]:min-h-0",
+          "lg:has-[>[data-page-fill=lg]]:min-h-0 lg:[&>[data-page-fill=lg]]:min-h-0",
+        ].join(" ")}
+      >
+        {outlet}
+      </Reveal>
     </AppShell>
   );
 }

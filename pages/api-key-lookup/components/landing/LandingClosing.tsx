@@ -1,8 +1,7 @@
-import { motion } from "framer-motion";
 import { Icon as SatinIcon } from "satin-ui/react";
 import { BRAND_NAME, Wordmark } from "@code-proxy/assets";
 import { LandingButton } from "./LandingButton";
-import { useLandingFade } from "./landingMotion";
+import { LandingFade } from "./landingMotion";
 import type { LandingCopy } from "./landingCopy";
 
 export function LandingClosing({
@@ -14,23 +13,16 @@ export function LandingClosing({
   onLogin: () => void;
   onBrowseModels: () => void;
 }) {
-  const fade = useLandingFade();
-
   return (
     <>
-      {/*
-        整块反色收尾：浅色主题通篇是白与浅灰，末尾压一块深色能明确「读完了，该行动了」，
-        同时给浅色页面一个必要的重量。深色主题下用一层极淡的白色叠层与画布区分——
-        不再铺彩色光晕，只留细点阵的质感。
-      */}
       <section className="relative overflow-hidden bg-slate-950 py-28 dark:bg-white/[0.03] lg:py-40">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(70%_70%_at_50%_50%,#000,transparent)]"
         />
 
-        <motion.div
-          {...fade({ distance: 20 })}
+        <LandingFade
+          distance={20}
           className="relative mx-auto w-full max-w-screen-xl px-5 text-center sm:px-8 lg:px-10"
         >
           <h2 className="mx-auto max-w-3xl font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-5xl">
@@ -56,10 +48,9 @@ export function LandingClosing({
               />
             </button>
           </div>
-        </motion.div>
+        </LandingFade>
       </section>
 
-      {/* 页脚紧跟在深色收尾段之后，那一块深色已经把两段分开，不再画通栏分隔线。 */}
       <footer className="py-12">
         <div className="mx-auto flex w-full max-w-screen-xl flex-col items-center gap-5 px-5 text-center sm:flex-row sm:justify-between sm:px-8 sm:text-left lg:px-10">
           <Wordmark

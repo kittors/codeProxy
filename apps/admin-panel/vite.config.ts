@@ -130,7 +130,6 @@ export default defineConfig({
           }
           if (match("i18next", "react-i18next")) return "vendor-i18n";
           if (match("echarts", "echarts-for-react", "zrender")) return "vendor-echarts";
-          if (match("framer-motion")) return "vendor-animation";
           return undefined;
         },
       },

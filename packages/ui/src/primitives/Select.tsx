@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -24,6 +23,7 @@ import {
 import type { ControlSize } from "../utils/controlStyles";
 import { useScrollFade } from "../hooks/useScrollFade";
 import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -87,83 +87,34 @@ export function Select({
   size = "default",
 }: SelectProps) {
   const [open, setOpen] = useState(false);
-  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: open && !disabled, size: 24 });
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  /* --- position state for the portal popover ---  */
-  const [pos, setPos] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-    placement: "bottom" as "bottom" | "top",
-    ready: false,
+  const isOpen = open && !disabled;
+
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: listRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
   });
 
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const gap = 6;
-    const pad = 8;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-    const panelEl = listRef.current;
-    const panelHeight = panelEl?.offsetHeight || Math.min(options.length * 36 + 12, 280);
-    const panelWidth = Math.max(rect.width, panelEl?.offsetWidth || 0);
-    const spaceBelow = vh - rect.bottom - gap - pad;
-    const spaceAbove = rect.top - gap - pad;
-    const fitsBelow = spaceBelow >= panelHeight || spaceBelow >= spaceAbove;
-    const rawTop = fitsBelow ? rect.bottom + gap : rect.top - gap - panelHeight;
-    const top = Math.min(Math.max(pad, rawTop), Math.max(pad, vh - panelHeight - pad));
-    const left = Math.min(Math.max(pad, rect.left), Math.max(pad, vw - panelWidth - pad));
-    setPos({
-      top: Math.round(top),
-      left: Math.round(left),
-      width: rect.width,
-      placement: fitsBelow ? "bottom" : "top",
-      ready: true,
-    });
-  }, [options.length]);
-
-  /* Recompute position on open and on scroll/resize */
-  useLayoutEffect(() => {
-    if (!open) {
-      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
-      return;
-    }
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
-
-  /* Close on outside click */
   useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      if (triggerRef.current?.contains(target) || listRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
-  /* Keyboard navigation & Escape close */
+  /* Keyboard navigation */
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
-        return;
-      }
       if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End") {
         const panel = listRef.current;
         if (!panel) return;
@@ -190,7 +141,7 @@ export function Select({
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, options, value]);
+  }, [isOpen, options, value]);
 
   const selectedLabel = useMemo(() => {
     const match = options.find((o) => o.value === value);
@@ -207,25 +158,23 @@ export function Select({
 
   return (
     <>
-      {/* Hidden native input for forms */}
       {name ? <input type="hidden" name={name} value={value} /> : null}
 
-      {/* Trigger */}
       <button
         ref={triggerRef}
         id={id}
         type="button"
         role="combobox"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
-        data-state={selectTriggerState(open)}
+        data-state={selectTriggerState(isOpen)}
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={(event) => {
-          if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !open) {
+          if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !isOpen) {
             event.preventDefault();
             setOpen(true);
           }
@@ -240,32 +189,37 @@ export function Select({
         <Icon
           name="chevron-down"
           size={14}
-          className={cn(selectChevron, open && "rotate-180")}
+          className={cn(selectChevron, isOpen && "rotate-180")}
         />
       </button>
 
-      {/* Dropdown (portal) */}
-      {open && !disabled
+      {floating.mounted && !disabled
         ? createPortal(
             <div
               ref={listRef}
               role="listbox"
-              data-side={pos.placement}
-              data-state="open"
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-side={floating.side}
+              data-state={floating.isOpen ? "open" : "closed"}
               aria-label={ariaLabel}
-              className={cn(selectPanel, "!p-0")}
+              className={cn(
+                selectPanel,
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
               style={{
-                top: pos.top,
-                left: pos.left,
-                minWidth: pos.width,
+                top: floating.top,
+                left: floating.left,
+                minWidth: Math.max(floating.anchorWidth, 120),
                 maxWidth: "min(500px, 90vw)",
-                visibility: pos.ready ? undefined : "hidden",
+                transformOrigin: floating.origin,
               }}
             >
               {/* 面板本身保留圆角与投影，滚动交给里面这一层：选项多到要滚时上下渐隐，不会被面板边缘一刀切断。 */}
               <div
                 ref={listFade.ref}
-                style={{ maxHeight: 280 }}
+                style={{ maxHeight: Math.min(280, floating.availableHeight) }}
                 className="overflow-y-auto overscroll-contain p-1.5"
               >
                 {options.map((opt) => {

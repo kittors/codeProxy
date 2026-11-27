@@ -9,6 +9,7 @@ import {
 import {
   computeFloating,
   dropDismiss,
+  getViewportBounds,
   hideTip,
   hitAny,
   pushDismiss,
@@ -48,6 +49,8 @@ export interface SatinFloatingState {
   up: boolean;
   end: boolean;
   side: SatinFloatingPlacement;
+  anchorWidth: number;
+  availableHeight: number;
   ready: boolean;
   reposition: () => void;
 }
@@ -108,6 +111,8 @@ export function useSatinFloatingLayer({
     up: boolean;
     end: boolean;
     side: SatinFloatingPlacement;
+    anchorWidth: number;
+    availableHeight: number;
     ready: boolean;
   }>({
     top: 0,
@@ -116,6 +121,8 @@ export function useSatinFloatingLayer({
     up: placement === "top",
     end: align === "end",
     side: placement,
+    anchorWidth: 0,
+    availableHeight: 320,
     ready: false,
   });
 
@@ -160,6 +167,8 @@ export function useSatinFloatingLayer({
     const anchor = anchorRef.current;
     const panel = panelRef.current;
     if (!anchor || !panel) return;
+    const ar = anchor.getBoundingClientRect();
+    const bounds = getViewportBounds(margin);
     const pos = computeFloating(panel, anchor, {
       placement,
       align,
@@ -168,6 +177,9 @@ export function useSatinFloatingLayer({
     });
     const nextSide = resolveSide(placement, pos);
     const nextOrigin = `${pos.ox}px ${pos.oy}px`;
+    const nextAnchorWidth = Math.round(ar.width);
+    const space = pos.up ? ar.top - bounds.top - gap : bounds.bottom - ar.bottom - gap;
+    const nextAvailableHeight = Math.max(120, Math.floor(space));
     setLayout((prev) =>
       prev.top === pos.top &&
       prev.left === pos.left &&
@@ -175,6 +187,8 @@ export function useSatinFloatingLayer({
       prev.up === pos.up &&
       prev.end === pos.end &&
       prev.side === nextSide &&
+      prev.anchorWidth === nextAnchorWidth &&
+      prev.availableHeight === nextAvailableHeight &&
       prev.ready
         ? prev
         : {
@@ -184,6 +198,8 @@ export function useSatinFloatingLayer({
             up: pos.up,
             end: pos.end,
             side: nextSide,
+            anchorWidth: nextAnchorWidth,
+            availableHeight: nextAvailableHeight,
             ready: true,
           },
     );
@@ -249,6 +265,8 @@ export function useSatinFloatingLayer({
     up: layout.up,
     end: layout.end,
     side: layout.side,
+    anchorWidth: layout.anchorWidth,
+    availableHeight: layout.availableHeight,
     ready: layout.ready,
     reposition,
   };

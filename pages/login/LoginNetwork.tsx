@@ -1,24 +1,14 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
+import { usePrefersReducedMotion } from "@code-proxy/ui";
 import { Bot, Code2, SquareTerminal } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import "./loginNetwork.css";
 
 /**
  * 登录卡片四周的「中继网络」：左边是调用方（终端、Agent、编辑器），右边是各家模型，
- * 曲线都连到登录卡片的两侧——卡片本身就是那个网关。沿线路流过的短线代表一次请求（多彩风格是
- * 品牌绿，简约风格是强调色蓝），抵达时模型节点轻轻放大；右侧的模型图标会轮流换成别家，讲的是
- * 「接入所有模型」。
- * 整层随鼠标轻微反向位移，和卡片拉开前后层次。
- *
- * 节点是小卡片（伪元素细边 + 卡片投影），不画 border；出发 / 抵达时外圈闪一下的细环（动画的
- * 一部分，平时不可见）和短线同色。厂商 logo 保留各自的品牌色。
- *
- * 位置都按登录卡片的实际矩形算（ResizeObserver 跟踪），所以窗口多宽线路都接得上；
- * 两侧空间不够放节点时整层不渲染。纯装饰，对读屏隐藏；减少动态效果时只留静态线路。
+ * 曲线都连到登录卡片的两侧，整层随鼠标轻微反向阻尼位移（原生 rAF lerp，零外部动效库依赖）。
  */
 
-/** 与 loginNetwork.css 里的动画周期一致。 */
 const CYCLE_S = 6.4;
 const NODE = 44;
 
@@ -28,7 +18,6 @@ const CLIENTS = [
   { key: "ide", Icon: Code2, dx: -228, dy: 118 },
 ];
 
-/** 每个槽位轮流展示两家模型；dx 相对卡片右边缘，dy 相对卡片垂直中心。 */
 const MODEL_SLOTS = [
   { dx: 215, dy: -172, models: ["openai", "deepseek"] },
   { dx: 292, dy: -86, models: ["claude", "kimi"] },
@@ -60,8 +49,6 @@ const curve = (x1: number, y1: number, x2: number, y2: number) => {
 function useCardGeometry(rootRef: RefObject<HTMLDivElement | null>, cardRef: RefObject<HTMLElement | null>) {
   const [geometry, setGeometry] = useState<Geometry | null>(null);
 
-  // 用 useEffect 而不是 useLayoutEffect：卡片在本组件之后渲染，布局阶段按树的顺序挂 ref，
-  // 那时卡片的 ref 可能还没挂上；被动 effect 在所有 ref 都就位后才执行。
   useEffect(() => {
     const root = rootRef.current;
     const card = cardRef.current;
@@ -74,12 +61,10 @@ function useCardGeometry(rootRef: RefObject<HTMLDivElement | null>, cardRef: Ref
         height: base.height,
         left: rect.left - base.left,
         right: rect.right - base.left,
-        // 网络的垂直中心比卡片中心略高：卡片上方还有标题，整组构图的重心在那里。
         centerY: rect.top - base.top + rect.height / 2 - 24,
       });
     };
     measure();
-    // 卡片有一段上浮入场动画，getBoundingClientRect 会带上那段位移；入场结束后再量一次。
     const settle = window.setTimeout(measure, 700);
     const observer = new ResizeObserver(measure);
     observer.observe(root);
@@ -95,14 +80,12 @@ function useCardGeometry(rootRef: RefObject<HTMLDivElement | null>, cardRef: Ref
 
 export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | null> }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const geometry = useCardGeometry(rootRef, cardRef);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const [variants, setVariants] = useState<number[]>(() => MODEL_SLOTS.map(() => 0));
   const [hovered, setHovered] = useState<string | null>(null);
-  const offsetX = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
-  const offsetY = useSpring(useMotionValue(0), { stiffness: 60, damping: 18 });
 
-  // 每隔一个节拍换一个槽位的模型，五个槽位轮流，画面始终在缓慢变化而不是一齐闪。
   useEffect(() => {
     if (reduceMotion) return;
     let step = 0;
@@ -116,16 +99,40 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
 
   useEffect(() => {
     if (reduceMotion) return;
-    const onMove = (event: PointerEvent) => {
-      offsetX.set((event.clientX / window.innerWidth - 0.5) * -16);
-      offsetY.set((event.clientY / window.innerHeight - 0.5) * -12);
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let rafId = 0;
+
+    const tick = () => {
+      currentX += (targetX - currentX) * 0.08;
+      currentY += (targetY - currentY) * 0.08;
+      const el = layerRef.current;
+      if (el) {
+        el.style.transform = `translate3d(${currentX.toFixed(2)}px, ${currentY.toFixed(2)}px, 0)`;
+      }
+      if (Math.abs(targetX - currentX) > 0.05 || Math.abs(targetY - currentY) > 0.05) {
+        rafId = window.requestAnimationFrame(tick);
+      } else {
+        rafId = 0;
+      }
     };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [offsetX, offsetY, reduceMotion]);
+
+    const onMove = (event: PointerEvent) => {
+      targetX = (event.clientX / (window.innerWidth || 1) - 0.5) * -16;
+      targetY = (event.clientY / (window.innerHeight || 1) - 0.5) * -12;
+      if (!rafId) rafId = window.requestAnimationFrame(tick);
+    };
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, [reduceMotion]);
 
   const side = geometry ? Math.min(geometry.left, geometry.width - geometry.right) : 0;
-  // 两侧至少要放得下一列节点和一段线路；再窄就整层不画，免得节点压到卡片或出屏。
   const visible = geometry !== null && side >= 280;
   const scale = visible ? Math.min(1, Math.max(0.62, (side - 70) / 330)) : 1;
 
@@ -144,13 +151,14 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
         y: geometry.centerY + slot.dy,
         anchorY: geometry.centerY + (index - 2) * 34,
         model: slot.models[variants[index] % slot.models.length],
+        variantIndex: variants[index] % slot.models.length,
       }))
     : [];
 
   return (
     <div ref={rootRef} aria-hidden="true" className="pointer-events-none absolute inset-0 hidden select-none lg:block">
       {visible ? (
-        <motion.div className="absolute inset-0" style={{ x: offsetX, y: offsetY }}>
+        <div ref={layerRef} className="absolute inset-0 will-change-transform">
           <svg
             className="absolute inset-0 h-full w-full overflow-visible"
             viewBox={`0 0 ${geometry.width} ${geometry.height}`}
@@ -232,18 +240,14 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
                     className="ln-glow absolute -inset-1 rounded-2xl ring-1 ring-accent/40 colorful:ring-ok/40"
                     style={delay}
                   />
-                  <AnimatePresence initial={false}>
-                    <motion.span
-                      key={slot.model}
-                      className="absolute inset-0 flex items-center justify-center"
-                      initial={{ opacity: 0, scale: 0.6 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.6 }}
-                      transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }}
-                    >
-                      <VendorIcon modelId={slot.model} size={22} />
-                    </motion.span>
-                  </AnimatePresence>
+                  <span className={slot.variantIndex === 1 ? "sn-swap sn-on" : "sn-swap"}>
+                    <span className="sn-a">
+                      <VendorIcon modelId={slot.models[0]} size={22} />
+                    </span>
+                    <span className="sn-b">
+                      <VendorIcon modelId={slot.models[1]} size={22} />
+                    </span>
+                  </span>
                 </span>
                 <span
                   className={[
@@ -257,7 +261,7 @@ export function LoginNetwork({ cardRef }: { cardRef: RefObject<HTMLElement | nul
               </span>
             );
           })}
-        </motion.div>
+        </div>
       ) : null}
     </div>
   );

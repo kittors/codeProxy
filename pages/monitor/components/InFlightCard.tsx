@@ -1,5 +1,4 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { CircleCheck, Hourglass } from "@code-proxy/ui/icons";
 import {
@@ -35,20 +34,6 @@ const STAGE_TONE: Record<string, string> = {
 const NEUTRAL_TONE = STAGE_TONE.preparing;
 
 const pad = (value: number) => String(value).padStart(2, "0");
-
-/**
- * 空和有请求之间切换（夜里流量低时每几秒就来回一次）：提示和表格交叉淡入淡出，同时一个收起、一个
- * 展开，卡片高度平滑过渡，不再一下跳成另一个样子。曲线和时长与表格行展开收起相同（DataGrid.css 的
- * --grid-fold-ease、useRowMotion 的 ROW_FOLD_MS）。减少动效时直接切换。
- */
-const SWAP_TRANSITION = { duration: 0.28, ease: [0.37, 0, 0.63, 1] as const };
-const SWAP_MOTION = {
-  initial: { opacity: 0, height: 0, overflow: "hidden" },
-  animate: { opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } },
-  exit: { opacity: 0, height: 0, overflow: "hidden" },
-  transition: SWAP_TRANSITION,
-};
-const SWAP_INSTANT = { initial: false, transition: { duration: 0 } } as const;
 
 /** 开始时刻按浏览器本地时间显示到秒：在途请求都是刚刚开始的，不用写日期。 */
 function clockOf(iso: string): string {
@@ -113,7 +98,6 @@ export function InFlightCard({
 }) {
   const { t } = useTranslation();
   const visible = usePageVisible();
-  const reduceMotion = useReducedMotion();
   const requests = inFlight?.requests;
   const rows = useMemo(() => newestFirst(requests ?? [], receivedAt), [requests, receivedAt]);
   const running = visible && rows.length > 0;
@@ -139,8 +123,7 @@ export function InFlightCard({
       }
       loading={!inFlight && !error}
     >
-      <AnimatePresence initial={false}>
-        <motion.div key={view} {...(reduceMotion ? SWAP_INSTANT : SWAP_MOTION)}>
+      <div key={view} className="sn-fade-up">
           {view === "error" ? (
             <MonitorInlineNotice
               icon={Hourglass}
@@ -168,8 +151,7 @@ export function InFlightCard({
               />
             </InFlightClock.Provider>
           )}
-        </motion.div>
-      </AnimatePresence>
+      </div>
     </Card>
   );
 }

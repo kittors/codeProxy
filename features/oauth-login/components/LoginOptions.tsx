@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, SlidersHorizontal } from "@code-proxy/ui/icons";
 import { useId, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
@@ -99,84 +98,72 @@ export function LoginOptions({
             </span>
           ))}
         </span>
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="shrink-0"
+        <span
+          className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         >
           <ChevronDown size={14} aria-hidden="true" />
-        </motion.span>
+        </span>
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            id={panelId}
-            key="panel"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="grid gap-4 rounded-xl bg-subtle p-4">
-              {showProxy ? (
-                <ProxyPoolSelect
-                  value={values.proxyId}
-                  onChange={(proxyId) => onChange({ proxyId })}
-                  entries={proxyEntries}
-                  checkState={proxyCheckState}
-                  showDetails
-                  noneLabel={t("add_account.options.proxy_none")}
-                  label={t("add_account.options.proxy_label")}
-                  hint={t("add_account.options.proxy_hint")}
-                  ariaLabel={t("add_account.options.proxy_label")}
+      {open ? (
+        <div id={panelId} className="sn-fade-up overflow-hidden">
+          <div className="grid gap-4 rounded-xl bg-subtle p-4">
+            {showProxy ? (
+              <ProxyPoolSelect
+                value={values.proxyId}
+                onChange={(proxyId) => onChange({ proxyId })}
+                entries={proxyEntries}
+                checkState={proxyCheckState}
+                showDetails
+                noneLabel={t("add_account.options.proxy_none")}
+                label={t("add_account.options.proxy_label")}
+                hint={t("add_account.options.proxy_hint")}
+                ariaLabel={t("add_account.options.proxy_label")}
+              />
+            ) : null}
+            {provider.projectId ? (
+              <label className="grid gap-1.5">
+                <span className="text-xs font-medium text-ink-2">
+                  {t("add_account.options.project_label")}
+                </span>
+                <TextInput
+                  value={values.projectId}
+                  disabled={disabled}
+                  onChange={(event) => onChange({ projectId: event.currentTarget.value })}
+                  placeholder={t("add_account.options.project_placeholder")}
+                  aria-label={t("add_account.options.project_label")}
                 />
-              ) : null}
-              {provider.projectId ? (
-                <label className="grid gap-1.5">
-                  <span className="text-xs font-medium text-ink-2">
-                    {t("add_account.options.project_label")}
-                  </span>
-                  <TextInput
-                    value={values.projectId}
-                    disabled={disabled}
-                    onChange={(event) => onChange({ projectId: event.currentTarget.value })}
-                    placeholder={t("add_account.options.project_placeholder")}
-                    aria-label={t("add_account.options.project_label")}
-                  />
-                  <span className="text-xs text-ink-3">
-                    {t("add_account.options.project_hint")}
-                  </span>
-                </label>
-              ) : null}
-              {provider.endpointMode ? (
-                <div className="grid gap-1.5">
-                  <span className="text-xs font-medium text-ink-2">
-                    {t("add_account.options.endpoint_label")}
-                  </span>
-                  <Select
-                    value={values.usingApi ? "api" : "build"}
-                    onChange={(value) => onChange({ usingApi: value === "api" })}
-                    options={[
-                      { value: "build", label: t("add_account.options.endpoint_build") },
-                      { value: "api", label: t("add_account.options.endpoint_api") },
-                    ]}
-                    aria-label={t("add_account.options.endpoint_label")}
-                    disabled={disabled}
-                  />
-                  <span className="text-xs text-ink-3">
-                    {t(
-                      values.usingApi
-                        ? "add_account.options.endpoint_api_hint"
-                        : "add_account.options.endpoint_build_hint",
-                    )}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+                <span className="text-xs text-ink-3">
+                  {t("add_account.options.project_hint")}
+                </span>
+              </label>
+            ) : null}
+            {provider.endpointMode ? (
+              <div className="grid gap-1.5">
+                <span className="text-xs font-medium text-ink-2">
+                  {t("add_account.options.endpoint_label")}
+                </span>
+                <Select
+                  value={values.usingApi ? "api" : "build"}
+                  onChange={(value) => onChange({ usingApi: value === "api" })}
+                  options={[
+                    { value: "build", label: t("add_account.options.endpoint_build") },
+                    { value: "api", label: t("add_account.options.endpoint_api") },
+                  ]}
+                  aria-label={t("add_account.options.endpoint_label")}
+                  disabled={disabled}
+                />
+                <span className="text-xs text-ink-3">
+                  {t(
+                    values.usingApi
+                      ? "add_account.options.endpoint_api_hint"
+                      : "add_account.options.endpoint_build_hint",
+                  )}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

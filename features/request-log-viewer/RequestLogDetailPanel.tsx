@@ -7,7 +7,6 @@ import {
   formatDurationMs,
   formatInteger,
 } from "@code-proxy/ui";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, ArrowRight, Check, Copy, FileInput, FileOutput } from "@code-proxy/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +26,6 @@ const DASH = "—";
 
 function CopyValue({ value, label }: { value: string; label: string }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
@@ -45,18 +43,14 @@ function CopyValue({ value, label }: { value: string; label: string }) {
     >
       <span className="min-w-0 break-all">{value}</span>
       <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-ink-3">
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={copied ? "done" : "copy"}
-            initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.6 }}
-            transition={{ duration: reduceMotion ? 0 : 0.16 }}
-            className={copied ? "text-emerald-600 dark:text-emerald-400" : ""}
-          >
-            {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
-          </motion.span>
-        </AnimatePresence>
+        <span className={copied ? "sn-swap sn-on" : "sn-swap"}>
+          <span className="sn-a">
+            <Copy size={12} aria-hidden="true" />
+          </span>
+          <span className="sn-b text-emerald-600 dark:text-emerald-400">
+            <Check size={13} aria-hidden="true" />
+          </span>
+        </span>
       </span>
     </button>
   );
