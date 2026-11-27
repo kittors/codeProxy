@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "@code-proxy/ui/icons";
 import { Button, GRID_WIDTH, surface } from "@code-proxy/ui";
 import { Checkbox } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -39,7 +39,7 @@ export type ModelSelectionPanelProps = {
 
 // 提醒条只用琥珀淡底、不描边（同 Callout）。
 const NOTICE_CLASS =
-  "rounded-2xl bg-amber-500/[0.09] px-4 py-3 text-xs leading-5 text-amber-800 dark:text-amber-200";
+  "rounded-xl bg-amber-500/[0.09] px-4 py-3 text-xs leading-5 text-amber-800 dark:text-amber-200";
 
 type RuleChip = { list: ModelListName; entry: string; tagKey: string };
 
@@ -173,7 +173,7 @@ export function ModelSelectionPanel({
               </OverflowTooltip>
               {model.description ? (
                 <OverflowTooltip content={model.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-xs text-ink-3">
+                  <span className="block min-w-0 truncate text-xs text-sn-label3">
                     {model.description}
                   </span>
                 </OverflowTooltip>
@@ -189,7 +189,7 @@ export function ModelSelectionPanel({
         minWidth: 120,
         maxWidth: 360,
         cell: (model) => (
-          <span className="truncate whitespace-nowrap text-ink-2">{model.owned_by || "-"}</span>
+          <span className="truncate whitespace-nowrap text-sn-label2">{model.owned_by || "-"}</span>
         ),
         overflowTooltip: (model) => model.owned_by || "-",
       },
@@ -200,7 +200,7 @@ export function ModelSelectionPanel({
         minWidth: 180,
         maxWidth: 420,
         cell: (model) => (
-          <span className="truncate whitespace-nowrap font-mono text-xs tabular-nums text-ink-2">
+          <span className="truncate whitespace-nowrap font-mono text-xs tabular-nums text-sn-label2">
             {formatModelPrice(model.pricing ?? emptyModelPricing(), t("models_page.not_priced"))}
           </span>
         ),
@@ -223,17 +223,17 @@ export function ModelSelectionPanel({
     <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="text-sm font-semibold text-ink">
+          <div className="text-sm font-semibold text-sn-label">
             {t("channel_groups_page.allowed_models_label")}
           </div>
-          <div className="text-xs text-ink-3">
+          <div className="text-xs text-sn-label3">
             {t("channel_groups_page.allowed_models_hint")}
           </div>
           <div
             data-testid="model-gate-mode-hint"
             className={
               selection.exclusionsSupported
-                ? "text-xs text-ink-2"
+                ? "text-xs text-sn-label2"
                 : "text-xs text-amber-700 dark:text-amber-200"
             }
           >
@@ -275,7 +275,7 @@ export function ModelSelectionPanel({
             description={t("channel_groups_page.follow_upstream_models_hint")}
           />
           {upstreamPreview.length > 0 ? (
-            <p data-testid="follow-upstream-models-preview" className="text-xs text-ink-2">
+            <p data-testid="follow-upstream-models-preview" className="text-xs text-sn-label2">
               {t(
                 following
                   ? "channel_groups_page.follow_upstream_models_preview_on"
@@ -324,7 +324,7 @@ export function ModelSelectionPanel({
             {ruleChips.map(({ list, entry, tagKey }) => (
               <span
                 key={`${list}:${entry}`}
-                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface py-0.5 pl-2.5 pr-1"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-sn-raised py-0.5 pl-2.5 pr-1"
               >
                 <span className="truncate font-mono">{entry}</span>
                 <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-2xs font-semibold">
@@ -349,7 +349,7 @@ export function ModelSelectionPanel({
         <div
           className={[
             surface({ tone: "inset", radius: "2xl" }),
-            "px-4 py-6 text-sm text-ink-3",
+            "px-4 py-6 text-sm text-sn-label3",
           ].join(" ")}
         >
           {t("channel_groups_page.models_need_channels")}

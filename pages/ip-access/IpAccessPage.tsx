@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ShieldBan } from "lucide-react";
+import { RefreshCw, ShieldBan } from "@code-proxy/ui/icons";
 import { ipAccessApi, type IpAccessEffect, type IpAccessStatus } from "@code-proxy/api-client";
 import {
   Button,
@@ -83,21 +83,21 @@ export function IpAccessPage() {
         */}
         <div data-ip-access-header className="flex items-center justify-between gap-3 pb-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <h2 className="flex shrink-0 items-center gap-2 text-base font-semibold text-ink">
-              <ShieldBan size={18} className="text-ink-3" aria-hidden="true" />
+            <h2 className="flex shrink-0 items-center gap-2 text-base font-semibold text-sn-label">
+              <ShieldBan size={18} className="text-sn-label3" aria-hidden="true" />
               {t("ip_access.page_title")}
             </h2>
             {status ? (
-              <div className="hidden shrink-0 items-center gap-2 text-xs text-ink-3 min-[720px]:flex">
-                <span className="text-ink-4">|</span>
+              <div className="hidden shrink-0 items-center gap-2 text-xs text-sn-label3 min-[720px]:flex">
+                <span className="text-sn-label-off">|</span>
                 <span>
                   {t("ip_access.stat_active_rules")}{" "}
-                  <span className="font-mono tabular-nums text-ink">{status.active_rules ?? "—"}</span>
+                  <span className="font-mono tabular-nums text-sn-label">{status.active_rules ?? "—"}</span>
                 </span>
-                <span className="text-ink-4">|</span>
+                <span className="text-sn-label-off">|</span>
                 <span>
                   {t("ip_access.stat_auto_ban")}{" "}
-                  <span className="font-mono text-ink">
+                  <span className="font-mono text-sn-label">
                     {/* 字段缺失（旧后端）时写「—」，未知取值原样显示，不把 i18n 键名露出来。 */}
                     {status.auto_ban_mode
                       ? t(`ip_access.auto_ban_mode_${status.auto_ban_mode}`, {
@@ -108,7 +108,7 @@ export function IpAccessPage() {
                 </span>
                 {status.lockdown ? (
                   <>
-                    <span className="text-ink-4">|</span>
+                    <span className="text-sn-label-off">|</span>
                     <span className="font-medium text-amber-600 dark:text-amber-400">
                       {t("ip_access.stat_lockdown_on")}
                     </span>

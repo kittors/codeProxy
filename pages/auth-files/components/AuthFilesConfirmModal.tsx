@@ -1,4 +1,4 @@
-import { RotateCcw, Trash2 } from "lucide-react";
+import { RotateCcw, Trash2 } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { resolveAuthFileDisplayName } from "@code-proxy/domain";
@@ -58,7 +58,7 @@ export function AuthFilesConfirmModal({
               </li>
             ))}
             {names.length > listed.length ? (
-              <li className="font-sans text-ink-3">
+              <li className="font-sans text-sn-label3">
                 {t("auth_files.batch_delete_more", { count: names.length - listed.length })}
               </li>
             ) : null}

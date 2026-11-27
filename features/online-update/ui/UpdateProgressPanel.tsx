@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Check, ChevronDown, CircleAlert, Loader, Minus, Terminal, WifiOff } from "lucide-react";
+import { Check, ChevronDown, CircleAlert, Loader, Minus, Terminal, WifiOff } from "@code-proxy/ui/icons";
 import type { UpdateProgressResponse } from "@code-proxy/api-client/endpoints/update";
 import { Button } from "@code-proxy/ui";
 import type { UpdateLinkState } from "../progress/progressStream";
@@ -54,11 +54,11 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
           ) : state === "failed" ? (
             <CircleAlert size={12} className="text-rose-600 dark:text-rose-300" />
           ) : state === "skipped" ? (
-            <Minus size={12} className="text-ink-3" />
+            <Minus size={12} className="text-sn-label3" />
           ) : state === "active" ? (
-            <Loader size={12} className="animate-spin text-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300" />
+            <Loader size={12} className="animate-spin text-sn-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300" />
           ) : (
-            <span className="h-1.5 w-1.5 rounded-full bg-ink-4" />
+            <span className="h-1.5 w-1.5 rounded-full bg-sn-label-off" />
           );
 
         return (
@@ -67,10 +67,10 @@ function StageTimeline({ progress }: { progress?: UpdateProgressResponse | null 
             <span
               className={
                 state === "active"
-                  ? "font-medium text-ink"
+                  ? "font-medium text-sn-label"
                   : state === "skipped"
-                    ? "text-ink-3 line-through"
-                    : "text-ink-2"
+                    ? "text-sn-label3 line-through"
+                    : "text-sn-label2"
               }
             >
               {stageLabel(t, stage.id ?? "")}
@@ -112,7 +112,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
       >
         <Terminal size={12} />
         {t("auto_update.progress_logs")}
-        <span className="text-ink-3">
+        <span className="text-sn-label3">
           {t("auto_update.progress_log_count", { count: logs.length })}
         </span>
         <ChevronDown
@@ -129,7 +129,7 @@ function LogConsole({ progress }: { progress?: UpdateProgressResponse | null }) 
           className="mt-2 max-h-48 overflow-y-auto rounded-lg bg-[#171717] p-3 dark:bg-[#0d0d10]"
         >
           {logs.length === 0 ? (
-            <p className="font-mono text-xs text-ink-3">
+            <p className="font-mono text-xs text-sn-label3">
               {t("auto_update.progress_logs_empty")}
             </p>
           ) : (
@@ -181,7 +181,7 @@ export function UpdateProgressPanel({
       ? "bg-emerald-500"
       : tone === "rose"
         ? "bg-rose-500"
-        : "bg-accent bar-semantic:bg-sky-500";
+        : "bg-sn-accent bar-semantic:bg-sky-500";
 
   const bytes = formatBytes(progress?.progress_bytes);
   const totalBytes = formatBytes(progress?.progress_total_bytes);
@@ -202,18 +202,18 @@ export function UpdateProgressPanel({
   return (
     <div data-testid="update-progress-console" className="min-w-0">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-sm text-ink-2">
+        <p className="min-w-0 truncate text-sm text-sn-label2">
           {progressMessage(t, progress)}
         </p>
         <span
           data-testid="update-progress-percent"
-          className="shrink-0 font-mono text-sm font-semibold tabular-nums text-ink"
+          className="shrink-0 font-mono text-sm font-semibold tabular-nums text-sn-label"
         >
           {percent === null ? "--" : `${Math.round(percent)}%`}
         </span>
       </div>
 
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-track">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sn-sunken">
         <div
           data-testid="update-progress-fill"
           className={`h-full rounded-full transition-[width] duration-500 ease-out ${barClass}`}
@@ -226,7 +226,7 @@ export function UpdateProgressPanel({
       {bytes && totalBytes ? (
         <p
           data-testid="update-progress-bytes"
-          className="mt-1.5 font-mono text-xs text-ink-3"
+          className="mt-1.5 font-mono text-xs text-sn-label3"
         >
           {bytes} / {totalBytes}
         </p>
@@ -235,7 +235,7 @@ export function UpdateProgressPanel({
       {steps ? (
         <p
           data-testid="update-progress-details"
-          className="mt-1.5 text-xs text-ink-3"
+          className="mt-1.5 text-xs text-sn-label3"
         >
           {steps}
         </p>
@@ -245,7 +245,7 @@ export function UpdateProgressPanel({
         <p
           data-testid="update-reconnecting"
           // 说明条：天蓝淡底 + 彩色图标；简约风格正文保持中性色（同 Callout），多彩风格正文是天蓝字。
-          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-500/[0.07] p-2.5 text-xs leading-5 text-ink-2 colorful:text-sky-800 colorful:dark:text-sky-200"
+          className="mt-3 flex items-start gap-2 rounded-lg bg-sky-500/[0.07] p-2.5 text-xs leading-5 text-sn-label2 colorful:text-sky-800 colorful:dark:text-sky-200"
         >
           <WifiOff size={14} className="mt-0.5 shrink-0 text-sky-600 dark:text-sky-300" />
           {stale ? t("auto_update.reconnecting_slow") : t("auto_update.reconnecting")}

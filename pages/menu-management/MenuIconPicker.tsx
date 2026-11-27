@@ -54,13 +54,20 @@ import {
   UsersRound,
   Wrench,
   X,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
-import { TextInput, floatingPanelSurface, resolveMenuIcon, iconHueClass, ScrollFade } from "@code-proxy/ui";
+import {
+  TextInput,
+  floatingPanelSurface,
+  resolveMenuIcon,
+  resolvePortalContainer,
+  iconHueClass,
+  ScrollFade,
+} from "@code-proxy/ui";
 
 
-type IconOption = { name: string; icon: LucideIcon };
+type IconOption = { name: string; icon: SatinIconComponent };
 
 const PICKER_ICONS: IconOption[] = [
   { name: "layout-dashboard", icon: LayoutDashboard },
@@ -206,14 +213,14 @@ export function MenuIconPicker({
             }}
             startAdornment={
               value ? (
-                <SelectedIcon size={16} className={`text-ink-3 ${iconHueClass(SelectedIcon)}`} aria-hidden="true" />
+                <SelectedIcon size={16} className={`text-sn-label3 ${iconHueClass(SelectedIcon)}`} aria-hidden="true" />
               ) : null
             }
             endAdornment={
               value && !disabled ? (
                 <button
                   type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
                   aria-label={t("common.clear", { defaultValue: "Clear" })}
                   onClick={() => onChange("")}
                 >
@@ -226,8 +233,7 @@ export function MenuIconPicker({
         <button
           type="button"
           disabled={disabled}
-          // 和左边的输入框同一种控件外观：胶囊形、阴影描边，不画 border。
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-field text-ink-2 shadow-control transition-[color,box-shadow] hover:text-ink hover:shadow-control-hover focus-visible:shadow-control-focus focus-visible:outline-none disabled:opacity-50"
+          className="sn-btn sn-secondary sn-ibtn !h-9 !w-9 shrink-0"
           aria-label={t("identity_admin.menu_icon_picker")}
           onClick={() => {
             if (!disabled) setOpen((current) => !current);
@@ -241,23 +247,25 @@ export function MenuIconPicker({
         ? createPortal(
             <div
               ref={panelRef}
+              data-state="open"
+              data-side="bottom"
               className={`fixed z-[9999] overflow-hidden ${floatingPanelSurface}`}
               style={{ top: pos.top, left: pos.left, width: pos.width }}
             >
-              <div className="flex items-center gap-2 border-b border-line px-3 py-2">
-                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <div className="flex items-center gap-2 border-b border-[var(--sn-line)] px-3 py-2">
+                <Search size={14} className="shrink-0 text-[var(--sn-label3)]" aria-hidden="true" />
                 <input
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={t("identity_admin.menu_icon_search")}
                   aria-label={t("identity_admin.menu_icon_search")}
-                  className="h-7 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-4"
+                  className="h-7 w-full bg-transparent text-sm text-[var(--sn-label)] outline-none placeholder:text-[var(--sn-label3)]"
                 />
               </div>
               <ScrollFade className="grid max-h-64 grid-cols-6 gap-1 overflow-y-auto p-2">
                 {icons.length === 0 ? (
-                  <div className="col-span-6 px-2 py-6 text-center text-xs text-ink-3">
+                  <div className="col-span-6 px-2 py-6 text-center text-xs text-[var(--sn-label3)]">
                     {t("common.no_results", { defaultValue: "无匹配结果" })}
                   </div>
                 ) : (
@@ -273,8 +281,8 @@ export function MenuIconPicker({
                         aria-pressed={active}
                         className={
                           active
-                            ? "inline-flex h-10 items-center justify-center rounded-lg bg-accent text-accent-fg"
-                            : "inline-flex h-10 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+                            ? "sn-btn sn-primary sn-ibtn !h-10 !w-full !rounded-lg"
+                            : "sn-btn sn-ghost sn-ibtn !h-10 !w-full !rounded-lg text-[var(--sn-label2)]"
                         }
                         onClick={() => {
                           onChange(item.name);
@@ -289,7 +297,7 @@ export function MenuIconPicker({
                 )}
               </ScrollFade>
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

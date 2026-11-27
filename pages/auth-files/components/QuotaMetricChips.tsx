@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock } from "lucide-react";
+import { Clock } from "@code-proxy/ui/icons";
 import { Skeleton } from "@code-proxy/ui";
 import { type QuotaItem } from "@features/quota-preview/quota-helpers";
 import { useQuotaWindowSpendText } from "@features/quota-preview/quota-spend";
@@ -34,7 +34,7 @@ export function QuotaProgressRing({ percent }: { percent: number | null }) {
           background: `conic-gradient(${tone.fillHex} ${deg}deg, rgba(255, 255, 255, 0.14) 0deg)`,
         }}
       />
-      <span className="absolute inset-[2px] rounded-full bg-surface" />
+      <span className="absolute inset-[2px] rounded-full bg-sn-raised" />
     </span>
   );
 }

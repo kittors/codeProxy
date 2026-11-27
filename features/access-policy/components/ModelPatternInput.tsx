@@ -9,9 +9,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Asterisk, Plus, X } from "lucide-react";
+import { Asterisk, Plus, X } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
-import { HUE_GLYPH, HUE_SOFT, cn, controlMultilineSurface, floatingPanelSurface } from "@code-proxy/ui";
+import {
+  HUE_GLYPH,
+  HUE_SOFT,
+  cn,
+  controlMultilineSurface,
+  floatingPanelSurface,
+  resolvePortalContainer,
+} from "@code-proxy/ui";
 import { isWildcardPattern, matchingCatalogModels, modelPatternMatches, normalizeModelPattern } from "../model/modelMatch";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 
@@ -47,19 +54,19 @@ export function ModelPatternChip({
       className={cn(
         "inline-flex max-w-full min-w-0 items-center gap-1 rounded-full py-0.5 pl-1.5 text-xs font-medium",
         onRemove ? "pr-0.5" : "pr-2",
-        "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+        "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
         wildcard ? HUE_SOFT.fuchsia : null,
       )}
       title={wildcard && typeof matchCount === "number" ? `${pattern} · ${matchCount}` : pattern}
     >
       {wildcard ? (
-        <Asterisk size={12} aria-hidden="true" className={cn("shrink-0 text-ink-3", HUE_GLYPH.fuchsia)} />
+        <Asterisk size={12} aria-hidden="true" className={cn("shrink-0 text-sn-label3", HUE_GLYPH.fuchsia)} />
       ) : (
         <VendorIcon modelId={pattern} size={12} />
       )}
       <span className="min-w-0 truncate font-mono">{pattern}</span>
       {wildcard && typeof matchCount === "number" ? (
-        <span className="shrink-0 rounded-full bg-ink/[0.06] px-1 text-2xs tabular-nums dark:bg-white/[0.08]">
+        <span className="shrink-0 rounded-full bg-sn-label/[0.06] px-1 text-2xs tabular-nums dark:bg-white/[0.08]">
           {matchCount}
         </span>
       ) : null}
@@ -68,7 +75,7 @@ export function ModelPatternChip({
           type="button"
           onClick={onRemove}
           aria-label={removeLabel}
-          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-ink/[0.08] hover:text-ink dark:hover:bg-white/[0.1]"
+          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-sn-label3 hover:bg-sn-label/[0.08] hover:text-sn-label dark:hover:bg-white/[0.1]"
         >
           <X size={10} aria-hidden="true" />
         </button>
@@ -249,7 +256,7 @@ export function ModelPatternInput({
           placeholder={value.length === 0 ? placeholder : undefined}
           autoComplete="off"
           spellCheck={false}
-          className="h-7 min-w-[8rem] flex-1 bg-transparent px-1 font-mono text-xs text-ink outline-none placeholder:font-sans placeholder:text-ink-3"
+          className="h-7 min-w-[8rem] flex-1 bg-transparent px-1 font-mono text-xs text-sn-label outline-none placeholder:font-sans placeholder:text-sn-label3"
           onChange={(event) => {
             setText(event.target.value);
             setActive(0);
@@ -284,16 +291,16 @@ export function ModelPatternInput({
                   aria-selected={index === active}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs",
-                    index === active ? "bg-hover text-ink" : "text-ink-2",
+                    index === active ? "bg-sn-hover text-sn-label" : "text-sn-label2",
                   )}
                   onMouseEnter={() => setActive(index)}
                   onClick={() => add([item.value])}
                 >
                   {item.kind === "add" ? (
                     isWildcardPattern(item.value) ? (
-                      <Asterisk size={13} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.fuchsia)} />
+                      <Asterisk size={13} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.fuchsia)} />
                     ) : (
-                      <Plus size={13} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.blue)} />
+                      <Plus size={13} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.blue)} />
                     )
                   ) : (
                     (item.icon ?? <VendorIcon modelId={item.value} size={13} />)
@@ -301,11 +308,11 @@ export function ModelPatternInput({
                   <span className="min-w-0 flex-1 truncate font-mono">
                     {item.kind === "add" ? t("access_policy.add_pattern", { pattern: item.value }) : item.value}
                   </span>
-                  {item.hint ? <span className="shrink-0 text-2xs text-ink-3">{item.hint}</span> : null}
+                  {item.hint ? <span className="shrink-0 text-2xs text-sn-label3">{item.hint}</span> : null}
                 </div>
               ))}
             </div>,
-            document.body,
+            resolvePortalContainer(anchorRef.current),
           )
         : null}
     </>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "lucide-react";
+import { Activity, BarChart3, CalendarRange, FileStack, Gauge, LineChart, RefreshCw } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, DialogIcon, iconHueClass, type Hue } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -28,21 +28,21 @@ function StatCard({
   help: ReactNode;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl bg-subtle px-4 py-3.5">
+    <div className="flex flex-col rounded-xl bg-sn-subtle px-4 py-3.5">
       <div className="flex items-center gap-2">
         <span
           aria-hidden="true"
-          className="shrink-0 text-ink-3 icon-hue:hidden [&_svg.lucide]:size-[16px]"
+          className="shrink-0 text-sn-label3 icon-hue:hidden [&_svg:is(.lucide,.sn-ic)]:size-[16px]"
         >
           {icon}
         </span>
         <DialogIcon tone={hue} size="sm" className="hidden icon-hue:grid">
           {icon}
         </DialogIcon>
-        <p className="min-w-0 truncate text-xs font-medium text-ink-3">{label}</p>
+        <p className="min-w-0 truncate text-xs font-medium text-sn-label3">{label}</p>
       </div>
-      <div className="mt-2.5 text-2xl font-semibold tracking-tight text-ink tabular-nums">{value}</div>
-      <p className="mt-1 text-xs leading-5 text-ink-3">{help}</p>
+      <div className="mt-2.5 text-2xl font-semibold tracking-tight text-sn-label tabular-nums">{value}</div>
+      <p className="mt-1 text-xs leading-5 text-sn-label3">{help}</p>
     </div>
   );
 }
@@ -117,11 +117,11 @@ export function GroupOverviewModal({
             </TabsList>
           </Tabs>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-hover px-3.5 text-sm font-medium text-ink-2">
+            <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-sn-hover px-3.5 text-sm font-medium text-sn-label2">
               <CalendarRange
                 size={14}
                 aria-hidden="true"
-                className={`text-ink-3 ${iconHueClass(CalendarRange)}`}
+                className={`text-sn-label3 ${iconHueClass(CalendarRange)}`}
               />
               {t("auth_files.group_overview_fixed_7_days")}
             </span>
@@ -171,18 +171,18 @@ export function GroupOverviewModal({
                 <div className="space-y-1">
                   {activeGroupOverview.weeklyFamilies.map((family) => (
                     <div key={family.id} className="flex items-baseline justify-between gap-3">
-                      <span className="min-w-0 truncate text-xs font-normal text-ink-3">
+                      <span className="min-w-0 truncate text-xs font-normal text-sn-label3">
                         {family.label}
                       </span>
                       <span className="shrink-0 text-lg">
-                        {formatAveragePercent(family.remainingPercent)}
+                        {formatAveragePercent(family.usedPercent)}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
                 formatAveragePercent(
-                  activeGroupOverview.weeklyFamilies[0]?.remainingPercent ??
+                  activeGroupOverview.weeklyFamilies[0]?.usedPercent ??
                     activeGroupOverview.averageWeekly,
                 )
               )
@@ -210,8 +210,8 @@ export function GroupOverviewModal({
 
         <div className="min-h-0 flex-1">
           {activeGroupRows.length === 0 ? (
-            <div className="grid place-items-center rounded-2xl bg-subtle px-4 py-12 text-center text-sm text-ink-3">
-              <BarChart3 size={20} className="mb-2 text-ink-4" aria-hidden="true" />
+            <div className="grid place-items-center rounded-xl bg-sn-subtle px-4 py-12 text-center text-sm text-sn-label3">
+              <BarChart3 size={20} className="mb-2 text-sn-label-off" aria-hidden="true" />
               {t("auth_files.group_overview_empty")}
             </div>
           ) : (

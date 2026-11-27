@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw } from "@code-proxy/ui/icons";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";
@@ -53,7 +52,7 @@ export function LoginStatusBar({
   let pulse = true;
   let text: string;
   let remaining: string | null = null;
-  let remainingTone = "text-ink-3";
+  let remainingTone = "text-sn-label3";
 
   if (phase.name === "waiting") {
     text = waitingLabel;
@@ -81,36 +80,28 @@ export function LoginStatusBar({
         {dot ? (
           <>
             {pulse ? (
-              <motion.span
-                className={`absolute h-2.5 w-2.5 rounded-full ${dot}`}
-                animate={{ scale: [1, 2.2], opacity: [0.45, 0] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
+              <span
+                className={`absolute h-2.5 w-2.5 animate-ping rounded-full opacity-45 ${dot}`}
               />
             ) : null}
             <span className={`relative h-2 w-2 rounded-full ${dot}`} />
           </>
         ) : (
-          <Loader2 size={14} className="animate-spin text-ink-2" />
+          <Loader2 size={14} className="animate-spin text-sn-label2" />
         )}
       </span>
-      <AnimatePresence initial={false} mode="wait">
-        <motion.p
-          key={text}
-          initial={{ opacity: 0, y: 3 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -3 }}
-          transition={{ duration: 0.15 }}
-          className={[
-            "min-w-0 flex-1 text-sm",
-            phase.name === "failed" ? "text-rose-700 dark:text-rose-300" : "text-ink-2",
-          ].join(" ")}
-        >
-          {text}
-          {remaining ? (
-            <span className={`ml-2 tabular-nums ${remainingTone}`}>· {remaining}</span>
-          ) : null}
-        </motion.p>
-      </AnimatePresence>
+      <p
+        key={text}
+        className={[
+          "sn-fade-up min-w-0 flex-1 text-sm",
+          phase.name === "failed" ? "text-rose-700 dark:text-rose-300" : "text-sn-label2",
+        ].join(" ")}
+      >
+        {text}
+        {remaining ? (
+          <span className={`ml-2 tabular-nums ${remainingTone}`}>· {remaining}</span>
+        ) : null}
+      </p>
       {phase.name === "waiting" || phase.name === "failed" ? (
         <Button
           size="xs"

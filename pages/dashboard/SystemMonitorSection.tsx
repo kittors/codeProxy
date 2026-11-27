@@ -14,9 +14,9 @@ import {
   Network,
   Wifi,
   Zap,
-  type LucideIcon,
-} from "lucide-react";
-import { AnimatedNumber, Card } from "@code-proxy/ui";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
+import { AnimatedNumber, Card, StatusTag } from "@code-proxy/ui";
 import type { SystemStats } from "./useSystemStats";
 import { formatBytes, formatMs, formatRate, formatUptime } from "./systemFormat";
 import {
@@ -81,14 +81,14 @@ function MetricHeader({
   label,
   children,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   label: string;
   children?: ReactNode;
 }) {
   return (
     <div className="relative flex items-center justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink-2">
+      <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-sn-label2">
         <MetricIcon icon={icon} hue={hue} />
         <span className="truncate">{label}</span>
       </span>
@@ -119,9 +119,9 @@ function HealthHeroCard({ score }: { score: number }) {
           <AnimatedNumber
             value={score}
             format={(value) => String(Math.round(value))}
-            className="text-4xl font-semibold tracking-tight tabular-nums text-ink"
+            className="text-4xl font-semibold tracking-tight tabular-nums text-sn-label"
           />
-          <span className="mt-0.5 text-xs font-medium text-ink-3">/ 100</span>
+          <span className="mt-0.5 text-xs font-medium text-sn-label3">/ 100</span>
         </MeterRing>
       </div>
     </Card>
@@ -132,18 +132,18 @@ function HealthHeroCard({ score }: { score: number }) {
 function StatLine({ label, value, marker }: { label: string; value: string; marker?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-1.5 text-xs text-ink-3">
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-sn-label3">
         {marker}
         <span className="truncate">{label}</span>
       </span>
-      <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">{value}</span>
+      <span className="shrink-0 text-sm font-semibold tabular-nums text-sn-label">{value}</span>
     </div>
   );
 }
 
 function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
   const { t } = useTranslation();
-  const pct = Math.min(Math.max(stats.disk_pct, 0), 100);
+  const pct = Math.min(Math.max(Number(stats.disk_pct ?? 0), 0), 100);
   const level = usageLevel(pct);
   const tone = usageTone(pct, "sky");
 
@@ -155,10 +155,10 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
 
       <div className="flex flex-1 items-center justify-center">
         <MeterRing value={pct} tone={tone} className="h-32 w-32" strokeWidth={12}>
-          <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink">
-            {stats.disk_pct.toFixed(1)}%
+          <span className="text-2xl font-semibold tracking-tight tabular-nums text-sn-label">
+            {pct.toFixed(1)}%
           </span>
-          <span className="mt-0.5 text-xs font-medium text-ink-3">{t("system_monitor.disk_used")}</span>
+          <span className="mt-0.5 text-xs font-medium text-sn-label3">{t("system_monitor.disk_used")}</span>
         </MeterRing>
       </div>
 
@@ -172,9 +172,9 @@ function DiskUsageRingCard({ stats }: { stats: SystemStats }) {
         <StatLine
           label={t("system_monitor.disk_free")}
           value={formatBytes(stats.disk_free)}
-          marker={<span className="size-1.5 rounded-full bg-ink-4" aria-hidden="true" />}
+          marker={<span className="size-1.5 rounded-full bg-sn-label-off" aria-hidden="true" />}
         />
-        <p className="pt-0.5 text-center text-xs text-ink-3">
+        <p className="pt-0.5 text-center text-xs text-sn-label3">
           {t("system_monitor.total_size", { size: formatBytes(stats.disk_total) })}
         </p>
       </div>
@@ -194,7 +194,7 @@ function ResourceBar({
   pct,
   detail,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   label: string;
   value: string;
@@ -207,12 +207,12 @@ function ResourceBar({
     <Card bodyClassName="mt-0" className="h-full">
       <MetricHeader icon={icon} hue={hue} label={label}>
         <span className="flex shrink-0 items-center gap-2">
-          <span className="text-base font-semibold tabular-nums text-ink">{value}</span>
+          <span className="text-base font-semibold tabular-nums text-sn-label">{value}</span>
           <LevelDot level={level} label={t(USAGE_LEVEL_LABEL_KEY[level])} />
         </span>
       </MetricHeader>
       <MeterBar pct={pct} tone={meterTone(level, hue)} className="mt-3 h-bar" />
-      {detail ? <p className="mt-1.5 text-xs text-ink-3">{detail}</p> : null}
+      {detail ? <p className="mt-1.5 text-xs text-sn-label3">{detail}</p> : null}
     </Card>
   );
 }
@@ -230,7 +230,7 @@ function MiniKpi({
 }: {
   label: string;
   value: string;
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   sublabel?: string;
 }) {
@@ -238,8 +238,8 @@ function MiniKpi({
     <Card bodyClassName="mt-0 flex h-full flex-col justify-between gap-3" className="h-full">
       <MetricHeader icon={icon} hue={hue} label={label} />
       <div className="min-w-0">
-        <p className="truncate text-xl font-semibold tracking-tight tabular-nums text-ink">{value}</p>
-        {sublabel ? <p className="mt-0.5 truncate text-xs text-ink-3">{sublabel}</p> : null}
+        <p className="truncate text-xl font-semibold tracking-tight tabular-nums text-sn-label">{value}</p>
+        {sublabel ? <p className="mt-0.5 truncate text-xs text-sn-label3">{sublabel}</p> : null}
       </div>
     </Card>
   );
@@ -254,11 +254,13 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
   const rows = [
     {
       icon: ArrowUpRight,
+      iconTone: "text-emerald-600 dark:text-emerald-400",
       rate: formatRate(stats.net_send_rate),
       total: t("system_monitor.up_total", { size: formatBytes(stats.net_bytes_sent) }),
     },
     {
       icon: ArrowDownRight,
+      iconTone: "text-sky-600 dark:text-sky-400",
       rate: formatRate(stats.net_recv_rate),
       total: t("system_monitor.down_total", { size: formatBytes(stats.net_bytes_recv) }),
     },
@@ -271,12 +273,12 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           <div key={row.total} className="flex min-w-0 items-start gap-2">
             <row.icon
               size={14}
-              className="mt-1 shrink-0 text-ink-3 icon-hue:text-emerald-600 icon-hue:dark:text-emerald-300"
+              className={`mt-1 shrink-0 ${row.iconTone}`}
               aria-hidden="true"
             />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold tabular-nums text-ink">{row.rate}</p>
-              <p className="truncate text-xs text-ink-3">{row.total}</p>
+              <p className="truncate text-sm font-semibold tabular-nums text-sn-label">{row.rate}</p>
+              <p className="truncate text-xs text-sn-label3">{row.total}</p>
             </div>
           </div>
         ))}
@@ -314,8 +316,8 @@ function AverageLatencyCard({
       <div className="grid flex-1 grid-cols-2 items-end gap-3">
         {tiles.map((tile) => (
           <div key={tile.label} className="min-w-0">
-            <div className="truncate text-xs text-ink-3">{tile.label}</div>
-            <div className="mt-1 truncate text-xl font-semibold tracking-tight tabular-nums text-ink">
+            <div className="truncate text-xs text-sn-label3">{tile.label}</div>
+            <div className="mt-1 truncate text-xl font-semibold tracking-tight tabular-nums text-sn-label">
               {tile.value}
             </div>
           </div>
@@ -330,7 +332,7 @@ function AverageLatencyCard({
    ═══════════════════════════════════════════════════════════ */
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`rounded bg-track motion-safe:animate-pulse ${className}`} />;
+  return <div className={`rounded bg-sn-sunken motion-safe:animate-pulse ${className}`} />;
 }
 
 function SkeletonLayout() {
@@ -370,28 +372,15 @@ function SkeletonLayout() {
    ═══════════════════════════════════════════════════════════ */
 
 /**
- * 右上角的数据通道状态：实时推送是一颗绿色呼吸点，退回轮询时点是灰色。简约风格下胶囊保持
- * 中性、颜色只在那颗点上；多彩风格下实时推送时整块是绿色淡底。
+ * 右上角的数据通道状态：统一采用 Satin 原生 `.sn-tag` 状态胶囊，实时推送呈脉冲态 `.sn-run`，
+ * 退回轮询时为中性灰胶囊。
  */
 function LiveIndicator({ connected }: { connected: boolean }) {
   const { t } = useTranslation();
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07]",
-        connected
-          ? "text-ink-2 colorful:bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:bg-emerald-400/15 colorful:dark:text-emerald-300"
-          : "text-ink-3",
-      ].join(" ")}
-    >
-      <span className="relative flex size-2">
-        {connected ? (
-          <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-60 motion-safe:animate-ping" />
-        ) : null}
-        <span className={`relative size-2 rounded-full ${connected ? "bg-emerald-500" : "bg-ink-4"}`} />
-      </span>
+    <StatusTag size="sm" tone={connected ? "run" : "neutral"}>
       {connected ? t("system_monitor.live") : t("system_monitor.polling")}
-    </span>
+    </StatusTag>
   );
 }
 
@@ -412,10 +401,9 @@ export function SystemMonitorSection({
         flat
         title={t("system_monitor.title")}
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-hover px-2.5 py-1 text-xs font-medium text-ink-3">
-            <span className="size-2 rounded-full bg-ink-4 motion-safe:animate-pulse" />
+          <StatusTag size="sm" tone="run">
             {t("system_monitor.connecting")}
-          </span>
+          </StatusTag>
         }
       >
         <SkeletonLayout />
@@ -490,31 +478,31 @@ export function SystemMonitorSection({
             icon={Cpu}
             hue="sky"
             label={t("system_monitor.system_cpu")}
-            value={`${stats.system_cpu_pct.toFixed(1)}%`}
-            pct={stats.system_cpu_pct}
+            value={`${Number(stats.system_cpu_pct ?? 0).toFixed(1)}%`}
+            pct={Number(stats.system_cpu_pct ?? 0)}
           />
           <ResourceBar
             icon={MemoryStick}
             hue="violet"
             label={t("system_monitor.system_memory")}
-            value={`${stats.system_mem_pct.toFixed(1)}%`}
-            pct={stats.system_mem_pct}
-            detail={`${formatBytes(stats.system_mem_used)} / ${formatBytes(stats.system_mem_total)}`}
+            value={`${Number(stats.system_mem_pct ?? 0).toFixed(1)}%`}
+            pct={Number(stats.system_mem_pct ?? 0)}
+            detail={`${formatBytes(stats.system_mem_used ?? 0)} / ${formatBytes(stats.system_mem_total ?? 0)}`}
           />
           <ResourceBar
             icon={Cpu}
             hue="sky"
             label={t("system_monitor.service_cpu")}
-            value={`${stats.process_cpu_pct.toFixed(1)}%`}
-            pct={Math.min(stats.process_cpu_pct, 100)}
+            value={`${Number(stats.process_cpu_pct ?? 0).toFixed(1)}%`}
+            pct={Math.min(Number(stats.process_cpu_pct ?? 0), 100)}
           />
           <ResourceBar
             icon={MemoryStick}
             hue="violet"
             label={t("system_monitor.service_memory")}
-            value={`${stats.process_mem_pct.toFixed(1)}%`}
-            pct={stats.process_mem_pct}
-            detail={formatBytes(stats.process_mem_bytes)}
+            value={`${Number(stats.process_mem_pct ?? 0).toFixed(1)}%`}
+            pct={Number(stats.process_mem_pct ?? 0)}
+            detail={formatBytes(stats.process_mem_bytes ?? 0)}
           />
         </div>
 

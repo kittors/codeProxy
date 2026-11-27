@@ -2,7 +2,6 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
-  CalendarClock,
   Download,
   Eye,
   Gauge,
@@ -10,14 +9,15 @@ import {
   RefreshCw,
   Tags,
   Zap,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { formatLatency } from "@features/provider-latency";
 import { AuthFileSuccessRateCell } from "../components/AuthFileSuccessRateCell";
 import { AuthFilePlanBadge } from "../components/AuthFilePlanBadge";
+import { AuthFileSubscriptionBadge } from "../components/AuthFileSubscriptionBadge";
 import { ProviderTag, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { GRID_ROW_ACTIONS_COLUMN, GRID_WIDTH, GridRowActions, HoverTooltip } from "@code-proxy/ui";
-import { ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
+import { Checkbox, ToggleSwitch, type DataGridColumn } from "@code-proxy/ui";
 import {
   type FilesViewMode,
   type UsageIndex,
@@ -51,7 +51,6 @@ import {
   CLAUDE_OAUTH_HEALTH_TONE_CLASSES,
   KNOWN_QUOTA_TEXT_KEYS,
   RESTRICTION_TONE_CLASSES,
-  SUBSCRIPTION_TONE_CLASSES,
 } from "./presentationStyles";
 
 interface UseAuthFilesFilesPresentationOptions {
@@ -207,35 +206,9 @@ export function useAuthFilesFilesPresentation({
   const renderSubscriptionBadge = useCallback(
     (file: AuthFileItem): ReactNode | null => {
       const status = resolveAuthFileSubscriptionStatus(file, nowMs);
-      if (!status) return null;
-
-      const days = Math.max(0, Math.abs(status.remainingDays));
-      const label = status.expired
-        ? t("auth_files.subscription_expired_short", { days })
-        : status.expiresAtMs - nowMs < 24 * 60 * 60 * 1000
-          ? t("auth_files.subscription_remaining_less_than_day")
-          : t("auth_files.subscription_remaining_short", { days });
-      const title = t("auth_files.subscription_expires_at_title", {
-        start: status.startedAtText,
-        date: status.expiresAtText,
-        period: t(`auth_files.subscription_period_${status.period}`),
-      });
-
-      return (
-        <HoverTooltip content={title}>
-          <span
-            className={[
-              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs font-semibold tabular-nums",
-              SUBSCRIPTION_TONE_CLASSES[status.tone],
-            ].join(" ")}
-          >
-            <CalendarClock size={11} className="shrink-0" />
-            <span className="min-w-0 truncate">{label}</span>
-          </span>
-        </HoverTooltip>
-      );
+      return status ? <AuthFileSubscriptionBadge status={status} nowMs={nowMs} /> : null;
     },
-    [nowMs, t],
+    [nowMs],
   );
 
   const formatQuotaResetTextCompact = useCallback(
@@ -430,31 +403,25 @@ export function useAuthFilesFilesPresentation({
         overflowTooltip: false,
         skeleton: "box",
         headerAccessory: (
-          <input
-            type="checkbox"
+          <Checkbox
             aria-label={t("auth_files.select_current_page")}
             checked={allPageSelected}
+            indeterminate={somePageSelected}
             disabled={selectablePageNames.length === 0}
-            ref={(node) => {
-              if (node) node.indeterminate = somePageSelected;
-            }}
-            onChange={(event) => selectCurrentPage(event.currentTarget.checked)}
-            className="h-4 w-4 accent-accent disabled:cursor-not-allowed disabled:opacity-40"
+            onCheckedChange={(checked) => selectCurrentPage(checked)}
           />
         ),
         cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-ink-3">--</span>;
+            return <span className="text-xs text-sn-label3">--</span>;
           }
           return (
-            <input
-              type="checkbox"
+            <Checkbox
               aria-label={t("auth_files.select_file", {
                 name: resolveAuthFileDisplayName(file) || file.name,
               })}
               checked={selectedFileNameSet.has(file.name)}
-              onChange={(event) => toggleFileSelection(file.name, event.currentTarget.checked)}
-              className="h-4 w-4 accent-accent"
+              onCheckedChange={(checked) => toggleFileSelection(file.name, checked)}
             />
           );
         },
@@ -482,7 +449,7 @@ export function useAuthFilesFilesPresentation({
                   {supplementalTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
+                      className="inline-flex items-center rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                     >
                       {tag}
                     </span>
@@ -564,7 +531,7 @@ export function useAuthFilesFilesPresentation({
             <button
               type="button"
               disabled={state?.loading}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-1 text-xs tabular-nums text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-default disabled:opacity-40 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-950 colorful:dark:hover:text-blue-300"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-1 text-xs tabular-nums text-sn-label2 transition-colors hover:bg-sn-accent-soft hover:text-sn-accent-ink disabled:cursor-default disabled:opacity-40 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-950 colorful:dark:hover:text-blue-300"
               onClick={() => void checkAuthFileConnectivity(file.name)}
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}
@@ -591,7 +558,7 @@ export function useAuthFilesFilesPresentation({
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
-            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-ink-2">
+            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-sn-label2">
               {typeof calls === "number" ? (
                 calls
               ) : !statusUsageReady && statusUsageLoading ? (
@@ -612,7 +579,7 @@ export function useAuthFilesFilesPresentation({
           const stats = resolveAuthFileStats(file, usageIndex);
           const hasUsage = stats.success + stats.failure > 0;
           return (
-            <span className="text-xs font-semibold tabular-nums text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
+            <span className="text-xs font-semibold tabular-nums text-sn-label2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {statusUsageReady || hasUsage ? stats.success : "--"}
             </span>
           );
@@ -676,7 +643,7 @@ export function useAuthFilesFilesPresentation({
         align: "center",
         cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-ink-3">--</span>;
+            return <span className="text-xs text-sn-label3">--</span>;
           }
           return (
             <ToggleSwitch

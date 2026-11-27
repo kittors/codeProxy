@@ -184,7 +184,7 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   const systemList = page.getByRole("group", { name: /^(System Settings|系统设置)$/ });
   const configLink = systemList.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");
-  await expect(configLink).toHaveClass(/bg-surface/);
+  await expect(configLink).toHaveClass(/bg-sn-raised/);
   await expect(configLink).not.toHaveClass(/from-blue-600/);
   expect(await configLink.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("nowrap");
   await expect(page.getByRole("banner")).toContainText(/System Settings|系统设置/);
@@ -248,7 +248,8 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   await accountTrigger.click();
   const accountMenu = page.locator("[data-sidebar-account-menu='true']");
   await expect(accountMenu).toBeVisible();
-  await expect(accountMenu).toHaveClass(/code-proxy-floating-surface/);
+  await expect(accountMenu).toHaveClass(/\bsn-menu\b/);
+  await expect(accountMenu).toHaveClass(/\bsn-float\b/);
   await expect(page.getByRole("menuitem", { name: /^Config|配置面板$/i })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Logout|退出登录/i })).toBeVisible();
   await page.waitForTimeout(220);
@@ -264,7 +265,7 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   await expect(accountMenu).toBeHidden();
 
   await page.locator("header button[aria-haspopup='listbox']").click();
-  const languageMenu = page.locator("[role='listbox'].code-proxy-floating-surface");
+  const languageMenu = page.locator("[role='listbox'].sn-menu.sn-float");
   await expect(languageMenu).toBeVisible();
   expect(await languageMenu.evaluate(surfaceStyle)).toEqual(accountSurfaceStyle);
   await page.keyboard.press("Escape");
@@ -370,8 +371,8 @@ test("API Keys: table should scroll vertically when many keys are listed", async
   await page.goto("/#/access/api-keys?endUserId=end-user-1");
   await expect(page.getByText("Scroll Key 01")).toBeVisible();
 
-  // DataGrid 的表体视口：整页列表铺满剩余高度、在自己的视口里滚动。
-  const tableScroller = page.locator(".cp-grid-viewport").first();
+  // Satin 表格视口：整页列表铺满剩余高度、在自己的视口里滚动。
+  const tableScroller = page.locator(".sn-tbl-sc").first();
   await expect(tableScroller).toBeVisible();
 
   await expect

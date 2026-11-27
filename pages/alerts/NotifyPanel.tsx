@@ -108,7 +108,7 @@ export function NotifyPanel({
                 update((current) => ({ ...current, cooldown: event.target.value }))
               }
               endAdornment={
-                <span className="pr-1 text-xs text-ink-3">{t("alerts_page.cooldown.unit")}</span>
+                <span className="pr-1 text-xs text-sn-label3">{t("alerts_page.cooldown.unit")}</span>
               }
             />
           }

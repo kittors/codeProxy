@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, ListChecks, ShieldCheck } from "lucide-react";
+import { Ban, ListChecks, ShieldCheck } from "@code-proxy/ui/icons";
 import {
   ipAccessApi,
   type CreateIpAccessRuleBody,

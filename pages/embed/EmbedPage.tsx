@@ -16,7 +16,7 @@ export function EmbedPage() {
   );
   if (!menu?.link_url) {
     return (
-      <div className={`p-6 text-sm text-ink-3 ${surface({ radius: "3xl" })}`}>
+      <div className={`p-6 text-sm text-sn-label3 ${surface({ radius: "3xl" })}`}>
         {t("identity_admin.embed_unavailable", { defaultValue: "Embed URL unavailable." })}
       </div>
     );
@@ -28,7 +28,7 @@ export function EmbedPage() {
       data-page-fill="always"
       title={t(menu.label_key, { defaultValue: menu.title || menu.code })}
       src={menu.link_url}
-      className="w-full rounded-2xl bg-surface"
+      className="w-full rounded-xl bg-sn-raised"
     />
   );
 }

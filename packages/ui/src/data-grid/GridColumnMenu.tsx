@@ -1,5 +1,6 @@
-import { ArrowDown, ArrowUp, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { Icon } from "satin-ui/react";
+import { initSeg } from "satin-ui";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { isGridFilterActive } from "./gridModel";
@@ -36,6 +37,31 @@ export function GridColumnMenu<T>({
   const activeDirection = sort?.columnId === column.id ? sort.direction : null;
   const canSort = Boolean(column.sortable && onSortChange);
   const canFilter = Boolean(filter && draft && onApplyFilter);
+  const sortSegRef = useRef<HTMLDivElement | null>(null);
+  const sortApiRef = useRef<ReturnType<typeof initSeg> | null>(null);
+  const activeSortIndex = activeDirection === "asc" ? 0 : activeDirection === "desc" ? 1 : -1;
+  const activeSortIndexRef = useRef(activeSortIndex);
+  activeSortIndexRef.current = activeSortIndex;
+
+  useLayoutEffect(() => {
+    const el = sortSegRef.current;
+    if (!canSort || !el) return undefined;
+    const api = initSeg(el, undefined, activeSortIndexRef.current, {
+      role: "none",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    sortApiRef.current = api;
+    return () => {
+      api.destroy();
+      if (sortApiRef.current === api) sortApiRef.current = null;
+    };
+  }, [canSort]);
+
+  useLayoutEffect(() => {
+    sortApiRef.current?.sync(activeSortIndex, false);
+  }, [activeSortIndex]);
 
   const chooseSort = (direction: GridSortDirection) => {
     if (!onSortChange) return;
@@ -59,29 +85,24 @@ export function GridColumnMenu<T>({
 
   const sortButton = (direction: GridSortDirection) => {
     const active = activeDirection === direction;
-    const Icon = direction === "asc" ? ArrowUp : ArrowDown;
     return (
       <button
         type="button"
         aria-pressed={active}
+        aria-selected={active}
         onClick={() => chooseSort(direction)}
-        className={[
-          "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
-          active
-            ? "bg-surface text-ink shadow-control"
-            : "text-ink-2 hover:bg-hover hover:text-ink",
-        ].join(" ")}
+        className="!inline-flex items-center justify-center gap-1.5 !px-2"
       >
-        <Icon size={13} aria-hidden="true" />
+        <Icon name={direction === "asc" ? "arrow-up" : "arrow-down"} size={13} />
         {direction === "asc" ? t("data_grid.sort_asc") : t("data_grid.sort_desc")}
       </button>
     );
   };
 
   return (
-    <div className="flex w-[18.5rem] max-w-[calc(100vw-2rem)] flex-col p-2">
-      <div className="flex min-h-7 items-center justify-between gap-2 px-2 pb-1.5">
-        <span className="truncate text-xs font-semibold text-ink">{column.header}</span>
+    <div className="flex w-[18.5rem] max-w-[calc(100vw-2rem)] flex-col p-2.5">
+      <div className="flex min-h-7 items-center justify-between gap-2 px-1.5 pb-1.5">
+        <span className="truncate text-xs font-semibold text-[var(--sn-label)]">{column.header}</span>
         {onHide ? (
           <button
             type="button"
@@ -89,9 +110,9 @@ export function GridColumnMenu<T>({
               onHide();
               onClose();
             }}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md text-xs text-ink-3 transition-colors hover:text-ink"
+            className="sn-textbtn sn-quiet !h-6 !text-xs"
           >
-            <EyeOff size={12} aria-hidden="true" />
+            <Icon name="eye-off" size={12} />
             {t("data_grid.hide_column")}
           </button>
         ) : null}
@@ -99,10 +120,12 @@ export function GridColumnMenu<T>({
 
       {canSort ? (
         <div
-          className="grid grid-cols-2 gap-1 rounded-xl bg-track p-1"
+          ref={sortSegRef}
+          className="sn-seg sn-sm !grid w-full"
           role="group"
           aria-label={t("data_grid.sort")}
         >
+          <span aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
           {sortButton("asc")}
           {sortButton("desc")}
         </div>
@@ -110,7 +133,7 @@ export function GridColumnMenu<T>({
 
       {canFilter && filter && draft ? (
         <>
-          <div className={canSort ? "mt-2 border-t border-line pt-2.5" : "pt-1"}>
+          <div className={canSort ? "mt-2 border-t border-sn-line pt-2.5" : "pt-1"}>
             <GridFilterEditor
               filter={filter}
               draft={draft}
@@ -118,7 +141,7 @@ export function GridColumnMenu<T>({
               onSubmit={apply}
             />
           </div>
-          <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-line pt-2">
+          <div className="mt-2.5 flex items-center justify-end gap-1.5 border-t border-sn-line pt-2">
             <Button size="xs" variant="ghost" onClick={reset}>
               {t("data_grid.reset")}
             </Button>

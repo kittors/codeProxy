@@ -10,9 +10,8 @@ import {
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
-import { floatingPanelSurface, popoverEnterTransition, popoverExitTransition } from "@code-proxy/ui";
+import { Icon } from "satin-ui/react";
+import { floatingPanelSurface } from "@code-proxy/ui";
 import type { NavSection } from "./navModel";
 import { SidebarItemLink } from "./SidebarItemLink";
 import { sidebarFadeClass, sidebarRowClass, SidebarRowIcon, SidebarRowLabel } from "./sidebarRow";
@@ -180,13 +179,19 @@ export function SidebarGroup({
         className={sidebarRowClass(active && !listVisible)}
       >
         <SidebarRowIcon icon={section.icon} active={active} />
-        <SidebarRowLabel collapsed={collapsed}>{label}</SidebarRowLabel>
-        <span className={`grid shrink-0 place-items-center ${sidebarFadeClass(collapsed)}`}>
-          <ChevronRight
+        <SidebarRowLabel collapsed={collapsed} trailingSpace>
+          {label}
+        </SidebarRowLabel>
+        {/* 绝对定位脱离 flex 流：收起前 100ms 原地淡出，绝不向左挤压图标或伸出侧栏右缘被裁切。 */}
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute right-2 top-1/2 grid -translate-y-1/2 place-items-center ${sidebarFadeClass(collapsed)}`}
+        >
+          <Icon
+            name="chevron-right"
             size={14}
-            aria-hidden="true"
             className={[
-              "mr-2.5 text-ink-3 transition-transform duration-200 ease-soft motion-reduce:transition-none",
+              "text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)] motion-reduce:transition-none",
               open ? "rotate-90" : "",
             ].join(" ")}
           />
@@ -196,19 +201,17 @@ export function SidebarGroup({
         id={listId}
         role="group"
         aria-label={label}
+        data-list-visible={listVisible ? "true" : "false"}
         inert={!listVisible}
-        className={[
-          "grid transition-[grid-template-rows,opacity] duration-300 ease-soft motion-reduce:transition-none",
-          listVisible ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
-        ].join(" ")}
+        className="cp-side-group-body"
       >
         {/*
           折叠动画要靠 overflow-hidden 把收起的行裁掉，但裁剪框若和行一样宽，选中项白卡片的描边
           与投影会被切掉一边（右侧看着像缺了竖线）。左右各外扩 1 格再用内边距收回，阴影就有地方画。
         */}
         <div className="-mx-1 min-h-0 overflow-hidden px-1">
-          {/* 子项靠缩进表达层级、不画竖向引导线；子项文字与分区标题文字左对齐。 */}
-          <div className="ml-4.5 space-y-0.5 py-1 pl-1.5">
+          {/* 对齐 Satin 工作台侧栏：子项文字左缘精确对齐父级图标右侧（36px - 10px 内边距 = 26px 缩进）。 */}
+          <div className="my-0.5 space-y-0.5 pl-[26px]">
             {section.items.map((item) => (
               <SidebarItemLink
                 key={item.to}
@@ -224,19 +227,17 @@ export function SidebarGroup({
           </div>
         </div>
       </div>
-      <AnimatePresence>
-        {collapsed && flyoutOpen ? (
-          <SectionFlyout
-            key="flyout"
-            anchorRef={triggerRef}
-            section={section}
-            label={label}
-            activeTo={activeTo}
-            nav={nav}
-            onSelect={closeAndSuppress}
-          />
-        ) : null}
-      </AnimatePresence>
+      {collapsed && flyoutOpen ? (
+        <SectionFlyout
+          key="flyout"
+          anchorRef={triggerRef}
+          section={section}
+          label={label}
+          activeTo={activeTo}
+          nav={nav}
+          onSelect={closeAndSuppress}
+        />
+      ) : null}
     </div>
   );
 }
@@ -275,26 +276,22 @@ function SectionFlyout({
   }, [anchorRef]);
 
   return (
-    <motion.div
+    <div
       ref={ref}
       role="menu"
       aria-label={label}
       data-sidebar-flyout={section.id}
-      // 与下拉、菜单同一套节奏：朝图标反方向滑出一点、从 0.96 放大，退场更快、位移减半。
-      initial={{ opacity: 0, x: -4, scale: 0.96 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: -2, scale: 0.98, transition: popoverExitTransition }}
-      transition={popoverEnterTransition}
+      data-side="right"
+      data-state="open"
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0,
         visibility: position ? undefined : "hidden",
-        transformOrigin: "left top",
       }}
       // before: 伪元素在图标与浮层之间搭一座 12px 的「桥」，指针穿过空隙时不会触发离开。
-      className={`${floatingPanelSurface} fixed z-50 w-60 p-2 before:absolute before:top-0 before:-left-3 before:h-full before:w-3`}
+      className={`${floatingPanelSurface} fixed z-50 min-w-52 max-w-64 p-1.5 before:absolute before:top-0 before:-left-3 before:h-full before:w-3`}
     >
-      <div className="px-2.5 pt-1.5 pb-1.5 text-xs font-semibold text-ink-3">{label}</div>
+      <div className="px-2.5 pt-1 pb-1.5 text-xs font-semibold text-[var(--sn-label3)]">{label}</div>
       <div className="space-y-0.5">
         {section.items.map((item) => (
           <SidebarItemLink
@@ -309,6 +306,6 @@ function SectionFlyout({
           />
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

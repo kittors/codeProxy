@@ -8,6 +8,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
  */
 
 const observedAt = new Date().toISOString();
+const futureExpiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+const futureReset = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
 // 3 个同状态（全部启用）的账号：让「状态」筛选只剩一个选项，从而触发 Select 的禁用态。
 const authFiles = ["alias-a", "alias-b", "alias-c"].map((idx, i) => ({
@@ -35,14 +37,14 @@ const statusItems = authFiles.map((f) => ({
   refresh_state: "success",
   health_status: "ok",
   plan_type: "pro_20x",
-  subscription_expires_at: "2026-08-27T00:00:00Z",
+  subscription_expires_at: futureExpiry,
   subscription_source: "signed_claims",
   quotas: [
     {
       quota_key: "code_week",
       quota_label: "m_quota.code_weekly",
       percent: 12,
-      reset_at: "2026-08-09T06:38:11Z",
+      reset_at: futureReset,
       window_seconds: 604800,
       observed_at: observedAt,
     },
@@ -63,7 +65,7 @@ const statusItems = authFiles.map((f) => ({
   updated_at: observedAt,
 }));
 
-const openPage = async (page: Page) => {
+const openPage = async (page: Page, opts: { empty?: boolean } = {}) => {
   await page.addInitScript(() => {
     localStorage.setItem(
       "code-proxy-admin-auth",
@@ -82,7 +84,7 @@ const openPage = async (page: Page) => {
     const path = new URL(route.request().url()).pathname;
     const json = (body: unknown) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-    if (path.endsWith("/ai-accounts/status")) return json({ items: statusItems });
+    if (path.endsWith("/ai-accounts/status")) return json({ items: opts.empty ? [] : statusItems });
     if (path.includes("/ai-accounts/status-refresh")) {
       return json({
         job_id: "j",
@@ -93,7 +95,7 @@ const openPage = async (page: Page) => {
         results: [],
       });
     }
-    if (path.endsWith("/auth-files")) return json({ files: authFiles });
+    if (path.endsWith("/auth-files")) return json({ files: opts.empty ? [] : authFiles });
     if (path.endsWith("/usage/entity-stats")) return json({ source: [], auth_index: [] });
     if (path.endsWith("/usage/auth-file-trend")) return json({ points: [] });
     if (path.endsWith("/config")) return json({ config: {} });
@@ -101,7 +103,11 @@ const openPage = async (page: Page) => {
     return json({ items: [] });
   });
   await page.goto("/#/access/ai-accounts");
-  await expect(page.getByTestId("auth-files-cards")).toBeVisible();
+  if (opts.empty) {
+    await expect(page.getByRole("combobox", { name: "状态" })).toBeVisible();
+  } else {
+    await expect(page.getByTestId("auth-files-cards")).toBeVisible();
+  }
 };
 
 /**
@@ -126,7 +132,7 @@ const compositedOnWhite = async (locator: Locator): Promise<[number, number, num
 
 test.describe("下拉控件表面状态", () => {
   test("禁用的 Select 仍保留可见填充，不会退化成白底", async ({ page }) => {
-    await openPage(page);
+    await openPage(page, { empty: true });
 
     const statusSelect = page.getByRole("combobox", { name: "状态" });
     await expect(statusSelect).toBeDisabled();
@@ -154,11 +160,14 @@ test.describe("下拉控件表面状态", () => {
     const openFill = await compositedOnWhite(refreshSelect);
     expect(Math.max(...openFill)).toBeLessThanOrEqual(Math.max(...idleFill));
 
-    // 焦点仍在按钮上，但鼠标交互不该留下聚焦光晕。控件的轮廓本身就是一圈 1px 阴影描边
-    // （shadow-control，不用 border），所以这里查的是键盘聚焦才有的那圈 4px 光晕。
-    const shadow = await refreshSelect.evaluate((el) => getComputedStyle(el).boxShadow);
-    expect(shadow).toMatch(/0px 0px 0px 1px/);
-    expect(shadow).not.toMatch(/0px 0px 0px [2-9]px/);
+    // 焦点仍在按钮上，但鼠标交互不该留下键盘聚焦光晕。Satin 触发器使用 1px 内部实线边框，
+    // 鼠标展开态不应有外扩聚焦光环。
+    const surfaceStyle = await refreshSelect.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { borderWidth: cs.borderTopWidth, boxShadow: cs.boxShadow };
+    });
+    expect(surfaceStyle.borderWidth).toBe("1px");
+    expect(surfaceStyle.boxShadow).not.toMatch(/0px 0px 0px [2-9]px/);
 
     await page.keyboard.press("Escape");
     const closedFill = await compositedOnWhite(refreshSelect);

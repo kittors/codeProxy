@@ -81,13 +81,13 @@ const htmlState = (page: Page) =>
     palette: document.documentElement.dataset.palette,
     icons: document.documentElement.dataset.icons,
     bars: document.documentElement.dataset.bars,
-    accent: document.documentElement.style.getPropertyValue("--cp-pref-accent"),
-    bar: document.documentElement.style.getPropertyValue("--cp-pref-bar"),
+    accent: document.documentElement.style.getPropertyValue("--sn-pref-accent"),
+    bar: document.documentElement.style.getPropertyValue("--sn-pref-bar"),
   }));
 
-const DEFAULTS = { palette: "colorful", icons: "colorful", bars: "semantic", accent: "", bar: "" };
+const DEFAULTS = { palette: "quiet", icons: "mono", bars: "semantic", accent: "", bar: "" };
 
-test("外观：顶栏按钮打开抽屉，切到简约与调粗进度条即时生效、刷新保留、恢复默认回到多彩", async ({
+test("外观：顶栏按钮打开抽屉，切到多彩/自定义强调色与调粗进度条即时生效、刷新保留、恢复默认回到 Satin 简约", async ({
   page,
 }) => {
   await openPanel(page);
@@ -97,18 +97,24 @@ test("外观：顶栏按钮打开抽屉，切到简约与调粗进度条即时�
   expect(await htmlState(page)).toEqual(DEFAULTS);
 
   await openDrawer(page);
-  // 多彩：健康段是绿色渐变；默认 8px（随根字号缩放）。
+  // 默认 Satin 简约：语义进度条健康段仍是绿色渐变；默认 8px（随根字号缩放）。
   let bar = await previewBar(page);
   expect(bar.fillImage).toContain("linear-gradient");
   expect(bar.trackHeight).toBeCloseTo((8 / 16) * bar.root, 1);
 
   await drawer(page)
     .getByRole("radiogroup", { name: "风格" })
-    .getByRole("radio", { name: /简约/ })
+    .getByRole("radio", { name: /多彩/ })
     .click();
   expect(await htmlState(page)).toMatchObject({
-    palette: "quiet",
-    icons: "mono",
+    palette: "colorful",
+    icons: "colorful",
+    bars: "semantic",
+  });
+
+  await drawer(page).getByRole("radiogroup", { name: "强调色" }).getByRole("radio").nth(1).click();
+  await drawer(page).getByRole("radiogroup", { name: "进度条" }).getByRole("radio").nth(1).click();
+  expect(await htmlState(page)).toMatchObject({
     bars: "accent",
     accent: "#2a6ee8",
   });
@@ -128,7 +134,7 @@ test("外观：顶栏按钮打开抽屉，切到简约与调粗进度条即时�
   await page.reload();
   await expect(page.getByRole("button", { name: "外观" })).toBeVisible();
   expect(await htmlState(page)).toMatchObject({
-    palette: "quiet",
+    palette: "colorful",
     bars: "accent",
     accent: "#2a6ee8",
     bar: "14",

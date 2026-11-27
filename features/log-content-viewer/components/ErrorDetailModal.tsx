@@ -1,6 +1,6 @@
 import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, FileQuestion } from "lucide-react";
+import { AlertTriangle, FileQuestion } from "@code-proxy/ui/icons";
 import { Button, Callout, CopyButton, EmptyState, Modal, Skeleton, SkeletonLines } from "@code-proxy/ui";
 import {
   answeredByGateway,
@@ -108,7 +108,7 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
                   className={
                     keys
                       ? "[overflow-wrap:anywhere]"
-                      : "font-medium text-ink [overflow-wrap:anywhere]"
+                      : "font-medium text-sn-label [overflow-wrap:anywhere]"
                   }
                 >
                   {errorMessage}
@@ -121,21 +121,21 @@ export function ErrorDetailModal({ open, logId, model, onClose }: ErrorDetailMod
             <SkeletonLines rows={2} />
           ) : traceSummary || hint ? (
             <section aria-labelledby={nextId} className="space-y-1">
-              <h3 id={nextId} className="text-xs font-medium text-ink-3">
+              <h3 id={nextId} className="text-xs font-medium text-sn-label3">
                 {t("error_detail.next_title")}
               </h3>
-              {traceSummary ? <p className="text-sm leading-6 text-ink">{traceSummary}</p> : null}
-              {hint ? <p className="text-sm leading-6 text-ink-2">{hint}</p> : null}
+              {traceSummary ? <p className="text-sm leading-6 text-sn-label">{traceSummary}</p> : null}
+              {hint ? <p className="text-sm leading-6 text-sn-label2">{hint}</p> : null}
             </section>
           ) : null}
 
           {hasErrorContent ? (
             <section>
               <div className="mb-1.5 flex items-center justify-between gap-3">
-                <h3 className="text-xs font-medium text-ink-3">{t("error_detail.full_response")}</h3>
+                <h3 className="text-xs font-medium text-sn-label3">{t("error_detail.full_response")}</h3>
                 <CopyButton value={errorContent} label={t("error_detail.copy_response")} />
               </div>
-              <pre className="max-h-[40vh] overflow-auto rounded-2xl bg-subtle p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2 [overflow-wrap:anywhere]">
+              <pre className="max-h-[40vh] overflow-auto rounded-xl bg-sn-subtle p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-sn-label2 [overflow-wrap:anywhere]">
                 {formattedContent}
               </pre>
             </section>

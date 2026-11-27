@@ -1,0 +1,97 @@
+{
+  "$description": "宽松密度：语义间距整体升一档",
+  "space": {
+    "gap": {
+      "tight": {
+        "$type": "dimension",
+        "$value": "{space.6}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-tight",
+            "source": "kit.css"
+          }
+        },
+        "$description": "最紧的间距：图标和文字"
+      },
+      "inline": {
+        "$type": "dimension",
+        "$value": "{space.12}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-inline",
+            "source": "kit.css"
+          }
+        },
+        "$description": "同一行元素之间"
+      },
+      "stack": {
+        "$type": "dimension",
+        "$value": "{space.16}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-stack",
+            "source": "kit.css"
+          }
+        },
+        "$description": "上下相邻的小块之间"
+      },
+      "group": {
+        "$type": "dimension",
+        "$value": "{space.24}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-group",
+            "source": "kit.css"
+          }
+        },
+        "$description": "一组和一组之间"
+      },
+      "section": {
+        "$type": "dimension",
+        "$value": "{space.48}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--gap-section",
+            "source": "kit.css"
+          }
+        },
+        "$description": "页面大块之间"
+      }
+    },
+    "pad": {
+      "card": {
+        "$type": "dimension",
+        "$value": "{space.20}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-card",
+            "source": "kit.css"
+          }
+        },
+        "$description": "卡片内边距"
+      },
+      "panel": {
+        "$type": "dimension",
+        "$value": "{space.32}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-panel",
+            "source": "kit.css"
+          }
+        },
+        "$description": "面板内边距"
+      },
+      "page": {
+        "$type": "dimension",
+        "$value": "{space.40}",
+        "$extensions": {
+          "com.satin": {
+            "var": "--pad-page",
+            "source": "kit.css"
+          }
+        },
+        "$description": "页面内边距"
+      }
+    }
+  }
+}

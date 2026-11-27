@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit3, Plus, RefreshCw, Search, Shuffle, Trash2 } from "lucide-react";
+import { Edit3, Plus, RefreshCw, Search, Shuffle, Trash2 } from "@code-proxy/ui/icons";
 import {
   apiClient,
   channelGroupsApi,
@@ -39,7 +39,7 @@ const isVersionConflict = (err: unknown) =>
   extractApiErrorCode(err.payload) === "config_version_conflict";
 
 const PILL =
-  "inline-flex max-w-full items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200";
+  "inline-flex max-w-full items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200";
 
 /**
  * 模型页「虚拟模型」标签：一个模型名由几个真实模型轮流承接，请求按成员顺序尝试，前一个接不了
@@ -156,9 +156,9 @@ export function VirtualModelsPanel() {
         overflowTooltip: (vm) => vm.description || vm.name,
         cell: (vm) => (
           <span className="block min-w-0">
-            <span className="block truncate font-mono text-sm font-medium text-ink">{vm.name}</span>
+            <span className="block truncate font-mono text-sm font-medium text-sn-label">{vm.name}</span>
             {vm.description ? (
-              <span className="block truncate text-xs text-ink-3">{vm.description}</span>
+              <span className="block truncate text-xs text-sn-label3">{vm.description}</span>
             ) : null}
           </span>
         ),
@@ -179,7 +179,7 @@ export function VirtualModelsPanel() {
                 className="flex min-w-0 items-center gap-1.5"
               >
                 {index > 0 ? (
-                  <span className="text-xs text-ink-4" aria-hidden="true">
+                  <span className="text-xs text-sn-label-off" aria-hidden="true">
                     →
                   </span>
                 ) : null}
@@ -188,7 +188,7 @@ export function VirtualModelsPanel() {
                     {member.group ? memberRoute(member) : member.model}
                   </span>
                   {vm.strategy === "weighted" ? (
-                    <span className="tabular-nums text-ink-3">· {member.weight ?? 0}</span>
+                    <span className="tabular-nums text-sn-label3">· {member.weight ?? 0}</span>
                   ) : null}
                 </span>
               </li>
@@ -257,7 +257,7 @@ export function VirtualModelsPanel() {
               placeholder={t("models_page.virtual.search")}
               aria-label={t("models_page.virtual.search")}
               className="!w-48"
-              startAdornment={<Search size={14} className="text-ink-3" />}
+              startAdornment={<Search size={14} className="text-sn-label3" />}
             />
             {canEdit ? (
               <Button
@@ -305,7 +305,7 @@ export function VirtualModelsPanel() {
                   title: t("models_page.virtual.no_results"),
                   description: t("common.grid_filters_in_effect"),
                   details: (
-                    <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]">
+                    <span className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]">
                       {t("common.grid_search_chip", { query: search.trim() })}
                     </span>
                   ),

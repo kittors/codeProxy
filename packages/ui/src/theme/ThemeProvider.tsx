@@ -4,22 +4,16 @@ import {
   use,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Monitor, Moon, Sun } from "lucide-react";
-import {
-  cn,
-  selectOptionBase,
-  selectOptionCheck,
-  selectOptionIdle,
-  selectOptionSelected,
-  selectPanel,
-} from "../utils/selectStyles";
+import { Icon as SatinIcon } from "satin-ui/react";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
+import { cn } from "../utils/selectStyles";
 
 const THEME_STORAGE_KEY = "code-proxy-admin-theme";
 const THEME_TRANSITION_LOCK_CLASS = "theme-transition-lock";
@@ -45,9 +39,9 @@ interface ThemeContextState {
 const ThemeContext = createContext<ThemeContextState | null>(null);
 
 const THEME_OPTIONS = [
-  { value: "light", labelKey: "theme.light", Icon: Sun },
-  { value: "dark", labelKey: "theme.dark", Icon: Moon },
-  { value: "auto", labelKey: "theme.auto", Icon: Monitor },
+  { value: "light", labelKey: "theme.light", icon: "sun" },
+  { value: "dark", labelKey: "theme.dark", icon: "moon" },
+  { value: "auto", labelKey: "theme.auto", icon: "monitor" },
 ] as const;
 
 const isThemePreference = (value: unknown): value is ThemePreference =>
@@ -91,11 +85,9 @@ const applyThemeToDom = (mode: ThemeMode): void => {
 
   document.documentElement.classList.toggle("dark", isDark);
   document.documentElement.style.colorScheme = mode;
-  if (isDark) {
-    document.documentElement.setAttribute("data-theme", "dark");
-  } else {
-    document.documentElement.removeAttribute("data-theme");
-  }
+  // 显式写入 data-theme="light" | "dark"，避免系统深色 + 应用手选浅色时命中
+  // Satin tokens.css 的 @media (prefers-color-scheme: dark) { :root:not([data-theme]) }。
+  document.documentElement.setAttribute("data-theme", mode);
 };
 
 const persistTheme = (mode: ThemePreference): void => {
@@ -199,7 +191,25 @@ export const useTheme = (): ThemeContextState => {
   return context;
 };
 
-export function ThemeToggleButton({ className, label }: { className?: string; label?: string }) {
+export interface ThemeToggleButtonProps {
+  className?: string;
+  label?: string;
+  variant?: "ghost" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+const TOGGLE_SIZE_CLASS: Record<NonNullable<ThemeToggleButtonProps["size"]>, string> = {
+  sm: "sn-sm",
+  md: "",
+  lg: "sn-lg",
+};
+
+export function ThemeToggleButton({
+  className,
+  label,
+  variant = "ghost",
+  size = "md",
+}: ThemeToggleButtonProps) {
   const { t } = useTranslation();
   const {
     state: { mode, preference },
@@ -208,51 +218,56 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const floating = useSatinFloatingLayer({
+    open,
+    anchorRef: triggerRef,
+    panelRef: menuRef,
+    placement: "bottom",
+    align: "end",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
   const selectedOption = THEME_OPTIONS.find((option) => option.value === preference);
-  const TriggerIcon = preference === "auto" ? Monitor : mode === "dark" ? Moon : Sun;
+  const triggerIconName = preference === "auto" ? "monitor" : mode === "dark" ? "moon" : "sun";
   const buttonLabel = label ?? t("theme.switch");
   const tooltip = `${buttonLabel}: ${t(selectedOption?.labelKey ?? "theme.switch")}`;
-
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const width = 220;
-    const margin = 8;
-    const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
-    const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-    setPos({ top: rect.bottom + 6, left });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp" &&
+        event.key !== "Home" &&
+        event.key !== "End"
+      ) {
+        return;
+      }
+      const panel = menuRef.current;
+      if (!panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
+      if (items.length === 0) return;
+      event.preventDefault();
+      if (event.key === "Home") {
+        items[0]?.focus();
+        return;
+      }
+      if (event.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const cur = items.indexOf(document.activeElement as HTMLElement);
+      const nextIdx =
+        event.key === "ArrowDown"
+          ? (cur + 1 + items.length) % items.length
+          : (cur - 1 + items.length) % items.length;
+      items[nextIdx]?.focus();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
@@ -261,6 +276,7 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
   const handleModeChange = (next: ThemePreference) => {
     setMode(next);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
@@ -269,28 +285,50 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className={className}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && !open) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={cn(
+          "sn-btn sn-ibtn",
+          variant === "secondary" ? "sn-secondary" : "sn-ghost",
+          TOGGLE_SIZE_CLASS[size],
+          open ? "sn-is-open" : null,
+          className,
+        )}
         aria-label={buttonLabel}
         aria-expanded={open}
         aria-haspopup="menu"
-        data-tooltip={tooltip}
-        title={tooltip}
+        data-tip={tooltip}
+        data-tip-side="bottom"
       >
-        <TriggerIcon size={16} />
+        <SatinIcon name={triggerIconName} size={16} />
       </button>
 
-      {open
+      {floating.mounted
         ? createPortal(
             <div
               ref={menuRef}
               role="menu"
-              data-state="open"
-              data-side="bottom"
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-state={floating.isOpen ? "open" : "closed"}
+              data-side={floating.side}
               aria-label={buttonLabel}
-              className={cn(selectPanel, "w-[220px]")}
-              style={{ top: pos.top, left: pos.left }}
+              className={cn(
+                "sn-menu sn-float sn-solid !w-48 !min-w-48 outline-none",
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
+              style={{
+                top: floating.top,
+                left: floating.left,
+                transformOrigin: floating.origin,
+              }}
             >
-              {THEME_OPTIONS.map(({ value, labelKey, Icon }) => {
+              {THEME_OPTIONS.map(({ value, labelKey, icon }) => {
                 const selected = value === preference;
                 return (
                   <button
@@ -300,18 +338,22 @@ export function ThemeToggleButton({ className, label }: { className?: string; la
                     aria-checked={selected}
                     onClick={() => handleModeChange(value)}
                     className={cn(
-                      selectOptionBase,
-                      selected ? selectOptionSelected : selectOptionIdle,
+                      "sn-item w-full border-0 bg-transparent text-left outline-none hover:bg-[var(--sn-b-ghost-hover)] focus:bg-[var(--sn-b-ghost-hover)]",
+                      selected ? "sn-sel font-medium" : null,
                     )}
                   >
-                    <Icon size={16} className="shrink-0" aria-hidden="true" />
+                    <SatinIcon name={icon} size={16} />
                     <span className="min-w-0 flex-1 truncate">{t(labelKey)}</span>
-                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
+                    {selected ? (
+                      <span className="sn-chk">
+                        <SatinIcon name="check" size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

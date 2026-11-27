@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, FileKey2, Folder, PanelTop } from "lucide-react";
+import { ChevronRight, FileKey2, Folder, PanelTop } from "@code-proxy/ui/icons";
 import { Button, Checkbox, iconHueClass } from "@code-proxy/ui";
 import type { MenuIdentity, PermissionIdentity } from "@code-proxy/api-client";
 
@@ -160,7 +160,7 @@ export function PermissionTree({
         aria-expanded={hasChildren ? isExpanded : undefined}
       >
         <div
-          className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-hover"
+          className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-sn-hover"
           style={{ paddingLeft: 12 + depth * 24 }}
         >
           {hasChildren ? (
@@ -199,12 +199,12 @@ export function PermissionTree({
               onChange(next);
             }}
           />
-          <Icon size={15} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+          <Icon size={15} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-ink">
+            <span className="block truncate text-sm font-medium text-sn-label">
               {node.label}
             </span>
-            <span className="block truncate font-mono text-xs text-ink-3">{node.description}</span>
+            <span className="block truncate font-mono text-xs text-sn-label3">{node.description}</span>
           </span>
         </div>
         {hasChildren && isExpanded ? (

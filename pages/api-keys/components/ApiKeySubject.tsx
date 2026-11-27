@@ -10,7 +10,7 @@ export function ApiKeySubject({ entry }: { entry?: Pick<ApiKeyEntry, "name" | "k
     <span className="flex min-w-0 items-center justify-between gap-3">
       <span className="truncate font-medium">{entry.name || t("api_keys_page.unnamed")}</span>
       {entry.key ? (
-        <code className="shrink-0 font-mono text-xs text-ink-3">{maskApiKey(entry.key)}</code>
+        <code className="shrink-0 font-mono text-xs text-sn-label3">{maskApiKey(entry.key)}</code>
       ) : null}
     </span>
   );

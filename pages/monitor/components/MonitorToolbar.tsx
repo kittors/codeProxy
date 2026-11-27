@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, KeyRound, RefreshCw, Timer, UserRound, X } from "lucide-react";
+import { Activity, KeyRound, RefreshCw, Timer, UserRound, X } from "@code-proxy/ui/icons";
 import {
   MONITOR_RANGE_KEYS,
   type MonitorFilterOption,
@@ -63,13 +63,13 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-              <Activity size={18} aria-hidden="true" className={`text-ink-3 ${iconHueClass(Activity)}`} />
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-sn-label">
+              <Activity size={18} aria-hidden="true" className={`text-sn-label3 ${iconHueClass(Activity)}`} />
               {t("monitor_center.title")}
             </h2>
             <LiveStatus {...props} t={t} />
           </div>
-          <p className="mt-1 text-xs text-ink-3">{rangeCaption(overview, legacy, t)}</p>
+          <p className="mt-1 text-xs text-sn-label3">{rangeCaption(overview, legacy, t)}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-32">
@@ -85,7 +85,7 @@ export function MonitorToolbar(props: MonitorToolbarProps) {
                 label: t(`monitor_center.auto_refresh_${seconds}`),
                 triggerLabel: (
                   <span className="flex min-w-0 items-center gap-1.5">
-                    <Timer size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Timer)}`} aria-hidden="true" />
+                    <Timer size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Timer)}`} aria-hidden="true" />
                     <span className="truncate">
                       {t(`monitor_center.auto_refresh_short_${seconds}`)}
                     </span>
@@ -191,12 +191,11 @@ function LiveStatus({
       : refreshSeconds === 0 || legacy
         ? "paused"
         : "live";
-  // 正在刷新是进行中的状态，用强调色；天蓝留给「说明」类提示。
-  const dotClass = {
-    updating: "bg-accent",
-    failed: "bg-rose-500",
-    paused: "bg-ink-4",
-    live: "bg-emerald-500",
+  const tagTone = {
+    updating: "sn-run",
+    failed: "sn-bad",
+    paused: "",
+    live: "sn-ok",
   }[state];
   const label = {
     updating: t("monitor_center.status_updating"),
@@ -212,14 +211,9 @@ function LiveStatus({
       role="status"
       aria-live="polite"
       title={error ?? undefined}
-      className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]"
+      className={["sn-tag", tagTone].filter(Boolean).join(" ")}
     >
-      <span className="relative inline-flex size-2" aria-hidden="true">
-        {state === "live" ? (
-          <span className="absolute inset-0 rounded-full bg-emerald-500 motion-safe:animate-[monitor-live-ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]" />
-        ) : null}
-        <span className={`relative inline-flex size-2 rounded-full ${dotClass}`} />
-      </span>
+      <i aria-hidden="true" />
       {label}
     </span>
   );
@@ -230,7 +224,7 @@ function optionLabel(dimension: MonitorFilterDimension, option: MonitorFilterOpt
     const Icon = option.kind === "end_user" ? UserRound : KeyRound;
     return (
       <span className="flex min-w-0 items-center gap-1.5">
-        <Icon size={14} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+        <Icon size={14} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
         <span className="truncate">{option.label || t("monitor_center.unnamed_consumer")}</span>
       </span>
     );
@@ -271,7 +265,7 @@ function FilterSelect({
       title: option.label || option.value,
       searchText: `${option.label} ${option.value}`,
       trailing: (
-        <span className="text-2xs tabular-nums text-ink-3">
+        <span className="text-2xs tabular-nums text-sn-label3">
           {formatMonitorCompact(option.requests)}
         </span>
       ),
@@ -328,22 +322,22 @@ function ActiveFilterChips({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-xs text-ink-3">{t("monitor_center.filter.active")}</span>
+      <span className="mr-1 text-xs text-sn-label3">{t("monitor_center.filter.active")}</span>
       {DIMENSIONS.flatMap((dimension) =>
         query[dimension].map((value) => (
           <span
             key={`${dimension}:${value}`}
-            className="inline-flex max-w-72 items-center gap-1 rounded-full bg-selected py-0.5 pr-1 pl-2.5 text-xs text-ink"
+            className="sn-chip sn-tag !h-6 max-w-72 gap-1 !pr-1 !pl-2.5 !text-xs"
           >
-            <span className="shrink-0 text-ink-3">{t(`monitor_center.filter.${dimension}`)}</span>
+            <span className="shrink-0 text-[var(--sn-label3)]">{t(`monitor_center.filter.${dimension}`)}</span>
             <span className="truncate font-medium">{labelFor(dimension, value)}</span>
             <button
               type="button"
               onClick={() => onRemove(dimension, value)}
               aria-label={t("monitor_center.filter.remove", { value: labelFor(dimension, value) })}
-              className="grid size-5 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+              className="sn-x"
             >
-              <X size={14} aria-hidden="true" />
+              <X size={12} aria-hidden="true" />
             </button>
           </span>
         )),
@@ -351,7 +345,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="ml-1 rounded-full px-2 py-0.5 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+        className="sn-btn sn-ghost sn-xs ml-1 !h-6 !px-2 !text-xs text-[var(--sn-label2)]"
       >
         {t("monitor_center.filter.clear_all")}
       </button>

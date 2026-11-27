@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import { SettingGroup, SettingRow } from "@code-proxy/ui";
 import {
   privacyMaskingPortalApi,
@@ -32,8 +32,8 @@ function Section({
   return (
     <section className="space-y-2">
       <div className="px-1">
-        <h3 className="text-sm font-semibold text-ink">{title}</h3>
-        {description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}
+        <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
+        {description ? <p className="mt-0.5 text-xs text-sn-label3">{description}</p> : null}
       </div>
       {children}
     </section>
@@ -73,12 +73,12 @@ export function MaskingRulesView({ settings }: { settings: PortalPrivacyMaskSett
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
         on
           ? "bg-violet-500/10 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200"
-          : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+          : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
       ].join(" ")}
     >
       <span
         aria-hidden="true"
-        className={`size-1.5 rounded-full ${on ? "bg-violet-500" : "bg-ink-3"}`}
+        className={`size-1.5 rounded-full ${on ? "bg-violet-500" : "bg-sn-label3"}`}
       />
       {on ? t("privacy_masking.portal.state_on") : t("privacy_masking.portal.state_off")}
     </span>
@@ -93,14 +93,14 @@ export function MaskingRulesView({ settings }: { settings: PortalPrivacyMaskSett
         return (
           <li
             key={kind}
-            className="inline-flex items-center gap-1.5 rounded-full bg-ink/[0.04] py-1 pr-1 pl-2.5 text-xs text-ink-2 dark:bg-white/[0.06]"
+            className="inline-flex items-center gap-1.5 rounded-full bg-sn-label/[0.04] py-1 pr-1 pl-2.5 text-xs text-sn-label2 dark:bg-white/[0.06]"
           >
             <KindDot kind={kind} />
             {kindLabel(kind)}
             <span
               className={[
                 "rounded-full px-1.5 py-0.5 text-2xs font-medium",
-                action === "mask" ? "text-ink-3" : ACTION_CHIP[action],
+                action === "mask" ? "text-sn-label3" : ACTION_CHIP[action],
               ].join(" ")}
             >
               {t(`privacy_masking.action.${action}`)}
@@ -174,7 +174,7 @@ export function MaskingRulesView({ settings }: { settings: PortalPrivacyMaskSett
             </div>
           </SettingGroup>
         </Section>
-        <p className="px-1 text-xs leading-relaxed text-ink-3">
+        <p className="px-1 text-xs leading-relaxed text-sn-label3">
           {t("privacy_masking.explain.where")}
         </p>
       </aside>

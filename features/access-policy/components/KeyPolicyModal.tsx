@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Boxes, Gauge, KeyRound, Tag } from "lucide-react";
+import { Boxes, Gauge, KeyRound, Tag } from "@code-proxy/ui/icons";
 import {
   LEGACY_KEY_CELLS,
   emptyQuotaMatrix,

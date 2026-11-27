@@ -1,0 +1,23 @@
+// 简体中文（默认）：所有组件的文字合在一起（各组件自己只引自己那一份，打包时互不拖累）。
+import browser_tabs from "./zh-CN/browser-tabs.js";
+import canvas_grid from "./zh-CN/canvas-grid.js";
+import charts from "./zh-CN/charts.js";
+import chat from "./zh-CN/chat.js";
+import components from "./zh-CN/components.js";
+import feedback from "./zh-CN/feedback.js";
+import flow from "./zh-CN/flow.js";
+import form from "./zh-CN/form.js";
+import grid from "./zh-CN/grid.js";
+import input from "./zh-CN/input.js";
+import lightbox from "./zh-CN/lightbox.js";
+import list from "./zh-CN/list.js";
+import markdown from "./zh-CN/markdown.js";
+import media from "./zh-CN/media.js";
+import nav from "./zh-CN/nav.js";
+import overlay from "./zh-CN/overlay.js";
+import picker from "./zh-CN/picker.js";
+import table from "./zh-CN/table.js";
+import theme from "./zh-CN/theme.js";
+import theme_panel from "./zh-CN/theme-panel.js";
+import tree from "./zh-CN/tree.js";
+export default { ...browser_tabs, ...canvas_grid, ...charts, ...chat, ...components, ...feedback, ...flow, ...form, ...grid, ...input, ...lightbox, ...list, ...markdown, ...media, ...nav, ...overlay, ...picker, ...table, ...theme, ...theme_panel, ...tree };

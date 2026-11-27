@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -9,16 +8,13 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectCheckboxBox,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -28,6 +24,8 @@ import {
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 
 export interface MultiSelectOption {
   value: string;
@@ -75,98 +73,37 @@ export function MultiSelect({
   const { t } = useTranslation();
   const resolvedEmptyLabel = emptyLabel ?? t("ui.select_all_label");
   const [open, setOpen] = useState(false);
-  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
+  const isOpen = open && !disabled;
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: isOpen, size: 24 });
   const [search, setSearch] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
-  // Compute dropdown position from trigger bounding rect, with viewport flip
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const dropdownMaxH = 280; // approximate max dropdown height
-    const gap = 4;
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-
-    // Flip upward if not enough space below but enough above
-    const openAbove = spaceBelow < dropdownMaxH && spaceAbove > spaceBelow;
-
-    if (openAbove) {
-      setDropdownPlacement("top");
-      setDropdownStyle({
-        position: "fixed",
-        bottom: window.innerHeight - rect.top + gap,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.min(dropdownMaxH, spaceAbove),
-        zIndex: 99999,
-      });
-    } else {
-      setDropdownPlacement("bottom");
-      setDropdownStyle({
-        position: "fixed",
-        top: rect.bottom + gap,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.min(dropdownMaxH, spaceBelow),
-        zIndex: 99999,
-      });
-    }
-  }, []);
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: dropdownRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
       setOpen(false);
       setSearch("");
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
-  // Esc 收起下拉，并吃掉这次按键：外层弹窗看到 defaultPrevented 就不会跟着关闭。
   useEffect(() => {
-    if (!open) return;
-    const handler = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setOpen(false);
-      setSearch("");
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open]);
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
-  // Focus search on open + update position (useLayoutEffect to avoid flicker)
-  useLayoutEffect(() => {
-    if (open) {
-      updatePosition();
-      if (searchRef.current) {
-        searchRef.current.focus();
-      }
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => searchRef.current?.focus());
     }
-  }, [open, updatePosition]);
-
-  // Update position on window scroll/resize while open
-  // Only listen at window level to avoid feedback loops with modal scroll containers
-  useEffect(() => {
-    if (!open) return;
-    const onUpdate = () => updatePosition();
-    window.addEventListener("scroll", onUpdate);
-    window.addEventListener("resize", onUpdate);
-    return () => {
-      window.removeEventListener("scroll", onUpdate);
-      window.removeEventListener("resize", onUpdate);
-    };
-  }, [open, updatePosition]);
+  }, [isOpen]);
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -207,19 +144,29 @@ export function MultiSelect({
     return map;
   }, [options]);
 
-  const dropdown = createPortal(
-    <AnimatePresence>
-      {open ? (
-        <motion.div
+  const dropdown = floating.mounted && !disabled
+    ? createPortal(
+        <div
           ref={dropdownRef}
-          data-side={dropdownPlacement}
-          style={dropdownStyle}
-          className={cn(searchableSelectPanel, "flex flex-col")}
-          {...getSelectDropdownMotion(dropdownPlacement)}
-          transition={selectDropdownTransition}
+          aria-hidden={floating.isOpen ? undefined : true}
+          data-side={floating.side}
+          data-state={floating.isOpen ? "open" : "closed"}
+          style={{
+            top: floating.top,
+            left: floating.left,
+            width: Math.max(floating.anchorWidth, 220),
+            maxHeight: Math.min(280, floating.availableHeight),
+            transformOrigin: floating.origin,
+          }}
+          className={cn(
+            searchableSelectPanel,
+            floating.isOpen ? "sn-open" : null,
+            floating.up ? "sn-up" : null,
+            floating.end ? "sn-end" : null,
+          )}
         >
           {searchable && (
-            <div className="flex-shrink-0 border-b border-line px-3.5 py-2.5">
+            <div className="flex-shrink-0 border-b border-[var(--sn-line)] px-3.5 py-2.5">
               <input
                 ref={searchRef}
                 type="text"
@@ -245,12 +192,12 @@ export function MultiSelect({
               )}
             >
               <div className={selectCheckboxBox(value.length === 0)}>
-                {value.length === 0 && <Check size={12} />}
+                {value.length === 0 && <Icon name="check" size={12} />}
               </div>
               <span className="font-medium">{selectAllLabel || t("common.all_models")}</span>
             </button>
 
-            <div className="mx-2.5 my-1 h-px bg-line" />
+            <div className="mx-2.5 my-1 h-px bg-[var(--sn-line)]" />
 
             {filteredOptions.length === 0 ? (
               <div className={selectEmptyState}>{t("ui.no_match")}</div>
@@ -268,7 +215,7 @@ export function MultiSelect({
                     )}
                   >
                     <div className={selectCheckboxBox(checked)}>
-                      {checked && <Check size={12} />}
+                      {checked && <Icon name="check" size={12} />}
                     </div>
                     {opt.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                     <span className="truncate font-mono text-xs">{opt.label}</span>
@@ -277,11 +224,10 @@ export function MultiSelect({
               })
             )}
           </div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>,
-    document.body,
-  );
+        </div>,
+        resolvePortalContainer(triggerRef.current),
+      )
+    : null;
 
   return (
     <div className={`relative ${className}`}>
@@ -294,17 +240,13 @@ export function MultiSelect({
         // 被读出来；若还是普通 button，接上标签后读屏就只剩标签、听不到选了什么。
         role="combobox"
         aria-haspopup="listbox"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
-        data-state={selectTriggerState(open)}
-        onClick={() => {
-          // Pre-compute position before opening so the portal renders at the correct spot
-          if (!open) updatePosition();
-          setOpen(!open);
-        }}
+        data-state={selectTriggerState(isOpen)}
+        onClick={() => setOpen((prev) => !prev)}
         className={cn(
           getSelectTriggerBase(size, "multiline"),
           "h-auto min-h-9 w-full justify-between py-1 text-left",
@@ -312,7 +254,7 @@ export function MultiSelect({
       >
         <div className="flex min-w-0 flex-1 flex-wrap gap-1">
           {value.length === 0 ? (
-            <span className="inline-flex items-center gap-1 text-ink">
+            <span className="inline-flex items-center gap-1 text-[var(--sn-label)]">
               {resolvedEmptyLabel}
             </span>
           ) : (
@@ -321,7 +263,7 @@ export function MultiSelect({
               return (
                 <span
                   key={v}
-                  className="inline-flex max-w-[180px] items-center gap-1 rounded-full bg-selected px-2 py-0.5 text-xs text-ink"
+                  className="inline-flex max-w-[180px] items-center gap-1 rounded-md border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] px-2 py-0.5 text-xs text-[var(--sn-label)]"
                 >
                   {opt?.icon && <span className="flex-shrink-0">{opt.icon}</span>}
                   <span className="truncate">{labelMap.get(v) || v}</span>
@@ -331,20 +273,21 @@ export function MultiSelect({
                     <span
                       aria-hidden="true"
                       onClick={(e) => removeTag(v, e)}
-                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded-full p-0.5 text-ink-3 hover:bg-hover hover:text-ink"
+                      className="-mr-0.5 ml-0.5 flex-shrink-0 cursor-pointer rounded p-0.5 text-[var(--sn-label3)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]"
                     >
-                      <X size={10} />
+                      <Icon name="x" size={10} />
                     </span>
                   )}
                 </span>
               );
             })
           )}
-          {value.length > 5 && <span className="text-xs text-ink-3">+{value.length - 5}</span>}
+          {value.length > 5 && <span className="text-xs text-[var(--sn-label3)]">+{value.length - 5}</span>}
         </div>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           size={16}
-          className={cn(selectChevron, "flex-shrink-0", open && "rotate-180")}
+          className={cn(selectChevron, "flex-shrink-0", isOpen && "rotate-180")}
         />
       </button>
 

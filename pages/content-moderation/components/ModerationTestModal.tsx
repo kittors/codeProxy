@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "lucide-react";
+import { FlaskConical, ShieldCheck, ShieldX, TriangleAlert } from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   type ContentModerationDecision,
@@ -73,7 +73,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
         header: t("content_moderation.category"),
         width: 200,
         grow: true,
-        cell: (row) => <span className="truncate font-mono text-xs text-ink-2">{row.category}</span>,
+        cell: (row) => <span className="truncate font-mono text-xs text-sn-label2">{row.category}</span>,
       },
       {
         id: "score",
@@ -85,7 +85,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
           const over = row.threshold !== undefined && row.score >= row.threshold;
           return (
             <span
-              className={`text-xs tabular-nums ${over ? "font-semibold text-rose-600 dark:text-rose-400" : "text-ink-2"}`}
+              className={`text-xs tabular-nums ${over ? "font-semibold text-rose-600 dark:text-rose-400" : "text-sn-label2"}`}
             >
               {row.score.toFixed(4)}
             </span>
@@ -98,7 +98,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
         align: "end",
         width: 112,
         cell: (row) => (
-          <span className="text-xs tabular-nums text-ink-3">{row.threshold?.toFixed(4) ?? "--"}</span>
+          <span className="text-xs tabular-nums text-sn-label3">{row.threshold?.toFixed(4) ?? "--"}</span>
         ),
       },
     ],
@@ -190,12 +190,12 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                   : t("content_moderation.test_allowed")
               }
               actions={
-                <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]">
+                <span className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]">
                   {t("content_moderation.latency_value", { value: decision.latency_ms })}
                 </span>
               }
             >
-              <span className="font-mono text-xs text-ink-3">{decision.action}</span>
+              <span className="font-mono text-xs text-sn-label3">{decision.action}</span>
             </Callout>
 
             {decision.safety ? (
@@ -215,8 +215,8 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
                       className={[
                         "rounded-full px-2.5 py-1 text-xs",
                         matched
-                          ? "bg-accent-soft font-medium text-accent-ink colorful:bg-accent colorful:text-accent-fg"
-                          : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+                          ? "bg-sn-accent-soft font-medium text-sn-accent-ink colorful:bg-sn-accent colorful:text-sn-on-primary"
+                          : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
                       ].join(" ")}
                       title={
                         matched
@@ -232,7 +232,7 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
             ) : null}
 
             {decision.matched_keyword || decision.highest_category ? (
-              <div className="space-y-1 text-sm text-ink-2">
+              <div className="space-y-1 text-sm text-sn-label2">
                 {decision.matched_keyword ? (
                   <p>
                     {t("content_moderation.matched_keyword", {
@@ -261,9 +261,9 @@ export function ModerationTestModal({ profile, onClose }: ModerationTestModalPro
 
             {scoreRows.length ? (
               // 浅底框里的小表：不再套外框，最高 13rem 后表内滚动（表头吸顶）；
-              // 浅底框不设 --cp-backdrop，这里补上，行底色才和框一致。
+              // 浅底框不设 --sn-backdrop，这里补上，行底色才和框一致。
               <div
-                className={`overflow-hidden [--cp-backdrop:var(--cp-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
+                className={`overflow-hidden [--sn-backdrop:var(--sn-fill-subtle)] ${surface({ tone: "inset", radius: "xl" })}`}
               >
                 <DataGrid<ScoreRow>
                   frame={false}

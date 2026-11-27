@@ -1,4 +1,4 @@
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { EndUser } from "@code-proxy/api-client";
 import { ConfirmModal, SecretRevealModal } from "@code-proxy/ui";
@@ -9,7 +9,7 @@ function EndUserSubject({ user }: { user: EndUser | null }) {
   return (
     <span className="flex min-w-0 items-center justify-between gap-3">
       <span className="truncate font-medium">{user.display_name || user.username}</span>
-      <code className="shrink-0 font-mono text-xs text-ink-3">{user.username}</code>
+      <code className="shrink-0 font-mono text-xs text-sn-label3">{user.username}</code>
     </span>
   );
 }

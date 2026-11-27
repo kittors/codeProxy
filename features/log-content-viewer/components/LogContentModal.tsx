@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Code2, Download, Eye, FileInput, FileOutput, Info, Loader2 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Code2, Download, Eye, FileInput, FileOutput, Info, Loader2 } from "@code-proxy/ui/icons";
 import { usageApi, type UsageLogEgressResponse } from "@code-proxy/api-client";
 import {
   Button,
@@ -42,7 +41,6 @@ import { useLogContentData } from "../log-content/useLogContentData";
 const VIRTUAL_MESSAGE_REVEAL_THRESHOLD = 80;
 const MODAL_CONTENT_LOAD_DELAY_MS = 260;
 const LOADING_EXIT_MS = 220;
-const CONTENT_ENTER_MS = 340;
 type ContentPhase = "loading" | "error" | "content";
 
 export function LogContentModal({
@@ -431,7 +429,7 @@ export function LogContentModal({
   }, [contentPhase, displayPhase]);
 
   const renderCenteredLoading = () => (
-    <div className="flex min-h-0 flex-1 items-center justify-center text-ink-3">
+    <div className="flex min-h-0 flex-1 items-center justify-center text-sn-label3">
       <Loader2 size={22} className="animate-spin" aria-hidden />
       <span className="ml-3 text-sm">{t("common.loading_ellipsis")}</span>
     </div>
@@ -578,54 +576,40 @@ export function LogContentModal({
         description={detailsOnly ? t("log_content.details_only_desc") : undefined}
       >
         <div className="relative min-h-0 flex-1">
-          <AnimatePresence initial={false}>
-            {displayPhase === "loading" ? (
-              <motion.div
-                key={`loading-${activeTab}-${logId ?? "none"}`}
-                className="absolute inset-0 flex overflow-y-auto overscroll-contain"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: contentPhase === "loading" ? 1 : 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-              >
-                {renderCenteredLoading()}
-              </motion.div>
-            ) : displayPhase === "error" ? (
-              <motion.div
-                key={`error-${activeTab}-${logId ?? "none"}`}
-                className="absolute inset-0 flex flex-col items-center justify-center overflow-y-auto overscroll-contain"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-              >
-                <Callout tone="danger" role="alert" className="max-w-md">
-                  {activeError}
-                </Callout>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
-                className="absolute inset-0 will-change-[opacity,filter]"
-                initial={{ opacity: 0, filter: "blur(3px)" }}
-                animate={{ opacity: 1, filter: "blur(0px)" }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: CONTENT_ENTER_MS / 1000,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-              >
-                {/* 内容区上下渐隐：长 JSON、长对话滚动时不会在页签条和弹窗底边被硬生生截断。 */}
-                <ScrollFade className="h-full overflow-y-auto overscroll-contain">
-                  {activeTab === "input"
-                    ? renderInput()
-                    : activeTab === "output"
-                      ? renderOutput()
-                      : renderDetails()}
-                </ScrollFade>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {displayPhase === "loading" ? (
+            <div
+              key={`loading-${activeTab}-${logId ?? "none"}`}
+              className={[
+                "absolute inset-0 flex overflow-y-auto overscroll-contain transition-opacity duration-200",
+                contentPhase === "loading" ? "opacity-100" : "opacity-0",
+              ].join(" ")}
+            >
+              {renderCenteredLoading()}
+            </div>
+          ) : displayPhase === "error" ? (
+            <div
+              key={`error-${activeTab}-${logId ?? "none"}`}
+              className="sn-fade-up absolute inset-0 flex flex-col items-center justify-center overflow-y-auto overscroll-contain"
+            >
+              <Callout tone="danger" role="alert" className="max-w-md">
+                {activeError}
+              </Callout>
+            </div>
+          ) : (
+            <div
+              key={`content-${activeTab}-${viewMode}-${logId ?? "none"}`}
+              className="sn-fade-up absolute inset-0"
+            >
+              {/* 内容区上下渐隐：长 JSON、长对话滚动时不会在页签条和弹窗底边被硬生生截断。 */}
+              <ScrollFade className="h-full overflow-y-auto overscroll-contain">
+                {activeTab === "input"
+                  ? renderInput()
+                  : activeTab === "output"
+                    ? renderOutput()
+                    : renderDetails()}
+              </ScrollFade>
+            </div>
+          )}
         </div>
       </ContentModal>
       {/* 大图预览放在弹窗外：弹窗关闭时会冻结内容播完退场动画，预览不该跟着被冻住。 */}

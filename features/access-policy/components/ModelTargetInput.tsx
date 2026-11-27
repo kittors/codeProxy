@@ -1,8 +1,8 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { Bot } from "lucide-react";
+import { Bot } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
-import { HUE_GLYPH, TextInput, cn, floatingPanelSurface } from "@code-proxy/ui";
+import { HUE_GLYPH, TextInput, cn, floatingPanelSurface, resolvePortalContainer } from "@code-proxy/ui";
 import type { ModelOption } from "./ModelPatternInput";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 
@@ -110,7 +110,7 @@ export function ModelTargetInput({
             trimmed ? (
               <VendorIcon modelId={trimmed} size={14} />
             ) : (
-              <Bot size={14} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.violet)} />
+              <Bot size={14} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.violet)} />
             )
           }
           onChange={(event) => {
@@ -144,7 +144,7 @@ export function ModelTargetInput({
                   aria-selected={index === active}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs",
-                    index === active ? "bg-hover text-ink" : "text-ink-2",
+                    index === active ? "bg-sn-hover text-sn-label" : "text-sn-label2",
                   )}
                   onMouseEnter={() => setActive(index)}
                   onClick={() => choose(option.value)}
@@ -154,7 +154,7 @@ export function ModelTargetInput({
                 </div>
               ))}
             </div>,
-            document.body,
+            resolvePortalContainer(anchorRef.current),
           )
         : null}
     </>

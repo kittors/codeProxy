@@ -1,6 +1,5 @@
 import type { MouseEvent } from "react";
-import type { LucideIcon } from "lucide-react";
-import { resolveMenuIcon } from "@code-proxy/ui";
+import { resolveMenuIcon, type MenuIconComponent } from "@code-proxy/ui";
 import type { MenuIdentity, TenantIdentity } from "@code-proxy/api-client";
 
 /**
@@ -16,7 +15,7 @@ export interface SidebarNavItem {
   menuCode: string;
   to: string;
   i18nKey: string;
-  icon: LucideIcon;
+  icon: MenuIconComponent;
   permission: string;
   sortOrder: number;
   external?: boolean;
@@ -26,7 +25,7 @@ export interface SidebarNavGroup {
   id: string;
   menuCode: string;
   i18nKey: string;
-  icon: LucideIcon;
+  icon: MenuIconComponent;
   sortOrder: number;
   items: readonly SidebarNavItem[];
 }
@@ -39,7 +38,7 @@ export type SidebarNavEntry =
 export interface NavSection {
   id: string;
   i18nKey: string;
-  icon: LucideIcon;
+  icon: MenuIconComponent;
   items: readonly SidebarNavItem[];
   single: boolean;
 }

@@ -65,14 +65,14 @@ const readGeometry = (page: Page) =>
     const header = document.querySelector<HTMLElement>('th[data-col="actions"]');
     const cells = [...document.querySelectorAll<HTMLElement>('td[data-col="actions"]')];
     const firstButton = cells[0]?.querySelector("button");
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     if (!header || !firstButton || !viewport) throw new Error("missing fixed actions column");
     const headerRect = header.getBoundingClientRect();
     const firstCellRect = cells[0]!.getBoundingClientRect();
-    const shadow = getComputedStyle(cells[0]!, "::after");
+    const shadow = getComputedStyle(cells[0]!, "::before");
     const lastRowBottom = cells[cells.length - 1]!.getBoundingClientRect().bottom;
     // 带边缘阴影的格子：每一行的操作格加表头，不多也不少（没有一条按视口高度画的轨道）。
-    const edges = [...document.querySelectorAll<HTMLElement>('.cp-grid [data-pin-edge="end"]')];
+    const edges = [...document.querySelectorAll<HTMLElement>(".sn-tbl-wrap .sn-pin-r-start")];
     return {
       header: { left: headerRect.left, right: headerRect.right, width: headerRect.width },
       firstCell: { left: firstCellRect.left, width: firstCellRect.width },
@@ -80,6 +80,7 @@ const readGeometry = (page: Page) =>
       shadowOpacity: Number(shadow.opacity),
       shadowLeft: shadow.left,
       shadowWidth: shadow.width,
+      shadowBox: shadow.boxShadow,
       edgeCount: edges.length,
       lowestEdgeBottom: Math.max(...edges.map((edge) => edge.getBoundingClientRect().bottom)),
       lastRowBottom,
@@ -92,9 +93,10 @@ const expectShadowHugsTheFixedColumn = (geometry: Awaited<ReturnType<typeof read
   expect(Math.abs(geometry.header.right - geometry.viewportRight)).toBeLessThanOrEqual(1);
   expect(Math.abs(geometry.firstCell.left - geometry.header.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(geometry.firstCell.width - geometry.header.width)).toBeLessThanOrEqual(1);
-  // …the shadow sits just outside it (a 22px strip left of the cell), never over its first button…
-  expect(geometry.shadowLeft).toBe("-22px");
-  expect(geometry.shadowWidth).toBe("22px");
+  // Satin 原生 1px 细线 + 柔雾 box-shadow 离边投影，不覆盖相邻列也不压住操作按钮。
+  expect(geometry.shadowLeft).toBe("0px");
+  expect(geometry.shadowWidth).toBe("1px");
+  expect(geometry.shadowBox).not.toBe("none");
   expect(geometry.firstButtonLeft).toBeGreaterThan(geometry.firstCell.left);
   // …and it belongs to the rows themselves, so it stops at the last row.
   expect(geometry.edgeCount).toBe(files.length + 1);
@@ -126,7 +128,7 @@ test("AI accounts: a table wider than its columns leaves the fixed column at its
   await page.setViewportSize({ width: 2560, height: 900 });
   const widened = await readGeometry(page);
   expect(
-    await page.evaluate(() => document.querySelector(".cp-grid")?.getAttribute("data-x-overflow")),
+    await page.evaluate(() => document.querySelector(".sn-tbl-wrap")?.getAttribute("data-x-overflow")),
   ).toBe("false");
   expect(Math.abs(widened.header.width - nominalWidth)).toBeLessThanOrEqual(1);
   expectShadowHugsTheFixedColumn(widened);

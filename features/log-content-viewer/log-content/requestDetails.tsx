@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@code-proxy/ui/icons";
 import type { UsageLogEgressResponse } from "@code-proxy/api-client";
 import { DetailBadge } from "./detailBadge";
 import { parseJsonObject } from "./parsers";
@@ -339,16 +338,16 @@ function buildExtraDetailSections(details: RequestDetailRecord): Array<{
 function RequestDetailRows({ rows }: { rows: RequestDetailRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <div className="divide-y divide-line">
+    <div className="divide-y divide-sn-line">
       {rows.map((row) => (
         <div
           key={`${row.label}:${row.value}`}
           className="grid min-w-0 gap-1.5 py-2.5 sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3"
         >
-          <span className="min-w-0 font-mono text-xs leading-5 break-all text-ink-3">
+          <span className="min-w-0 font-mono text-xs leading-5 break-all text-sn-label3">
             {row.label}
           </span>
-          <span className="min-w-0 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ink">
+          <span className="min-w-0 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-sn-label">
             {row.value}
           </span>
         </div>
@@ -361,7 +360,7 @@ function RequestDetailGroupView({ group }: { group: RequestDetailGroup }) {
   if (group.rows.length === 0) return null;
   return (
     <div className="pt-3">
-      <div className="pb-1 text-xs font-medium text-ink-3">{group.title}</div>
+      <div className="pb-1 text-xs font-medium text-sn-label3">{group.title}</div>
       <RequestDetailRows rows={group.rows} />
     </div>
   );
@@ -378,7 +377,7 @@ function RequestDetailAttemptView({
   return (
     <div className="min-w-0">
       {showTitle && attempt.title ? (
-        <div className="pb-1 font-mono text-xs text-ink-3">{attempt.title}</div>
+        <div className="pb-1 font-mono text-xs text-sn-label3">{attempt.title}</div>
       ) : null}
       <RequestDetailRows rows={attempt.rows} />
       {attempt.groups.map((group) => (
@@ -415,17 +414,17 @@ function RequestDetailSection({
 
   return (
     // 分区是弹窗里的一块无描边淡底：以前是「描边分区 → 灰底内衬 → 描边小卡」三层框。
-    <section data-testid={testId} className="overflow-hidden rounded-xl bg-subtle">
+    <section data-testid={testId} className="overflow-hidden rounded-xl bg-sn-subtle">
       {/* 分区是 overflow-hidden 的：焦点环往里画，否则全局的外扩描边会被裁掉。 */}
       <button
         type="button"
         aria-expanded={open}
         aria-controls={contentId}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-hover focus-visible:outline-offset-[-2px]"
+        className="flex w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-sn-hover focus-visible:outline-offset-[-2px]"
       >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          <h3 className="min-w-0 truncate text-sm font-medium text-ink">
+          <h3 className="min-w-0 truncate text-sm font-medium text-sn-label">
             {title}
           </h3>
           {headerExtras ? (
@@ -436,38 +435,29 @@ function RequestDetailSection({
         </div>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-ink-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-sn-label3 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           aria-hidden="true"
         />
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            id={contentId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-4 px-3.5 pb-3">
-              {children ? (
-                children
-              ) : visibleAttempts.length > 0 ? (
-                visibleAttempts.map((attempt, index) => (
-                  <RequestDetailAttemptView
-                    key={`${attempt.title ?? "attempt"}-${index}`}
-                    attempt={attempt}
-                    showTitle={showAttemptTitle}
-                  />
-                ))
-              ) : (
-                <span className="block py-1 text-sm text-ink-3">--</span>
-              )}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {open ? (
+        <div id={contentId} className="sn-fade-up overflow-hidden">
+          <div className="space-y-4 px-3.5 pb-3">
+            {children ? (
+              children
+            ) : visibleAttempts.length > 0 ? (
+              visibleAttempts.map((attempt, index) => (
+                <RequestDetailAttemptView
+                  key={`${attempt.title ?? "attempt"}-${index}`}
+                  attempt={attempt}
+                  showTitle={showAttemptTitle}
+                />
+              ))
+            ) : (
+              <span className="block py-1 text-sm text-sn-label3">--</span>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

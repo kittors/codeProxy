@@ -96,26 +96,26 @@ export function StructuredRequestCard({
       <div className="space-y-5">
         {model ? (
           <div>
-            <p className="text-xs font-medium text-ink-3">{t("log_content.field_model")}</p>
-            <p className="mt-2 break-words text-sm font-semibold text-ink">{model}</p>
+            <p className="text-xs font-medium text-sn-label3">{t("log_content.field_model")}</p>
+            <p className="mt-2 break-words text-sm font-semibold text-sn-label">{model}</p>
           </div>
         ) : null}
         {prompt ? (
           <div>
-            <p className="text-xs font-medium text-ink-3">{t("log_content.field_prompt")}</p>
-            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ink">
+            <p className="text-xs font-medium text-sn-label3">{t("log_content.field_prompt")}</p>
+            <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-7 text-sn-label">
               {prompt}
             </pre>
           </div>
         ) : null}
         {parameters.length > 0 ? (
           <div>
-            <p className="text-xs font-medium text-ink-3">{t("log_content.field_parameters")}</p>
+            <p className="text-xs font-medium text-sn-label3">{t("log_content.field_parameters")}</p>
             <div className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {parameters.map((item) => (
                 <div key={item.key} className="min-w-0">
-                  <p className="font-mono text-xs text-ink-3">{item.key}</p>
-                  <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-ink">
+                  <p className="font-mono text-xs text-sn-label3">{item.key}</p>
+                  <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-sn-label">
                     {item.value}
                   </pre>
                 </div>
@@ -140,7 +140,7 @@ export function OutputImageCard({
   // 图片本身就是内容，不再外面再套一块淡底框：底色只在图片加载出来之前垫在图片位置上。
   return (
     <div className="space-y-2">
-      <div className="relative min-h-[160px] overflow-hidden rounded-2xl bg-subtle">
+      <div className="relative min-h-[160px] overflow-hidden rounded-xl bg-sn-subtle">
         <img
           src={image.src}
           alt={t("log_content.output")}
@@ -158,8 +158,8 @@ export function OutputImageCard({
       </div>
       {image.revisedPrompt ? (
         <div className="px-1">
-          <p className="text-xs font-medium text-ink-3">{t("image_generation.revised_prompt_label")}</p>
-          <p className="mt-1 text-sm text-ink-2">{image.revisedPrompt}</p>
+          <p className="text-xs font-medium text-sn-label3">{t("image_generation.revised_prompt_label")}</p>
+          <p className="mt-1 text-sm text-sn-label2">{image.revisedPrompt}</p>
         </div>
       ) : null}
     </div>

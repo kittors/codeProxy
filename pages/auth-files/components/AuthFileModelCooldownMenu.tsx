@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2, RotateCw, Timer } from "lucide-react";
+import { ChevronDown, Loader2, RotateCw, Timer } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@code-proxy/ui";
 import {
@@ -78,7 +78,7 @@ export function AuthFileModelCooldownMenu({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="start" className="max-h-72 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto">
-          <p className="px-2 pb-1 pt-1 text-2xs font-semibold text-ink-3">
+          <p className="px-2 pb-1 pt-1 text-2xs font-semibold text-sn-label3">
             {t(
               canRetry
                 ? "auth_files.cooldown_menu_title"
@@ -105,7 +105,7 @@ export function AuthFileModelCooldownMenu({
                   <RotateCw size={14} aria-hidden="true" />
                 )}
                 <span className="min-w-0 flex-1 truncate font-mono text-xs">{cooldown.model}</span>
-                <span className="shrink-0 text-2xs tabular-nums text-ink-3">{detail}</span>
+                <span className="shrink-0 text-2xs tabular-nums text-sn-label3">{detail}</span>
               </DropdownMenu.Item>
             );
           })}

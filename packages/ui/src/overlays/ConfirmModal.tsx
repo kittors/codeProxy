@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { AlertTriangle, CircleHelp, Trash2 } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { TextInput } from "../primitives/Input";
@@ -15,9 +15,9 @@ const TONE: Record<ConfirmVariant, DialogTone> = {
 };
 
 const DEFAULT_ICON: Record<ConfirmVariant, ReactNode> = {
-  danger: <Trash2 />,
-  warning: <AlertTriangle />,
-  primary: <CircleHelp />,
+  danger: <Icon name="trash-2" size={18} />,
+  warning: <Icon name="triangle-alert" size={18} />,
+  primary: <Icon name="info" size={18} />,
 };
 
 /**
@@ -111,19 +111,24 @@ export function ConfirmModal({
       {hasBody ? (
         <div className="space-y-4">
           {subject ? (
-            <div className="rounded-2xl bg-subtle px-4 py-3 text-sm text-ink">
+            <div className="rounded-xl bg-sn-subtle px-3.5 py-2.5 text-sm text-sn-label">
               {subject}
             </div>
           ) : null}
           {consequences?.length ? (
-            <ul className="space-y-1.5 text-sm text-ink-2">
+            <ul
+              className={[
+                "space-y-1.5 text-sm",
+                variant === "danger" ? "sn-impact !list-none !ml-0" : "text-sn-label2",
+              ].join(" ")}
+            >
               {consequences.map((item, index) => (
                 <li key={index} className="flex gap-2.5">
                   <span
                     aria-hidden="true"
                     className={[
                       "mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full",
-                      variant === "danger" ? "bg-rose-500/70" : "bg-ink-4",
+                      variant === "danger" ? "bg-[var(--sn-danger)]" : "bg-sn-label-off",
                     ].join(" ")}
                   />
                   <span className="min-w-0">{item}</span>
@@ -140,7 +145,7 @@ export function ConfirmModal({
                 confirm();
               }}
             >
-              <label htmlFor={phraseId} className="block text-sm text-ink-2">
+              <label htmlFor={phraseId} className="block text-sm text-sn-label2">
                 {t("common.confirm_phrase_label", {
                   phrase: confirmPhrase,
                   defaultValue: "输入 {{phrase}} 以确认",

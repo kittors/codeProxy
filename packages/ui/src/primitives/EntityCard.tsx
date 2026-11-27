@@ -90,14 +90,14 @@ export function EntityCard({
       className={[
         // Both `group` and `group/card`: children written against the plain
         // group variant keep working, and tests locate a card by `.group`.
-        // 悬停只把投影加深一档，不上浮：卡片里有开关、勾选框这类小目标，鼠标移上去时
-        // 整张卡跟着挪 2px，正要点的那个控件也会跟着跑。
-        "group group/card flex w-full max-w-[34rem] flex-col transition-[box-shadow,opacity] duration-250 ease-soft hover:shadow-lift md:max-w-none",
+        // 对齐 Satin `.sn-card` / `.sn-pc` 规范：不加悬停投影、不上浮，悬停仅提亮 1px 细描边。
+        "group group/card flex w-full max-w-[34rem] flex-col transition-[border-color,opacity] duration-150 ease-[var(--sn-ease-out)] hover:border-sn-line-control-hover md:max-w-none",
         fill ? "h-full" : "",
-        // 紧凑卡片的圆角小一档（16），同心内圆角跟着改成 16 − 12 = 4（见 Card 的说明）。
-        dense ? "rounded-2xl [--cp-inner-radius:var(--radius-sm)]" : "rounded-3xl",
-        // 选中：把伪元素细边换成强调色，不再叠一圈墨色 ring——投影照常，卡片不会因为选中「变厚」。
-        selected ? "[--cp-edge:var(--cp-accent)] dark:[--cp-edge:var(--cp-accent-ink)]" : "",
+        dense
+          ? "rounded-lg [--sn-inner-radius:var(--sn-r-xs)]"
+          : "rounded-xl [--sn-inner-radius:var(--sn-r-md)]",
+        // 选中态对齐 Satin `.sn-card.sn-sel`：主色描边 + 1px 选中环。
+        selected ? "border-sn-accent shadow-[0_0_0_1px_var(--sn-accent)]" : "",
         muted ? "opacity-90" : "",
         dimmed ? "opacity-85" : "",
         className,
@@ -111,7 +111,7 @@ export function EntityCard({
             content={title}
             title={title}
             className={[
-              "min-w-0 truncate leading-5 font-semibold tracking-tight text-ink",
+              "min-w-0 truncate leading-5 font-semibold tracking-tight text-sn-label",
               titleAdornment ? "" : "flex-1",
               dense ? "text-sm" : "text-base",
             ].join(" ")}
@@ -216,8 +216,8 @@ export function EntityCardSkeleton({
       aria-hidden="true"
       className={[
         "relative flex w-full min-w-0 max-w-[34rem] flex-col md:max-w-none",
-        surface({ tone: "card", radius: "3xl" }),
-        dense ? "rounded-2xl p-3" : "rounded-3xl p-4",
+        surface({ tone: "card", radius: "xl" }),
+        dense ? "rounded-lg p-3.5" : "rounded-xl p-5",
         fill ? "h-full" : "",
         className,
       ]

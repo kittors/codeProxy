@@ -1,47 +1,39 @@
-import type { ReactNode } from "react";
-import type { Activity } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import type { ECBasicOption } from "echarts/types/dist/shared";
-import { Card, DialogIcon, EChart, type Hue } from "@code-proxy/ui";
+import { Icon } from "satin-ui/react";
+import { Card, EChart, type Hue } from "@code-proxy/ui";
+
+type SatinIconName = ComponentProps<typeof Icon>["name"];
 
 /**
- * 仪表盘上的一格指标：名称、数值、说明、底部一条迷你趋势线。每格是一张独立的卡片
- * （见 DashboardPage），数值本身保持墨色。
- *
- * 跟随「外观」：多彩风格下每格有一个身份色（chartTheme 的 metric），标题前的小图标块与底部
- * 趋势线同色，和系统监控、监控中心、账号详情用的是同一组色系；简约风格下标题前是线性图标、
- * 趋势线用强调色，只有失败请求用错误红。
+ * 仪表盘指标卡（对齐 Satin `.sn-panel` + `.sn-stat` + no-icon-box 规范）：
+ * 克制裸矢量图标 + 标签 + 等宽数字主值 + 说明 + 底部趋势微图，去掉旧版花哨彩色底块。
  */
 export function DashboardKpiCard({
   title,
   value,
   hint,
-  icon: Icon,
-  hue,
+  icon,
   option,
 }: {
   title: string;
   value: ReactNode;
   hint: ReactNode;
-  icon: typeof Activity;
-  /** 图标块的色相，与趋势线的身份色一致（请求蓝、成功绿、Token 紫、费用琥珀、失败红、缓存青）。 */
-  hue: Hue;
+  icon: SatinIconName;
+  /** 保留类型参数供调用方语义标记，视觉严格遵循 Satin 单色图标规范。 */
+  hue?: Hue;
   option: ECBasicOption;
 }) {
   return (
     <Card className="h-full" bodyClassName="mt-0 flex h-full min-w-0 flex-col">
-      <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
-        <Icon size={16} className="shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
-        <span className="hidden icon-hue:contents">
-          <DialogIcon tone={hue} size="xs">
-            <Icon />
-          </DialogIcon>
-        </span>
-        <span className="min-w-0 truncate">{title}</span>
-      </p>
-      <div className="mt-2 text-3xl leading-none font-semibold tracking-tight text-ink">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-xs font-medium text-sn-label3">{title}</span>
+        <Icon name={icon} size={15} className="shrink-0 text-sn-label3" />
+      </div>
+      <div className="mt-2.5 text-2xl leading-none font-semibold tracking-tight text-sn-label tabular-nums">
         {value}
       </div>
-      <p className="mt-2 text-xs text-ink-3">{hint}</p>
+      <p className="mt-2 text-xs text-sn-label3 tabular-nums">{hint}</p>
       <div className="mt-auto pt-3">
         <EChart option={option} className="h-10" overflowVisible />
       </div>

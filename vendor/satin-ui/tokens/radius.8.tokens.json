@@ -1,0 +1,16 @@
+{
+  "$description": "按钮圆角档：8px",
+  "radius": {
+    "button": {
+      "$type": "dimension",
+      "$value": "8px",
+      "$extensions": {
+        "com.satin": {
+          "var": "--btn-r",
+          "source": "buttons.css"
+        }
+      },
+      "$description": "按钮圆角（跟着 data-radius 档：6 / 8 / 10 / 胶囊，默认胶囊）"
+    }
+  }
+}

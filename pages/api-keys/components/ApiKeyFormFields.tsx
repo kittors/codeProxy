@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@code-proxy/ui/icons";
 import { Button, Callout, FormField, Select, TextInput, type SelectOption } from "@code-proxy/ui";
 import type { ApiKeyFormValues } from "../types";
 

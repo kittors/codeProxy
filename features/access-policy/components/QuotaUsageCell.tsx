@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Infinity as InfinityIcon } from "lucide-react";
+import { Infinity as InfinityIcon } from "@code-proxy/ui/icons";
 import {
   QUOTA_METRICS,
   QUOTA_WINDOWS,
@@ -51,8 +51,8 @@ const barPercent = (ratio: number): number => Math.min(100, Math.max(ratio > 0 ?
 /** 「不限制」：简约风格是中性胶囊，多彩风格叠回绿色。 */
 export function UnlimitedChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300">
-      <InfinityIcon size={13} aria-hidden="true" className="text-ink-3 colorful:text-current" />
+    <span className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-1 text-xs font-medium text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300">
+      <InfinityIcon size={13} aria-hidden="true" className="text-sn-label3 colorful:text-current" />
       {label}
     </span>
   );
@@ -67,8 +67,8 @@ function CellLine({ cell, withBar }: { cell: CellUsage; withBar: boolean }) {
     <div className="min-w-0">
       <div className="flex min-w-0 items-center gap-1 text-xs">
         <MetricGlyph metric={cell.metric} size={12} />
-        <span className="shrink-0 font-semibold text-ink-2">{label}</span>
-        <span className={cn("min-w-0 truncate tabular-nums", hasUsage ? USAGE_TEXT[tone] : "text-ink-2")}>
+        <span className="shrink-0 font-semibold text-sn-label2">{label}</span>
+        <span className={cn("min-w-0 truncate tabular-nums", hasUsage ? USAGE_TEXT[tone] : "text-sn-label2")}>
           {hasUsage
             ? `${formatQuotaAmount(cell.metric, cell.used, { compact: true })} / ${formatQuotaAmount(cell.metric, cell.limit, { compact: true })}`
             : formatQuotaAmount(cell.metric, cell.limit, { compact: true })}
@@ -156,7 +156,7 @@ export function QuotaUsageCell({
           <button
             type="button"
             aria-label={t("access_policy.more_cells", { count: hidden })}
-            className="inline-flex h-6 items-center rounded-full bg-ink/[0.05] px-2 text-xs font-medium tabular-nums text-ink-2 hover:bg-ink/[0.08] dark:bg-white/[0.07] dark:hover:bg-white/[0.1]"
+            className="inline-flex h-6 items-center rounded-full bg-sn-label/[0.05] px-2 text-xs font-medium tabular-nums text-sn-label2 hover:bg-sn-label/[0.08] dark:bg-white/[0.07] dark:hover:bg-white/[0.1]"
           >
             +{hidden}
           </button>

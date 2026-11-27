@@ -27,6 +27,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: false,
       privacyMasking: false,
       nodeMetrics: false,
+      billing: false,
     });
     for (const config of [
       { capabilities: { "payload-rules-dry-run": "true" } },
@@ -42,6 +43,7 @@ describe("payload rules dry-run", () => {
         poolCapacity: false,
         privacyMasking: false,
         nodeMetrics: false,
+        billing: false,
       });
     }
   });
@@ -56,6 +58,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: true,
       privacyMasking: false,
       nodeMetrics: false,
+      billing: false,
     });
     // Only an explicit true unlocks a page: a truthy string or a camelCase key is not a declaration.
     expect(
@@ -66,6 +69,7 @@ describe("payload rules dry-run", () => {
       poolCapacity: false,
       privacyMasking: false,
       nodeMetrics: false,
+      billing: false,
     });
   });
 
@@ -80,5 +84,11 @@ describe("payload rules dry-run", () => {
     const { readConfigCapabilities } = await import("../payload-rules");
     expect(readConfigCapabilities({ capabilities: { "privacy-masking": true } }).privacyMasking).toBe(true);
     expect(readConfigCapabilities({ capabilities: { privacyMasking: true, "privacy-masking": "true" } }).privacyMasking).toBe(false);
+  });
+
+  test("reads the billing declaration by its key", async () => {
+    const { readConfigCapabilities } = await import("../payload-rules");
+    expect(readConfigCapabilities({ capabilities: { billing: true } }).billing).toBe(true);
+    expect(readConfigCapabilities({ capabilities: { billing: "true" } }).billing).toBe(false);
   });
 });

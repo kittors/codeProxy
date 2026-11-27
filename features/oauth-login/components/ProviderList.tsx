@@ -1,4 +1,4 @@
-import { FileJson } from "lucide-react";
+import { FileJson } from "@code-proxy/ui/icons";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { VendorIcon } from "@code-proxy/assets";
@@ -15,7 +15,7 @@ export function ProviderGlyph({
   return provider.icon ? (
     <VendorIcon modelId={provider.icon} size={size} />
   ) : (
-    <FileJson size={size} className="text-ink-2" aria-hidden="true" />
+    <FileJson size={size} className="text-sn-label2" aria-hidden="true" />
   );
 }
 

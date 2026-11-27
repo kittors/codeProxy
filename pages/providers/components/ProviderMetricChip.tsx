@@ -15,7 +15,7 @@ interface ProviderMetricChipProps {
   title?: string;
 }
 
-const NEUTRAL_CHIP = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_CHIP = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 // Squared corners, 2xs type, flat tint: the badge language of the AI accounts
 // card, so a provider card and an account card read as the same component.

@@ -1,6 +1,5 @@
 import { useRef } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "@code-proxy/ui/icons";
 import { LogoMark } from "@code-proxy/assets";
 import { Callout, FormField, TextInput, rules, useFormValidation } from "@code-proxy/ui";
 import {
@@ -10,8 +9,6 @@ import {
   type LoginFailure,
 } from "@features/login-lock";
 import { LandingButton } from "./landing/LandingButton";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * 门户登录表单。
@@ -49,7 +46,6 @@ export function PortalLoginForm({
   onTogglePassword: () => void;
   onSubmit: () => void;
 }) {
-  const reduceMotion = useReducedMotion();
   const formRef = useRef<HTMLFormElement | null>(null);
   const validation = useFormValidation(
     { username, password },
@@ -63,17 +59,17 @@ export function PortalLoginForm({
   // 锁定倒计时走完后，那句「请 N 分钟后重试」已经过时，不再显示。
   const showError = Boolean(error) && (locked || !error?.lockedUntil);
 
-  const fieldClass = "h-12 rounded-2xl px-4 text-sm";
-  const adornmentClass = "text-ink-3";
+  const fieldClass = "h-12 rounded-[var(--sn-btn-r)] px-4 text-sm";
+  const adornmentClass = "text-sn-label3";
 
   return (
     <div>
       <div className="flex flex-col items-center pb-8 text-center">
         <LogoMark size={44} className="mb-5" />
-        <h2 className="font-display text-2xl font-bold tracking-tight text-ink">
+        <h2 className="font-display text-2xl font-bold tracking-tight text-sn-label">
           {t("apikey_lookup.login_title", { defaultValue: "登录" })}
         </h2>
-        <p className="mt-2 text-sm text-ink-3">
+        <p className="mt-2 text-sm text-sn-label3">
           {t("apikey_lookup.login_desc", { defaultValue: "使用你的账号登录。" })}
         </p>
       </div>
@@ -127,7 +123,7 @@ export function PortalLoginForm({
               <button
                 type="button"
                 onClick={onTogglePassword}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-sn-label3 transition-colors duration-150 hover:bg-sn-hover hover:text-sn-label"
                 aria-label={
                   showPassword
                     ? t("login.hide_key", { defaultValue: "隐藏密码" })
@@ -141,27 +137,17 @@ export function PortalLoginForm({
           />
         </FormField>
 
-        {/* 错误条用高度动画展开，避免它突然出现把按钮顶下去 */}
-        <AnimatePresence initial={false}>
-          {showError && error ? (
-            <motion.div
-              key="login-error"
-              initial={reduceMotion ? false : { opacity: 0, height: 0, y: -4 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -4 }}
-              transition={{ duration: 0.24, ease: EASE }}
-              className="overflow-hidden"
-            >
-              <Callout tone="danger" role="alert">
-                {locked ? (
-                  <LoginLockMessage t={t} seconds={lockSeconds} announcement={error.message} />
-                ) : (
-                  error.message
-                )}
-              </Callout>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        {showError && error ? (
+          <div key="login-error" className="sn-fade-up overflow-hidden">
+            <Callout tone="danger" role="alert">
+              {locked ? (
+                <LoginLockMessage t={t} seconds={lockSeconds} announcement={error.message} />
+              ) : (
+                error.message
+              )}
+            </Callout>
+          </div>
+        ) : null}
 
         <LandingButton type="submit" disabled={busy || locked} className="mt-1 h-12 w-full">
           {busy ? (
@@ -180,7 +166,7 @@ export function PortalLoginForm({
           它是静态说明，不加 live region，免得和上面的错误条重复播报。
           俄文这类长文案在弹窗宽度下会折行，text-balance 让两行等长，不把最后一个词单独挤到第二行。
         */}
-        <p className="text-center text-sm text-balance text-ink-3">
+        <p className="text-center text-sm text-balance text-sn-label3">
           {t("apikey_lookup.forgot_password_hint", {
             defaultValue: "忘记密码？请联系管理员重置。",
           })}

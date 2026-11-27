@@ -1,23 +1,16 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import { TextInput } from "../primitives/Input";
-import { controlSurface } from "../utils/controlStyles";
-import {
-  cn,
-  floatingPanelSurface,
-  getSelectDropdownMotion,
-  selectDropdownTransition,
-} from "../utils/selectStyles";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
+import { cn } from "../utils/selectStyles";
 
 export interface DateTimePickerLabels {
   picker: string;
@@ -46,11 +39,7 @@ interface DateTimePickerProps {
   placeholder?: string;
 }
 
-const VIEWPORT_MARGIN = 12;
-const POPOVER_GAP = 8;
 const POPOVER_WIDTH = 320;
-const FIVE_WEEK_POPOVER_HEIGHT = 392;
-const SIX_WEEK_POPOVER_HEIGHT = 428;
 
 const pad2 = (value: number): string => String(value).padStart(2, "0");
 
@@ -124,14 +113,6 @@ export function DateTimePicker({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
-  const [panelStyle, setPanelStyle] = useState<CSSProperties>({
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: POPOVER_WIDTH,
-    zIndex: 99999,
-  });
 
   const parsedValue = useMemo(() => parseLocalDateTime(value), [value]);
   const [visibleMonth, setVisibleMonth] = useState(() => {
@@ -145,77 +126,21 @@ export function DateTimePicker({
     setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
   }, [open, parsedValue]);
 
+  const floating = useSatinFloatingLayer({
+    open,
+    anchorRef: rootRef,
+    panelRef,
+    placement: "bottom",
+    align: "start",
+    gap: 8,
+    margin: 12,
+    onClose: () => setOpen(false),
+  });
+
   const calendarCellCount = useMemo(
     () => getCalendarCellCount(visibleMonth.getFullYear(), visibleMonth.getMonth()),
     [visibleMonth],
   );
-  const estimatedPopoverHeight =
-    calendarCellCount > 35 ? SIX_WEEK_POPOVER_HEIGHT : FIVE_WEEK_POPOVER_HEIGHT;
-
-  const updatePosition = useCallback(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const rect = root.getBoundingClientRect();
-    const viewportWidth = window.innerWidth || 1024;
-    const viewportHeight = window.innerHeight || 768;
-    const width = Math.max(0, Math.min(POPOVER_WIDTH, viewportWidth - VIEWPORT_MARGIN * 2));
-    const minLeft = VIEWPORT_MARGIN;
-    const maxLeft = Math.max(VIEWPORT_MARGIN, viewportWidth - width - VIEWPORT_MARGIN);
-    const left = clamp(rect.left, minLeft, maxLeft);
-    const spaceBelow = viewportHeight - rect.bottom - POPOVER_GAP - VIEWPORT_MARGIN;
-    const spaceAbove = rect.top - POPOVER_GAP - VIEWPORT_MARGIN;
-    const openAbove = spaceBelow < estimatedPopoverHeight && spaceAbove > spaceBelow;
-    const minTop = VIEWPORT_MARGIN;
-    const maxTop = Math.max(
-      VIEWPORT_MARGIN,
-      viewportHeight - VIEWPORT_MARGIN - estimatedPopoverHeight,
-    );
-    const top = openAbove
-      ? clamp(rect.top - POPOVER_GAP - estimatedPopoverHeight, minTop, maxTop)
-      : clamp(rect.bottom + POPOVER_GAP, minTop, maxTop);
-
-    setPlacement(openAbove ? "top" : "bottom");
-    setPanelStyle({
-      position: "fixed",
-      top,
-      left,
-      width,
-      zIndex: 99999,
-    });
-  }, [estimatedPopoverHeight]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [open, updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起面板）。
-      event.preventDefault();
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
 
   const monthLabel = useMemo(
     () =>
@@ -321,48 +246,56 @@ export function DateTimePicker({
             type="button"
             aria-label={labels.open}
             onClick={() => setOpen((prev) => !prev)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+            className="sn-eye"
           >
-            <CalendarDays size={15} aria-hidden="true" />
+            <Icon name="calendar" size={15} />
           </button>
         }
       />
 
-      {createPortal(
-        <AnimatePresence>
-          {open ? (
-            <motion.div
+      {floating.mounted
+        ? createPortal(
+            <div
               ref={panelRef}
               role="dialog"
+              aria-hidden={floating.isOpen ? undefined : true}
               aria-label={labels.picker}
-              data-placement={placement}
-              data-side={placement}
-              className={cn("fixed z-[9999] overflow-hidden p-3", floatingPanelSurface)}
-              style={panelStyle}
-              {...getSelectDropdownMotion(placement)}
-              transition={selectDropdownTransition}
+              data-placement={floating.side}
+              data-side={floating.side}
+              data-state={floating.isOpen ? "open" : "closed"}
+              className={cn(
+                "sn-pop !z-[9999] overflow-hidden !p-3 outline-none",
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+              )}
+              style={{
+                top: floating.top,
+                left: floating.left,
+                width: `min(${POPOVER_WIDTH}px, calc(100vw - 24px))`,
+                transformOrigin: floating.origin,
+              }}
             >
               <div className="flex items-center justify-between gap-2">
                 <button
                   type="button"
                   aria-label={labels.previousMonth}
                   onClick={() => moveMonth(-1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
                 >
-                  <ChevronLeft size={16} aria-hidden="true" />
+                  <Icon name="chevron-left" size={16} />
                 </button>
                 <div className="min-w-0 truncate text-sm font-semibold">{monthLabel}</div>
                 <button
                   type="button"
                   aria-label={labels.nextMonth}
                   onClick={() => moveMonth(1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="sn-btn sn-ghost sn-sm sn-ibtn sn-round"
                 >
-                  <ChevronRight size={16} aria-hidden="true" />
+                  <Icon name="chevron-right" size={16} />
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-2xs font-medium uppercase text-ink-3">
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-2xs font-medium uppercase text-[var(--sn-label3)]">
                 {weekdayLabels.map((day) => (
                   <span key={day}>{day}</span>
                 ))}
@@ -385,10 +318,14 @@ export function DateTimePicker({
                       aria-label={dayLabel}
                       onClick={() => commitDate(date)}
                       className={cn(
-                        "mx-auto h-8 w-8 rounded-full text-xs font-medium tabular-nums transition-colors",
-                        selected ? "bg-accent text-accent-fg" : "text-ink hover:bg-hover",
+                        "mx-auto h-8 w-8 rounded-[var(--sn-btn-r)] text-xs font-medium tabular-nums transition-[background-color,color,transform] duration-120 active:scale-95",
+                        selected
+                          ? "bg-[var(--sn-accent)] text-[var(--sn-on-primary)]"
+                          : "text-[var(--sn-label)] hover:bg-[var(--sn-b-ghost-hover)]",
                         !inMonth && !selected ? "opacity-35" : null,
-                        today && !selected ? "ring-1 ring-ink/20" : null,
+                        today && !selected
+                          ? "shadow-[inset_0_0_0_1px_var(--sn-line-control-hover)]"
+                          : null,
                       )}
                     >
                       {date.getDate()}
@@ -397,9 +334,9 @@ export function DateTimePicker({
                 })}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--sn-line)] pt-3">
                 <label className="space-y-1">
-                  <span className="text-2xs font-medium uppercase text-ink-3">
+                  <span className="text-2xs font-medium uppercase text-[var(--sn-label3)]">
                     {labels.hour}
                   </span>
                   <input
@@ -409,11 +346,11 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getHours()) : ""}
                     onChange={(event) => updateTime("hour", event.currentTarget.value)}
                     aria-label={labels.hour}
-                    className={cn("h-9 w-full px-3 text-sm font-medium tabular-nums", controlSurface)}
+                    className="sn-input sn-sm w-full font-medium tabular-nums"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-2xs font-medium uppercase text-ink-3">
+                  <span className="text-2xs font-medium uppercase text-[var(--sn-label3)]">
                     {labels.minute}
                   </span>
                   <input
@@ -423,7 +360,7 @@ export function DateTimePicker({
                     value={parsedValue ? pad2(parsedValue.getMinutes()) : ""}
                     onChange={(event) => updateTime("minute", event.currentTarget.value)}
                     aria-label={labels.minute}
-                    className={cn("h-9 w-full px-3 text-sm font-medium tabular-nums", controlSurface)}
+                    className="sn-input sn-sm w-full font-medium tabular-nums"
                   />
                 </label>
               </div>
@@ -432,23 +369,22 @@ export function DateTimePicker({
                 <button
                   type="button"
                   onClick={() => onChange("")}
-                  className="rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+                  className="sn-btn sn-ghost sn-sm"
                 >
                   {labels.clear}
                 </button>
                 <button
                   type="button"
                   onClick={setToday}
-                  className="rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-control transition-[background-color,box-shadow] hover:bg-hover hover:shadow-control-hover"
+                  className="sn-btn sn-secondary sn-sm"
                 >
                   {labels.today}
                 </button>
               </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            resolvePortalContainer(rootRef.current),
+          )
+        : null}
     </div>
   );
 }

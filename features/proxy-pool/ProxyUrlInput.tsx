@@ -1,5 +1,5 @@
-import { ClipboardPaste, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { Callout, SegmentedControl, TextInput } from "@code-proxy/ui";
 import {
@@ -147,24 +147,24 @@ export function ProxyUrlInput({
 
   const fieldId = (field: PartField) => `${baseId}-${field}`;
   const preview = maskedProxyUrl(parts);
-  const subLabel = "mb-1.5 block text-xs font-medium text-ink-2";
+  const subLabel = "mb-1.5 block text-xs font-medium text-sn-label2";
   const errorText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 
   const header = (
     <>
       {label ? (
-        <legend className="mb-1 text-sm font-medium text-ink">
+        <legend className="mb-1 text-sm font-medium text-sn-label">
           {label}
           {required ? (
             <span className="ml-0.5 text-rose-500" aria-hidden="true">
               *
             </span>
           ) : (
-            <span className="ml-1.5 text-xs font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 text-xs font-normal text-sn-label3">{t("common.optional")}</span>
           )}
         </legend>
       ) : null}
-      {description ? <p className="-mt-1 text-xs leading-5 text-ink-3">{description}</p> : null}
+      {description ? <p className="-mt-1 text-xs leading-5 text-sn-label3">{description}</p> : null}
     </>
   );
 
@@ -175,10 +175,9 @@ export function ProxyUrlInput({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          // 阴影描边的小按钮，和输入框同一套描边；虚线框只留给文件拖放区。
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 shadow-control transition-[color,box-shadow] hover:text-ink hover:shadow-control-hover focus-visible:shadow-control-focus focus-visible:outline-none"
+          className="sn-btn sn-secondary sn-xs"
         >
-          <Plus size={13} aria-hidden="true" />
+          <Icon name="plus" size={13} />
           {t("proxy_input.add")}
         </button>
       </fieldset>
@@ -212,9 +211,9 @@ export function ProxyUrlInput({
             setPasteError(false);
           }}
           aria-expanded={pasteOpen}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+          className="sn-btn sn-ghost sn-xs ml-auto text-[var(--sn-label2)]"
         >
-          {pasteOpen ? <X size={13} aria-hidden="true" /> : <ClipboardPaste size={13} aria-hidden="true" />}
+          <Icon name={pasteOpen ? "x" : "clipboard"} size={13} />
           {pasteOpen ? t("proxy_input.paste_cancel") : t("proxy_input.paste_open")}
         </button>
         {collapsible ? (
@@ -225,9 +224,9 @@ export function ProxyUrlInput({
               setPasteOpen(false);
               setExpanded(false);
             }}
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-300"
+            className="sn-btn sn-ghost-danger sn-xs"
           >
-            <Trash2 size={13} aria-hidden="true" />
+            <Icon name="trash-2" size={13} />
             {t("proxy_input.remove")}
           </button>
         ) : null}
@@ -263,7 +262,7 @@ export function ProxyUrlInput({
               }
             }}
           />
-          <p className={pasteError ? errorText : "mt-1 text-xs text-ink-3"} role={pasteError ? "alert" : undefined}>
+          <p className={pasteError ? errorText : "mt-1 text-xs text-sn-label3"} role={pasteError ? "alert" : undefined}>
             {pasteError ? t("proxy_input.paste_invalid") : t("proxy_input.paste_hint")}
           </p>
         </div>
@@ -320,7 +319,7 @@ export function ProxyUrlInput({
         <div className="min-w-0">
           <label htmlFor={fieldId("username")} className={subLabel}>
             {t("proxy_input.username")}
-            <span className="ml-1.5 font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 font-normal text-sn-label3">{t("common.optional")}</span>
           </label>
           <TextInput
             id={fieldId("username")}
@@ -341,7 +340,7 @@ export function ProxyUrlInput({
         <div className="min-w-0">
           <label htmlFor={fieldId("password")} className={subLabel}>
             {t("proxy_input.password")}
-            <span className="ml-1.5 font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 font-normal text-sn-label3">{t("common.optional")}</span>
           </label>
           <TextInput
             id={fieldId("password")}
@@ -355,14 +354,14 @@ export function ProxyUrlInput({
       </div>
 
       {preview ? (
-        <p className="flex min-w-0 items-center gap-2 text-xs text-ink-3">
+        <p className="flex min-w-0 items-center gap-2 text-xs text-sn-label3">
           <span className="shrink-0">{t("proxy_input.preview")}</span>
-          <code className="min-w-0 truncate rounded-md bg-subtle px-1.5 py-0.5 font-mono text-ink-2">
+          <code className="min-w-0 truncate rounded-md bg-sn-subtle px-1.5 py-0.5 font-mono text-sn-label2">
             {preview}
           </code>
         </p>
       ) : !required ? (
-        <p className="text-xs text-ink-3">{t("proxy_input.empty_means_direct")}</p>
+        <p className="text-xs text-sn-label3">{t("proxy_input.empty_means_direct")}</p>
       ) : null}
     </fieldset>
   );

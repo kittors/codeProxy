@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ShieldCheck } from "lucide-react";
+import { Download, ShieldCheck } from "@code-proxy/ui/icons";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type { ModelTestImage, ModelTestResult } from "@code-proxy/api-client";
 import { ImageResultCanvas, type CanvasState } from "@features/image-result-canvas";
@@ -154,13 +154,13 @@ function ImageCaption({ image, durationBadge }: { image: ModelTestImage; duratio
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <span className="truncate text-xs tabular-nums text-ink-3">{meta}</span>
+        <span className="truncate text-xs tabular-nums text-sn-label3">{meta}</span>
         <span className="flex shrink-0 items-center gap-2">
           {durationBadge}
           <a
             href={imageSource(image)}
             download={`model-test.${image.format || "png"}`}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
             aria-label={t("models_page.test_download_image")}
           >
             <Download size={13} aria-hidden />
@@ -168,7 +168,7 @@ function ImageCaption({ image, durationBadge }: { image: ModelTestImage; duratio
         </span>
       </div>
       {image.c2pa?.present && generator ? (
-        <p className="flex items-center gap-1 text-xs text-ink-2">
+        <p className="flex items-center gap-1 text-xs text-sn-label2">
           <ShieldCheck size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
           <span className="truncate">
             {t("models_page.test_provenance_generator")}: {generator}
@@ -176,7 +176,7 @@ function ImageCaption({ image, durationBadge }: { image: ModelTestImage; duratio
         </p>
       ) : null}
       {image.revised_prompt ? (
-        <p className="line-clamp-2 text-xs text-ink-3">
+        <p className="line-clamp-2 text-xs text-sn-label3">
           {t("models_page.test_revised_prompt")}: {image.revised_prompt}
         </p>
       ) : null}

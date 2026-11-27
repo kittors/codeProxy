@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { Button } from "../primitives/Button";
 import { HoverTooltip } from "../overlays/Tooltip";
 
@@ -25,7 +25,6 @@ export function MaskToggleButton({
     <HoverTooltip content={label}>
       <Button
         type="button"
-        // 遮罩开启时用强调色实心按钮表达「按下」状态，与调用方传入的变体无关。
         variant={masked ? "primary" : (variant ?? "secondary")}
         size={size}
         onClick={onToggle}
@@ -34,7 +33,7 @@ export function MaskToggleButton({
         title={label}
         className={className}
       >
-        {masked ? <EyeOff size={15} /> : <Eye size={15} />}
+        <Icon name={masked ? "eye-off" : "eye"} size={15} />
       </Button>
     </HoverTooltip>
   );

@@ -9,34 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  CircleOff,
-  Download,
-  Columns3,
-  Ellipsis,
-  Eye,
-  Gauge,
-  Loader2,
-  Power,
-  RefreshCw,
-  Search,
-  Settings2,
-  Share2,
-  SlidersHorizontal,
-  Tags,
-} from "lucide-react";
+import { CircleOff, Columns3, Download, Ellipsis, Eye, Gauge, Power, RefreshCw, Search, Settings2, Share2, SlidersHorizontal, Tags } from "@code-proxy/ui/icons";
+import { Loader } from "satin-ui/react";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { VendorIcon } from "@code-proxy/assets";
-import { Button, DropdownMenu, ProviderTag, buttonClassName, iconHueClass } from "@code-proxy/ui";
-import { Card, EntityCard, entityCardGridClass } from "@code-proxy/ui";
-import { EmptyState } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
-import { HoverTooltip } from "@code-proxy/ui";
-import { ScrollArea } from "@code-proxy/ui";
-import { Select } from "@code-proxy/ui";
-import { SearchableSelect, type SearchableSelectOption } from "@code-proxy/ui";
-import { DataGrid, DataGridPagination, type DataGridColumn } from "@code-proxy/ui";
-import { ToggleSwitch } from "@code-proxy/ui";
+import { Button, Card, DataGrid, DataGridPagination, DropdownMenu, EmptyState, EntityCard, HoverTooltip, ProviderTag, ScrollArea, SearchableSelect, Select, TextInput, ToggleSwitch, buttonClassName, entityCardGridClass, iconHueClass, type DataGridColumn, type SearchableSelectOption } from "@code-proxy/ui";
 import type { AuthFilesUploadProgress } from "@pages/auth-files/hooks/useAuthFilesFileActions";
 import type {
   AuthFileModelOwnerGroup,
@@ -558,7 +535,7 @@ export function AuthFilesFilesTab({
           label: (
             <span className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate">{label}</span>
-              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-ink/[0.05] px-1 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]">
+              <span className="ml-auto inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-sn-label/[0.05] px-1 text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]">
                 {count}
               </span>
             </span>
@@ -705,7 +682,7 @@ export function AuthFilesFilesTab({
         className={[
           "!h-8 px-3 text-xs",
           selectedModelOwner
-            ? "bg-accent-soft text-accent-ink hover:bg-accent-soft colorful:bg-emerald-50 colorful:text-emerald-700 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-400/10 colorful:dark:text-emerald-100 colorful:dark:hover:bg-emerald-400/15"
+            ? "bg-sn-accent-soft text-sn-accent-ink hover:bg-sn-accent-soft colorful:bg-emerald-50 colorful:text-emerald-700 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-400/10 colorful:dark:text-emerald-100 colorful:dark:hover:bg-emerald-400/15"
             : "",
         ].join(" ")}
         onClick={() => {
@@ -724,7 +701,7 @@ export function AuthFilesFilesTab({
         {selectedModelOwner ? (
           <span
             aria-hidden="true"
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent colorful:bg-emerald-500"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-sn-accent colorful:bg-emerald-500"
           />
         ) : null}
       </Button>
@@ -1140,9 +1117,9 @@ export function AuthFilesFilesTab({
                       : null;
                   const successRateClass =
                     successRate === null
-                      ? "text-ink-3"
+                      ? "text-sn-label3"
                       : successRate >= 90
-                        ? "text-ink colorful:text-emerald-700 colorful:dark:text-emerald-200"
+                        ? "text-sn-label colorful:text-emerald-700 colorful:dark:text-emerald-200"
                         : successRate >= 50
                           ? "text-amber-700 dark:text-amber-200"
                           : "text-rose-700 dark:text-rose-200";
@@ -1258,10 +1235,10 @@ export function AuthFilesFilesTab({
                                 <button
                                   type="button"
                                   className={[
-                                    "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                                    "sn-btn !h-6 !w-6 !p-0 !rounded-md !shadow-none",
                                     fileDisabled
-                                      ? "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] dark:bg-white/[0.07]"
-                                      : "bg-accent-soft text-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300",
+                                      ? "!bg-sn-label/[0.05] !text-sn-label3 hover:!bg-sn-label/[0.08] dark:!bg-white/[0.07]"
+                                      : "!bg-sn-accent-soft !text-sn-accent-ink colorful:!bg-emerald-50 colorful:!text-emerald-600 colorful:hover:!bg-emerald-100 colorful:dark:!bg-emerald-500/15 colorful:dark:!text-emerald-300",
                                     statusUpdating[file.name]
                                       ? "cursor-wait opacity-70"
                                       : "",
@@ -1325,8 +1302,8 @@ export function AuthFilesFilesTab({
                               <button
                                 type="button"
                                 className={[
-                                  "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] text-2xs font-semibold text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-wait disabled:opacity-70 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-500/15 colorful:dark:hover:text-blue-200",
-                                  denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
+                                  "sn-btn !h-auto shrink-0 gap-1 !rounded-md !bg-sn-label/[0.05] !text-2xs font-semibold !text-sn-label2 !shadow-none hover:!bg-sn-accent-soft hover:!text-sn-accent-ink disabled:cursor-wait disabled:opacity-70 dark:!bg-white/[0.07] colorful:hover:!bg-blue-50 colorful:hover:!text-blue-700 colorful:dark:hover:!bg-blue-500/15 colorful:dark:hover:!text-blue-200",
+                                  denseCards ? "!h-5 !px-1.5" : "!px-2 !py-0.5",
                                 ].join(" ")}
                                 disabled={quotaRefreshing}
                                 onClick={() =>
@@ -1336,7 +1313,7 @@ export function AuthFilesFilesTab({
                               >
                                 <RefreshCw
                                   size={10}
-                                  className={`text-ink-3 ${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
+                                  className={`text-sn-label3 ${iconHueClass(RefreshCw)} ${quotaRefreshing ? "animate-spin" : ""}`}
                                 />
                                 <span className="tabular-nums">
                                   {denseCards
@@ -1355,7 +1332,7 @@ export function AuthFilesFilesTab({
                             >
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]",
+                                  "inline-flex shrink-0 items-center rounded-md bg-sn-label/[0.05] text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1367,7 +1344,7 @@ export function AuthFilesFilesTab({
                             <HoverTooltip content={cycleTokensTooltip} className="shrink-0">
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07]",
+                                  "inline-flex shrink-0 items-center rounded-md bg-sn-label/[0.05] text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 px-1.5" : "px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1382,7 +1359,7 @@ export function AuthFilesFilesTab({
                             >
                               <span
                                 className={[
-                                  "inline-flex shrink-0 items-center rounded-md bg-ink/[0.05] text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]",
+                                  "inline-flex shrink-0 items-center rounded-md bg-sn-label/[0.05] text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07]",
                                   denseCards ? "h-5 gap-0 px-1.5" : "gap-1 px-2 py-0.5",
                                 ].join(" ")}
                               >
@@ -1425,7 +1402,7 @@ export function AuthFilesFilesTab({
                             {visibleTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex max-w-full items-center truncate rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
+                                className="inline-flex max-w-full items-center truncate rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                               >
                                 {tag}
                               </span>
@@ -1435,7 +1412,7 @@ export function AuthFilesFilesTab({
                                 content={displayTags.join("\n")}
                                 className="shrink-0"
                               >
-                                <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200">
+                                <span className="inline-flex items-center rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200">
                                   +{hiddenTagCount}
                                 </span>
                               </HoverTooltip>
@@ -1492,10 +1469,7 @@ export function AuthFilesFilesTab({
                                 )}
                               >
                                 {resetCreditBusy ? (
-                                  <Loader2
-                                    size={actionIconSize}
-                                    className="animate-spin"
-                                  />
+                                  <Loader variant="arc" size={actionIconSize} label={t("common.loading")} />
                                 ) : (
                                   <Gauge size={actionIconSize} />
                                 )}
@@ -1564,10 +1538,7 @@ export function AuthFilesFilesTab({
                                   }
                                 >
                                   {clearStatusBusy ? (
-                                    <Loader2
-                                      size={15}
-                                      className="animate-spin"
-                                    />
+                                    <Loader variant="arc" size={15} label={t("common.loading")} />
                                   ) : (
                                     <CircleOff size={15} />
                                   )}

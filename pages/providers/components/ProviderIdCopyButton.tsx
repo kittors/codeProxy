@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, Hash } from "lucide-react";
+import { Hash } from "@code-proxy/ui/icons";
+import { Icon as SatinIcon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { HoverTooltip, copyTextToClipboard } from "@code-proxy/ui";
 
@@ -19,7 +20,7 @@ export function ProviderIdCopyButton({ id }: { id: string }) {
     <HoverTooltip content={`ID: ${id}`} placement="top">
       <button
         type="button"
-        className="inline-flex h-5 shrink-0 items-center gap-0.5 rounded-md bg-ink/[0.05] px-1 text-2xs font-semibold text-ink-3 transition-colors hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]"
+        className="sn-btn !h-5 !w-5 !p-0 shrink-0 !rounded-md !bg-sn-label/[0.05] !text-2xs font-semibold !text-sn-label3 !shadow-none hover:!bg-sn-label/[0.08] hover:!text-sn-label2 dark:!bg-white/[0.07] dark:hover:!bg-white/[0.1]"
         aria-label={t("providers.copy_channel_id")}
         onClick={(event) => {
           event.stopPropagation();
@@ -32,7 +33,17 @@ export function ProviderIdCopyButton({ id }: { id: string }) {
         }}
         onMouseLeave={() => setCopied(false)}
       >
-        {copied ? <Check size={11} /> : <Hash size={11} />}
+        <span
+          className={copied ? "sn-swap sn-on" : "sn-swap"}
+          aria-hidden="true"
+        >
+          <span className="sn-a">
+            <Hash size={11} />
+          </span>
+          <span className="sn-b text-emerald-500">
+            <SatinIcon name="check" size={11} />
+          </span>
+        </span>
       </button>
     </HoverTooltip>
   );

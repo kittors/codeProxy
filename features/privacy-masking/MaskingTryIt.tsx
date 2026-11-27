@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "@code-proxy/ui/icons";
 import { Textarea } from "@code-proxy/ui";
 import { privacyMaskingApi, type PrivacyMaskPolicy, type PrivacyMaskPreview } from "@code-proxy/api-client";
 import { kindStyle } from "./maskKinds";
@@ -80,21 +80,21 @@ export function MaskingTryIt({
         aria-label={t("privacy_masking.try.title")}
         className="font-mono text-xs"
       />
-      <div className="min-h-[9.5rem] rounded-2xl bg-subtle px-3.5 py-3" aria-live="polite">
+      <div className="min-h-[9.5rem] rounded-xl bg-sn-subtle px-3.5 py-3" aria-live="polite">
         {error ? (
           <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>
         ) : !result ? (
-          <p className="text-xs text-ink-3">{t("privacy_masking.try.empty")}</p>
+          <p className="text-xs text-sn-label3">{t("privacy_masking.try.empty")}</p>
         ) : (
           <>
-            <p className="mb-2 text-2xs font-medium text-ink-3">{t("privacy_masking.try.upstream")}</p>
+            <p className="mb-2 text-2xs font-medium text-sn-label3">{t("privacy_masking.try.upstream")}</p>
             {result.blocked ? (
               <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-300">
                 <ShieldAlert size={14} aria-hidden="true" />
                 {t("privacy_masking.try.blocked")}
               </p>
             ) : null}
-            <p className="font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-ink-2">{ink(result.text)}</p>
+            <p className="font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-sn-label2">{ink(result.text)}</p>
             {result.values.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1">
                 {result.values.map((value, index) => (
@@ -102,7 +102,7 @@ export function MaskingTryIt({
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-xs text-ink-3">{t("privacy_masking.try.nothing")}</p>
+              <p className="mt-2 text-xs text-sn-label3">{t("privacy_masking.try.nothing")}</p>
             )}
           </>
         )}

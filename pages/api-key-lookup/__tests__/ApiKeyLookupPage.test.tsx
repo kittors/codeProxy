@@ -908,7 +908,7 @@ describe("ApiKeyLookupPage", () => {
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
     expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector('.cp-grid[data-fill="false"]')).not.toBeNull();
+    expect(tableViewport.querySelector('.sn-tbl-wrap[data-fill="false"]')).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);
@@ -1429,7 +1429,7 @@ describe("ApiKeyLookupPage", () => {
       expect(toolbar.parentElement?.tagName.toLowerCase()).toBe("main");
       expect(toolbar).toHaveAttribute("data-stuck", "false");
       // 没吸顶时完全透明，和页面融为一体：没有细边、没有投影。
-      expect(toolbar.className).not.toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
+      expect(toolbar.className).not.toMatch(/(?:^|\s)border-sn-line(?:\s|$)/);
       expect(toolbar.className).toMatch(/(?:^|\s)shadow-none(?:\s|$)/);
 
       const header = screen.getByTestId("apikey-lookup-header");
@@ -1448,9 +1448,9 @@ describe("ApiKeyLookupPage", () => {
       });
       expect(header.className).toMatch(/-translate-y-full/);
       expect(header.className).toMatch(/opacity-0/);
-      // 吸顶后浮成一张卡片：伪元素细边 + 卡片投影，不画 ring 描边。
-      expect(toolbar.className).toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
-      expect(toolbar.className).toMatch(/(?:^|\s)shadow-card(?:\s|$)/);
+      // 吸顶后浮成一块浮层卡片：Satin 1px 细边 + 浮层投影（shadow-sn-e1），不画 ring 描边。
+      expect(toolbar.className).toMatch(/(?:^|\s)border-sn-line(?:\s|$)/);
+      expect(toolbar.className).toMatch(/(?:^|\s)shadow-sn-e1(?:\s|$)/);
       expect(toolbar.className).not.toMatch(/ring-/);
 
       Object.defineProperty(window, "scrollY", {
@@ -1464,7 +1464,7 @@ describe("ApiKeyLookupPage", () => {
         expect(header).toHaveAttribute("data-collapsed", "false");
         expect(toolbar).toHaveAttribute("data-stuck", "false");
       });
-      expect(toolbar.className).not.toMatch(/(?:^|\s)cp-edge(?:\s|$)/);
+      expect(toolbar.className).not.toMatch(/(?:^|\s)border-sn-line(?:\s|$)/);
     } finally {
       Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
     }

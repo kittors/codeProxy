@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Eye, EyeOff, Plus, Upload, X } from "lucide-react";
+import { Copy, Eye, EyeOff, Plus, Upload, X } from "@code-proxy/ui/icons";
 import { Button, Textarea, TextInput } from "@code-proxy/ui";
 
 /** 一次粘贴进来的多个词：按行或逗号（中英文）分开，去掉空的。 */
@@ -49,7 +49,7 @@ export function WordListEditor({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-ink-3">{t("privacy_masking.words.count", { count: values.length })}</span>
+        <span className="text-xs text-sn-label3">{t("privacy_masking.words.count", { count: values.length })}</span>
         <span className="flex-1" />
         {concealable ? (
           <Button size="xs" variant="ghost" onClick={() => setShown((v) => !v)} aria-pressed={shown}>
@@ -77,7 +77,7 @@ export function WordListEditor({
           {values.map((word, index) => (
             <li
               key={`${word}-${index}`}
-              className="group inline-flex max-w-full items-center gap-1 rounded-lg bg-subtle py-1 pr-1 pl-2.5 text-xs text-ink"
+              className="group inline-flex max-w-full items-center gap-1 rounded-lg bg-sn-subtle py-1 pr-1 pl-2.5 text-xs text-sn-label"
             >
               <span className={`truncate font-mono ${conceal}`}>{word}</span>
               <button
@@ -85,7 +85,7 @@ export function WordListEditor({
                 disabled={disabled}
                 onClick={() => onChange(values.filter((_, i) => i !== index))}
                 aria-label={t("privacy_masking.words.remove", { word: shown ? word : "" })}
-                className="grid size-5 place-items-center rounded-md text-ink-3 transition-colors hover:bg-rose-500/10 hover:text-rose-600"
+                className="grid size-5 place-items-center rounded-md text-sn-label3 transition-colors hover:bg-rose-500/10 hover:text-rose-600"
               >
                 <X size={12} aria-hidden="true" />
               </button>
@@ -117,7 +117,7 @@ export function WordListEditor({
       </form>
 
       {importing ? (
-        <div className="space-y-2 rounded-2xl bg-subtle p-3">
+        <div className="space-y-2 rounded-xl bg-sn-subtle p-3">
           <Textarea
             rows={4}
             value={bulk}
@@ -127,7 +127,7 @@ export function WordListEditor({
             className={conceal}
           />
           <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {bulk.trim() ? t("privacy_masking.words.import_new", { count: bulkFresh.length }) : null}
             </span>
             <span className="flex-1" />

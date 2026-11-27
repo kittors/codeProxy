@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ShieldOff } from "lucide-react";
+import { ShieldOff } from "@code-proxy/ui/icons";
 import { Button, Callout, EmptyState, PageLoader } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 import { useConfigCapabilities } from "@features/backend-capabilities";

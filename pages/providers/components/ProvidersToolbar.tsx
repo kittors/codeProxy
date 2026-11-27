@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckSquare, Download, Plus, RefreshCw, Upload } from "lucide-react";
+import { CheckSquare, Download, Plus, RefreshCw, Upload } from "@code-proxy/ui/icons";
 import { Button, DropdownMenu } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
@@ -100,7 +100,7 @@ export function ProvidersToolbar({
                 ? t("providers.batch_deselect_all")
                 : t("providers.batch_select_all")}
               {hasSelection ? (
-                <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-2xs font-semibold leading-none text-accent-fg">
+                <span className="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sn-accent px-1 text-2xs font-semibold leading-none text-sn-on-primary">
                   {selectedExportCount}
                 </span>
               ) : null}

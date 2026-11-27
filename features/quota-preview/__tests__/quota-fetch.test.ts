@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
+  resetCredit: vi.fn(),
 }));
 
 vi.mock("@code-proxy/api-client", async (importOriginal) => {
@@ -12,14 +13,19 @@ vi.mock("@code-proxy/api-client", async (importOriginal) => {
       ...mod.apiCallApi,
       request: mocks.request,
     },
+    authFilesApi: {
+      ...mod.authFilesApi,
+      resetCredit: mocks.resetCredit,
+    },
   };
 });
 
 import { consumeCodexResetCredit, resolveQuotaProvider } from "@features/quota-preview/quota-fetch";
-import type { AuthFileItem } from "@code-proxy/api-client";
+import { ApiError, type AuthFileItem } from "@code-proxy/api-client";
 
 beforeEach(() => {
   mocks.request.mockReset();
+  mocks.resetCredit.mockReset();
 });
 
 const encodeBase64UrlJson = (value: unknown): string =>
@@ -78,7 +84,69 @@ describe("resolveQuotaProvider", () => {
 });
 
 describe("consumeCodexResetCredit", () => {
-  test("posts a redeem request id to the ChatGPT reset-credit consume endpoint", async () => {
+  test("prefers the dedicated backend reset-credit endpoint", async () => {
+    mocks.resetCredit.mockResolvedValueOnce({
+      status: "ok",
+      auth_index: "auth-codex-alpha",
+      credit_id: "credit-earliest",
+      quota_status_cleared: true,
+    });
+
+    await consumeCodexResetCredit(
+      {
+        id: "codex-id-1",
+        name: "codex-alpha@example.test-plus.json",
+        type: "codex",
+        provider: "codex",
+        auth_index: "auth-codex-alpha",
+      } as any,
+      { creditId: "credit-manual" },
+    );
+
+    expect(mocks.resetCredit).toHaveBeenCalledWith({
+      authIndex: "auth-codex-alpha",
+      id: "codex-id-1",
+      name: "codex-alpha@example.test-plus.json",
+      creditId: "credit-manual",
+      redeemRequestId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      ),
+    });
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  test("surfaces structured backend business errors without falling back to /api-call", async () => {
+    mocks.resetCredit.mockRejectedValueOnce(
+      new ApiError({
+        message: "未找到指定的 AI 账号凭据，请刷新列表后重试。",
+        status: 404,
+        payload: {
+          error: {
+            code: "auth_not_found",
+            message: "未找到指定的 AI 账号凭据，请刷新列表后重试。",
+          },
+        },
+      }),
+    );
+
+    await expect(
+      consumeCodexResetCredit({
+        name: "codex-missing.json",
+        type: "codex",
+        provider: "codex",
+        auth_index: "auth-codex-missing",
+      } as any),
+    ).rejects.toThrow("未找到指定的 AI 账号凭据");
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  test("falls back to legacy /api-call when older backend lacks /auth-files/reset-credit (404)", async () => {
+    mocks.resetCredit.mockRejectedValueOnce(
+      new ApiError({
+        message: "404 page not found",
+        status: 404,
+      }),
+    );
     // Details query returns empty credits
     mocks.request.mockResolvedValueOnce({
       statusCode: 200,
@@ -122,7 +190,14 @@ describe("consumeCodexResetCredit", () => {
       ),
     });
   });
-  test("consumes specific credit_id in FIFO order when credits are available", async () => {
+
+  test("falls back to FIFO /api-call consume when older backend returns 405", async () => {
+    mocks.resetCredit.mockRejectedValueOnce(
+      new ApiError({
+        message: "405 method not allowed",
+        status: 405,
+      }),
+    );
     mocks.request.mockResolvedValueOnce({
       statusCode: 200,
       header: {},

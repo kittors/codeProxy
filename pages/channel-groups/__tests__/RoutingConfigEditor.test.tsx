@@ -922,7 +922,7 @@ describe("RoutingConfigEditor", () => {
     expect(await screen.findByTestId("group-editor-model-list")).toHaveClass("-mx-5");
     expect(screen.getByTestId("group-editor-model-list-content")).toHaveClass("px-5");
     expect(
-      screen.getByRole("table", { name: "允许模型" }).closest(".cp-grid-viewport"),
+      screen.getByRole("table", { name: "允许模型" }).closest(".sn-tbl-sc"),
     ).not.toHaveClass("pr-5");
     expect(screen.getByRole("table", { name: "允许模型" })).toBeInTheDocument();
     expect(screen.getByRole("tablist")).toBeInTheDocument();
@@ -941,12 +941,12 @@ describe("RoutingConfigEditor", () => {
     await user.click(screen.getByRole("combobox", { name: "选择渠道" }));
 
     const channelTable = screen.getByRole("table", { name: "选择渠道" });
-    const grid = channelTable.closest(".cp-grid") as HTMLDivElement | null;
+    const grid = channelTable.closest(".sn-tbl-wrap") as HTMLDivElement | null;
 
     // 表单里的小表按行收高、跟着编辑器一起滚，不铺满、不套外框，也没有自己的固定高度。
     expect(grid).not.toBeNull();
     expect(grid).toHaveAttribute("data-fill", "false");
-    expect(grid).not.toHaveClass("cp-grid-frame");
+    expect(grid).toHaveClass("sn-plain");
     expect(grid).not.toHaveClass("h-[248px]");
   });
 
@@ -1122,8 +1122,8 @@ describe("RoutingConfigEditor", () => {
     expect(saveButton).toHaveTextContent("保存中...");
     expect(saveButton.querySelector("svg")).toHaveClass("animate-spin");
     // Spinner+label are Fragment-wrapped; Button must keep text sizing (not icon-only square).
-    expect(saveButton.className).toMatch(/\bpx-4\b/);
-    expect(saveButton.className).not.toMatch(/\bw-9\b/);
+    expect(saveButton.className).toMatch(/\bsn-btn\b/);
+    expect(saveButton.className).not.toMatch(/\bsn-ibtn\b/);
     expect(screen.getByTestId("group-editor-modal-body")).toBeInTheDocument();
 
     pending.resolve();

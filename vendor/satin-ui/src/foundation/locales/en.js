@@ -1,0 +1,23 @@
+// English：所有组件的文字合在一起（各组件自己只引自己那一份，打包时互不拖累）。
+import browser_tabs from "./en/browser-tabs.js";
+import canvas_grid from "./en/canvas-grid.js";
+import charts from "./en/charts.js";
+import chat from "./en/chat.js";
+import components from "./en/components.js";
+import feedback from "./en/feedback.js";
+import flow from "./en/flow.js";
+import form from "./en/form.js";
+import grid from "./en/grid.js";
+import input from "./en/input.js";
+import lightbox from "./en/lightbox.js";
+import list from "./en/list.js";
+import markdown from "./en/markdown.js";
+import media from "./en/media.js";
+import nav from "./en/nav.js";
+import overlay from "./en/overlay.js";
+import picker from "./en/picker.js";
+import table from "./en/table.js";
+import theme from "./en/theme.js";
+import theme_panel from "./en/theme-panel.js";
+import tree from "./en/tree.js";
+export default { ...browser_tabs, ...canvas_grid, ...charts, ...chat, ...components, ...feedback, ...flow, ...form, ...grid, ...input, ...lightbox, ...list, ...markdown, ...media, ...nav, ...overlay, ...picker, ...table, ...theme, ...theme_panel, ...tree };

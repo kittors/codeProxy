@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRightLeft, CheckCircle2, Pencil, Plus, RefreshCw, Share2, Trash2 } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Pencil, Plus, RefreshCw, Share2, Trash2 } from "@code-proxy/ui/icons";
 import {
   NO_SHARING_CAPABILITY,
   type ResourceSharingCapability,
@@ -272,7 +272,7 @@ export function ProxiesPage() {
         cell: (entry) => (
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate font-semibold text-ink">{entry.name}</p>
+              <p className="truncate font-semibold text-sn-label">{entry.name}</p>
               {overriddenSharedKeys.has(proxyIdKey(entry.id)) ? (
                 <SharingNoticeBadge
                   label={t("proxies.overrides_shared_badge")}
@@ -281,7 +281,7 @@ export function ProxiesPage() {
                 />
               ) : null}
             </div>
-            <p className="mt-1 truncate font-mono text-xs text-ink-3">
+            <p className="mt-1 truncate font-mono text-xs text-sn-label3">
               {entry.id}
             </p>
           </div>
@@ -293,10 +293,10 @@ export function ProxiesPage() {
         width: GRID_WIDTH.badgeGroup,
         cell: (entry) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+            <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-semibold text-sn-label2 dark:bg-white/[0.07]">
               {proxyProtocol(entry.url)}
             </span>
-            <span className="truncate font-mono text-xs text-ink-2">
+            <span className="truncate font-mono text-xs text-sn-label2">
               {proxyEndpoint(entry)}
             </span>
           </div>
@@ -322,7 +322,7 @@ export function ProxiesPage() {
                     status={egressStatusFor(egressListing, entry.id, false)}
                   />
                 ) : (
-                  <span className="text-xs text-ink-3">--</span>
+                  <span className="text-xs text-sn-label3">--</span>
                 ),
             },
           ]
@@ -348,7 +348,7 @@ export function ProxiesPage() {
         header: t("proxies.remark_label"),
         width: GRID_WIDTH.badgeGroup,
         cell: (entry) => (
-          <p className="truncate text-xs text-ink-2">
+          <p className="truncate text-xs text-sn-label2">
             {entry.description || "--"}
           </p>
         ),
@@ -442,8 +442,8 @@ export function ProxiesPage() {
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-2xl font-semibold tracking-tight text-ink">{t("proxies.title")}</h2>
-          <p className="mt-1 max-w-3xl text-sm text-ink-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-sn-label">{t("proxies.title")}</h2>
+          <p className="mt-1 max-w-3xl text-sm text-sn-label2">
             {t("proxies.description")}
           </p>
         </div>
@@ -577,7 +577,7 @@ function ProxySubject({ entry }: { entry: ProxyPoolEntry }) {
   return (
     <span className="flex min-w-0 items-center justify-between gap-3">
       <span className="truncate font-medium">{entry.name}</span>
-      <span className="shrink-0 font-mono text-xs text-ink-3">
+      <span className="shrink-0 font-mono text-xs text-sn-label3">
         {proxyProtocol(entry.maskedUrl || entry.url)} · {proxyEndpoint(entry)}
       </span>
     </span>

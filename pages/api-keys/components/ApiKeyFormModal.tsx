@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@code-proxy/ui/icons";
 import {
   Button,
   Modal,

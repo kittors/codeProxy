@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2 } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 import { Card } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -76,7 +76,7 @@ export function AmpcodePanel({
               onCheckedChange={setAmpForceMappings}
             />
           </div>
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-sn-label3">
             {t("providers.current_status", {
               status: ampcode ? t("providers.status_loaded") : t("providers.status_not_loaded"),
               count: ampMappings.length,
@@ -85,7 +85,7 @@ export function AmpcodePanel({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.model_mappings")}
           </p>
           {ampMappings.map((entry, idx) => (

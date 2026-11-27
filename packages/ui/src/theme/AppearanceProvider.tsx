@@ -43,7 +43,7 @@ const readStoredSettings = (): AppearanceSettings => {
 };
 
 /**
- * 写到 <html> 上：data-palette / data-icons / data-bars 三个开关，以及 --cp-pref-* 变量
+ * 写到 <html> 上：data-palette / data-icons / data-bars 三个开关，以及 --sn-pref-* 变量
  * （行内样式，盖过样式表里的默认值，也盖过 data-os 这类属性选择器）。不再需要的变量要删掉，
  * 否则从自选强调色切回墨色时旧值还留在行内样式里。
  */
@@ -54,6 +54,7 @@ export function applyAppearanceToDom(settings: AppearanceSettings): void {
   root.setAttribute("data-palette", attrs.palette);
   root.setAttribute("data-icons", attrs.icons);
   root.setAttribute("data-bars", attrs.bars);
+  root.setAttribute("data-radius", settings.controlRadius);
   const vars = appearanceVars(settings);
   for (const name of APPEARANCE_VAR_NAMES) {
     const value = vars[name];
@@ -116,7 +117,7 @@ export function AppearanceProvider({ children }: PropsWithChildren) {
 
 const FALLBACK_CONTEXT: AppearanceContextValue = {
   settings: DEFAULT_APPEARANCE,
-  preset: "colorful",
+  preset: "quiet",
   update: () => undefined,
   applyPreset: () => undefined,
   reset: () => undefined,

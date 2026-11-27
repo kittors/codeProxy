@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, RotateCcw, Save, Trash2 } from "lucide-react";
+import { FlaskConical, RotateCcw, Save, Trash2 } from "@code-proxy/ui/icons";
 import type {
   WordPolicyInput,
   WordPolicyLimits,
@@ -211,14 +211,14 @@ export function WordPolicyEditor({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h3 className="text-base font-semibold text-ink">{title}</h3>
-          {description ? <p className="text-xs leading-5 text-ink-3">{description}</p> : null}
-          <p className="text-xs text-ink-2" data-testid="word-policy-status">
+          <h3 className="text-base font-semibold text-sn-label">{title}</h3>
+          {description ? <p className="text-xs leading-5 text-sn-label3">{description}</p> : null}
+          <p className="text-xs text-sn-label2" data-testid="word-policy-status">
             {status}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-2 text-sm text-ink-2">
+          <label className="inline-flex items-center gap-2 text-sm text-sn-label2">
             <ToggleSwitch
               checked={draft.enabled}
               disabled={readOnly}
@@ -273,7 +273,7 @@ export function WordPolicyEditor({
           <ul className="mt-1 space-y-0.5 text-xs">
             {editor.problems.problems.slice(0, 5).map((problem) => (
               <li key={`${problem.index}:${problem.pattern}`}>
-                <span className="break-all font-mono text-ink">{problem.pattern}</span>
+                <span className="break-all font-mono text-sn-label">{problem.pattern}</span>
                 {" — "}
                 {problem.message}
               </li>
@@ -297,11 +297,11 @@ export function WordPolicyEditor({
         <TabsList aria-label={t("content_moderation.words.panels_label")}>
           <TabsTrigger value="rules" id={`${panelIds}-tab-rules`} aria-controls={`${panelIds}-rules`}>
             {t("content_moderation.words.tab_rules")}{" "}
-            <span className="tabular-nums text-ink-3">{view.rules_hidden ? view.rule_count : draft.rules.length}</span>
+            <span className="tabular-nums text-sn-label3">{view.rules_hidden ? view.rule_count : draft.rules.length}</span>
           </TabsTrigger>
           <TabsTrigger value="handling" id={`${panelIds}-tab-handling`} aria-controls={`${panelIds}-handling`}>
             {t("content_moderation.words.tab_handling")}{" "}
-            <span className="text-ink-3">{actionLabel}</span>
+            <span className="text-sn-label3">{actionLabel}</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -381,7 +381,7 @@ export function WordPolicyEditor({
           aria-label={t("content_moderation.words.status_unsaved")}
           className={`${surface({ tone: "card", radius: "2xl" })} sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}
         >
-          <p className="text-sm text-ink-2">{t("content_moderation.words.status_unsaved")}</p>
+          <p className="text-sm text-sn-label2">{t("content_moderation.words.status_unsaved")}</p>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" disabled={editor.saving} onClick={editor.discard}>
               <RotateCcw size={14} />

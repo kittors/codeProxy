@@ -10,9 +10,11 @@ import {
 import { extractDownloadFilename, type BrowserFilePickerWindow } from "./download";
 import {
   ApiError,
+  buildHtmlErrorMessage,
   extractApiErrorCode,
   extractApiErrorMessage,
   isAbortError,
+  isHtmlDocument,
   truncateErrorText,
 } from "./errors";
 import { unwrapApiEnvelope, type ApiSuccessEnvelope } from "./response";
@@ -58,18 +60,6 @@ const dispatchWindowEvent = (event: Event): void => {
   if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
     window.dispatchEvent(event);
   }
-};
-
-const isHtmlDocument = (contentType: string, text: string) =>
-  contentType.toLowerCase().includes("text/html") &&
-  /^<!doctype html|^<html[\s>]/i.test(text.trim());
-
-const buildHtmlErrorMessage = (response: Response) => {
-  const status = response.status || 0;
-  const suffix = response.statusText?.trim()
-    ? `${status} ${response.statusText.trim()}`
-    : String(status);
-  return `Management API temporarily returned an HTML error page (${suffix}).`;
 };
 
 const normalizeRequestPath = (path: string): string => {
@@ -282,7 +272,7 @@ export class ApiClient {
       if (trimmed) {
         if (isHtmlDocument(response.headers.get("Content-Type") ?? "", trimmed)) {
           payload = truncateErrorText(trimmed);
-          message = buildHtmlErrorMessage(response);
+          message = buildHtmlErrorMessage(response, "Management API");
         } else {
           try {
             payload = JSON.parse(trimmed) as unknown;

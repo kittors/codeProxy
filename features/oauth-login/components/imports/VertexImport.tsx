@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { FileJson, ShieldCheck, X } from "lucide-react";
+import { FileJson, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { vertexApi, type ProxyPoolEntry } from "@code-proxy/api-client";
@@ -115,58 +114,48 @@ export function VertexImport({
   return (
     <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
       <div className="grid gap-4">
-        <AnimatePresence initial={false} mode="wait">
-          {summary && file ? (
-            <motion.div
-              key="preview"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3"
+        {summary && file ? (
+          <div
+            key="preview"
+            className="sn-fade-up flex items-center gap-3 rounded-xl bg-sn-subtle px-4 py-3"
+          >
+            <FileJson size={18} className={`shrink-0 text-sn-label3 ${iconHueClass(FileJson)}`} aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-sn-label">{summary.clientEmail}</p>
+              <p className="truncate text-xs text-sn-label3">
+                {t("add_account.import.vertex_project", { project: summary.projectId })} ·{" "}
+                {file.name}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              aria-label={t("add_account.import.vertex_clear")}
+              onClick={() => {
+                setFile(null);
+                setSummary(null);
+              }}
             >
-              <FileJson size={18} className={`shrink-0 text-ink-3 ${iconHueClass(FileJson)}`} aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{summary.clientEmail}</p>
-                <p className="truncate text-xs text-ink-3">
-                  {t("add_account.import.vertex_project", { project: summary.projectId })} ·{" "}
-                  {file.name}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={t("add_account.import.vertex_clear")}
-                onClick={() => {
-                  setFile(null);
-                  setSummary(null);
-                }}
-              >
-                <X size={14} aria-hidden="true" />
-              </Button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="drop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <FileDropZone
-                title={t("add_account.import.vertex_drop")}
-                hint={t("add_account.import.vertex_hint")}
-                busy={importing}
-                onFiles={(files) => void pick(files)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <X size={14} aria-hidden="true" />
+            </Button>
+          </div>
+        ) : (
+          <div key="drop" className="sn-fade-up">
+            <FileDropZone
+              title={t("add_account.import.vertex_drop")}
+              hint={t("add_account.import.vertex_hint")}
+              busy={importing}
+              onFiles={(files) => void pick(files)}
+            />
+          </div>
+        )}
         {error ? (
           <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">
             {error}
           </p>
         ) : null}
         <label className="grid gap-1.5">
-          <span className="text-xs font-medium text-ink-2">
+          <span className="text-xs font-medium text-sn-label2">
             {t("add_account.import.vertex_location")}
           </span>
           <TextInput
@@ -175,7 +164,7 @@ export function VertexImport({
             placeholder="us-central1"
             aria-label={t("add_account.import.vertex_location")}
           />
-          <span className="text-xs text-ink-3">{t("add_account.import.vertex_location_hint")}</span>
+          <span className="text-xs text-sn-label3">{t("add_account.import.vertex_location_hint")}</span>
         </label>
         <LoginOptions
           provider={provider}

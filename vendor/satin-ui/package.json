@@ -1,0 +1,205 @@
+{
+  "name": "satin-ui",
+  "version": "0.1.0",
+  "description": "Zero-dependency, framework-agnostic Web UI component & design system library with first-class React, Vue, Svelte, and Web Components wrappers, W3C design tokens, 100K-row DataGrid, AI Chat, Charts, and full EN/zh-CN i18n.",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/kittors/Satin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kittors/Satin.git",
+    "directory": "packages/satin-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/kittors/Satin/issues"
+  },
+  "keywords": [
+    "satin",
+    "satin-ui",
+    "ui",
+    "design-system",
+    "components",
+    "react",
+    "vue",
+    "svelte",
+    "web-components",
+    "data-grid",
+    "ai-chat",
+    "charts",
+    "design-tokens"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": [
+    "**/*.css",
+    "./src/foundation/theme-boot.js"
+  ],
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "bin": {
+    "satin-ui": "bin/satin-ui.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./components": {
+      "types": "./types/components.d.ts",
+      "default": "./src/components.js"
+    },
+    "./setup": {
+      "types": "./types/index.d.ts",
+      "default": "./src/setup.js"
+    },
+    "./react": {
+      "types": "./types/react.d.ts",
+      "default": "./react/index.js"
+    },
+    "./react/*": {
+      "types": "./types/react-*.d.ts",
+      "default": "./react/*.js"
+    },
+    "./vue": {
+      "types": "./types/vue.d.ts",
+      "default": "./vue/index.js"
+    },
+    "./vue/*": {
+      "types": "./types/vue-*.d.ts",
+      "default": "./vue/*.js"
+    },
+    "./svelte/*.svelte": {
+      "types": "./types/svelte-*.d.ts",
+      "svelte": "./svelte/*.svelte",
+      "default": "./svelte/*.svelte"
+    },
+    "./elements": {
+      "types": "./types/elements.d.ts",
+      "default": "./elements/index.js"
+    },
+    "./theme": {
+      "types": "./types/theme.d.ts",
+      "default": "./src/foundation/theme.js"
+    },
+    "./theme-panel": {
+      "types": "./types/theme.d.ts",
+      "default": "./src/foundation/theme-panel.js"
+    },
+    "./theme-boot": "./src/foundation/theme-boot.js",
+    "./theme-boot-script": {
+      "types": "./types/theme-boot-script.d.ts",
+      "default": "./src/foundation/theme-boot-script.js"
+    },
+    "./vite": {
+      "types": "./types/vite.d.ts",
+      "default": "./vite/index.js"
+    },
+    "./resolver": {
+      "types": "./types/resolver.d.ts",
+      "default": "./vite/resolver.js"
+    },
+    "./style-map": {
+      "types": "./types/style-map.d.ts",
+      "default": "./src/core/style-map.js"
+    },
+    "./locales/*": {
+      "types": "./types/locales.d.ts",
+      "default": "./src/foundation/locales/*.js"
+    },
+    "./icons": {
+      "types": "./types/icons.d.ts",
+      "default": "./src/foundation/icons.js"
+    },
+    "./icons/paths": {
+      "types": "./types/icons-paths.d.ts",
+      "default": "./src/foundation/icons/index.js"
+    },
+    "./svg": {
+      "types": "./types/svg.d.ts",
+      "default": "./src/foundation/svg.js"
+    },
+    "./markdown": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/markdown.js"
+    },
+    "./chat": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/chat.js"
+    },
+    "./flow": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/flow.js"
+    },
+    "./grid": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/grid.js"
+    },
+    "./canvas-grid": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/canvas-grid.js"
+    },
+    "./charts": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/charts.js"
+    },
+    "./lightbox": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/media/lightbox.js"
+    },
+    "./media": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/media/media.js"
+    },
+    "./tree": {
+      "types": "./types/heavy.d.ts",
+      "default": "./src/data/tree.js"
+    },
+    "./css": "./css/satin.css",
+    "./css/min": "./dist/satin.min.css",
+    "./css/page.min.css": "./dist/page.min.css",
+    "./css/*": "./css/*",
+    "./dist/*": "./dist/*",
+    "./tokens/*": "./tokens/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "css",
+    "dist",
+    "types",
+    "react",
+    "vue",
+    "svelte",
+    "elements",
+    "tokens",
+    "vite",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "vue": ">=3.3",
+    "svelte": ">=5.20",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

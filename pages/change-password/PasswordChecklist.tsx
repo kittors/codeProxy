@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import { IDENTITY_PASSWORD_MIN_LENGTH, passwordRuleStatus } from "@code-proxy/domain";
 import { passwordPolicyMessage, type PasswordPolicyTranslate } from "@features/password-policy";
 
@@ -39,8 +39,8 @@ export function PasswordChecklist({
           <span
             key={item.key}
             className={[
-              "h-1 flex-1 rounded-full transition-colors duration-300 ease-soft",
-              index < metCount ? (complete ? "bg-ok" : "bg-ink") : "bg-track",
+              "h-1 flex-1 rounded-full transition-colors duration-300 ease-sn-out",
+              index < metCount ? (complete ? "bg-ok" : "bg-sn-label") : "bg-sn-sunken",
             ].join(" ")}
           />
         ))}
@@ -52,14 +52,14 @@ export function PasswordChecklist({
             data-met={item.met ? "true" : "false"}
             className={[
               "flex items-center gap-1.5 text-xs transition-colors duration-200",
-              item.met ? "text-ink-2" : "text-ink-3",
+              item.met ? "text-sn-label2" : "text-sn-label3",
             ].join(" ")}
           >
             <span
               // 未满足是一颗中性的实心小圆，满足后变绿打勾；不再画空心描边圈。
               className={[
                 "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
-                item.met ? "bg-ok text-white" : "bg-track",
+                item.met ? "bg-ok text-white" : "bg-sn-sunken",
               ].join(" ")}
             >
               <Check
@@ -67,7 +67,7 @@ export function PasswordChecklist({
                 strokeWidth={3}
                 aria-hidden="true"
                 className={[
-                  "transition-[opacity,scale] duration-200 ease-spring",
+                  "transition-[opacity,scale] duration-200 ease-sn-overshoot",
                   item.met ? "scale-100 opacity-100" : "scale-50 opacity-0",
                 ].join(" ")}
               />

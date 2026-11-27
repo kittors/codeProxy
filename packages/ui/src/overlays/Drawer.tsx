@@ -1,15 +1,38 @@
 import { createPortal } from "react-dom";
-import { useCallback, useId, useRef, useState, type PropsWithChildren, type ReactNode } from "react";
-import { X } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
+import { reduced } from "satin-ui";
+import { Icon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 import { useScrollFade } from "../hooks/useScrollFade";
+import {
+  cssEase,
+  DRAWER_EXIT_MS,
+  EASE_OUT,
+  OVERLAY_NUDGE_MS,
+} from "../utils/motion";
 import { DialogIcon, type DialogTone } from "./DialogIcon";
-import { drawerPanelMotion, overlayBackdropMotion, useOverlayPresence } from "./overlayMotion";
+import { useOverlayPresence } from "./overlayMotion";
 import {
   useDialogBehavior,
   useInteractionGuard,
   type DialogInitialFocus,
 } from "./useDialogBehavior";
+
+function isMotionReduced(): boolean {
+  try {
+    return reduced();
+  } catch {
+    return false;
+  }
+}
 
 export function Drawer({
   open,
@@ -37,27 +60,60 @@ export function Drawer({
   bodyClassName?: string;
   /** 抽屉多用来查看详情，默认只把焦点放在面板上，不去点亮第一个输入框。 */
   initialFocus?: DialogInitialFocus;
-  /** 与 Modal 相同：不传时输入过文字后点遮罩只轻晃；传 true 时 Esc 也拦下；传 false 时直接关闭。 */
+  /** 与 Modal 相同：不传时输入过文字后点遮罩只轻顶；传 true 时 Esc 也拦下；传 false 时直接关闭。 */
   dirty?: boolean;
   onBlockedClose?: () => void;
   onClose: () => void;
 }>) {
   const { t } = useTranslation();
-  // 与弹窗共用进出场：隔两帧再置为可见，进场滑入才有起点（以前只隔一帧，常常直接跳出来）。
-  const { mounted, visible } = useOverlayPresence(open);
+  // 与 Satin .sn-drawer 同步：两帧后挂 .sn-open 启动 320ms --sn-ease-open 滑入，关闭等待 220ms 滑出后卸载。
+  const { mounted, visible } = useOverlayPresence(open, DRAWER_EXIT_MS);
   const titleId = useId();
   const descriptionId = useId();
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const nudgeTimerRef = useRef<number | null>(null);
   const [nudging, setNudging] = useState(false);
   const { interacted, onInput } = useInteractionGuard(open);
 
-  // 抽屉里多是长表单：填了一半手滑点到遮罩，不该把内容全丢掉。与 Modal 同一套规则。
+  /** Satin 原生轻顶反馈：WAAPI 原地微弹 scale(1 -> 1.015 -> 1) 260ms `--sn-ease-out`。 */
   const nudge = useCallback(() => {
-    setNudging(false);
-    window.requestAnimationFrame(() => setNudging(true));
+    const panel = panelRef.current;
+    setNudging(true);
+    if (nudgeTimerRef.current !== null) window.clearTimeout(nudgeTimerRef.current);
+    nudgeTimerRef.current = window.setTimeout(() => {
+      setNudging(false);
+      nudgeTimerRef.current = null;
+    }, OVERLAY_NUDGE_MS);
+
+    if (panel && !isMotionReduced() && typeof panel.animate === "function") {
+      panel.animate(
+        [
+          { transform: "none", transformOrigin: "50% 50%" },
+          { transform: "scale(1.015)", transformOrigin: "50% 50%" },
+          { transform: "none", transformOrigin: "50% 50%" },
+        ],
+        { duration: OVERLAY_NUDGE_MS, easing: cssEase(EASE_OUT) },
+      );
+    }
     onBlockedClose?.();
   }, [onBlockedClose]);
+
+  useEffect(
+    () => () => {
+      if (nudgeTimerRef.current !== null) {
+        window.clearTimeout(nudgeTimerRef.current);
+        nudgeTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
   const guardBackdrop = dirty ?? interacted;
+  const guardRef = useRef(guardBackdrop);
+  guardRef.current = guardBackdrop;
+  const actionsRef = useRef({ onClose, nudge });
+  actionsRef.current = { onClose, nudge };
+
   const handleEscape = useCallback(() => {
     if (dirty === true) {
       nudge();
@@ -70,15 +126,91 @@ export function Drawer({
   useDialogBehavior({ open, visible, panelRef, onEscape: handleEscape, initialFocus });
   const fade = useScrollFade<HTMLDivElement>({ enabled: mounted });
 
+  // Satin 原生触屏右滑关闭手势（对齐 overlay.js:466-489）：拖过 30% 宽或快甩即关闭；有未保存修改时弹回轻顶。
+  useEffect(() => {
+    const drawer = panelRef.current;
+    if (!mounted || !drawer) return;
+
+    let swipe: { x: number; y: number; t: number; dx: number; on: boolean; id: number } | null =
+      null;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch" || !drawer.classList.contains("sn-open")) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          "input, textarea, select, [contenteditable], .sn-slider, .sn-seg, .sn-tab-list",
+        )
+      ) {
+        return;
+      }
+      const scrollView = target?.closest<HTMLElement>(".sn-sa-vp, [data-scroll-area-viewport]");
+      if (scrollView && scrollView.scrollWidth > scrollView.clientWidth + 1) return;
+      swipe = {
+        x: event.clientX,
+        y: event.clientY,
+        t: event.timeStamp,
+        dx: 0,
+        on: false,
+        id: event.pointerId,
+      };
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!swipe || event.pointerId !== swipe.id) return;
+      const dx = event.clientX - swipe.x;
+      const dy = event.clientY - swipe.y;
+      if (!swipe.on) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+          swipe = null;
+          return;
+        }
+        if (dx < 8) return;
+        swipe.on = true;
+        try {
+          drawer.setPointerCapture?.(event.pointerId);
+        } catch {
+          // ignore
+        }
+        drawer.style.transition = "none";
+      }
+      swipe.dx = Math.max(0, dx);
+      drawer.style.translate = `${swipe.dx}px 0`;
+    };
+
+    const onSwipeEnd = (event: PointerEvent) => {
+      if (!swipe || event.pointerId !== swipe.id) return;
+      const current = swipe;
+      swipe = null;
+      if (!current.on) return;
+      const velocity = current.dx / Math.max(1, event.timeStamp - current.t);
+      const shouldClose =
+        event.type === "pointerup" &&
+        (current.dx > drawer.offsetWidth * 0.3 || velocity > 0.6);
+      drawer.style.transition = "";
+      drawer.style.translate = "";
+      if (shouldClose) {
+        if (guardRef.current) actionsRef.current.nudge();
+        else actionsRef.current.onClose();
+      }
+    };
+
+    drawer.addEventListener("pointerdown", onPointerDown);
+    drawer.addEventListener("pointermove", onPointerMove);
+    drawer.addEventListener("pointerup", onSwipeEnd);
+    drawer.addEventListener("pointercancel", onSwipeEnd);
+    return () => {
+      drawer.removeEventListener("pointerdown", onPointerDown);
+      drawer.removeEventListener("pointermove", onPointerMove);
+      drawer.removeEventListener("pointerup", onSwipeEnd);
+      drawer.removeEventListener("pointercancel", onSwipeEnd);
+    };
+  }, [mounted]);
+
   if (!mounted) return null;
 
-  const backdropMotion = overlayBackdropMotion(visible);
-  const panelMotion = drawerPanelMotion(visible);
-
   return createPortal(
-    // 桌面端抽屉离屏幕边缘留 8px，四角圆起来，读起来是浮在页面上的一张面板而不是一块切出来的墙；
-    // 手机上贴边铺满，省下边距。
-    <div className="fixed inset-0 z-[200] flex justify-end sm:p-2">
+    <>
       <button
         type="button"
         data-overlay-backdrop=""
@@ -90,45 +222,40 @@ export function Drawer({
           }
           onClose();
         }}
-        // 遮罩不是一个「关闭」按钮：填过内容后点它只会轻晃。与 Modal 一样对读屏和 Tab 隐藏，
-        // 关闭交给头部的关闭按钮和 Esc。
+        // 遮罩不是一个「关闭」按钮：填过内容后点它只会轻顶。与 Modal 一样对读屏和 Tab 隐藏。
         aria-hidden="true"
         tabIndex={-1}
-        style={backdropMotion.style}
-        className={[
-          // 与 Modal 用同一套遮罩语言：只压暗、不模糊。
-          "absolute inset-0 cursor-default bg-black/25 dark:bg-black/55",
-          backdropMotion.className,
-        ].join(" ")}
+        className={["sn-drawer-scrim cp-drawer-scrim cursor-default", visible ? "sn-open" : ""]
+          .filter(Boolean)
+          .join(" ")}
       />
-      <div
+      <aside
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
+        data-state={visible ? "open" : open ? "entering" : "closing"}
+        data-nudging={nudging ? "true" : undefined}
         onInput={onInput}
-        onAnimationEnd={(event) => {
-          if (event.animationName === "overlay-nudge") setNudging(false);
-        }}
-        style={panelMotion.style}
         className={[
-          `relative z-10 flex h-full ${widthClassName} flex-col overflow-hidden bg-elevated text-ink shadow-dialog outline-none [--cp-backdrop:var(--cp-elevated)] sm:max-w-[calc(100vw-1rem)] sm:rounded-3xl`,
-          panelMotion.className,
-          nudging ? "overlay-nudge" : "",
-        ].join(" ")}
+          `sn-drawer cp-drawer-panel ${widthClassName} [--sn-backdrop:var(--sn-overlay)]`,
+          visible ? "sn-open" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {/* 抽屉内容通常很长：头尾不画硬分隔线，正文滚动时上下渐隐，和 Modal 一致。 */}
-        <div className="flex items-start justify-between gap-3 py-4 pr-4 pl-6">
-          <div className="flex min-w-0 items-start gap-3.5">
+        <div className="flex shrink-0 items-start justify-between gap-3 py-3.5 pr-4 pl-5">
+          <div className="flex min-w-0 items-start gap-3">
             {icon ? <DialogIcon tone={tone}>{icon}</DialogIcon> : null}
-            <div className={["min-w-0", icon ? "pt-px" : "pt-1"].join(" ")}>
-              <h2 id={titleId} className="truncate text-lg font-semibold tracking-tight text-ink">
+            <div className={["min-w-0", icon ? "pt-px" : "pt-0.5"].join(" ")}>
+              <h2 id={titleId} className="truncate text-base font-semibold tracking-tight text-sn-label">
                 {title}
               </h2>
               {description ? (
-                <div id={descriptionId} className="mt-0.5 text-sm text-ink-2">
+                <div id={descriptionId} className="mt-0.5 text-sm text-sn-label2">
                   {description}
                 </div>
               ) : null}
@@ -138,25 +265,26 @@ export function Drawer({
             type="button"
             onClick={onClose}
             disabled={!open}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-ink-3 shadow-none transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            data-kbd="Esc"
+            className="sn-btn sn-ghost sn-sm sn-ibtn sn-round shrink-0"
             aria-label={t("common.close")}
           >
-            <X size={18} />
+            <Icon name="x" size={16} />
           </button>
         </div>
         <div
           ref={fade.ref}
-          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-3 ${bodyClassName ?? ""}`}
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-3 ${bodyClassName ?? ""}`}
         >
           {children}
         </div>
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2.5 px-6 py-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2.5 px-5 py-3.5">
             {footer}
           </div>
         ) : null}
-      </div>
-    </div>,
+      </aside>
+    </>,
     document.body,
   );
 }

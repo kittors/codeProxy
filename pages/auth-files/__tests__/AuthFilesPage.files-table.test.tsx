@@ -499,7 +499,7 @@ describe("AuthFilesPage files table", () => {
     expect(rowsPerPage).toHaveTextContent("9");
 
     await user.click(rowsPerPage);
-    await user.click(screen.getByRole("option", { name: "12" }));
+    await user.click(screen.getByRole("option", { name: "12 / page" }));
     expect(window.localStorage.getItem(AUTH_FILES_PAGE_SIZE_KEY)).toBe("12");
 
     await user.click(screen.getByRole("combobox", { name: "Cards per row" }));
@@ -1925,7 +1925,8 @@ describe("AuthFilesPage files table", () => {
       clipboardData: { getData: () => "http://localhost:1455/auth/callback?code=ok&state=state-1" },
     });
 
-    expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
+    // 授权成功面板与主列表会同步展示该账号文件名，按列表卡片的 title 精确断言列表已刷新。
+    await waitFor(() => expect(screen.getByTitle("codex-authorized.json")).toBeInTheDocument());
     // New visible scope: snapshot + quiet probe (not the legacy per-file quota fan-out).
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());
@@ -2023,7 +2024,7 @@ describe("AuthFilesPage files table", () => {
     expect(codexBrand).not.toBe("");
     const providerTag = within(card as HTMLElement).getByText(/^codex$/i);
     expect(providerTag.style.getPropertyValue("--brand-l")).toBe(codexBrand);
-    expect(providerTag).toHaveClass("text-ink-2", "colorful:text-[var(--brand-text)]");
+    expect(providerTag).toHaveClass("text-sn-label2", "colorful:text-[var(--brand-text)]");
     expect(within(card as HTMLElement).queryByText("pro")).not.toBeInTheDocument();
   });
 
@@ -3471,13 +3472,11 @@ describe("AuthFilesPage files table", () => {
           size: 1024,
           modified: Date.now(),
           disabled: false,
-          shared_subscription_started_at: new Date(
-            Date.now() - 5 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-          shared_subscription_expires_at: new Date(
-            Date.now() + 26 * 24 * 60 * 60 * 1000,
-          ).toISOString(),
-          shared_subscription_source: "signed_claims",
+          shared_subscription: {
+            started_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            expires_at: new Date(Date.now() + 26 * 24 * 60 * 60 * 1000).toISOString(),
+            source: "signed_claims",
+          },
         },
       ],
     }));

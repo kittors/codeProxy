@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Crown, Zap } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { vendorBrand, vendorBrandStyle, VendorIcon } from "@code-proxy/assets";
 import { cn } from "../utils/selectStyles";
 import "./brandBadges.css";
@@ -70,9 +70,23 @@ export function PlanBadge({
 } & Omit<React.HTMLAttributes<HTMLSpanElement>, "children" | "className">) {
   const icon =
     tier === "ultra" ? (
-      <Crown size={10} strokeWidth={2.4} aria-hidden="true" className="relative shrink-0" />
+      <svg
+        width={10}
+        height={10}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        data-icon="crown"
+        className="sn-ic relative shrink-0"
+      >
+        <path d="M3 18h18l1-11-5.5 4.5L12 5 6.5 11.5 1 7l2 11z" />
+      </svg>
     ) : tier === "max" ? (
-      <Zap size={10} strokeWidth={2.4} aria-hidden="true" className="relative shrink-0" />
+      <Icon name="zap" size={10} className="relative shrink-0" />
     ) : null;
   return (
     <span
@@ -119,7 +133,7 @@ export function ProviderTag({
       style={brandStyle(vendor, rest.style)}
       className={cn(
         BRAND_VARS,
-        "inline-flex shrink-0 items-center gap-1 rounded-md bg-ink/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-ink-2 dark:bg-white/[0.07]",
+        "inline-flex shrink-0 items-center gap-1 rounded-md bg-sn-label/[0.05] px-1.5 py-px text-2xs font-medium whitespace-nowrap text-sn-label2 dark:bg-white/[0.07]",
         "colorful:bg-[color-mix(in_oklab,var(--brand)_11%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
         className,
       )}

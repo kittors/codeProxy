@@ -1,12 +1,5 @@
-import { motion } from "framer-motion";
-import { useLandingFade } from "./landingMotion";
+import { LandingFade } from "./landingMotion";
 
-/**
- * 章节头：等宽序号 + 等宽 eyebrow + 大标题。
- *
- * 序号（01 / 02 / 03）是这版设计的节奏锚点——它让长页面读起来像一份有目录的文档，
- * 而不是一串互不相干的卡片区。
- */
 export function LandingSectionHead({
   index,
   eyebrow,
@@ -20,32 +13,28 @@ export function LandingSectionHead({
   subtitle?: string;
   align?: "left" | "center";
 }) {
-  const fade = useLandingFade();
   const centered = align === "center";
 
   return (
-    <motion.div
-      {...fade()}
-      className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}
-    >
+    <LandingFade className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       <div
         className={[
-          "flex items-center gap-3 font-display text-2xs uppercase tracking-[0.28em]",
+          "flex items-center gap-2.5 text-xs font-medium text-sn-label3",
           centered ? "justify-center" : "",
         ].join(" ")}
       >
-        <span className="text-ink">{index}</span>
-        <span className="h-px w-8 bg-line-strong" aria-hidden />
-        <span className="tracking-[0.1em] text-ink-3">{eyebrow}</span>
+        <span className="font-mono tabular-nums text-sn-label2">{index}</span>
+        <span className="h-px w-5 bg-sn-line-control" aria-hidden />
+        <span>{eyebrow}</span>
       </div>
 
-      <h2 className="mt-6 font-display text-3xl font-bold leading-tight tracking-tight text-ink sm:text-4xl">
+      <h2 className="mt-3.5 font-sans text-2xl font-semibold leading-tight tracking-[-0.025em] text-sn-label sm:text-3xl">
         {title}
       </h2>
 
       {subtitle ? (
-        <p className="mt-5 text-base leading-8 text-ink-2">{subtitle}</p>
+        <p className="mt-3 text-sm leading-7 text-sn-label2 sm:text-base">{subtitle}</p>
       ) : null}
-    </motion.div>
+    </LandingFade>
   );
 }

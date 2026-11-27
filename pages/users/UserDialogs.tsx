@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, Lock, ShieldCheck, UserX } from "lucide-react";
+import { KeyRound, Lock, ShieldCheck, UserX } from "@code-proxy/ui/icons";
 import type { UserIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -20,7 +20,7 @@ function UserSubject({ name, username }: { name: string; username: string }) {
   return (
     <span className="flex min-w-0 items-center justify-between gap-3">
       <span className="truncate font-medium">{name}</span>
-      <span className="shrink-0 font-mono text-xs text-ink-3">{username}</span>
+      <span className="shrink-0 font-mono text-xs text-sn-label3">{username}</span>
     </span>
   );
 }

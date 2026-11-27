@@ -1,6 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Check, Plug } from "lucide-react";
+import { AlertCircle, Check, Plug } from "@code-proxy/ui/icons";
 import type { OpenAIDraft } from "../providers-helpers";
 import { Button } from "@code-proxy/ui";
 import { Modal } from "@code-proxy/ui";
@@ -92,7 +92,7 @@ export function OpenAIProviderModal({
         <OpenAIProviderBasicSection openaiDraft={openaiDraft} setOpenaiDraft={setOpenaiDraft} />
 
         {/* 弹窗里只有一层：审核配置用无边淡底分组，分区之间靠留白，不再画分隔线、套描边卡。 */}
-        <div className="rounded-2xl bg-subtle p-4">
+        <div className="rounded-xl bg-sn-subtle p-4">
           <ModerationProfileSelect
             canRead={moderationPerms.canRead}
             canWrite={moderationPerms.canWrite}

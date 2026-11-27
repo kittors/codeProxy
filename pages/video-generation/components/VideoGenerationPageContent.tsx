@@ -56,10 +56,10 @@ export function VideoGenerationPageContent() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-ink">
+        <h1 className="text-2xl font-semibold text-sn-label">
           {t("video_generation.title")}
         </h1>
-        <p className="text-sm text-ink-3">
+        <p className="text-sm text-sn-label3">
           {t("video_generation.description")}
         </p>
       </header>
@@ -68,10 +68,10 @@ export function VideoGenerationPageContent() {
       <Card flat>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
-            <h2 className="text-base font-semibold text-ink">
+            <h2 className="text-base font-semibold text-sn-label">
               {t("video_generation.call_title")}
             </h2>
-            <p className="text-sm text-ink-3">
+            <p className="text-sm text-sn-label3">
               {t("video_generation.call_description")}
             </p>
           </div>
@@ -104,18 +104,18 @@ export function VideoGenerationPageContent() {
           </Tabs>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-subtle p-4">
+        <div className="mt-4 rounded-xl bg-sn-subtle p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-ink">
+              <h3 className="text-sm font-semibold text-sn-label">
                 {t(`video_generation.${doc.titleKey}`)}
               </h3>
-              <p className="mt-1 text-sm text-ink-3">
+              <p className="mt-1 text-sm text-sn-label3">
                 {t(`video_generation.${doc.descriptionKey}`)}
               </p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1 font-mono text-xs text-ink-2">
-              <span className="font-semibold text-ink">
+            <span className="inline-flex items-center gap-2 rounded-full bg-sn-raised px-3 py-1 font-mono text-xs text-sn-label2">
+              <span className="font-semibold text-sn-label">
                 {doc.method}
               </span>
               {doc.path}
@@ -125,7 +125,7 @@ export function VideoGenerationPageContent() {
 
         <CodeBlock code={doc.curl} label="curl" className="mt-4" />
 
-        <p className="mt-3 text-xs text-ink-3">
+        <p className="mt-3 text-xs text-sn-label3">
           {t("video_generation.status_endpoint_hint", { path: VIDEO_STATUS_PATH })}
         </p>
 
@@ -200,7 +200,7 @@ function SpecTable({
 
   return (
     <section className="mt-6 space-y-2">
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
       <DataGrid
         id={tableId}
         frame={false}

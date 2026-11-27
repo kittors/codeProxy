@@ -65,8 +65,8 @@ const measure = (page: Page) =>
      * 的死区」。钉高页改为检查页面根撑到底：高度链完整，表格才有一块确定的高度可以封顶。
      */
     const paints = (el: Element) => {
-      // 滚动区与 DataGrid 的外框 / 视口都算「画出来的内容」：行少时空白留在表格框里。
-      if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility], .cp-grid, .cp-grid-viewport")) {
+      // 滚动区与 Satin 表格外框 / 视口都算「画出来的内容」：行少时空白留在表格框里。
+      if (el.matches("[data-scroll-area-viewport], [data-scrollbar-visibility], .sn-tbl-wrap, .sn-tbl-sc")) {
         return true;
       }
       const s = getComputedStyle(el);
@@ -129,7 +129,18 @@ const measureScrolledEnd = (page: Page) =>
       if (r.width <= 0 || r.height <= 0) return;
       const s = getComputedStyle(el);
       if (s.visibility === "hidden" || s.display === "none") return;
-      lowest = Math.max(lowest, r.bottom);
+      // 被祖先 overflow:hidden/clip（如 Satin NumberFlow 的 50 行滚筒轨）裁掉的部分不可见，
+      // 可见底边应钳制在最近裁剪祖先的底边以内。
+      let visibleBottom = r.bottom;
+      let ancestor = el.parentElement;
+      while (ancestor && ancestor !== main) {
+        const as = getComputedStyle(ancestor);
+        if (as.overflowY === "hidden" || as.overflowY === "clip") {
+          visibleBottom = Math.min(visibleBottom, ancestor.getBoundingClientRect().bottom);
+        }
+        ancestor = ancestor.parentElement;
+      }
+      lowest = Math.max(lowest, visibleBottom);
     });
     return Math.round(scroller.getBoundingClientRect().bottom - lowest);
   });

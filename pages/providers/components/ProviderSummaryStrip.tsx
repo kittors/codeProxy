@@ -21,15 +21,15 @@ export function ProviderSummaryStrip({
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 text-xs">
-      <span className="font-medium text-ink-3">
+      <span className="font-medium text-sn-label3">
         {t("providers.total_configs", { count })}
       </span>
-      <span className="inline-flex items-center gap-1 text-ink-2 colorful:text-emerald-600 colorful:dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-sn-label2 colorful:text-emerald-600 colorful:dark:text-emerald-400">
         <span className="size-1.5 rounded-full bg-emerald-500" />
         {t("providers.enabled_count", { count: enabledCount })}
       </span>
       {disabledCount > 0 ? (
-        <span className="inline-flex items-center gap-1 text-ink-2 colorful:text-rose-600 colorful:dark:text-rose-400">
+        <span className="inline-flex items-center gap-1 text-sn-label2 colorful:text-rose-600 colorful:dark:text-rose-400">
           <span className="size-1.5 rounded-full bg-amber-500 colorful:bg-rose-500" />
           {t("providers.disabled_count", { count: disabledCount })}
         </span>

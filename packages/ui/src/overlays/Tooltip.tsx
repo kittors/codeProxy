@@ -1,6 +1,6 @@
 import {
-  createElement,
   createContext,
+  createElement,
   useCallback,
   useEffect,
   useId,
@@ -11,14 +11,10 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { computeFloating, hideTip, showTip, tipTarget } from "satin-ui";
+import { resolvePortalContainer } from "./portalContainer";
 
 export type TooltipPlacement = "top" | "right" | "bottom" | "left";
-
-type TooltipPosition = {
-  left: number;
-  placement: TooltipPlacement;
-  top: number;
-};
 
 type GlobalTooltipState = {
   anchor: HTMLElement;
@@ -26,14 +22,14 @@ type GlobalTooltipState = {
   placement?: TooltipPlacement;
 };
 
-const TOOLTIP_OFFSET = 8;
-const VIEWPORT_PADDING = 8;
-const FALLBACK_PLACEMENTS: TooltipPlacement[] = ["bottom", "right", "left", "top"];
-
 export const TooltipTriggerContext = createContext(false);
 
 function isEmptyTooltipContent(content: ReactNode) {
   return content === null || content === undefined || content === false || content === "";
+}
+
+function isPlainTooltipText(content: ReactNode): content is string | number {
+  return typeof content === "string" || typeof content === "number";
 }
 
 function parseTooltipPlacement(value: string | null): TooltipPlacement | undefined {
@@ -49,14 +45,14 @@ function resolveIconButtonTooltip(target: EventTarget | null): GlobalTooltipStat
   const button = target.closest("button, a[data-tooltip]");
   if (!(button instanceof HTMLButtonElement || button instanceof HTMLAnchorElement)) return null;
   if (button.closest("[data-tooltip-managed='true']")) return null;
+  // 已采用 Satin 原生 data-tip 的元素交由 Satin installTooltips() 原生延迟/暖机管线接管，不重复触发。
+  if (button.hasAttribute("data-tip")) return null;
 
-  // 有可见文字的按钮不弹提示——文字本身已经说明了用途。显式写了 data-tooltip 的例外：
-  // 侧边栏收起后行内文字只是淡出、仍留在 DOM 里（保住可访问名称），这时仍要靠提示露出名字。
+  // 有可见文字的按钮不弹提示，显式写了 data-tooltip 的例外（例如侧边栏收起态淡出文字）。
   const explicitTooltip = button.getAttribute("data-tooltip");
   const hasVisibleText = (button.textContent ?? "").trim().length > 0;
   if (hasVisibleText && !explicitTooltip) return null;
-  // 里面什么都没有的空按钮（弹窗、抽屉的整屏遮罩）不是图标按钮：aria-label 只是给读屏的，
-  // 悬停时在屏幕底部弹一个「关闭」反而莫名其妙。
+  // 里面什么都没有的空按钮（弹窗、抽屉的整屏遮罩）不是图标按钮。
   if (!explicitTooltip && button.childElementCount === 0) return null;
 
   const content =
@@ -87,103 +83,7 @@ function restoreNativeTitle(button: HTMLElement | null | undefined) {
   delete button.dataset.tooltipNativeTitle;
 }
 
-function clamp(value: number, min: number, max: number) {
-  if (max < min) return min;
-  return Math.max(min, Math.min(value, max));
-}
-
-function getPlacementOrder(preferred: TooltipPlacement) {
-  return [
-    preferred,
-    ...FALLBACK_PLACEMENTS.filter((placement) => placement !== preferred),
-  ] satisfies TooltipPlacement[];
-}
-
-function getPlacementPosition(
-  rect: DOMRect,
-  tooltipWidth: number,
-  tooltipHeight: number,
-  placement: TooltipPlacement,
-): TooltipPosition {
-  switch (placement) {
-    case "bottom":
-      return {
-        placement,
-        top: rect.bottom + TOOLTIP_OFFSET,
-        left: rect.left + rect.width / 2 - tooltipWidth / 2,
-      };
-    case "left":
-      return {
-        placement,
-        top: rect.top + rect.height / 2 - tooltipHeight / 2,
-        left: rect.left - tooltipWidth - TOOLTIP_OFFSET,
-      };
-    case "top":
-      return {
-        placement,
-        top: rect.top - tooltipHeight - TOOLTIP_OFFSET,
-        left: rect.left + rect.width / 2 - tooltipWidth / 2,
-      };
-    case "right":
-    default:
-      return {
-        placement,
-        top: rect.top + rect.height / 2 - tooltipHeight / 2,
-        left: rect.right + TOOLTIP_OFFSET,
-      };
-  }
-}
-
-function fitsViewport(
-  position: TooltipPosition,
-  tooltipWidth: number,
-  tooltipHeight: number,
-  viewportWidth: number,
-  viewportHeight: number,
-) {
-  return (
-    position.left >= VIEWPORT_PADDING &&
-    position.top >= VIEWPORT_PADDING &&
-    position.left + tooltipWidth <= viewportWidth - VIEWPORT_PADDING &&
-    position.top + tooltipHeight <= viewportHeight - VIEWPORT_PADDING
-  );
-}
-
-function resolveTooltipPosition({
-  placement,
-  rect,
-  tooltipHeight,
-  tooltipWidth,
-  viewportHeight,
-  viewportWidth,
-}: {
-  placement: TooltipPlacement;
-  rect: DOMRect;
-  tooltipHeight: number;
-  tooltipWidth: number;
-  viewportHeight: number;
-  viewportWidth: number;
-}) {
-  const candidates = getPlacementOrder(placement).map((nextPlacement) =>
-    getPlacementPosition(rect, tooltipWidth, tooltipHeight, nextPlacement),
-  );
-  const selected =
-    candidates.find((candidate) =>
-      fitsViewport(candidate, tooltipWidth, tooltipHeight, viewportWidth, viewportHeight),
-    ) ?? candidates[0];
-
-  return {
-    ...selected,
-    left: clamp(selected.left, VIEWPORT_PADDING, viewportWidth - tooltipWidth - VIEWPORT_PADDING),
-    top: clamp(selected.top, VIEWPORT_PADDING, viewportHeight - tooltipHeight - VIEWPORT_PADDING),
-  };
-}
-
-// scrollWidth/clientWidth are rounded to integers, so text that fits with a
-// sub-pixel remainder (a 188.4px label in a 188px box) reports a 1px overflow
-// while rendering in full, with no ellipsis. Without this tolerance the tooltip
-// pops up repeating the text already on screen — which reads as the UI showing
-// an "alias" that is identical to the name next to it.
+// scrollWidth/clientWidth 会四舍五入到整数，188.4px 落在 188px 盒里会报 1px 假溢出。
 const OVERFLOW_TOLERANCE_PX = 1;
 
 function isElementOverflowing(element: HTMLElement) {
@@ -203,7 +103,140 @@ export function hasOverflowingContent(element: HTMLElement) {
   return false;
 }
 
-/** Fixed-position tooltip rendered via portal — never clipped by overflow containers */
+/**
+ * 富内容 Tooltip 浮层（用于 JSX 表格明细 / 标签组等非纯文本内容）：
+ * 直接由 Satin 原生 `computeFloating` 智能定位引擎 + `.sn-tip.sn-wrap.sn-on` 样式与微动效驱动，
+ * 并通过 `resolvePortalContainer` 自动兼容原生 `<dialog>` Top Layer。
+ */
+function SatinRichTooltip({
+  id,
+  open,
+  content,
+  anchorElement,
+  anchorRef,
+  interactive = false,
+  onMouseEnter,
+  onMouseLeave,
+  placement = "bottom",
+}: {
+  id: string;
+  open: boolean;
+  content: ReactNode;
+  anchorElement?: HTMLElement | null;
+  anchorRef?: React.RefObject<HTMLElement | null>;
+  interactive?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  placement?: TooltipPlacement;
+}) {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{
+    left: number;
+    top: number;
+    origin: string;
+    below: boolean;
+    right: boolean;
+    leftSide: boolean;
+    ready: boolean;
+  }>({
+    left: 0,
+    top: 0,
+    origin: "50% 0",
+    below: true,
+    right: false,
+    leftSide: false,
+    ready: false,
+  });
+
+  const updatePosition = useCallback(() => {
+    const anchor = anchorElement ?? anchorRef?.current;
+    const panel = tooltipRef.current;
+    if (!anchor || !panel) return;
+    const next = computeFloating(panel, anchor, {
+      placement,
+      align: "center",
+      gap: 8,
+      margin: 8,
+    });
+    const nextOrigin = `${next.ox}px ${next.oy}px`;
+    const nextBelow = !next.side && !next.up;
+    const nextRight = next.side === "right";
+    const nextLeftSide = next.side === "left";
+    setPos((prev) =>
+      prev.ready &&
+      prev.left === next.left &&
+      prev.top === next.top &&
+      prev.origin === nextOrigin &&
+      prev.below === nextBelow &&
+      prev.right === nextRight &&
+      prev.leftSide === nextLeftSide
+        ? prev
+        : {
+            left: next.left,
+            top: next.top,
+            origin: nextOrigin,
+            below: nextBelow,
+            right: nextRight,
+            leftSide: nextLeftSide,
+            ready: true,
+          },
+    );
+  }, [anchorElement, anchorRef, placement]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+      return;
+    }
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("satin-reposition", updatePosition);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("satin-reposition", updatePosition);
+    };
+  }, [open, updatePosition, content]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      ref={tooltipRef}
+      id={id}
+      role="tooltip"
+      className={[
+        "sn-tip sn-wrap !z-[10050] !px-2.5 !py-1.5",
+        interactive ? "!pointer-events-auto select-text" : "",
+        pos.below ? "sn-below" : "",
+        pos.right ? "sn-right" : "",
+        pos.leftSide ? "sn-left" : "",
+        pos.ready ? "sn-on" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        left: pos.left,
+        top: pos.top,
+        transformOrigin: pos.origin,
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <span className="block whitespace-pre-line break-words [overflow-wrap:anywhere]">
+        {content}
+      </span>
+    </div>,
+    resolvePortalContainer(anchorElement ?? anchorRef?.current),
+  );
+}
+
+/**
+ * 统一 Tooltip 气泡：
+ * - 纯文本直接复用 Satin 全局唯一 `#sn-tip`（Popover Top Layer + `showTip`/`hideTip`）；
+ * - 富 JSX 内容使用 Satin `computeFloating` + `.sn-tip` 渲染，零自研定位算法。
+ */
 export function TooltipBubble({
   id,
   open,
@@ -225,96 +258,47 @@ export function TooltipBubble({
   onMouseLeave?: () => void;
   placement?: TooltipPlacement;
 }) {
-  const tooltipRef = useRef<HTMLSpanElement>(null);
-  // 初始带一点下沉与缩小，定位算完后归位，配合上面的过渡形成「浮出」的观感。
-  const [style, setStyle] = useState<React.CSSProperties>({
-    position: "fixed",
-    opacity: 0,
-    transform: "translateY(2px) scale(0.98)",
-  });
-
-  const updatePosition = useCallback(() => {
-    const anchor = anchorElement ?? anchorRef?.current;
-    if (!anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    const tooltipEl = tooltipRef.current;
-    const tooltipHeight = tooltipEl?.offsetHeight ?? 32;
-    const tooltipWidth = tooltipEl?.offsetWidth ?? 200;
-    const {
-      left,
-      top,
-      placement: resolvedPlacement,
-    } = resolveTooltipPosition({
-      placement,
-      rect,
-      tooltipHeight,
-      tooltipWidth,
-      viewportHeight: window.innerHeight,
-      viewportWidth: window.innerWidth,
-    });
-
-    setStyle({
-      position: "fixed",
-      top,
-      left,
-      zIndex: 99999,
-      opacity: 1,
-      transform: "translateY(0) scale(1)",
-      ["--tooltip-placement" as string]: resolvedPlacement,
-    });
-  }, [anchorElement, anchorRef, placement]);
+  const useNativeTextTip = !interactive && isPlainTooltipText(content);
+  const textContent = useNativeTextTip ? String(content).trim() : "";
 
   useLayoutEffect(() => {
-    if (!open) return;
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-
+    if (!useNativeTextTip) return undefined;
+    const anchor = anchorElement ?? anchorRef?.current;
+    if (!open || !anchor || !textContent) {
+      if (anchor && tipTarget() === anchor) hideTip();
+      return undefined;
+    }
+    showTip(anchor, textContent, { side: placement });
     return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
+      if (tipTarget() === anchor) hideTip();
     };
-  }, [open, updatePosition, content]);
+  }, [anchorElement, anchorRef, open, placement, textContent, useNativeTextTip]);
 
-  if (!open) return null;
+  if (useNativeTextTip) return null;
 
-  return createPortal(
-    <span
-      ref={tooltipRef}
+  return (
+    <SatinRichTooltip
       id={id}
-      role="tooltip"
-      className={[
-        interactive ? "pointer-events-auto select-text" : "pointer-events-none",
-        // 只淡入显得硬；补 2px 上浮与轻微放大后，提示读起来是「浮出来」而不是「闪出来」。
-        // 深色实心气泡（深色模式反转成浅色）：和页面上的白卡片拉开最大反差，一眼就知道是临时提示。
-        "w-max max-w-[calc(100vw-2rem)] rounded-xl bg-ink px-3 py-1.5 text-sm leading-snug text-canvas shadow-[0_8px_20px_-6px_rgb(0_0_0/0.28)] sm:max-w-md",
-        "transition-[opacity,transform] duration-150 ease-soft motion-reduce:transition-none",
-      ].join(" ")}
-      style={style}
+      open={open}
+      content={content}
+      anchorElement={anchorElement}
+      anchorRef={anchorRef}
+      interactive={interactive}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-    >
-      <span className="block whitespace-pre-line break-words [overflow-wrap:anywhere]">
-        {content}
-      </span>
-    </span>,
-    document.body,
+      placement={placement}
+    />
   );
 }
 
 /**
- * 提示气泡里成组展示的小标签（模型名、渠道名、路由路径）。
- *
- * 气泡是墨色实心、深色模式下反转成浅色，所以标签的底、边、字都取 canvas 的透明度——跟着气泡
- * 一起反转，任何主题下都是「气泡上浅浅一层」。不要在气泡内容里写 text-slate-* / dark:text-white
- * 这类固定颜色：深色模式下气泡是浅色的，白字会直接看不见。
+ * 提示气泡里成组展示的小标签（模型名、渠道名、路由路径），对齐 Satin `.sn-tip` 深底高对比反色材质。
  */
 export function TooltipChip({ children, mono = false }: { children: ReactNode; mono?: boolean }) {
   return (
     <span
       className={[
-        "inline-flex items-center gap-1 rounded-md bg-canvas/12 px-2 py-0.5 text-xs text-canvas",
+        "inline-flex items-center gap-1 rounded-md bg-white/14 px-2 py-0.5 text-xs text-[var(--sn-tip-fg)]",
         mono ? "font-mono" : "",
       ].join(" ")}
     >
@@ -340,10 +324,10 @@ export function HoverTooltip({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | null>(null);
   const hasContent = !isEmptyTooltipContent(content);
+  const isPlain = isPlainTooltipText(content);
 
   const show = useCallback(() => {
-    if (disabled) return;
-    if (!hasContent) return;
+    if (disabled || !hasContent) return;
     if (typeof content === "string" && !content.trim()) return;
     setOpen(true);
   }, [content, disabled, hasContent]);
@@ -359,7 +343,7 @@ export function HoverTooltip({
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
-      aria-describedby={!disabled && hasContent ? id : undefined}
+      aria-describedby={!disabled && hasContent && !isPlain && open ? id : undefined}
     >
       <TooltipTriggerContext.Provider value={true}>{children}</TooltipTriggerContext.Provider>
       <TooltipBubble id={id} open={open} content={content} anchorRef={ref} placement={placement} />
@@ -381,42 +365,30 @@ export function OverflowTooltip({
   className?: string;
   placement?: TooltipPlacement;
 } & Omit<HTMLAttributes<HTMLElement>, "children" | "content">) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
-  const hideTimeoutRef = useRef<number | null>(null);
-
-  const cancelHide = useCallback(() => {
-    if (hideTimeoutRef.current === null) return;
-    window.clearTimeout(hideTimeoutRef.current);
-    hideTimeoutRef.current = null;
-  }, []);
+  const shownAnchorRef = useRef<HTMLElement | null>(null);
 
   const tryShow = useCallback(() => {
     const el = ref.current;
-    if (!el) return;
-    if (!content.trim()) return;
+    if (!el || !content.trim()) return;
     if (!hasOverflowingContent(el)) return;
-    cancelHide();
-    setOpen(true);
-  }, [cancelHide, content]);
+    shownAnchorRef.current = el;
+    showTip(el, content, { side: placement });
+  }, [content, placement]);
 
   const hide = useCallback(() => {
-    cancelHide();
-    setOpen(false);
-  }, [cancelHide]);
-
-  const scheduleHide = useCallback(() => {
-    cancelHide();
-    hideTimeoutRef.current = window.setTimeout(() => {
-      hideTimeoutRef.current = null;
-      setOpen(false);
-    }, 120);
-  }, [cancelHide]);
+    const el = shownAnchorRef.current ?? ref.current;
+    if (!el || tipTarget() === el) hideTip();
+    shownAnchorRef.current = null;
+  }, []);
 
   useEffect(() => {
-    return () => cancelHide();
-  }, [cancelHide]);
+    return () => {
+      const el = shownAnchorRef.current ?? ref.current;
+      if (el && tipTarget() === el) hideTip();
+      shownAnchorRef.current = null;
+    };
+  }, []);
 
   return createElement(
     as,
@@ -426,45 +398,35 @@ export function OverflowTooltip({
       "data-tooltip-managed": "true",
       className: ["relative", className].filter(Boolean).join(" "),
       onMouseEnter: tryShow,
-      onMouseLeave: scheduleHide,
+      onMouseLeave: hide,
       onFocus: tryShow,
       onBlur: hide,
-      // Only reference the bubble while it exists; TooltipBubble unmounts when closed.
-      "aria-describedby": open ? id : undefined,
     },
     children,
-    <TooltipBubble
-      id={id}
-      open={open}
-      content={content}
-      anchorRef={ref}
-      interactive
-      placement={placement}
-      onMouseEnter={cancelHide}
-      onMouseLeave={scheduleHide}
-    />,
   );
 }
 
+/**
+ * 全局纯图标按钮与 `data-tooltip` 提示桥接器：
+ * 零 React DOM / Portal，全部直接委托 Satin 原生 `showTip` / `hideTip` 全局 `#sn-tip` 顶层容器。
+ */
 export function GlobalIconButtonTooltip({
   placement = "bottom",
 }: {
   placement?: TooltipPlacement;
 }) {
-  const id = useId();
   const activeRef = useRef<GlobalTooltipState | null>(null);
-  const [active, setActive] = useState<GlobalTooltipState | null>(null);
-  // 最近一次交互是指针还是键盘。鼠标点按时提示已在 pointerdown 收起，紧接着按钮拿到焦点；
-  // 这时若按焦点再弹出来，内容是点击之前的名字（展开 / 收起这类切换按钮会一直显示「展开详情」）。
   const pointerInteractionRef = useRef(false);
+  const observerRef = useRef<MutationObserver | null>(null);
 
   const dismiss = useCallback(() => {
     const current = activeRef.current;
     if (!current) return;
-
+    observerRef.current?.disconnect();
+    observerRef.current = null;
     restoreNativeTitle(current.anchor);
+    if (tipTarget() === current.anchor) hideTip();
     activeRef.current = null;
-    setActive(null);
   }, []);
 
   const hide = useCallback(
@@ -472,28 +434,57 @@ export function GlobalIconButtonTooltip({
       const current = activeRef.current;
       if (!current) return;
       if (relatedTarget instanceof Node && current.anchor.contains(relatedTarget)) return;
-
       dismiss();
     },
     [dismiss],
   );
 
-  const show = useCallback((target: EventTarget | null) => {
-    const next = resolveIconButtonTooltip(target);
-    if (!next) return;
+  const show = useCallback(
+    (target: EventTarget | null) => {
+      const next = resolveIconButtonTooltip(target);
+      if (!next) return;
 
-    if (activeRef.current?.anchor !== next.anchor) {
-      restoreNativeTitle(activeRef.current?.anchor);
-    }
-    hideNativeTitle(next.anchor);
-    activeRef.current = next;
-    setActive(next);
-  }, []);
+      if (activeRef.current?.anchor !== next.anchor) {
+        observerRef.current?.disconnect();
+        observerRef.current = null;
+        restoreNativeTitle(activeRef.current?.anchor);
+      }
+      hideNativeTitle(next.anchor);
+      activeRef.current = next;
+      showTip(next.anchor, next.content, { side: next.placement ?? placement });
+
+      if (typeof MutationObserver !== "undefined") {
+        const anchor = next.anchor;
+        const observer = new MutationObserver(() => {
+          const current = activeRef.current;
+          if (!current || current.anchor !== anchor) return;
+          const content = (
+            anchor.getAttribute("data-tooltip") ||
+            anchor.getAttribute("aria-label") ||
+            anchor.dataset.tooltipNativeTitle ||
+            ""
+          ).trim();
+          if (!content) {
+            dismiss();
+            return;
+          }
+          if (content === current.content) return;
+          activeRef.current = { ...current, content };
+          showTip(anchor, content, { side: current.placement ?? placement });
+        });
+        observer.observe(anchor, {
+          attributes: true,
+          attributeFilter: ["aria-label", "data-tooltip"],
+        });
+        observerRef.current = observer;
+      }
+    },
+    [dismiss, placement],
+  );
 
   useEffect(() => {
     const handleMouseOver = (event: MouseEvent) => show(event.target);
     const handleMouseOut = (event: MouseEvent) => hide(event.relatedTarget);
-    // 只给键盘带来的焦点弹提示；指针点出来的焦点不弹（理由见 pointerInteractionRef）。
     const handleFocusIn = (event: FocusEvent) => {
       if (pointerInteractionRef.current) return;
       show(event.target);
@@ -515,7 +506,7 @@ export function GlobalIconButtonTooltip({
     document.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
-      restoreNativeTitle(activeRef.current?.anchor);
+      dismiss();
       document.removeEventListener("mouseover", handleMouseOver);
       document.removeEventListener("mouseout", handleMouseOut);
       document.removeEventListener("focusin", handleFocusIn);
@@ -525,39 +516,5 @@ export function GlobalIconButtonTooltip({
     };
   }, [dismiss, hide, show]);
 
-  // 提示开着时按钮的名字变了（键盘按 Enter 切换展开 / 收起），跟着换内容，不留旧名字。
-  const activeAnchor = active?.anchor ?? null;
-  useEffect(() => {
-    if (!activeAnchor || typeof MutationObserver === "undefined") return undefined;
-    const observer = new MutationObserver(() => {
-      const current = activeRef.current;
-      if (!current || current.anchor !== activeAnchor) return;
-      const content = (
-        activeAnchor.getAttribute("data-tooltip") ||
-        activeAnchor.getAttribute("aria-label") ||
-        activeAnchor.dataset.tooltipNativeTitle ||
-        ""
-      ).trim();
-      if (!content) {
-        dismiss();
-        return;
-      }
-      if (content === current.content) return;
-      const next = { ...current, content };
-      activeRef.current = next;
-      setActive(next);
-    });
-    observer.observe(activeAnchor, { attributes: true, attributeFilter: ["aria-label", "data-tooltip"] });
-    return () => observer.disconnect();
-  }, [activeAnchor, dismiss]);
-
-  return (
-    <TooltipBubble
-      id={id}
-      open={Boolean(active)}
-      content={active?.content ?? ""}
-      anchorElement={active?.anchor}
-      placement={active?.placement ?? placement}
-    />
-  );
+  return null;
 }

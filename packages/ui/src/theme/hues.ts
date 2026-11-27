@@ -13,9 +13,9 @@ import { isValidElement, type ReactNode } from "react";
  *   `icon-hue:` 变体上——图标着色选「多彩」时生效，选「单色」时落回调用方写的中性基础类；
  * - 淡底胶囊、小圆点（HUE_SOFT / DOT）是页面里的装饰色，挂在 `colorful:` 变体上，跟随配色风格。
  * 所以这里的类名只是「多彩时叠上去的那一层」，调用方必须自己写中性的基础类（例如图标的
- * text-ink-3、图标块的淡灰底），否则单色 / 简约时元素没有颜色可落。
+ * text-sn-label3、图标块的淡灰底），否则单色 / 简约时元素没有颜色可落。
  *
- * 不画描边：盒子的边一律由阴影表达（见 index.css 的 .cp-edge），图标块只用同色系渐变淡底。
+ * 不画描边：盒子的边一律由阴影表达（见 index.css 的 .border border-sn-line），图标块只用同色系渐变淡底。
  * 图标块先把基础类的淡灰底清成透明，渐变才不会叠在灰底上发脏。
  *
  * Tailwind 只认源码里完整出现的类名，所以每个色相的每种用法都写成完整字符串，不能拼接。
@@ -67,7 +67,7 @@ export const HUE_TILE: Record<Hue, string> = {
     "icon-hue:bg-transparent icon-hue:bg-gradient-to-b icon-hue:from-indigo-500/[0.13] icon-hue:to-indigo-500/[0.05] icon-hue:text-indigo-600 icon-hue:dark:from-indigo-400/20 icon-hue:dark:to-indigo-400/10 icon-hue:dark:text-indigo-300",
 };
 
-/** 不带底块的彩色图标（侧边栏、行内小图标）。基础类由调用方给（通常是 text-ink-3）。 */
+/** 不带底块的彩色图标（侧边栏、行内小图标）。基础类由调用方给（通常是 text-sn-label3）。 */
 export const HUE_GLYPH: Record<Hue, string> = {
   blue: "icon-hue:text-blue-500 icon-hue:dark:text-blue-400",
   sky: "icon-hue:text-sky-500 icon-hue:dark:text-sky-400",
@@ -103,8 +103,8 @@ export const HUE_SOFT: Record<Hue, string> = {
   indigo: "colorful:bg-indigo-500/10 colorful:text-indigo-700 colorful:dark:bg-indigo-400/15 colorful:dark:text-indigo-300",
 };
 
-/** HUE_SOFT 叠上去之前的中性淡底（简约风格下胶囊就是这个样子）。 */
-export const HUE_SOFT_BASE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+/** HUE_SOFT 叠上去之前的中性淡底（Satin 简约风格下胶囊使用中性柔灰底）。 */
+export const HUE_SOFT_BASE = "bg-sn-subtle text-sn-label2";
 
 /** 小圆点（有改动、状态点）。 */
 export const HUE_DOT: Record<Hue, string> = {
@@ -362,10 +362,19 @@ const ICON_HUE: Record<string, Hue> = {
   AlertTriangle: "amber",
   CircleAlert: "rose",
   AlertCircle: "rose",
+  CircleX: "rose",
   CircleCheck: "emerald",
   CheckCircle: "emerald",
   CheckCircle2: "emerald",
   Check: "emerald",
+  CheckCheck: "emerald",
+  CreditCard: "amber",
+  House: "indigo",
+  Plug: "sky",
+  Workflow: "teal",
+  GitFork: "teal",
+  Clipboard: "teal",
+  PenLine: "indigo",
   Power: "emerald",
   Inbox: "sky",
   SearchX: "sky",
@@ -391,6 +400,7 @@ const NEUTRAL_ICONS = new Set([
   "ArrowUp",
   "ArrowDown",
   "ArrowUpDown",
+  "CornerDownLeft",
   "MoreHorizontal",
   "MoreVertical",
   "Ellipsis",
@@ -401,6 +411,7 @@ const NEUTRAL_ICONS = new Set([
   "PanelLeft",
   "PanelLeftClose",
   "PanelLeftOpen",
+  "PanelRight",
   "Loader",
   "Loader2",
   "LoaderCircle",
@@ -433,7 +444,16 @@ export function hueForIconName(name: string): Hue {
   return FALLBACK_HUES[hash % FALLBACK_HUES.length]!;
 }
 
-/** 组件的名字：lucide 图标在 createLucideIcon 里显式设了 displayName（压缩后仍保留）。 */
+/** 将 Satin `<Icon name="key-round" />` 的 kebab-case 名称转为色相表使用的 PascalCase。 */
+const kebabToPascal = (value: string): string =>
+  value
+    .trim()
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1))
+    .join("");
+
+/** 组件的名字：菜单图标与 lucide 图标显式设了 displayName（压缩后仍保留）。 */
 const componentName = (type: unknown): string | null => {
   if (!type || (typeof type !== "object" && typeof type !== "function")) return null;
   const named = type as { displayName?: unknown; name?: unknown };
@@ -442,41 +462,25 @@ const componentName = (type: unknown): string | null => {
 };
 
 /**
- * 从图标节点推出色相：只认 lucide 这类带名字的图标组件；厂商 logo（img）、文字等返回 null，
- * 由调用方保持中性底色——logo 自带品牌色，底块再染色只会打架。
+ * 从图标节点推出色相：支持 Satin `<Icon name="..." />` 与带 displayName 的图标组件；
+ * 厂商 logo（img）、文字等返回 null，由调用方保持中性底色——logo 自带品牌色，底块再染色只会打架。
  */
 export function hueForIcon(icon: ReactNode): Hue | null {
   if (!isValidElement(icon)) return null;
-  const name = componentName(icon.type);
+  let name = componentName(icon.type);
+  if (!name && typeof icon.type !== "string") {
+    const rawName = (icon.props as { name?: unknown } | null)?.name;
+    if (typeof rawName === "string" && rawName.trim()) {
+      name = kebabToPascal(rawName);
+    }
+  }
   if (!name || isNeutralIconName(name)) return null;
   return hueForIconName(name);
 }
 
 /**
- * 按钮里的图标上色（图标按钮、带图标的次要按钮）：只改按钮里 lucide 图标的颜色，文字仍是中性色。
- * 用后代选择器而不是改按钮的 text 色——按钮的文字色与悬停色各变体自己管，不和它们抢优先级。
- */
-export const HUE_BUTTON_ICON: Record<Hue, string> = {
-  blue: "icon-hue:[&_svg.lucide]:text-blue-500 icon-hue:dark:[&_svg.lucide]:text-blue-400",
-  sky: "icon-hue:[&_svg.lucide]:text-sky-500 icon-hue:dark:[&_svg.lucide]:text-sky-400",
-  cyan: "icon-hue:[&_svg.lucide]:text-cyan-500 icon-hue:dark:[&_svg.lucide]:text-cyan-400",
-  teal: "icon-hue:[&_svg.lucide]:text-teal-500 icon-hue:dark:[&_svg.lucide]:text-teal-400",
-  emerald: "icon-hue:[&_svg.lucide]:text-emerald-500 icon-hue:dark:[&_svg.lucide]:text-emerald-400",
-  lime: "icon-hue:[&_svg.lucide]:text-lime-600 icon-hue:dark:[&_svg.lucide]:text-lime-400",
-  amber: "icon-hue:[&_svg.lucide]:text-amber-500 icon-hue:dark:[&_svg.lucide]:text-amber-400",
-  orange: "icon-hue:[&_svg.lucide]:text-orange-500 icon-hue:dark:[&_svg.lucide]:text-orange-400",
-  rose: "icon-hue:[&_svg.lucide]:text-rose-500 icon-hue:dark:[&_svg.lucide]:text-rose-400",
-  pink: "icon-hue:[&_svg.lucide]:text-pink-500 icon-hue:dark:[&_svg.lucide]:text-pink-400",
-  fuchsia: "icon-hue:[&_svg.lucide]:text-fuchsia-500 icon-hue:dark:[&_svg.lucide]:text-fuchsia-400",
-  purple: "icon-hue:[&_svg.lucide]:text-purple-500 icon-hue:dark:[&_svg.lucide]:text-purple-400",
-  violet: "icon-hue:[&_svg.lucide]:text-violet-500 icon-hue:dark:[&_svg.lucide]:text-violet-400",
-  indigo: "icon-hue:[&_svg.lucide]:text-indigo-500 icon-hue:dark:[&_svg.lucide]:text-indigo-400",
-};
-
-/**
- * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={cn("text-ink-3", iconHueClass(Icon))} />`。
- * 用在页面标题、行内小图标这类不需要底块的地方；认不出名字时用天蓝，纯操作提示类图标返回空串
- * （保持调用方的中性色）。
+ * 直接拿图标组件（不是元素）取无底图标的颜色类：`<Icon className={cn("text-sn-label3", iconHueClass(Icon))} />`。
+ * 默认 Satin 单色模式下 icon-hue: 不生效，图标始终保持克制中性灰。
  */
 export function iconHueClass(icon: unknown): string {
   const name = componentName(icon);

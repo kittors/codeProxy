@@ -91,7 +91,7 @@ export function FreezeThresholdSetting({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div>
-      <p id={hintId} className="text-sm leading-6 text-ink-2">
+      <p id={hintId} className="text-sm leading-6 text-sn-label2">
         {t("access_freeze.threshold_hint", {
           default: settings.default_threshold,
           max: settings.max_threshold,
@@ -128,7 +128,7 @@ export function FreezeThresholdSetting({ canWrite }: { canWrite: boolean }) {
             {t("access_freeze.threshold_save")}
           </Button>
         ) : (
-          <span className="pb-2 text-xs text-ink-3">{t("access_freeze.threshold_read_only")}</span>
+          <span className="pb-2 text-xs text-sn-label3">{t("access_freeze.threshold_read_only")}</span>
         )}
       </form>
       {error ? (
@@ -137,7 +137,7 @@ export function FreezeThresholdSetting({ canWrite }: { canWrite: boolean }) {
         </p>
       ) : null}
       {parsed === 0 ? (
-        <p className="mt-2 text-xs leading-5 text-ink-3">
+        <p className="mt-2 text-xs leading-5 text-sn-label3">
           {t("access_freeze.threshold_zero_note")}
         </p>
       ) : null}

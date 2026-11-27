@@ -69,6 +69,12 @@ export interface GridColumnLayout {
   /** 左侧固定区最后一列、右侧固定区第一列：只有它们画固定列阴影。 */
   startEdgeId: string | null;
   endEdgeId: string | null;
+  /**
+   * 表格宽度不超过视口时，指定由哪一列以原生 CSS auto 宽度吸收容器宽幅变化（配合 table width: 100%）：
+   * 侧边栏收起/展开或缩放窗口时，浏览器原生 table-layout: fixed 零延迟跟随，彻底消除 1 帧滞后导致的
+   * 假性横向滚动条闪烁与全表 RecalcStyle 震荡；超出视口需要横向滚动时为 null。
+   */
+  fluidColumnId: string | null;
 }
 
 export interface GridLayoutColumn {
@@ -159,6 +165,7 @@ export function computeGridLayout(
   const growColumns =
     declared.length > 0 ? declared : widest ? [{ ...widest, grow: true as const }] : [];
   const spare = Math.floor(viewportWidth) - totalWidth;
+  let fluidColumnId: string | null = null;
   if (growColumns.length > 0 && spare > 0) {
     const totalWeight = growColumns.reduce((sum, column) => sum + growWeight(column.grow), 0);
     let given = 0;
@@ -172,6 +179,16 @@ export function computeGridLayout(
     );
     widths[heaviest.id] += spare - given;
     totalWidth += spare;
+    fluidColumnId = heaviest.id;
+  } else if (growColumns.length > 0 && viewportWidth > 0 && spare === 0) {
+    const heaviest = growColumns.reduce((best, column) =>
+      growWeight(column.grow) > growWeight(best.grow) ? column : best,
+    );
+    // 只有当 heaviest 还有收缩余量（未压到底线）时才让它做弹性吸收列，压到底线则切精确像素出横滚。
+    const minHeaviest = Math.max(1, Math.round((heaviest.minWidth ?? heaviest.width) * scale));
+    if (heaviest.shrink && widths[heaviest.id] > minHeaviest + 4) {
+      fluidColumnId = heaviest.id;
+    }
   }
 
   const startOffsets: Record<string, number> = {};
@@ -203,6 +220,7 @@ export function computeGridLayout(
     endPinnedWidth,
     startEdgeId,
     endEdgeId,
+    fluidColumnId,
   };
 }
 

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check } from "@code-proxy/ui/icons";
 import {
   FormField,
   SettingGroup,
@@ -20,8 +20,8 @@ export interface AccessScopeValue {
 function ReadOnlyList({ items, unrestricted }: { items: string[]; unrestricted: string }) {
   if (items.length === 0) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
-        <Check size={12} aria-hidden="true" className="text-ink-3 colorful:text-current" />
+      <span className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
+        <Check size={12} aria-hidden="true" className="text-sn-label3 colorful:text-current" />
         {unrestricted}
       </span>
     );
@@ -31,7 +31,7 @@ function ReadOnlyList({ items, unrestricted }: { items: string[]; unrestricted: 
       {items.map((item) => (
         <span
           key={item}
-          className="inline-flex max-w-full items-center truncate rounded-full bg-ink/[0.05] px-2 py-0.5 font-mono text-xs text-ink-2 dark:bg-white/[0.07]"
+          className="inline-flex max-w-full items-center truncate rounded-full bg-sn-label/[0.05] px-2 py-0.5 font-mono text-xs text-sn-label2 dark:bg-white/[0.07]"
         >
           {item}
         </span>
@@ -72,21 +72,21 @@ export function AccessScopeFields({
     return (
       <dl className="space-y-4">
         <div>
-          <dt className="mb-1.5 text-xs font-medium text-ink-2">{t("api_keys_page.form_allowed_channel_groups")}</dt>
+          <dt className="mb-1.5 text-xs font-medium text-sn-label2">{t("api_keys_page.form_allowed_channel_groups")}</dt>
           <dd>
             <ReadOnlyList items={value.allowedChannelGroups} unrestricted={t("api_keys_page.form_all_channel_groups")} />
           </dd>
         </div>
         {value.allowedChannels.length > 0 ? (
           <div>
-            <dt className="mb-1.5 text-xs font-medium text-ink-2">{t("api_keys_page.form_allowed_channels")}</dt>
+            <dt className="mb-1.5 text-xs font-medium text-sn-label2">{t("api_keys_page.form_allowed_channels")}</dt>
             <dd>
               <ReadOnlyList items={value.allowedChannels} unrestricted={t("api_keys_page.form_all_channels")} />
             </dd>
           </div>
         ) : null}
         <div>
-          <dt className="mb-1.5 text-xs font-medium text-ink-2">{t("api_keys_page.form_allowed_models")}</dt>
+          <dt className="mb-1.5 text-xs font-medium text-sn-label2">{t("api_keys_page.form_allowed_models")}</dt>
           <dd>
             <ReadOnlyList items={value.allowedModels} unrestricted={t("api_keys_page.form_all_models")} />
           </dd>

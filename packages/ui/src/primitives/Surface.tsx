@@ -14,67 +14,38 @@ const RADIUS: Record<SurfaceRadius, string> = {
 };
 
 /**
- * The edge is a hairline drawn by the `.cp-edge` pseudo-element (styles/index.css),
- * never a border and never an outer ring.
- *
- * An outer `ring-*` paints outside the box, so any scrolling or `overflow-hidden`
- * ancestor clipped it and the edge broke off mid-card; a border fixed that but
- * gave every box a drawn outline, and boxes nested three deep read as a stack of
- * frames. The pseudo-element is an inset shadow inside the box: nothing clips it,
- * it sits above children that paint their own fill, and it takes no layout space.
+ * Satin 原生表面边框与分层：
+ * - 顶层卡片（card / plain / panel）对齐 Satin `.sn-panel`：1px 实线描边（--sn-line）+ 抬升表面（--sn-raised），无脏阴影；
+ * - 卡片内嵌槽（raised / inset）使用柔和浅灰槽（--sn-fill-subtle），绝不叠第二层卡片框线；
+ * - 不透明表面同步导出 `--sn-backdrop`，确保内部冻结列与所在容器底色严丝合缝。
  */
-const EDGE = "cp-edge";
+const EDGE = "border border-sn-line";
 
-/**
- * Fills come from the semantic tokens in styles/index.css, so light/dark is a
- * variable swap rather than a pair of classes per tone. Depth is the layered
- * drop shadow on the element itself (`shadow-card`). Opaque tones also set
- * `--cp-backdrop`, so a table's frozen columns inside them match the card.
- *
- * There is one level of elevation. A block nested inside a card does not get a
- * second card around it — `raised` and `inset` are flat tinted wells with no edge
- * and no shadow. Stacked frames (card in card in card, each with its own outline)
- * were the main reason the panel read as cluttered.
- */
 const TONE: Record<SurfaceTone, string> = {
-  /** Top-level card sitting directly on the content area. */
-  card: "bg-surface shadow-card [--cp-backdrop:var(--cp-surface)]",
-  /** Nested block inside a card. Kept as a name for existing call sites; it is a flat well now. */
-  raised: "bg-subtle",
-  /** Nested block that should read as recessed — code blocks, previews, wells. */
-  inset: "bg-subtle",
-  /** Opaque surface with no elevation, e.g. popovers over dense content. */
-  plain: "bg-surface [--cp-backdrop:var(--cp-surface)]",
-  /** Dashboard-style panel: same quiet card, kept as a name for existing call sites. */
-  panel: "bg-surface shadow-card [--cp-backdrop:var(--cp-surface)]",
+  card: "bg-sn-raised [--sn-backdrop:var(--sn-raised)]",
+  raised: "bg-sn-subtle",
+  inset: "bg-sn-subtle",
+  plain: "bg-sn-raised [--sn-backdrop:var(--sn-raised)]",
+  panel: "bg-sn-raised [--sn-backdrop:var(--sn-raised)]",
 };
 
-/** Tones that sit on the content area and need an edge; wells inside a card never do. */
 const EDGED_TONES = new Set<SurfaceTone>(["card", "plain", "panel"]);
 
 export type SurfaceOptions = {
   tone?: SurfaceTone;
   radius?: SurfaceRadius;
-  /** Drop the hairline edge for surfaces that only need the fill. */
+  /** Drop the hairline border for surfaces that only need the fill. */
   bordered?: boolean;
 };
 
 /**
- * The single source of truth for "a box" in the admin panel.
- *
- * Before this existed the same three decisions — radius, edge, fill — were
- * re-made inline at every call site, which produced 69 distinct combinations
- * across 166 places and no two pages that agreed.
+ * 全站容器表面唯一真源（对齐 Satin `.sn-panel`：12px 圆角、1px `--sn-line` 细描边、纯平实面底）。
  */
-export const surface = ({ tone = "card", radius = "2xl", bordered = true }: SurfaceOptions = {}) =>
+export const surface = ({ tone = "card", radius = "xl", bordered = true }: SurfaceOptions = {}) =>
   [RADIUS[radius], bordered && EDGED_TONES.has(tone) ? EDGE : null, TONE[tone]]
     .filter(Boolean)
     .join(" ");
 
-/**
- * Component form for plain containers. Reach for `Card` when the box needs a
- * title, actions or a loading veil; use this for nested blocks inside one.
- */
 export function Surface({
   tone,
   radius,

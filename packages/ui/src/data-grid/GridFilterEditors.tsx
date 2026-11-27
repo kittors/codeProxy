@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "../primitives/Checkbox";
@@ -81,10 +81,10 @@ export function OptionsFilterEditor({
           onChange={(event) => setQuery(event.currentTarget.value)}
           onKeyDown={onSearchKeyDown}
           placeholder={t("data_grid.search_options")}
-          startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+          startAdornment={<Icon name="search" size={14} className="text-sn-label3" />}
         />
       ) : null}
-      <div className="flex items-center justify-between px-2 pt-0.5 text-xs text-ink-3">
+      <div className="flex items-center justify-between px-2 pt-0.5 text-xs text-sn-label3">
         <span aria-live="polite">
           {values.length > 0
             ? t("data_grid.selected_count", { count: values.length })
@@ -93,14 +93,14 @@ export function OptionsFilterEditor({
         <span className="flex items-center gap-3">
           <button
             type="button"
-            className="rounded-md font-medium text-ink-2 transition-colors hover:text-ink"
+            className="rounded-md font-medium text-sn-label2 transition-colors hover:text-sn-label"
             onClick={selectVisible}
           >
             {normalizedQuery ? t("data_grid.select_matching") : t("data_grid.select_all")}
           </button>
           <button
             type="button"
-            className="rounded-md font-medium text-ink-2 transition-colors hover:text-ink disabled:opacity-40"
+            className="rounded-md font-medium text-sn-label2 transition-colors hover:text-sn-label disabled:opacity-40"
             onClick={() => onChange([])}
             disabled={values.length === 0}
           >
@@ -110,7 +110,7 @@ export function OptionsFilterEditor({
       </div>
       <div className="-mx-1 max-h-64 overflow-y-auto px-1" role="group">
         {visible.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-ink-3">{t("data_grid.no_options")}</p>
+          <p className="px-2 py-6 text-center text-xs text-sn-label3">{t("data_grid.no_options")}</p>
         ) : (
           visible.map((option) => {
             const checked = selected.has(option.value);
@@ -118,13 +118,13 @@ export function OptionsFilterEditor({
             return (
               <label
                 key={option.value}
-                className="group/option relative flex h-8 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm text-ink-2 transition-colors hover:bg-hover hover:text-ink has-[:checked]:text-ink"
+                className="group/option relative flex h-8 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm text-sn-label2 transition-colors hover:bg-sn-hover hover:text-sn-label has-[:checked]:text-sn-label"
               >
                 {/* 占比条：一眼看出哪个取值占大头，筛之前就知道会剩多少行。 */}
                 {share > 0 ? (
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-1 left-0 rounded-md bg-ink/[0.045] transition-[width] duration-300 ease-soft dark:bg-white/[0.05]"
+                    className="pointer-events-none absolute inset-y-1 left-0 rounded-md bg-sn-label/[0.045] transition-[width] duration-300 ease-sn-out dark:bg-white/[0.05]"
                     style={{ width: `${Math.max(4, share * 100)}%` }}
                   />
                 ) : null}
@@ -138,7 +138,7 @@ export function OptionsFilterEditor({
                 ) : null}
                 <span className="relative min-w-0 flex-1 truncate">{option.label}</span>
                 {typeof option.count === "number" ? (
-                  <span className="relative shrink-0 text-xs tabular-nums text-ink-3">
+                  <span className="relative shrink-0 text-xs tabular-nums text-sn-label3">
                     {formatInteger(option.count, i18n.resolvedLanguage)}
                   </span>
                 ) : null}
@@ -188,7 +188,7 @@ export function RangeFilterEditor({
   };
 
   const unit = filter.unit ? (
-    <span className="text-xs text-ink-3" aria-hidden="true">
+    <span className="text-xs text-sn-label3" aria-hidden="true">
       {filter.unit}
     </span>
   ) : null;
@@ -211,10 +211,10 @@ export function RangeFilterEditor({
                   )
                 }
                 className={[
-                  "h-7 rounded-full px-2.5 text-xs font-medium tabular-nums transition-[background-color,color,box-shadow,scale] duration-150 ease-soft active:scale-[0.96]",
+                  "h-7 rounded-[var(--sn-btn-r)] px-2.5 text-xs font-medium tabular-nums transition-[background-color,color,box-shadow,scale] duration-150 ease-sn-out active:scale-[0.96]",
                   active
-                    ? "bg-accent text-accent-fg"
-                    : "bg-ink/[0.05] text-ink-2 hover:bg-ink/[0.08] hover:text-ink dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+                    ? "bg-sn-accent text-sn-on-primary"
+                    : "bg-sn-label/[0.05] text-sn-label2 hover:bg-sn-label/[0.08] hover:text-sn-label dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
                 ].join(" ")}
               >
                 {preset.label}
@@ -237,7 +237,7 @@ export function RangeFilterEditor({
           endAdornment={unit}
           className="tabular-nums"
         />
-        <span className="text-ink-4" aria-hidden="true">
+        <span className="text-sn-label-off" aria-hidden="true">
           –
         </span>
         <TextInput
@@ -288,7 +288,7 @@ export function TextFilterEditor({
           }
         }}
         placeholder={placeholder ?? t("data_grid.contains_placeholder")}
-        startAdornment={<Search size={14} className="text-ink-3" aria-hidden="true" />}
+        startAdornment={<Icon name="search" size={14} className="text-sn-label3" />}
       />
     </div>
   );

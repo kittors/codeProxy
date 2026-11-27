@@ -30,16 +30,16 @@ describe("AppearanceButton", () => {
     expect(await within(drawer).findByTestId("appearance-preview")).toBeInTheDocument();
     const styles = within(drawer).getByRole("radiogroup", { name: /Style|风格|Стиль/ });
 
-    // 默认就是多彩：「恢复默认」不可点；换成简约后全站立刻切换，「恢复默认」可以点了。
+    // 默认就是 Satin 简约：「恢复默认」不可点；换成多彩后全站立刻切换，「恢复默认」可以点了。
     const restore = within(drawer).getByRole("button", {
       name: /Restore defaults|恢复默认|Вернуть/,
     });
     expect(restore).toBeDisabled();
-    fireEvent.click(within(styles).getByRole("radio", { name: /Quiet|简约|Сдержанный/ }));
-    expect(document.documentElement.dataset.palette).toBe("quiet");
+    fireEvent.click(within(styles).getByRole("radio", { name: /Colou?rful|多彩|Красочный/ }));
+    expect(document.documentElement.dataset.palette).toBe("colorful");
     expect(restore).toBeEnabled();
 
     fireEvent.click(restore);
-    expect(document.documentElement.dataset.palette).toBe("colorful");
+    expect(document.documentElement.dataset.palette).toBe("quiet");
   });
 });

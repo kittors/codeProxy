@@ -15,17 +15,17 @@ import {
 } from "../appearance";
 import { COLOR_SCALE_STEPS, colorScale, contrastRatio, hexToOklch } from "../colorMath";
 
-const quiet = (): AppearanceSettings => applyStylePreset(DEFAULT_APPEARANCE, "quiet");
+const colorful = (): AppearanceSettings => applyStylePreset(DEFAULT_APPEARANCE, "colorful");
 
 describe("appearance settings", () => {
-  test("the default is the colourful style and writes nothing over the stylesheet", () => {
-    expect(matchStylePreset(DEFAULT_APPEARANCE)).toBe("colorful");
+  test("the default is the Satin quiet style and writes nothing over the stylesheet", () => {
+    expect(matchStylePreset(DEFAULT_APPEARANCE)).toBe("quiet");
     expect(appearanceAttributes(DEFAULT_APPEARANCE)).toEqual({
-      palette: "colorful",
-      icons: "colorful",
+      palette: "quiet",
+      icons: "mono",
       bars: "semantic",
     });
-    // 默认值全在样式表里（墨色强调色、8px 进度条、平台缩放），行内一个变量都不写。
+    // 默认值全在样式表里（Satin 墨色强调色、8px 进度条、平台缩放），行内一个变量都不写。
     expect(appearanceVars(DEFAULT_APPEARANCE)).toEqual({});
   });
 
@@ -34,7 +34,7 @@ describe("appearance settings", () => {
     expect(normalizeAppearance("quiet")).toEqual(DEFAULT_APPEARANCE);
     const settings = normalizeAppearance({
       palette: "neon",
-      icons: "mono",
+      icons: "colorful",
       accent: "#ABCDEF",
       status: { success: "green", warning: "#123456" },
       barThickness: 99,
@@ -42,8 +42,8 @@ describe("appearance settings", () => {
       textScale: 0.5,
       weightShift: 37,
     });
-    expect(settings.palette).toBe("colorful");
-    expect(settings.icons).toBe("mono");
+    expect(settings.palette).toBe("quiet");
+    expect(settings.icons).toBe("colorful");
     expect(settings.accent).toBe("#abcdef");
     expect(settings.status).toEqual({ success: null, warning: "#123456", danger: null });
     expect(settings.barThickness).toBe(16);
@@ -55,16 +55,16 @@ describe("appearance settings", () => {
 
   test("a style preset replaces the colour choices and keeps the size preferences", () => {
     const sized = normalizeAppearance({ barThickness: 12, textScale: 1.1 });
-    const next = applyStylePreset({ ...sized, status: { success: "#2255ff", warning: null, danger: null } }, "quiet");
-    expect(next).toMatchObject({ ...STYLE_PRESETS.quiet, barThickness: 12, textScale: 1.1 });
+    const next = applyStylePreset({ ...sized, status: { success: "#2255ff", warning: null, danger: null } }, "colorful");
+    expect(next).toMatchObject({ ...STYLE_PRESETS.colorful, barThickness: 12, textScale: 1.1 });
     expect(next.status).toEqual({ success: null, warning: null, danger: null });
-    expect(matchStylePreset(next)).toBe("quiet");
+    expect(matchStylePreset(next)).toBe("colorful");
   });
 
   test("changing any colour choice makes the setup custom; sizes do not", () => {
-    expect(matchStylePreset({ ...DEFAULT_APPEARANCE, barThickness: 12, weightShift: 50 })).toBe("colorful");
-    expect(matchStylePreset({ ...DEFAULT_APPEARANCE, icons: "mono" })).toBe("custom");
-    expect(matchStylePreset({ ...quiet(), accent: "violet" })).toBe("custom");
+    expect(matchStylePreset({ ...DEFAULT_APPEARANCE, barThickness: 12, weightShift: 50 })).toBe("quiet");
+    expect(matchStylePreset({ ...DEFAULT_APPEARANCE, icons: "colorful" })).toBe("custom");
+    expect(matchStylePreset({ ...colorful(), accent: "violet" })).toBe("custom");
     expect(
       matchStylePreset({ ...DEFAULT_APPEARANCE, status: { success: null, warning: "#ff8800", danger: null } }),
     ).toBe("custom");
@@ -72,17 +72,18 @@ describe("appearance settings", () => {
 });
 
 describe("appearance variables", () => {
-  test("the quiet style's blue keeps the exact values the quiet panel shipped with", () => {
-    const vars = appearanceVars(quiet());
+  test("blue accent produces the calibrated Satin preference variables", () => {
+    const blueQuiet: AppearanceSettings = { ...DEFAULT_APPEARANCE, accent: "blue", bars: "accent" };
+    const vars = appearanceVars(blueQuiet);
     expect(vars).toMatchObject({
-      "--cp-pref-accent": "#2a6ee8",
-      "--cp-pref-accent-hover": "#1f5bd2",
-      "--cp-pref-accent-ink": "#1f5bd2",
-      "--cp-pref-accent-ink-dark": "#6e9ef0",
-      "--cp-pref-accent-hover-dark": "#3b7cf0",
-      "--cp-pref-focus": "#2a6ee8",
+      "--sn-pref-accent": "#2a6ee8",
+      "--sn-pref-accent-hover": "#1f5bd2",
+      "--sn-pref-accent-ink": "#1f5bd2",
+      "--sn-pref-accent-ink-dark": "#6e9ef0",
+      "--sn-pref-accent-hover-dark": "#3b7cf0",
+      "--sn-pref-focus": "#2a6ee8",
     });
-    expect(appearanceAttributes(quiet())).toEqual({ palette: "quiet", icons: "mono", bars: "accent" });
+    expect(appearanceAttributes(blueQuiet)).toEqual({ palette: "quiet", icons: "mono", bars: "accent" });
   });
 
   test.each(["#ffd400", "#0a1a3a", "#7c3aed", "#10a37f"])(
@@ -90,11 +91,11 @@ describe("appearance variables", () => {
     (hex) => {
       const tokens = accentTokens(hex)!;
       expect(contrastRatio(tokens.light.ink, "#ffffff")).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(tokens.dark.ink, "#18181c")).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(tokens.dark.ink, "#1c1c1e")).toBeGreaterThanOrEqual(4.5);
       // 填充色上的文字取白和墨色里对比度高的那个；深色下填充色至少和卡片拉开 3:1。
       expect(contrastRatio(tokens.light.fg, tokens.light.accent)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(tokens.dark.fg, tokens.dark.accent)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(tokens.dark.accent, "#18181c")).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(tokens.dark.accent, "#1c1c1e")).toBeGreaterThanOrEqual(3);
       expect(tokens.light.accent).toBe(hex);
     },
   );
@@ -120,10 +121,10 @@ describe("appearance variables", () => {
   test("size preferences become unitless variables the stylesheet multiplies", () => {
     const vars = appearanceVars({ ...DEFAULT_APPEARANCE, barThickness: 12, uiScale: 1.1, textScale: 1.05, weightShift: -100 });
     expect(vars).toEqual({
-      "--cp-pref-bar": "12",
-      "--cp-pref-ui-scale": "1.1",
-      "--cp-pref-text-scale": "1.05",
-      "--cp-pref-weight-shift": "-100",
+      "--sn-pref-bar": "12",
+      "--sn-pref-ui-scale": "1.1",
+      "--sn-pref-text-scale": "1.05",
+      "--sn-pref-weight-shift": "-100",
     });
   });
 
@@ -145,12 +146,12 @@ describe("appearance variables", () => {
 
 describe("appearance storage", () => {
   test("round-trips through localStorage and rejects other versions or broken JSON", () => {
-    const settings = { ...quiet(), barThickness: 10 };
+    const settings = { ...colorful(), barThickness: 10 };
     expect(parseStoredAppearance(serializeAppearance(settings))).toEqual(settings);
     const stored = JSON.parse(serializeAppearance(settings));
-    expect(stored.attrs).toEqual({ palette: "quiet", icons: "mono", bars: "accent" });
-    expect(stored.vars["--cp-pref-bar"]).toBe("10");
-    expect(parseStoredAppearance(JSON.stringify({ ...stored, version: 2 }))).toEqual(DEFAULT_APPEARANCE);
+    expect(stored.attrs).toEqual({ palette: "colorful", icons: "colorful", bars: "semantic" });
+    expect(stored.vars["--sn-pref-bar"]).toBe("10");
+    expect(parseStoredAppearance(JSON.stringify({ ...stored, version: 1 }))).toEqual(DEFAULT_APPEARANCE);
     expect(parseStoredAppearance("{nope")).toEqual(DEFAULT_APPEARANCE);
     expect(parseStoredAppearance(null)).toEqual(DEFAULT_APPEARANCE);
   });

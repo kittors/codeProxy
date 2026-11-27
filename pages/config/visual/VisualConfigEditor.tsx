@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import { Search, SearchX, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { isDatabaseSetting, type VisualConfigValues } from "@features/visual-config-editor";
 import { Callout, DialogIcon, HUE_GLYPH, SettingGroup, TextInput, useScrollFade } from "@code-proxy/ui";
@@ -52,19 +52,19 @@ function ConfigSection({
         <DialogIcon size="sm" tone={section.hue} className="hidden icon-hue:grid">
           <Icon />
         </DialogIcon>
-        <Icon size={18} className="mt-0.5 shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
+        <Icon size={18} className="mt-0.5 shrink-0 text-sn-label3 icon-hue:hidden" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 id={titleId} className="text-base font-semibold tracking-tight text-ink">
+            <h2 id={titleId} className="text-base font-semibold tracking-tight text-sn-label">
               {t(`config_ui.sections.${section.id}.title`)}
             </h2>
             {modifiedCount > 0 ? (
-              <span className="rounded-full bg-accent-soft px-2 py-px text-2xs font-medium text-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
+              <span className="rounded-full bg-sn-accent-soft px-2 py-px text-2xs font-medium text-sn-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
                 {t("config_ui.modified_count", { count: modifiedCount })}
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-sm text-ink-3">{t(`config_ui.sections.${section.id}.desc`)}</p>
+          <p className="mt-0.5 text-sm text-sn-label3">{t(`config_ui.sections.${section.id}.desc`)}</p>
         </div>
       </header>
       {children}
@@ -274,14 +274,14 @@ export function VisualConfigEditor({
               placeholder={t("config_ui.search_placeholder")}
               aria-label={t("config_ui.search_label")}
               className="sm:w-64"
-              startAdornment={<Search size={15} className="text-ink-3" aria-hidden="true" />}
+              startAdornment={<Search size={15} className="text-sn-label3" aria-hidden="true" />}
               endAdornment={
                 query ? (
                   <button
                     type="button"
                     onClick={() => setQuery("")}
                     aria-label={t("config_ui.search_clear")}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
                   >
                     <X size={14} aria-hidden="true" />
                   </button>
@@ -322,12 +322,12 @@ export function VisualConfigEditor({
           <ResourceProfileBanner values={values} disabled={databaseLocked} onChange={onChange} />
         ) : null}
         {visibleSections.length === 0 ? (
-          <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-16 text-center">
-            <SearchX size={22} className="text-ink-3 icon-hue:text-sky-500" aria-hidden="true" />
-            <p className="mt-3 text-sm font-medium text-ink">
+          <div className="grid place-items-center rounded-xl bg-sn-subtle px-6 py-16 text-center">
+            <SearchX size={22} className="text-sn-label3 icon-hue:text-sky-500" aria-hidden="true" />
+            <p className="mt-3 text-sm font-medium text-sn-label">
               {t("config_ui.search_empty_title", { query: deferredQuery.trim() })}
             </p>
-            <p className="mt-1 text-xs text-ink-3">{t("config_ui.search_empty_desc")}</p>
+            <p className="mt-1 text-xs text-sn-label3">{t("config_ui.search_empty_desc")}</p>
           </div>
         ) : searching ? (
           // 搜索结果按分组排开，每组前一个小标题，知道命中的设置在哪一组里。
@@ -337,7 +337,7 @@ export function VisualConfigEditor({
             const GroupIcon = def.icon;
             return (
               <div key={def.id} className="space-y-6">
-                <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-ink-3">
+                <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-sn-label3">
                   <GroupIcon size={13} aria-hidden="true" className={HUE_GLYPH[def.hue]} />
                   {t(`config_ui.groups.${def.id}`)}
                 </p>

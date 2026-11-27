@@ -1,22 +1,18 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Plus, Search } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -29,6 +25,8 @@ import {
 import type { ControlSize } from "../utils/controlStyles";
 import { useTranslation } from "react-i18next";
 import { useScrollFade } from "../hooks/useScrollFade";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -109,9 +107,7 @@ function OptionContent({
       </span>
       {trailing ? <span className="inline-flex shrink-0 items-center">{trailing}</span> : null}
       <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-        {selected ? (
-          <Check size={15} className="text-ink" aria-hidden="true" />
-        ) : null}
+        {selected ? <Icon name="check" size={15} className="text-[var(--sn-label)]" /> : null}
       </span>
     </>
   );
@@ -140,58 +136,26 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const listFade = useScrollFade<HTMLDivElement>({ enabled: open, size: 24 });
+  const isOpen = open && !disabled;
+  const listFade = useScrollFade<HTMLDivElement>({ enabled: isOpen, size: 24 });
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [pos, setPos] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-    placement: "bottom" as "bottom" | "top",
-    maxHeight: 320,
+
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: listRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
   });
-
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const gap = 6;
-    const maxPanelHeight = 320;
-    const minPanelHeight = 160;
-    const estimatedHeight = Math.min(options.length * 36 + 48, maxPanelHeight);
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
-    const availableSpace = Math.max(openAbove ? spaceAbove : spaceBelow, 0);
-    const maxHeight = Math.min(
-      maxPanelHeight,
-      Math.max(Math.min(minPanelHeight, maxPanelHeight), availableSpace),
-    );
-    const panelHeight = Math.min(estimatedHeight, maxHeight);
-    // Keep dropdown wider than the compact header trigger so long labels + check fit.
-    const width = Math.max(rect.width, 280);
-    const left = Math.min(rect.left, Math.max(gap, window.innerWidth - width - gap));
-    setPos({
-      top: openAbove ? Math.max(gap, rect.top - gap - panelHeight) : rect.bottom + gap,
-      left,
-      width,
-      placement: openAbove ? "top" : "bottom",
-      maxHeight,
-    });
-  }, [options.length]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -199,36 +163,11 @@ export function SearchableSelect({
 
   // Focus search input on open
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       setQuery("");
       requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [open]);
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node | null;
-      if (triggerRef.current?.contains(t) || listRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", handler);
-    return () => document.removeEventListener("pointerdown", handler);
-  }, [open]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
-      e.preventDefault();
-      setOpen(false);
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open]);
+  }, [isOpen]);
 
   const selectedOption = useMemo(
     () => options.find((o) => o.value === value) ?? null,
@@ -301,7 +240,7 @@ export function SearchableSelect({
         id={id}
         type="button"
         role="combobox"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid}
@@ -314,7 +253,7 @@ export function SearchableSelect({
               : undefined
         }
         disabled={disabled}
-        data-state={selectTriggerState(open)}
+        data-state={selectTriggerState(isOpen)}
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
           variant === "ghost" ? selectTriggerGhost : getSelectTriggerBase(size),
@@ -322,35 +261,40 @@ export function SearchableSelect({
         )}
       >
         <span className="min-w-0 flex-1 truncate text-left">{selectedLabel ?? placeholder}</span>
-        <ChevronDown
+        <Icon
+          name="chevron-down"
           size={14}
-          className={cn(selectChevron, open && "rotate-180")}
-          aria-hidden="true"
+          className={cn(selectChevron, isOpen && "rotate-180")}
         />
       </button>
 
-      {createPortal(
-        <AnimatePresence>
-          {open && !disabled ? (
-            <motion.div
+      {floating.mounted && !disabled
+        ? createPortal(
+            <div
               ref={listRef}
               role="listbox"
-              data-side={pos.placement}
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-side={floating.side}
+              data-state={floating.isOpen ? "open" : "closed"}
               aria-label={ariaLabel}
-              className={searchableSelectPanel}
-              {...getSelectDropdownMotion(pos.placement)}
-              transition={selectDropdownTransition}
+              className={cn(
+                searchableSelectPanel,
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
               style={{
-                top: pos.top,
-                left: pos.left,
-                minWidth: Math.max(pos.width, dropdownMinWidth),
+                top: floating.top,
+                left: floating.left,
+                minWidth: Math.max(floating.anchorWidth, 280, dropdownMinWidth),
                 maxWidth: "min(500px, 90vw)",
-                maxHeight: pos.maxHeight,
+                maxHeight: Math.min(320, Math.max(160, floating.availableHeight)),
+                transformOrigin: floating.origin,
               }}
             >
               {/* Search input */}
               <div className={selectSearchRow}>
-                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                <Icon name="search" size={14} className="shrink-0 text-[var(--sn-label3)]" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -407,7 +351,7 @@ export function SearchableSelect({
                                 opt.action?.onClick();
                               }}
                               className={cn(
-                                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/15 dark:hover:text-rose-300",
+                                "sn-btn sn-ghost-danger sn-xs sn-ibtn shrink-0",
                                 opt.action.className,
                               )}
                             >
@@ -440,9 +384,9 @@ export function SearchableSelect({
                         role="option"
                         aria-selected={false}
                         onClick={handleCreate}
-                        className={cn(selectOptionBase, "font-medium text-ink")}
+                        className={cn(selectOptionBase, "font-medium text-[var(--sn-label)]")}
                       >
-                        <Plus size={14} className="shrink-0 text-ink-2" aria-hidden="true" />
+                        <Icon name="plus" size={14} className="shrink-0 text-[var(--sn-label2)]" />
                         <span className="min-w-0 flex-1">
                           {createLabel ? createLabel(createValue) : createValue}
                         </span>
@@ -451,11 +395,10 @@ export function SearchableSelect({
                   </>
                 )}
               </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            resolvePortalContainer(triggerRef.current),
+          )
+        : null}
     </>
   );
 }

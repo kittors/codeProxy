@@ -27,8 +27,8 @@ export function ChannelCoolingField({
       <p
         className={
           variant === "section"
-            ? "text-sm font-semibold text-ink"
-            : "text-xs font-semibold text-ink-2"
+            ? "text-sm font-semibold text-sn-label"
+            : "text-xs font-semibold text-sn-label2"
         }
       >
         {label}
@@ -43,7 +43,7 @@ export function ChannelCoolingField({
         ]}
         aria-label={label}
       />
-      <p className="text-xs text-ink-3">
+      <p className="text-xs text-sn-label3">
         {t(scope === "account" ? "channel_cooling.hint_account" : "channel_cooling.hint_channel")}
       </p>
     </div>

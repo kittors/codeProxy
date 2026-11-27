@@ -212,9 +212,11 @@ describe("Auth Files helper coverage", () => {
         size: 2048,
         runtimeOnly: true,
         planType: "pro",
-        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
-        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: {
+          started_at: "2026-07-01T00:00:00.000Z",
+          expires_at: "2026-08-01T00:00:00.000Z",
+          source: "signed_claims",
+        },
         account_status_scope: "shared",
         subject_scope: "shared",
         share_eligible: true,
@@ -262,9 +264,11 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: "pro",
-        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
-        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: {
+          started_at: "2026-07-01T00:00:00.000Z",
+          expires_at: "2026-08-01T00:00:00.000Z",
+          source: "signed_claims",
+        },
         account_status_scope: "shared",
         subject_scope: "shared",
         share_eligible: true,
@@ -317,9 +321,7 @@ describe("Auth Files helper coverage", () => {
         runtime_only: undefined,
         plan_type: undefined,
         planType: undefined,
-        shared_subscription_started_at: undefined,
-        shared_subscription_expires_at: undefined,
-        shared_subscription_source: undefined,
+        shared_subscription: undefined,
         account_status_scope: undefined,
         subject_scope: undefined,
         share_eligible: undefined,
@@ -539,7 +541,7 @@ describe("Auth Files helper coverage", () => {
       subscription_expires_at: "2026-08-01T00:00:00Z",
       subscription_period: "monthly",
       subscription_remaining_minutes: 14_400,
-      shared_subscription_expires_at: "2026-08-01T00:00:00Z",
+      shared_subscription: { expires_at: "2026-08-01T00:00:00Z" },
       usage_history_complete: true,
       usage_projected_since: "2026-07-01T00:00:00Z",
     } as AuthFileItem;
@@ -596,16 +598,20 @@ describe("Auth Files helper coverage", () => {
       {
         name: "codex.json",
         type: "codex",
-        shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
-        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: {
+          started_at: "2026-07-01T00:00:00.000Z",
+          expires_at: "2026-08-01T00:00:00.000Z",
+          source: "signed_claims",
+        },
       } as AuthFileItem,
     ]);
 
     expect(cachedFile).toMatchObject({
-      shared_subscription_started_at: "2026-07-01T00:00:00.000Z",
-      shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
-      shared_subscription_source: "signed_claims",
+      shared_subscription: {
+        started_at: "2026-07-01T00:00:00.000Z",
+        expires_at: "2026-08-01T00:00:00.000Z",
+        source: "signed_claims",
+      },
     });
     expect(
       cachedFile &&
@@ -1400,9 +1406,11 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
         name: "codex.json",
         subscription_started_at: "2026-07-11T00:00:00.000Z",
         subscription_period: "monthly",
-        shared_subscription_started_at: "2026-06-11T00:00:00.000Z",
-        shared_subscription_expires_at: "2026-07-11T00:00:00.000Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: {
+          started_at: "2026-06-11T00:00:00.000Z",
+          expires_at: "2026-07-11T00:00:00.000Z",
+          source: "signed_claims",
+        },
       } as AuthFileItem,
       Date.parse("2026-07-21T00:00:00.000Z"),
     );
@@ -1421,8 +1429,7 @@ test("shows auth-level quota recovery records as 429 restriction badges", () => 
     const status = resolveAuthFileSubscriptionStatus(
       {
         name: "codex.json",
-        shared_subscription_expires_at: "2026-08-01T00:00:00.000Z",
-        shared_subscription_source: "signed_claims",
+        shared_subscription: { expires_at: "2026-08-01T00:00:00.000Z", source: "signed_claims" },
       } as AuthFileItem,
       Date.parse("2026-07-06T00:00:00.000Z"),
     );

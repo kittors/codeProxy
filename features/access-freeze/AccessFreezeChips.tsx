@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { AccessFreeze } from "@code-proxy/api-client";
 import { cn } from "@code-proxy/ui";

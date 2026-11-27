@@ -5,7 +5,7 @@ import {
   type DataGridColumn,
   type GridFilterOption,
 } from "@code-proxy/ui";
-import { Copy, Eye, FileInput, FileOutput, MoreHorizontal } from "lucide-react";
+import { Copy, Eye, FileInput, FileOutput, MoreHorizontal } from "@code-proxy/ui/icons";
 import {
   CacheCell,
   ChannelCell,
@@ -81,7 +81,7 @@ function RowActions({ row, handlers }: { row: LabLogRow; handlers: LabColumnHand
         <button
           type="button"
           aria-label={`请求 #${row.id} 的更多操作`}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-3 opacity-60 transition-[opacity,background-color,color] duration-150 ease-soft hover:bg-hover hover:text-ink group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:bg-selected data-[state=open]:text-ink data-[state=open]:opacity-100"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sn-label3 opacity-60 transition-[opacity,background-color,color] duration-150 ease-sn-out hover:bg-sn-hover hover:text-sn-label group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:bg-sn-active data-[state=open]:text-sn-label data-[state=open]:opacity-100"
         >
           <MoreHorizontal size={15} aria-hidden="true" />
         </button>

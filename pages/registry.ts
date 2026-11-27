@@ -33,6 +33,8 @@ import { ipAccessRoute } from "./ip-access/route";
 import { menuManagementRoute } from "./menu-management/route";
 import { alertsRoute } from "./alerts/route";
 import { privacyMaskingRoute } from "./privacy-masking/route";
+import { billingRoute } from "./billing/route";
+import { publicPayRoute } from "./billing-pay/route";
 import { dataGridLabRoute } from "./data-grid-lab/route";
 
 export interface PageRoute {
@@ -72,6 +74,7 @@ export const pageRoutes: PageRoute[] = [
   apiKeysRoute,
   endUsersRoute,
   apiKeyPermissionsRoute,
+  billingRoute,
   modelsRoute,
   modelPlazaRoute,
   channelGroupsRoute,
@@ -84,6 +87,7 @@ export const pageRoutes: PageRoute[] = [
   ccswitchImportSettingsRoute,
   apiKeyLookupRoute,
   apiKeyUsageRoute,
+  publicPayRoute,
   // 开发环境专用的表格演示页（计划 104），生产构建里是 null。
   ...(dataGridLabRoute ? [dataGridLabRoute] : []),
 ];

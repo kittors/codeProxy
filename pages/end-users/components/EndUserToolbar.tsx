@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw, Search } from "@code-proxy/ui/icons";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import { Button, Select, TextInput } from "@code-proxy/ui";
 
@@ -44,7 +44,7 @@ export function EndUserToolbar({
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t("end_users.search_placeholder")}
           aria-label={t("end_users.search_label")}
-          startAdornment={<Search className="h-4 w-4 text-ink-3" aria-hidden />}
+          startAdornment={<Search className="h-4 w-4 text-sn-label3" aria-hidden />}
         />
       </div>
       <Select

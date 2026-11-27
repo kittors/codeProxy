@@ -75,9 +75,10 @@ describe("OwnedApiKeysTable", () => {
       />,
     );
 
-    expect(container.firstElementChild).toHaveAttribute("data-fill", "true");
-    // 嵌在卡片和弹窗里：不再套一层外框
-    expect(container.firstElementChild).not.toHaveClass("cp-grid-frame");
+    const wrap = container.querySelector(".sn-tbl-wrap");
+    expect(wrap).toHaveAttribute("data-fill", "true");
+    // 嵌在卡片和弹窗里：不再套一层外框（Satin 无外框态 .sn-plain）
+    expect(wrap).toHaveClass("sn-plain");
   });
   test("exposes period reset and reset history for an owned week-only key", async () => {
     const row = {

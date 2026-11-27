@@ -1,4 +1,4 @@
-import { Feather, Shrimp } from "lucide-react";
+import { Feather, Shrimp } from "@code-proxy/ui/icons";
 import { cn, iconHueClass } from "@code-proxy/ui";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
@@ -53,7 +53,7 @@ export function CcSwitchClientIcon({
       aria-hidden="true"
       data-testid={`ccswitch-client-icon-${clientType}`}
       // 「多彩」图标着色时按全站的图标色相上色，「单色」时保持中性。
-      className={cn("shrink-0 text-ink-2", iconHueClass(Glyph), className)}
+      className={cn("shrink-0 text-sn-label2", iconHueClass(Glyph), className)}
     />
   );
 }

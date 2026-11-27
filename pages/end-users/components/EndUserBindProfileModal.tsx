@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "@code-proxy/ui/icons";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import { Button, Callout, Modal, ScrollFade } from "@code-proxy/ui";
 import { ProfilePicker } from "@features/access-policy";

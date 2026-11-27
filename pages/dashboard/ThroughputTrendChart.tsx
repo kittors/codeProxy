@@ -5,7 +5,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@code-proxy/ui/icons";
 import type { ECBasicOption } from "echarts/types/dist/shared";
 import type {
   DashboardTenantThroughputItem,
@@ -18,6 +18,7 @@ import {
   EChart,
   HoverTooltip,
   type Hue,
+  StatusTag,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -261,7 +262,7 @@ export function ThroughputTrendChart({
       <HoverTooltip content={t("dashboard.throughput_all_tenants_hint")} placement="top">
         <button
           type="button"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
           aria-label={t("dashboard.throughput_all_tenants_hint")}
         >
           <CircleAlert size={14} />
@@ -299,19 +300,13 @@ export function ThroughputTrendChart({
               </TabsList>
             </Tabs>
           ) : null}
-          {/* 简约风格是中性胶囊、颜色只在那颗点上；多彩风格整块绿色淡底（与系统监控的数据通道状态一致）。 */}
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium dark:bg-white/[0.07] ${
-              connected
-                ? "text-ink-2 colorful:bg-emerald-50 colorful:text-emerald-600 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300"
-                : "text-ink-3"
-            }`}
+          {/* Satin 原生状态胶囊：实时活跃用 .sn-run 呼吸脉冲点，空闲连接用 .sn-ok，轮询用中性灰。 */}
+          <StatusTag
+            size="sm"
+            tone={connected ? (active ? "run" : "ok") : "neutral"}
           >
-            <span
-              className={`h-2 w-2 rounded-full ${active ? "animate-pulse bg-emerald-500" : "bg-ink-4"}`}
-            />
             {connected ? t("system_monitor.live") : t("system_monitor.polling")}
-          </div>
+          </StatusTag>
         </div>
       }
     >
@@ -327,7 +322,7 @@ export function ThroughputTrendChart({
           ] as const
         ).map((reading) => (
           <div key={reading.key} className="min-w-0">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-ink-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-sn-label3">
               <span
                 aria-hidden="true"
                 className="size-2 shrink-0 rounded-full"
@@ -335,7 +330,7 @@ export function ThroughputTrendChart({
               />
               {reading.label}
             </div>
-            <div className="mt-0.5 text-xl font-semibold tabular-nums text-ink">
+            <div className="mt-0.5 text-xl font-semibold tabular-nums text-sn-label">
               <DashboardMetricValue value={reading.value} />
             </div>
           </div>

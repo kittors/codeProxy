@@ -27,7 +27,7 @@ describe("group overview weekly families", () => {
     expect(isWeeklyWindow(undefined)).toBe(false);
   });
 
-  test("averages each Antigravity weekly separately instead of taking the first bar", () => {
+  test("averages each Antigravity weekly separately and derives total consumed percent", () => {
     const files = [
       [
         weeklySlot("antigravity:gemini_weekly", "Gemini · 周", 40),
@@ -40,10 +40,27 @@ describe("group overview weekly families", () => {
       ],
     ];
     const families = collectWeeklyFamilies(files);
-    expect(families.map((family) => ({ id: family.id, remainingPercent: family.remainingPercent }))).toEqual([
-      { id: "antigravity:gemini_weekly", remainingPercent: 50 },
-      { id: "antigravity:3p_weekly", remainingPercent: 90 },
+    expect(
+      families.map((family) => ({
+        id: family.id,
+        remainingPercent: family.remainingPercent,
+        usedPercent: family.usedPercent,
+      })),
+    ).toEqual([
+      { id: "antigravity:gemini_weekly", remainingPercent: 50, usedPercent: 50 },
+      { id: "antigravity:3p_weekly", remainingPercent: 90, usedPercent: 10 },
     ]);
+  });
+
+  test("computes total weekly consumption share across Codex accounts (74/70/78 remaining -> 26% used)", () => {
+    const files = [
+      [weeklySlot("code_week", "代码：周", 74)],
+      [weeklySlot("code_week", "代码：周", 70)],
+      [weeklySlot("code_week", "代码：周", 78)],
+    ];
+    const [family] = collectWeeklyFamilies(files);
+    expect(family?.remainingPercent).toBeCloseTo(74);
+    expect(family?.usedPercent).toBeCloseTo(26);
   });
 
   test("keeps Codex code_week and extra Spark weeks as distinct families", () => {

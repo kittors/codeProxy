@@ -1,9 +1,9 @@
 import { VendorIcon } from "@code-proxy/assets";
 import {
+  Avatar,
   GridCellTooltip,
   GridTooltipRows,
-  HUE_SOFT_BASE,
-  HUE_TILE,
+  StatusTag,
   formatClock,
   formatCompactNumber,
   formatDateTime,
@@ -42,10 +42,10 @@ export function TimeCell({ row, now }: { row: LabLogRow; now: number }) {
       }
     >
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className="font-mono text-xs tabular-nums text-ink">
+        <span className="font-mono text-xs tabular-nums text-sn-label">
           {formatClock(row.timestampMs)}
         </span>
-        <span className="mt-0.5 truncate text-2xs text-ink-3">
+        <span className="mt-0.5 truncate text-2xs text-sn-label3">
           {today
             ? formatRelativeTime(row.timestampMs, now, "zh-CN")
             : `${date.getMonth() + 1}/${date.getDate()}`}
@@ -56,7 +56,6 @@ export function TimeCell({ row, now }: { row: LabLogRow; now: number }) {
 }
 
 export function UserCell({ row }: { row: LabLogRow }) {
-  const initial = Array.from(row.user.name)[0]?.toUpperCase() ?? "?";
   return (
     <GridCellTooltip
       content={
@@ -68,15 +67,12 @@ export function UserCell({ row }: { row: LabLogRow }) {
       }
     >
       <span className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${HUE_SOFT_BASE} ${HUE_TILE[row.user.hue]}`}
-        >
-          {initial}
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <Avatar name={row.user.name} size={28} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm font-medium text-ink">{row.user.name}</span>
-          <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">
+          <span className="truncate text-sm font-medium text-sn-label">{row.user.name}</span>
+          <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">
             {maskLabKey(row.user.key)}
           </span>
         </span>
@@ -109,20 +105,20 @@ export function ModelCell({ row }: { row: LabLogRow }) {
       }
     >
       <span className="flex min-w-0 items-center gap-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.04] dark:bg-white/[0.06]">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.04] dark:bg-white/[0.06]">
           <VendorIcon modelId={row.model} size={15} />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm font-medium text-ink">{row.model}</span>
+            <span className="truncate text-sm font-medium text-sn-label">{row.model}</span>
             {row.thinking ? (
-              <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 text-2xs leading-4 text-ink-2 dark:bg-white/[0.07]">
+              <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs leading-4 text-sn-label2 dark:bg-white/[0.07]">
                 {row.thinking}
               </span>
             ) : null}
           </span>
           <span
-            className={`mt-0.5 truncate text-2xs ${fallback ? "text-amber-600 dark:text-amber-400" : "text-ink-3"}`}
+            className={`mt-0.5 truncate text-2xs ${fallback ? "text-amber-600 dark:text-amber-400" : "text-sn-label3"}`}
           >
             {mapped ? `→ ${row.upstreamModel}` : row.streaming ? "流式" : "非流式"}
           </span>
@@ -157,17 +153,17 @@ export function ChannelCell({ row }: { row: LabLogRow }) {
     >
       {/* 渠道名常是 OAuth 邮箱，独占第一行；认证方式和厂商放第二行，不和名字抢宽度。 */}
       <span className="flex min-w-0 items-center gap-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.04] dark:bg-white/[0.06]">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.04] dark:bg-white/[0.06]">
           <VendorIcon modelId={row.channel.provider} size={14} />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm text-ink">{row.channel.name}</span>
-          <span className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-ink-3">
+          <span className="truncate text-sm text-sn-label">{row.channel.name}</span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-sn-label3">
             <span
               className={
                 row.channel.auth === "oauth"
-                  ? "font-medium text-ink-2 colorful:text-sky-600 colorful:dark:text-sky-400"
-                  : "font-medium text-ink-2"
+                  ? "font-medium text-sn-label2 colorful:text-sky-600 colorful:dark:text-sky-400"
+                  : "font-medium text-sn-label2"
               }
             >
               {AUTH_LABEL[row.channel.auth]}
@@ -196,13 +192,13 @@ export function InputTokensCell({ row }: { row: LabLogRow }) {
         />
       }
     >
-      <span className="tabular-nums text-ink">{formatCompactNumber(row.inputTokens)}</span>
+      <span className="tabular-nums text-sn-label">{formatCompactNumber(row.inputTokens)}</span>
     </GridCellTooltip>
   );
 }
 
 export function OutputTokensCell({ row }: { row: LabLogRow }) {
-  if (row.outputTokens <= 0) return <span className="text-ink-4">—</span>;
+  if (row.outputTokens <= 0) return <span className="text-sn-label-off">—</span>;
   return (
     <GridCellTooltip
       content={
@@ -215,7 +211,7 @@ export function OutputTokensCell({ row }: { row: LabLogRow }) {
         />
       }
     >
-      <span className="tabular-nums text-ink">{formatCompactNumber(row.outputTokens)}</span>
+      <span className="tabular-nums text-sn-label">{formatCompactNumber(row.outputTokens)}</span>
     </GridCellTooltip>
   );
 }
@@ -224,10 +220,10 @@ export function CacheCell({ row }: { row: LabLogRow }) {
   const ratio = labCacheRatio(row);
   const tone =
     ratio >= 0.8
-      ? "bg-ink/40 bar-semantic:bg-emerald-500"
+      ? "bg-sn-label/40 bar-semantic:bg-emerald-500"
       : ratio >= 0.4
-        ? "bg-ink/30 bar-semantic:bg-amber-500"
-        : "bg-ink/20 bar-semantic:bg-rose-400";
+        ? "bg-sn-label/30 bar-semantic:bg-amber-500"
+        : "bg-sn-label/20 bar-semantic:bg-rose-400";
   return (
     <GridCellTooltip
       content={
@@ -243,9 +239,9 @@ export function CacheCell({ row }: { row: LabLogRow }) {
       }
     >
       <span className="flex min-w-0 flex-col items-end gap-1">
-        <span className="tabular-nums text-ink">{formatPercent(ratio)}</span>
+        <span className="tabular-nums text-sn-label">{formatPercent(ratio)}</span>
         <span
-          className="h-1 w-12 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]"
+          className="h-1 w-12 overflow-hidden rounded-full bg-sn-label/[0.07] dark:bg-white/[0.08]"
           aria-hidden="true"
         >
           <span
@@ -262,11 +258,11 @@ export function CacheCell({ row }: { row: LabLogRow }) {
 function durationTone(ms: number): string {
   if (ms >= 30_000) return "text-rose-600 dark:text-rose-400";
   if (ms >= 10_000) return "text-amber-600 dark:text-amber-400";
-  return "text-ink";
+  return "text-sn-label";
 }
 
 export function FirstTokenCell({ row }: { row: LabLogRow }) {
-  if (row.firstTokenMs <= 0) return <span className="text-ink-4">—</span>;
+  if (row.firstTokenMs <= 0) return <span className="text-sn-label-off">—</span>;
   return (
     <span className={`tabular-nums ${durationTone(row.firstTokenMs)}`}>
       {formatDurationMs(row.firstTokenMs)}
@@ -294,7 +290,7 @@ export function LatencyCell({ row }: { row: LabLogRow }) {
         <span className={`tabular-nums ${durationTone(row.latencyMs)}`}>
           {formatDurationMs(row.latencyMs)}
         </span>
-        <span className="mt-0.5 whitespace-nowrap text-2xs text-ink-3">
+        <span className="mt-0.5 whitespace-nowrap text-2xs text-sn-label3">
           首字{" "}
           <span
             className={`tabular-nums ${row.firstTokenMs >= 10_000 ? durationTone(row.firstTokenMs) : ""}`}
@@ -331,7 +327,7 @@ const THROUGHPUT_BASIS: Record<"generation" | "total" | "burst", string> = {
  */
 export function ThroughputCell({ row }: { row: LabLogRow }) {
   const throughput = labThroughput(row);
-  if (!throughput) return <span className="text-ink-4">—</span>;
+  if (!throughput) return <span className="text-sn-label-off">—</span>;
   const value = formatTokensPerSecondValue(throughput.tokensPerSecond);
   return (
     <GridCellTooltip
@@ -350,16 +346,16 @@ export function ThroughputCell({ row }: { row: LabLogRow }) {
         />
       }
     >
-      <span className="whitespace-nowrap tabular-nums text-ink">
+      <span className="whitespace-nowrap tabular-nums text-sn-label">
         {value}
-        <span className="ml-0.5 text-2xs text-ink-3">tok/s</span>
+        <span className="ml-0.5 text-2xs text-sn-label3">tok/s</span>
       </span>
     </GridCellTooltip>
   );
 }
 
 export function CostCell({ row }: { row: LabLogRow }) {
-  if (row.cost.total <= 0) return <span className="text-ink-4">—</span>;
+  if (row.cost.total <= 0) return <span className="text-sn-label-off">—</span>;
   return (
     <GridCellTooltip
       content={
@@ -374,7 +370,7 @@ export function CostCell({ row }: { row: LabLogRow }) {
         />
       }
     >
-      <span className="tabular-nums text-ink">{formatUsd(row.cost.total)}</span>
+      <span className="tabular-nums text-sn-label">{formatUsd(row.cost.total)}</span>
     </GridCellTooltip>
   );
 }
@@ -408,25 +404,20 @@ export function StatusCell({ row, onOpenError }: { row: LabLogRow; onOpenError: 
         <button
           type="button"
           onClick={onOpenError}
-          className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-rose-500/10 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-500/15 dark:bg-rose-400/15 dark:text-rose-300 dark:hover:bg-rose-400/25"
+          className="sn-tag sn-sm sn-bad cursor-pointer transition-opacity hover:opacity-80"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden="true" />
+          <i aria-hidden="true" />
           {STATUS_LABEL.failed}
         </button>
       </GridCellTooltip>
     );
   }
-  const dot =
-    row.status === "success"
-      ? "bg-emerald-500"
-      : row.status === "retried"
-        ? "bg-amber-500"
-        : "bg-ink-4";
+  const tone =
+    row.status === "success" ? "ok" : row.status === "retried" ? "warn" : "neutral";
   const label = (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-2">
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+    <StatusTag size="sm" tone={tone}>
       {STATUS_LABEL[row.status]}
-    </span>
+    </StatusTag>
   );
   if (row.status === "success") return label;
   return (

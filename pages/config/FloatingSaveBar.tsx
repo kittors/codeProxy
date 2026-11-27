@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, RefreshCw, Save } from "lucide-react";
+import { Check, RefreshCw, Save } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 
 type SaveBarStatus = "saved" | "dirty" | "saving" | "loading" | "error" | "offline";
@@ -30,13 +30,13 @@ const STATUS_TONE: Record<SaveBarStatus, { icon?: ReactNode; tone: string; dot?:
     tone: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
   },
   loading: {
-    tone: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+    tone: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
   },
   error: {
     tone: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
   },
   offline: {
-    tone: "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+    tone: "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
   },
 };
 
@@ -117,7 +117,7 @@ export function FloatingSaveBar({
       <div
         className={[
           // 实色浮层，和下拉、提示条同一种表面：半透明毛玻璃压在配置表单上会透出底下的字。
-          "pointer-events-auto flex items-center gap-3 rounded-2xl bg-elevated px-4 py-2.5 shadow-pop",
+          "pointer-events-auto flex items-center gap-3 rounded-xl border border-[var(--sn-line)] bg-[var(--sn-overlay)] px-4 py-2.5 shadow-sn-e1",
           "transition-all duration-[360ms]",
           visible ? "translate-y-0 opacity-100 scale-100" : "translate-y-8 opacity-0 scale-[0.96]",
         ].join(" ")}
@@ -130,7 +130,7 @@ export function FloatingSaveBar({
       >
         <div
           className={[
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+            "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
             "transition-all duration-300",
             displayTone.tone,
           ].join(" ")}

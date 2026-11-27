@@ -1,4 +1,4 @@
-import { FileDown } from "lucide-react";
+import { FileDown } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, ConfirmModal, Modal } from "@code-proxy/ui";
 import type { ProviderImportDiff } from "../provider-import-export";
@@ -34,7 +34,7 @@ export function ProviderDeleteConfirm({
         <span className="block min-w-0">
           <span className="block truncate font-medium">{name || t("providers.unnamed")}</span>
           {detail ? (
-            <span className="mt-0.5 block truncate font-mono text-xs text-ink-3">{detail}</span>
+            <span className="mt-0.5 block truncate font-mono text-xs text-sn-label3">{detail}</span>
           ) : null}
         </span>
       }
@@ -56,7 +56,7 @@ const TILES = [
   { key: "added", dot: "bg-emerald-500", tone: "colorful:text-emerald-700 colorful:dark:text-emerald-300" },
   { key: "changed", dot: "bg-sky-500", tone: "colorful:text-sky-700 colorful:dark:text-sky-300" },
   { key: "removed", dot: "bg-rose-500", tone: "colorful:text-rose-700 colorful:dark:text-rose-300" },
-  { key: "duplicateEntriesRemoved", dot: "bg-ink-4", tone: "" },
+  { key: "duplicateEntriesRemoved", dot: "bg-sn-label-off", tone: "" },
 ] as const;
 
 // 读屏用完整句子（沿用原来的「新增：N」文案），视觉上拆成小标签 + 大数字。
@@ -153,13 +153,13 @@ export function ProviderImportPreviewModal({
                 key={tile.key}
                 role="group"
                 aria-label={t(TILE_ARIA[tile.key], { count: diff[tile.key] })}
-                className="rounded-2xl bg-subtle px-3.5 py-3"
+                className="rounded-xl bg-sn-subtle px-3.5 py-3"
               >
-                <p className="flex items-center gap-1.5 text-xs text-ink-3">
+                <p className="flex items-center gap-1.5 text-xs text-sn-label3">
                   <span aria-hidden="true" className={["h-1.5 w-1.5 rounded-full", tile.dot].join(" ")} />
                   {t(TILE_LABEL[tile.key])}
                 </p>
-                <p className={["mt-1 text-2xl font-semibold tabular-nums text-ink", tile.tone].join(" ")}>
+                <p className={["mt-1 text-2xl font-semibold tabular-nums text-sn-label", tile.tone].join(" ")}>
                   {diff[tile.key]}
                 </p>
               </div>
@@ -169,7 +169,7 @@ export function ProviderImportPreviewModal({
           {groups.map(([kind, labels, titleKey]) =>
             labels.length ? (
               <section key={kind}>
-                <h3 className="text-xs font-medium text-ink-2">{t(titleKey)}</h3>
+                <h3 className="text-xs font-medium text-sn-label2">{t(titleKey)}</h3>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {labels.map((label) => (
                     <span key={`${kind}-${label}`} className={["rounded-full px-2.5 py-1 text-xs", CHIP[kind]].join(" ")}>

@@ -1,24 +1,19 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Search, X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { Icon } from "satin-ui/react";
 import {
   cn,
-  getSelectDropdownMotion,
   getSelectTriggerBase,
   searchableSelectPanel,
   selectCheckboxBox,
   selectChevron,
-  selectDropdownTransition,
   selectEmptyState,
   selectOptionBase,
   selectOptionIdle,
@@ -29,6 +24,8 @@ import {
   selectTriggerState,
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 import { ScrollArea } from "./ScrollArea";
 
 export interface SearchableCheckboxMultiSelectOption {
@@ -127,13 +124,11 @@ export function SearchableCheckboxMultiSelect({
   selectionHint = "",
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const isOpen = open && !disabled;
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
-  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
-  const [listMaxHeight, setListMaxHeight] = useState(224);
 
   const manualApply = applyMode === "manual";
   const committedEmptyMeansAllSelected =
@@ -151,10 +146,14 @@ export function SearchableCheckboxMultiSelect({
   );
 
   useEffect(() => {
-    if (manualApply && open) return;
+    if (manualApply && isOpen) return;
     setDraftExplicitValue(sanitizedExplicitValue);
     setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
-  }, [committedEmptyMeansAllSelected, manualApply, open, sanitizedExplicitValue]);
+  }, [committedEmptyMeansAllSelected, isOpen, manualApply, sanitizedExplicitValue]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   const activeExplicitValue = manualApply ? draftExplicitValue : sanitizedExplicitValue;
   const activeEmptyMeansAllSelected = manualApply
@@ -215,124 +214,25 @@ export function SearchableCheckboxMultiSelect({
     [committedEmptyMeansAllSelected, manualApply, sanitizedExplicitValue],
   );
 
-  const updatePosition = useCallback(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const gap = 6;
-    const maxHeight = 360;
-    const listChromeHeight = (manualApply ? 132 : 84) + (selectionHint ? 14 : 0);
-    const setPanelMaxHeight = (height: number) => {
-      setListMaxHeight(Math.max(96, height - listChromeHeight));
-      return height;
-    };
-
-    const isNarrow = window.innerWidth < mobileBreakpoint;
-    if (isNarrow) {
-      const maxHeightMobile = Math.min(420, window.innerHeight * 0.7);
-      const spaceBelow = window.innerHeight - rect.bottom - gap;
-      const spaceAbove = rect.top - gap;
-      const openAbove = spaceBelow < maxHeightMobile && spaceAbove > spaceBelow;
-
-      if (openAbove) {
-        const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceAbove));
-        setDropdownPlacement("top");
-        setDropdownStyle({
-          position: "fixed",
-          left: 12,
-          right: 12,
-          width: "auto",
-          maxHeight: panelMaxHeight,
-          bottom: window.innerHeight - rect.top + gap,
-          zIndex: 99999,
-        });
-        return;
-      }
-      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceBelow));
-      setDropdownPlacement("bottom");
-      setDropdownStyle({
-        position: "fixed",
-        left: 12,
-        right: 12,
-        width: "auto",
-        maxHeight: panelMaxHeight,
-        top: Math.min(rect.bottom + gap, window.innerHeight - maxHeightMobile - 12),
-        zIndex: 99999,
-      });
-      return;
-    }
-
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
-
-    if (openAbove) {
-      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceAbove));
-      setDropdownPlacement("top");
-      setDropdownStyle({
-        position: "fixed",
-        bottom: window.innerHeight - rect.top + gap,
-        left: rect.left,
-        width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
-        maxHeight: panelMaxHeight,
-        zIndex: 99999,
-      });
-      return;
-    }
-
-    const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceBelow));
-    setDropdownPlacement("bottom");
-    setDropdownStyle({
-      position: "fixed",
-      top: rect.bottom + gap,
-      left: rect.left,
-      width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
-      maxHeight: panelMaxHeight,
-      zIndex: 99999,
-    });
-  }, [manualApply, mobileBreakpoint, options, selectionHint]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: dropdownRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
       closeDropdown(manualApply);
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [closeDropdown, manualApply, open]);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
   useEffect(() => {
-    if (!open) return;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
-        event.preventDefault();
-        closeDropdown(manualApply);
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [closeDropdown, manualApply, open]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-    requestAnimationFrame(() => searchRef.current?.focus());
-  }, [open, updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open, updatePosition]);
+    if (isOpen) {
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+  }, [isOpen]);
 
   const normalizeSelection = useCallback(
     (next: string[]) => {
@@ -466,6 +366,15 @@ export function SearchableCheckboxMultiSelect({
     [closeDropdown, emptyValueMeansAllSelected, manualApply, onClear, updateSelection],
   );
 
+  const isNarrow = typeof window !== "undefined" && window.innerWidth < mobileBreakpoint;
+  const maxPanelHeight = Math.min(isNarrow ? 420 : 360, floating.availableHeight);
+  const listChromeHeight = (manualApply ? 132 : 84) + (selectionHint ? 14 : 0);
+  const listMaxHeight = Math.max(96, maxPanelHeight - listChromeHeight);
+  const desktopMinWidth = Math.max(
+    floating.anchorWidth,
+    options.some((option) => option.trailing) ? 300 : 260,
+  );
+
   return (
     <>
       <div className={cn("group/multi-select relative", className)}>
@@ -474,18 +383,17 @@ export function SearchableCheckboxMultiSelect({
           id={id}
           type="button"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
           disabled={disabled}
-          data-state={selectTriggerState(open)}
+          data-state={selectTriggerState(isOpen)}
           onClick={() => {
-            if (!open) {
-              if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
-              if (manualApply) setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
-              updatePosition();
+            if (!open && manualApply) {
+              setDraftExplicitValue(sanitizedExplicitValue);
+              setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
             }
             setOpen((current) => !current);
           }}
@@ -495,27 +403,27 @@ export function SearchableCheckboxMultiSelect({
             className={cn(
               "min-w-0 flex-1 truncate text-left",
               (activeExplicitValue.length === 0 || showAllSelectionSummary) &&
-                "text-ink-3",
+                "text-[var(--sn-label3)]",
             )}
           >
             {selectedSummary}
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {showSelectionBadge ? (
-              <span className="rounded-full bg-selected px-2 py-0.5 text-xs font-medium text-ink">
+              <span className="rounded-md bg-[var(--sn-fill-subtle)] px-1.5 py-0.5 text-xs font-medium text-[var(--sn-label)]">
                 {selectedCountLabel(activeExplicitValue.length)}
               </span>
             ) : null}
-            <ChevronDown
+            <Icon
+              name="chevron-down"
               size={14}
               className={cn(
                 selectChevron,
                 showSelectionBadge &&
                   showClearButton &&
                   "group-hover/multi-select:opacity-0 group-focus-within/multi-select:opacity-0",
-                open && "rotate-180",
+                isOpen && "rotate-180",
               )}
-              aria-hidden="true"
             />
           </span>
         </button>
@@ -525,31 +433,52 @@ export function SearchableCheckboxMultiSelect({
             aria-label={clearLabel}
             onClick={handleClear}
             className={cn(
-              "absolute right-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full",
-              "text-ink-3 opacity-0 pointer-events-none transition-colors",
+              "sn-btn sn-ghost sn-xs sn-ibtn absolute top-1/2 right-2.5 z-10 !h-5 !w-5 -translate-y-1/2",
+              "pointer-events-none opacity-0",
               "group-hover/multi-select:pointer-events-auto group-hover/multi-select:opacity-100",
               "group-focus-within/multi-select:pointer-events-auto group-focus-within/multi-select:opacity-100",
-              "hover:bg-hover hover:text-ink-2",
             )}
           >
-            <X size={12} />
+            <Icon name="x" size={12} />
           </button>
         ) : null}
       </div>
 
-      {createPortal(
-        <AnimatePresence>
-          {open ? (
-            <motion.div
+      {floating.mounted && !disabled
+        ? createPortal(
+            <div
               ref={dropdownRef}
-              data-side={dropdownPlacement}
-              style={dropdownStyle}
-              className={cn(searchableSelectPanel, "flex flex-col")}
-              {...getSelectDropdownMotion(dropdownPlacement)}
-              transition={selectDropdownTransition}
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-side={floating.side}
+              data-state={floating.isOpen ? "open" : "closed"}
+              style={
+                isNarrow
+                  ? {
+                      top: floating.top,
+                      left: 12,
+                      right: 12,
+                      width: "auto",
+                      maxHeight: maxPanelHeight,
+                      transformOrigin: floating.origin,
+                    }
+                  : {
+                      top: floating.top,
+                      left: floating.left,
+                      width: desktopMinWidth,
+                      maxWidth: "min(500px, 90vw)",
+                      maxHeight: maxPanelHeight,
+                      transformOrigin: floating.origin,
+                    }
+              }
+              className={cn(
+                searchableSelectPanel,
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
             >
               <div className={cn(selectSearchRow, "shrink-0")}>
-                <Search size={14} className="shrink-0 text-ink-3" aria-hidden="true" />
+                <Icon name="search" size={14} className="shrink-0 text-[var(--sn-label3)]" />
                 <input
                   ref={searchRef}
                   type="text"
@@ -562,15 +491,15 @@ export function SearchableCheckboxMultiSelect({
                 />
               </div>
               {selectAllLabel || neutralAllSelection || showFilteredToggle || selectionHint ? (
-                <div className="flex items-center justify-between gap-2 border-b border-line py-2 pl-3.5 pr-2">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--sn-line)] py-2 pr-2 pl-3.5">
                   <span className="min-w-0">
                     <span
                       className={cn(
                         "block text-xs font-medium",
                         // 「全部」是当前生效的选择：简约风格用强调色，多彩风格沿用绿色。
                         showAllSelectionSummary
-                          ? "text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
-                          : "text-ink-2",
+                          ? "text-sn-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
+                          : "text-[var(--sn-label2)]",
                       )}
                     >
                       {showAllSelectionSummary
@@ -578,7 +507,7 @@ export function SearchableCheckboxMultiSelect({
                         : selectedCountLabel(effectiveValue.length)}
                     </span>
                     {selectionHint ? (
-                      <span className="mt-0.5 block truncate text-2xs text-ink-3">
+                      <span className="mt-0.5 block truncate text-2xs text-[var(--sn-label3)]">
                         {selectionHint}
                       </span>
                     ) : null}
@@ -651,7 +580,7 @@ export function SearchableCheckboxMultiSelect({
                         )}
                       >
                         <span className={selectCheckboxBox(checked)} aria-hidden="true">
-                          {checked ? <Check size={12} /> : null}
+                          {checked ? <Icon name="check" size={12} /> : null}
                         </span>
                         <span
                           className="min-w-0 flex-1 truncate text-left"
@@ -676,11 +605,11 @@ export function SearchableCheckboxMultiSelect({
                 )}
               </ScrollArea>
               {manualApply ? (
-                <div className="flex items-center justify-end gap-2 border-t border-line px-3 py-2.5">
+                <div className="flex items-center justify-end gap-2 border-t border-[var(--sn-line)] px-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => closeDropdown(true)}
-                    className={cn(selectTextAction, "px-3 py-1.5")}
+                    className={selectTextAction}
                   >
                     {cancelLabel}
                   </button>
@@ -688,17 +617,16 @@ export function SearchableCheckboxMultiSelect({
                     type="button"
                     onClick={applyDraftSelection}
                     disabled={!hasPendingChanges}
-                    className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-selected disabled:text-ink-3"
+                    className="sn-btn sn-primary sn-xs !h-7 !px-3.5 !text-xs"
                   >
                     {applyLabel}
                   </button>
                 </div>
               ) : null}
-            </motion.div>
-          ) : null}
-        </AnimatePresence>,
-        document.body,
-      )}
+            </div>,
+            resolvePortalContainer(triggerRef.current),
+          )
+        : null}
     </>
   );
 }

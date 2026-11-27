@@ -141,7 +141,7 @@ export async function chooseInFacet(
 
 /** 汇总里某一项的数值（「请求」「成功率」…）。 */
 export const summaryValue = (label: string) =>
-  screen.getByText(label, { selector: "span.text-ink-3" }).nextElementSibling?.textContent ?? null;
+  screen.getByText(label, { selector: "span.text-sn-label3" }).nextElementSibling?.textContent ?? null;
 
 /** 某次请求的查询参数（第 n 次，从 1 开始；不传是最后一次）。 */
 export const queryOf = (calls: unknown[][], n?: number) =>

@@ -1,9 +1,7 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, Search, X } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
-import { EASE_POP } from "../utils/motion";
 import { GridPopover } from "./GridPopover";
 import { OptionsFilterEditor } from "./GridFilterEditors";
 import { listGridFilterChips } from "./gridFilterText";
@@ -82,15 +80,16 @@ export function GridSearchInput({
   return (
     <div
       className={[
-        "group/search relative flex h-8 min-w-[12rem] items-center rounded-full bg-field shadow-control transition-shadow duration-150 ease-soft hover:shadow-control-hover focus-within:shadow-control-focus",
+        "sn-ib sn-has-pre sn-has-post min-w-[12rem]",
+        value ? "sn-filled" : "",
         className ?? "",
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <Search
-        size={14}
-        className="pointer-events-none absolute left-3 text-ink-3"
-        aria-hidden="true"
-      />
+      <span className="sn-pre flex items-center justify-center" aria-hidden="true">
+        <Icon name="search" size={14} />
+      </span>
       <input
         ref={inputRef}
         type="search"
@@ -106,34 +105,33 @@ export function GridSearchInput({
         }}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-full w-full min-w-0 rounded-full bg-transparent pl-8 pr-9 text-xs text-ink outline-none placeholder:text-ink-3 [&::-webkit-search-cancel-button]:hidden"
+        className="sn-input sn-sm !h-8 [&::-webkit-search-cancel-button]:hidden"
       />
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange("");
-            inputRef.current?.focus();
-          }}
-          aria-label={t("data_grid.clear_search")}
-          className="absolute right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
-        >
-          <X size={12} aria-hidden="true" />
-        </button>
-      ) : focused ? null : (
-        <kbd
-          aria-hidden="true"
-          className="pointer-events-none absolute right-2.5 rounded-md bg-ink/[0.06] px-1.5 font-mono text-2xs text-ink-3 dark:bg-white/[0.08]"
-        >
-          /
-        </kbd>
-      )}
+      <span className="sn-post">
+        {value ? (
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              inputRef.current?.focus();
+            }}
+            aria-label={t("data_grid.clear_search")}
+            className="sn-clear"
+          >
+            <Icon name="x" size={12} />
+          </button>
+        ) : focused ? null : (
+          <kbd aria-hidden="true" className="sn-kbd">
+            /
+          </kbd>
+        )}
+      </span>
     </div>
   );
 }
 
 /**
- * 分面筛选按钮：没筛时是普通描边胶囊「模型 ▾」；筛了以后变成淡底高亮，标签后面亮出选中个数。
+ * 分面筛选按钮：没筛时是 Satin 8px 描边按钮「模型 ▾」；筛了以后变成淡底高亮，标签后面亮出选中个数。
  *
  * 宽度在筛与不筛之间完全不变：个数徽标的位置一直留着（没筛时透明），数字用等宽数字。
  * 以前这里写出第一个选中值，按钮随值的长短伸缩，把后面的按钮挤得跳来跳去（用户 11-18 反馈）；
@@ -190,21 +188,22 @@ export function GridFacetFilter({
           setAnchor(event.currentTarget);
         }}
         className={[
-          "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full pl-3 pr-2.5 text-xs font-medium transition-[background-color,box-shadow,color,scale] duration-150 ease-soft active:scale-[0.97]",
-          active
-            ? "bg-accent-soft text-ink shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cp-focus)_35%,transparent)]"
-            : "bg-surface text-ink-2 shadow-control hover:bg-surface-hover hover:text-ink hover:shadow-control-hover",
-        ].join(" ")}
+          "sn-btn sn-secondary sn-sm !h-8 shrink-0 !pl-3.5 !pr-2.5",
+          open ? "sn-is-open" : "",
+          active ? "!bg-[var(--sn-fill-active)] !text-[var(--sn-label)]" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
-        {icon ? <span className="flex shrink-0 items-center text-ink-3">{icon}</span> : null}
+        {icon ? <span className="flex shrink-0 items-center text-[var(--sn-label3)]">{icon}</span> : null}
         <span className="shrink-0">{label}</span>
         {/* 箭头与个数徽标共用一个固定宽度的位置：没筛时是箭头，筛了以后换成个数，按钮宽度不变。 */}
         <span className="relative inline-flex h-4 w-[1.375rem] shrink-0 items-center justify-center">
-          <ChevronDown
+          <Icon
+            name="chevron-down"
             size={13}
-            aria-hidden="true"
             className={[
-              "text-ink-3 transition-[rotate,opacity,scale] duration-200 ease-pop",
+              "text-[var(--sn-label3)] transition-[rotate,opacity,scale] duration-200 ease-sn-strong",
               open ? "rotate-180" : "",
               active ? "scale-75 opacity-0" : "opacity-100",
             ].join(" ")}
@@ -212,8 +211,10 @@ export function GridFacetFilter({
           <span
             aria-hidden={active ? undefined : true}
             className={[
-              "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-pop",
-              active ? "bg-[var(--cp-focus)] text-white opacity-100" : "scale-75 opacity-0",
+              "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-sn-strong",
+              active
+                ? "bg-[var(--sn-accent)] text-[var(--sn-on-primary)] opacity-100"
+                : "scale-75 opacity-0",
             ].join(" ")}
           >
             {active ? (values.length > 99 ? "99+" : values.length) : null}
@@ -233,7 +234,7 @@ export function GridFacetFilter({
             onChange={setDraft}
             onSubmit={apply}
           />
-          <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-line pt-2">
+          <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-sn-line pt-2">
             <Button size="xs" variant="ghost" onClick={() => setDraft([])}>
               {t("data_grid.reset")}
             </Button>
@@ -270,7 +271,6 @@ export function GridFilterChips<T>({
   placeholder?: string;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const chips = [
     ...(extra ?? []).map((chip) => ({
       id: `extra:${chip.id}`,
@@ -286,69 +286,45 @@ export function GridFilterChips<T>({
 
   return (
     <div className="relative h-7 min-w-0">
-      <AnimatePresence initial={false}>
-        {chips.length === 0 ? (
-          <motion.p
-            key="placeholder"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 flex items-center px-1 text-xs text-ink-3"
-          >
-            {placeholder ?? t("data_grid.no_active_filters")}
-          </motion.p>
-        ) : null}
-      </AnimatePresence>
+      {chips.length === 0 ? (
+        <p className="absolute inset-0 flex items-center px-1 text-xs text-sn-label3 transition-opacity duration-150 ease-sn-out">
+          {placeholder ?? t("data_grid.no_active_filters")}
+        </p>
+      ) : null}
       <ul
         className="flex h-7 min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label={t("data_grid.active_filters")}
       >
-        <AnimatePresence initial={false}>
-          {chips.map((chip) => (
-            <motion.li
-              key={chip.id}
-              layout={reduceMotion ? false : "position"}
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.18, ease: EASE_POP }}
-              className="inline-flex h-7 max-w-[22rem] shrink-0 items-center gap-1 rounded-full bg-ink/[0.05] pl-2.5 pr-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+        {chips.map((chip) => (
+          <li
+            key={chip.id}
+            className="sn-chip sn-tag sn-pop-in !h-7 max-w-[22rem] shrink-0 !gap-1.5 !text-xs"
+          >
+            <span className="min-w-0 truncate">{chip.label}</span>
+            <button
+              type="button"
+              onClick={chip.onRemove}
+              aria-label={t("data_grid.remove_filter", { filter: chip.label })}
+              className="sn-x"
             >
-              <span className="min-w-0 truncate">{chip.label}</span>
-              <button
-                type="button"
-                onClick={chip.onRemove}
-                aria-label={t("data_grid.remove_filter", { filter: chip.label })}
-                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-ink/[0.08] hover:text-ink dark:hover:bg-white/[0.1]"
-              >
-                <X size={12} aria-hidden="true" />
-              </button>
-            </motion.li>
-          ))}
-          {chips.length > 0 ? (
-            <motion.li
-              key="clear-all"
-              layout={reduceMotion ? false : "position"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="shrink-0"
+              <Icon name="x" size={11} />
+            </button>
+          </li>
+        ))}
+        {chips.length > 0 ? (
+          <li key="clear-all" className="shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                onFiltersChange({});
+                for (const chip of extra ?? []) chip.onRemove();
+              }}
+              className="sn-btn sn-ghost sn-sm !h-7 whitespace-nowrap"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  onFiltersChange({});
-                  for (const chip of extra ?? []) chip.onRemove();
-                }}
-                className="h-7 whitespace-nowrap rounded-full px-2 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
-              >
-                {t("data_grid.clear_all_filters")}
-              </button>
-            </motion.li>
-          ) : null}
-        </AnimatePresence>
+              {t("data_grid.clear_all_filters")}
+            </button>
+          </li>
+        ) : null}
       </ul>
     </div>
   );

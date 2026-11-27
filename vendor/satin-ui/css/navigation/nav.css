@@ -1,0 +1,104 @@
+/* Satin：侧栏布局、标签页、面包屑、分页与步骤（从 data.css 拆出的独立样式分片）。 */
+@layer satin {
+/* ———— 侧栏与布局 ———— */
+.sn-app { --sn-side-w: 220px; --sn-side-w-min: 56px; display: flex; height: 100dvh; background: var(--sn-canvas); } /* 侧栏展开、收起两个宽度只在这里写，脚本也从这里读 */
+.sn-side { width: var(--sn-side-w); flex: none; display: flex; flex-direction: column; padding: 10px 8px; overflow: hidden; background: color-mix(in srgb, var(--sn-label) 3%, var(--sn-canvas)); transition: width .3s var(--sn-ease-open); }
+.sn-app.sn-collapsed .sn-side { width: var(--sn-side-w-min); }
+.sn-side-top { position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; height: 36px; padding: 0 0 0 8px; margin-bottom: 8px; } /* 右边不用内边距留位置（内边距会把收起后的宽度撑大），由名字右边的外边距让开收起按钮 */
+.sn-side-top [data-collapse] { position: absolute; top: 4px; right: 5px; } /* sp-ok: 收起按钮（28 宽）一直贴右边，随侧栏宽度连续移动、中途不跳；侧栏右边有 1px 边线，离边 5px 收起后中心才正好在 28px，和下面的图标同一条竖线 */
+.sn-side-top .sn-logo { width: 20px; height: 20px; flex: none; border-radius: 6px; background: var(--sn-accent); transition: opacity .12s var(--sn-ease-in); }
+.sn-side-top b { flex: 1; min-width: 0; margin-right: 40px; overflow: hidden; font: 600 calc(14px * var(--sn-font-scale, 1))/1 var(--sn-sans); white-space: nowrap; }
+.sn-side .sn-lbl, .sn-side-top b { transition: opacity .12s var(--sn-ease-in); }
+.sn-app.sn-collapsed .sn-side .sn-lbl, .sn-app.sn-collapsed .sn-side-top b, .sn-app.sn-collapsed .sn-side-top .sn-logo, .sn-app.sn-collapsed .sn-side .sn-badge { opacity: 0; } /* 收起时淡出，不从排版里拿掉（拿掉会让旁边的东西跳一下） */
+.sn-app:not(.sn-collapsed) .sn-side .sn-lbl, .sn-app:not(.sn-collapsed) .sn-side-top b, .sn-app:not(.sn-collapsed) .sn-side-top .sn-logo { transition: opacity .16s var(--sn-ease-out) .14s; }
+.sn-side-nav { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.sn-side-nav a, .sn-side-foot a { position: relative; z-index: 1; display: flex; min-width: 0; overflow: hidden; text-decoration: none; align-items: center; gap: 10px; height: 32px; padding: 0 12px; border-radius: var(--sn-r-md); font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label2); cursor: pointer; white-space: nowrap; transition: color .12s, background-color .12s; } /* 左边 12px：图标中心离侧栏边 8 + 12 + 8 = 28，收起成 56 宽时正好在正中；min-width:0 + overflow:hidden 防止透明文字撑宽格子导致悬停右缘被裁平 */
+@media (hover: hover) {
+.sn-side-nav a:hover, .sn-side-foot a:hover { color: var(--sn-label); background: var(--sn-b-ghost-hover); } }
+.sn-side-nav a.sn-on { color: var(--sn-label); font-weight: 500; background: none; }
+/* 选中切换的四种样式（.app[data-navfx]）。切换样式本身时，旧的指示物淡出、新的淡入 */
+.sn-side-nav .sn-hl-ind { position: absolute; left: 1px; top: 0; z-index: 2; width: 3px; height: 16px; border-radius: 1.5px; background: var(--sn-accent); transform-origin: 0 0; opacity: 0; pointer-events: none; transition: opacity .2s var(--sn-ease-out); }
+.sn-app[data-navfx="bar"] .sn-side-nav .sn-hl-ind { opacity: 1; }
+.sn-app:not([data-navfx="slide"]) .sn-side-nav .sn-hl-bar { opacity: 0; }
+/* 原地淡入：每一项自己带一块底，选中的淡入并从 96% 放大到 100%；取消选中的更快淡出。不走路 */
+.sn-side-nav a::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--sn-fill-active); opacity: 0; scale: .96; transition: opacity .12s var(--sn-ease-out), scale .12s var(--sn-ease-out); pointer-events: none; }
+.sn-app[data-navfx="fade"] .sn-side-nav a.sn-on::before { opacity: 1; scale: 1; transition: opacity .18s var(--sn-ease-out), scale .26s var(--sn-ease-out-strong); }
+/* 仅文字：没有底、没有指示，只有字色和图标变深；平时的项更淡一档，层次靠字色拉开 */
+.sn-app[data-navfx="text"] .sn-side-nav a:not(.sn-on) { color: var(--sn-label3); }
+@media (hover: hover) {
+.sn-app[data-navfx="text"] .sn-side-nav a:not(.sn-on):hover { color: var(--sn-label); } }
+.sn-navfx-cfg { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; flex-wrap: wrap; }
+.sn-navfx-cfg .sn-note { color: var(--sn-label3); }
+.sn-side-nav a .sn-ic, .sn-side-foot a .sn-ic { width: 16px; height: 16px; flex: none; }
+.sn-side-nav a .sn-lbl, .sn-side-foot a .sn-lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sn-side-nav a .sn-badge { margin-left: auto; transition: opacity .12s; }
+.sn-side-nav p { position: relative; min-width: 0; margin: 14px 12px 4px; font: 500 calc(11px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); white-space: nowrap; transition: color .12s var(--sn-ease-in); }
+.sn-side-nav p::before { content: ""; position: absolute; left: 0; top: calc(50% - 5px); width: 16px; height: 1px; background: var(--sn-line); opacity: 0; transition: opacity .12s var(--sn-ease-in); } /* 收起后分组标题的字淡出，换成一根 16px 短线：中心和图标在同一条竖线上，上下落在两组的正中（上面空 16、下面空 6） */
+.sn-app.sn-collapsed .sn-side-nav p { color: transparent; }
+.sn-app.sn-collapsed .sn-side-nav p::before { opacity: 1; transition: opacity .16s var(--sn-ease-out) .14s; }
+.sn-app:not(.sn-collapsed) .sn-side-nav p { transition: color .16s var(--sn-ease-out) .14s; }
+.sn-side-nav .sn-hl-bar { position: absolute; left: 0; right: 0; top: 0; height: 32px; border-radius: var(--sn-r-md); background: var(--sn-fill-active); transition: translate .27s var(--sn-ease-in-out), opacity .2s var(--sn-ease-out); }
+.sn-side-foot { margin-top: auto; }
+.sn-app-main { flex: 1; min-width: 0; padding: 20px; overflow: auto; } /* 主区自己滚动（侧栏不动） */
+.sn-app-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px; }
+.sn-app-head b { font: 600 calc(17px * var(--sn-font-scale, 1))/calc(24px * var(--sn-font-scale, 1)) var(--sn-sans); }
+.sn-app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.sn-app-grid .sn-gc { display: grid; gap: 6px; }
+.sn-app-grid .sn-gc .sn-cv { aspect-ratio: 16 / 9; border-radius: var(--sn-r-sm); background: var(--sn-g); }
+.sn-app-grid .sn-gc b { font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ———— 标签页 ———— */
+.sn-tabs { min-width: 0; max-width: 100%; }
+.sn-tab-list { position: relative; display: flex; gap: 20px; }
+.sn-tab-list > button { flex: none; white-space: nowrap; } /* 一行放不下横着滑（fitScroll），文字不换行 */
+.sn-tab-list.sn-scroll { padding-bottom: 2px; margin-bottom: -2px; } /* 聚焦下划线画在按钮下面 2px，滑动时别被裁掉 */
+.sn-tab-list button { all: unset; position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; font: 500 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); cursor: pointer; transition: color .15s; }
+@media (hover: hover) {
+.sn-tab-list button:hover { color: var(--sn-label2); } }
+.sn-tab-list button.sn-on { color: var(--sn-label); }
+.sn-tab-list button:focus-visible { box-shadow: 0 2px 0 0 var(--sn-focus); }
+.sn-tab-list .sn-ink { position: absolute; bottom: 0; height: 2px; border-radius: 1px; background: var(--sn-accent); }
+.sn-tab-panels { position: relative; overflow: hidden; padding-top: 16px; min-height: 92px; }
+.sn-tab-panel { font: 400 calc(13px * var(--sn-font-scale, 1))/calc(22px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); }
+.sn-tab-panel[hidden] { display: none; }
+
+/* ———— 面包屑、分页、步骤 ———— */
+.sn-crumbs { display: flex; align-items: center; gap: 2px; font: 400 calc(13px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+.sn-crumbs a { display: inline-flex; align-items: center; text-decoration: none; gap: 4px; padding: 2px 6px; border-radius: var(--sn-r-sm); color: var(--sn-label3); cursor: pointer; transition: color .12s, background-color .12s; }
+@media (hover: hover) {
+.sn-crumbs a:hover { color: var(--sn-label); background: var(--sn-b-ghost-hover); } }
+.sn-crumbs .sn-ic { width: 14px; height: 14px; color: var(--sn-label-off); }
+.sn-crumbs b { padding: 2px 6px; font-weight: 500; color: var(--sn-label); }
+.sn-pager { display: flex; align-items: center; gap: 4px; font: 400 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); }
+.sn-pager .sn-pages { position: relative; display: flex; gap: 2px; }
+.sn-pager .sn-pg { all: unset; position: relative; z-index: 1; min-width: 32px; height: 32px; padding: 0 4px; box-sizing: border-box; border-radius: var(--sn-btn-r); display: grid; place-items: center; color: var(--sn-label2); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .15s, background-color .12s, transform .1s var(--sn-ease-out); }
+@media (hover: hover) {
+.sn-pager .sn-pg:hover { background: var(--sn-b-ghost-hover); color: var(--sn-label); } }
+.sn-pager .sn-pg.sn-on { color: var(--sn-on-primary); background: none; }
+.sn-pager .sn-pg.sn-gap { cursor: default; } @media (hover: hover) { .sn-pager .sn-pg.sn-gap:hover { background: none; } }
+.sn-pager .sn-cur { position: absolute; top: 0; left: 0; width: 32px; height: 32px; border-radius: var(--sn-btn-r); background: var(--sn-accent); transition: translate .27s var(--sn-ease-in-out); }
+.sn-pager .sn-total { margin-right: 8px; color: var(--sn-label3); }
+/* 触屏（pointer: coarse）：页码 32 高、上一页 / 下一页 28 高，点击区用透明伪元素上下扩到 44，样子不变；左右挨着别的按钮，不扩 */
+@media (pointer: coarse) { .sn-pager .sn-pg::after, .sn-pager > .sn-btn::after { content: ""; position: absolute; inset: 50% 0 auto; height: max(100%, 44px); translate: 0 -50%; } }
+.sn-steps { display: flex; align-items: center; max-width: 720px; }
+/* 窄处：只留当前这一步的文字，其他步骤只显示序号（有 .demo 容器时按容器宽，真页面窄屏按视口宽） */
+@container demo (max-width: 520px) { .sn-steps .sn-st:not(.sn-cur) { font-size: 0; gap: 0; } .sn-steps .sn-ln { margin: 0 8px; min-width: 12px; } }
+@media (max-width: 520px) { .sn-steps .sn-st:not(.sn-cur) { font-size: 0; gap: 0; } .sn-steps .sn-ln { margin: 0 8px; min-width: 12px; } }
+.sn-steps .sn-st { display: flex; align-items: center; gap: 8px; font: 500 calc(13px * var(--sn-font-scale, 1))/1 var(--sn-sans); color: var(--sn-label3); white-space: nowrap; transition: color .2s; }
+.sn-steps .sn-st .sn-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--sn-line-control-hover); font: 600 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-sans); transition: background-color .2s, box-shadow .2s, color .2s; }
+.sn-steps .sn-st.sn-cur { color: var(--sn-label); } .sn-steps .sn-st.sn-cur .sn-n { box-shadow: inset 0 0 0 1.5px var(--sn-label); color: var(--sn-label); }
+.sn-steps .sn-st.sn-done { color: var(--sn-label2); } .sn-steps .sn-st.sn-done .sn-n { background: var(--sn-accent); color: var(--sn-on-primary); box-shadow: none; }
+.sn-steps .sn-ln { flex: 1; height: 2px; margin: 0 12px; border-radius: 1px; background: var(--sn-line); overflow: hidden; }
+.sn-steps .sn-ln i { display: block; height: 100%; width: 100%; background: var(--sn-accent); transform-origin: left; scale: 0 1; transition: scale .4s var(--sn-ease-in-out); }
+.sn-steps .sn-ln.sn-done i { scale: 1 1; }
+
+
+/* 侧栏收起态：带待办数字徽标的导航项在图标右上角保留 6px 精致提示点，不丢提醒 */
+.sn-side-nav a:has(.sn-badge)::after { content: ""; position: absolute; left: 26px; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--sn-accent); opacity: 0; scale: .5; pointer-events: none; transition: opacity .15s var(--sn-ease-out), scale .18s var(--sn-ease-out); }
+.sn-app.sn-collapsed .sn-side-nav a:has(.sn-badge)::after { opacity: 1; scale: 1; transition-delay: .12s; }
+/* 收起按钮：工作台顶栏 42px 内上下严格对称居中（top:7px），收起成 56px 后中心落在 28px 与图标严格同轴 */
+.sn-app.sn-workbench .sn-side-top [data-collapse] { top: 7px; right: 6px; }
+
+/* 服务端渲染的第一帧：标签页选中的那个自己画下划线（和真正的下划线同一位置、粗细、圆角），脚本接上以后去掉 */
+.sn-tabs[data-ssr] .sn-tab-list button.sn-on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: var(--sn-accent); }
+}

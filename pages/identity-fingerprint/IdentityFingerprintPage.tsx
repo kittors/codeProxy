@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Trash2 } from "lucide-react";
+import { Sparkles, Trash2 } from "@code-proxy/ui/icons";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { configFileApi } from "@code-proxy/api-client/endpoints/config-file";
 import {
@@ -1168,7 +1168,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.custom_headers_hint")}
                       </p>
                     </Field>
@@ -1377,7 +1377,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.claude_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1491,7 +1491,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.gemini_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1509,7 +1509,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="min-h-36 font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.gemini_headers_hint")}
                       </p>
                     </Field>
@@ -1647,7 +1647,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.xai_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1739,7 +1739,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.kimi_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1843,7 +1843,7 @@ export function IdentityFingerprintPage() {
                         spellCheck={false}
                         className="font-mono"
                       />
-                      <p className="mt-2 text-xs text-ink-3">
+                      <p className="mt-2 text-xs text-sn-label3">
                         {t("identity_fingerprint.antigravity_custom_headers_hint")}
                       </p>
                     </Field>
@@ -1921,7 +1921,7 @@ function RuntimeStatePanel({
             ? t("identity_fingerprint.status_enabled")
             : t("identity_fingerprint.status_disabled")}
         </SourcePill>
-        <span className="text-ink-3">
+        <span className="text-sn-label3">
           {t("identity_fingerprint.learned_count", {
             count: status.learned_count ?? learned.length,
           })}
@@ -1930,13 +1930,13 @@ function RuntimeStatePanel({
 
       {effective.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-ink-3">
+          <h4 className="text-xs font-medium text-sn-label3">
             {t("identity_fingerprint.effective_title")}
           </h4>
           {effective.map((record, index) => (
             <div
               key={`${record.account_key || "default"}-${index}`}
-              className="rounded-xl bg-subtle p-3"
+              className="rounded-xl bg-sn-subtle p-3"
             >
               <RecordHeader
                 accountKey={record.account_key}
@@ -1948,12 +1948,12 @@ function RuntimeStatePanel({
                 {orderedFieldEntries(provider, record.fields).map(([field, fieldValue]) => (
                   <div key={field} className="py-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-ink-2">
+                      <span className="text-xs font-semibold text-sn-label2">
                         {t(FIELD_LABEL_KEYS[field] ?? field)}
                       </span>
                       <SourceBadge source={fieldValue.source} />
                     </div>
-                    <div className="mt-1 break-all text-xs text-ink">
+                    <div className="mt-1 break-all text-xs text-sn-label">
                       {fieldValue.value || "-"}
                     </div>
                   </div>
@@ -1963,20 +1963,20 @@ function RuntimeStatePanel({
           ))}
         </div>
       ) : (
-        <p className="rounded-xl bg-subtle px-3 py-2 text-xs leading-5 text-ink-3">
+        <p className="rounded-xl bg-sn-subtle px-3 py-2 text-xs leading-5 text-sn-label3">
           {t("identity_fingerprint.no_effective_records")}
         </p>
       )}
 
       {learned.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-medium text-ink-3">
+          <h4 className="text-xs font-medium text-sn-label3">
             {t("identity_fingerprint.learned_records_title")}
           </h4>
           {learned.map((record) => (
             <div
               key={record.account_key}
-              className="space-y-2 rounded-xl bg-subtle p-3"
+              className="space-y-2 rounded-xl bg-sn-subtle p-3"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <RecordHeader

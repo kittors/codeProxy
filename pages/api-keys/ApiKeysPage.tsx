@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, KeyRound, RefreshCw, RotateCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, KeyRound, RefreshCw, RotateCw, Trash2 } from "@code-proxy/ui/icons";
 import {
   apiKeyEntriesApi,
   apiKeysApi,

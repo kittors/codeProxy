@@ -97,18 +97,16 @@ describe("FormField", () => {
     expect(content).toContainElement(screen.getByText("租户状态"));
   });
 
-  test("TextInput applies invalid styles via aria-invalid", () => {
-    render(
+  test("TextInput applies Satin invalid styles via aria-invalid and .sn-field.sn-bad", () => {
+    const { container } = render(
       <FormField label="名称" error="err" htmlFor="inv">
         <TextInput />
       </FormField>,
     );
     const input = screen.getByRole("textbox");
-    // 红色阴影描边由 aria-invalid 属性驱动（controlSurface 里的 aria-[invalid=true] 变体），
-    // 这里同时守住「属性挂上了」和「样式规则在」两层。控件不用 border，描边是阴影。
     expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(input.className).toMatch(/aria-\[invalid=true\]:shadow-\[0_0_0_1px_rgb\(229_72_77/);
-    expect(input.className).not.toMatch(/(^|\s)border(\s|$)/);
+    expect(input.className).toMatch(/\bsn-input\b/);
+    expect(container.querySelector("[data-slot='form-field']")).toHaveClass("sn-field", "sn-bad");
   });
 
   test("wires FormField label and description to ToggleSwitch", () => {

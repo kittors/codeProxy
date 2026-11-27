@@ -1,10 +1,10 @@
 import { VendorIcon } from "@code-proxy/assets";
 import { maskSensitiveIdentity } from "@code-proxy/domain";
 import {
+  Avatar,
   GridCellTooltip,
   GridTooltipRows,
-  HUE_SOFT_BASE,
-  HUE_TILE,
+  StatusTag,
   formatClock,
   formatCompactNumber,
   formatDateTime,
@@ -12,12 +12,10 @@ import {
   formatInteger,
   formatRelativeTime,
   formatUsd,
-  hueForIconName,
   isSameLocalDay,
 } from "@code-proxy/ui";
-import { CircleHelp, Globe, Package, SquareTerminal } from "lucide-react";
+import { CircleHelp, Globe, Package, SquareTerminal } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
-import { channelAuthTypeBadgeClass } from "./ChannelIdentityLabel";
 import { describeRequestLogClient } from "./requestLogClients";
 import { loopStoppedExplanation } from "./requestLogGuard";
 import { computeOutputTokensPerSecond, describeThroughput } from "./requestLogMetrics";
@@ -33,22 +31,13 @@ import type { RequestLogsRow } from "./requestLogsRow";
 const DASH = "—";
 
 function Dash() {
-  return <span className="text-ink-4">{DASH}</span>;
-}
-
-/** 图标块：两行单元格前面的 28px 圆角方块，厂商 logo 用中性底，logo 自带品牌色。 */
-function IconTile({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.04] text-ink-3 dark:bg-white/[0.06]">
-      {children}
-    </span>
-  );
+  return <span className="text-sn-label-off">{DASH}</span>;
 }
 
 export function RequestLogTimeCell({ row, now }: { row: RequestLogsRow; now: number }) {
   const { t, i18n } = useTranslation();
   if (!Number.isFinite(row.timestampMs)) {
-    return <span className="font-mono text-xs text-ink-3">{row.timestamp || DASH}</span>;
+    return <span className="font-mono text-xs text-sn-label3">{row.timestamp || DASH}</span>;
   }
   const date = new Date(row.timestampMs);
   const relative = formatRelativeTime(row.timestampMs, now, i18n.language);
@@ -65,10 +54,10 @@ export function RequestLogTimeCell({ row, now }: { row: RequestLogsRow; now: num
       }
     >
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className="font-mono text-xs tabular-nums text-ink">
+        <span className="font-mono text-xs tabular-nums text-sn-label">
           {formatClock(row.timestampMs)}
         </span>
-        <span className="mt-0.5 truncate text-2xs text-ink-3">
+        <span className="mt-0.5 truncate text-2xs text-sn-label3">
           {isSameLocalDay(row.timestampMs, now)
             ? relative
             : `${date.getMonth() + 1}/${date.getDate()}`}
@@ -91,9 +80,9 @@ export function RequestLogIdentityCell({
   const { t } = useTranslation();
   if (row.isSystemCall) {
     return (
-      <span className="inline-flex items-center rounded-md bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
+      <StatusTag size="sm" tone="neutral" dot={false}>
         {t("request_logs.system_call")}
-      </span>
+      </StatusTag>
     );
   }
   const mask = (value: string) => (masked && value !== DASH ? maskSensitiveIdentity(value) : value);
@@ -103,7 +92,7 @@ export function RequestLogIdentityCell({
   );
   const primary = variant === "key" ? keyName : mask(row.endUserDisplayName || row.apiKeyName || DASH);
   const secondary = variant === "user" && keyName !== primary ? keyName : "";
-  const initial = primary === DASH ? "?" : (Array.from(primary)[0]?.toUpperCase() ?? "?");
+  const avatarSeed = masked ? "masked-user" : (primary === DASH ? "guest" : primary);
   return (
     <GridCellTooltip
       content={
@@ -116,19 +105,16 @@ export function RequestLogIdentityCell({
         />
       }
     >
-      <span className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${HUE_SOFT_BASE} ${HUE_TILE[hueForIconName(primary)]}`}
-        >
-          {initial}
+      <span className="flex min-w-0 items-center gap-2">
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <Avatar name={avatarSeed} size={24} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className={`truncate text-sm font-medium ${primary === DASH ? "text-ink-4" : "text-ink"}`}>
+          <span className={`truncate text-sm font-medium ${primary === DASH ? "text-sn-label-off" : "text-sn-label"}`}>
             {primary}
           </span>
           {secondary ? (
-            <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">{secondary}</span>
+            <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">{secondary}</span>
           ) : null}
         </span>
       </span>
@@ -159,25 +145,18 @@ export function RequestLogChannelCell({ row, masked }: { row: RequestLogsRow; ma
         />
       }
     >
-      {/* 渠道名常是 OAuth 邮箱，独占第一行；认证方式和厂商放第二行，不和名字抢宽度。 */}
-      <span className="flex min-w-0 items-center gap-2.5">
-        <IconTile>
-          <VendorIcon modelId={provider} size={14} />
-        </IconTile>
+      {/* 渠道名常是 OAuth 邮箱，独占第一行；认证方式和厂商用轻盈点隔副行展示，摒弃旧式灰框图标盒。 */}
+      <span className="flex min-w-0 items-center gap-2">
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <VendorIcon modelId={provider} size={16} />
+        </span>
         <span className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm text-ink">{name}</span>
+          <span className="truncate text-sm text-sn-label">{name}</span>
           {auth || provider ? (
-            // 列被压窄时（1366 宽）厂商名只剩一个字母没有意义：放不下 4 个字宽就整个折到看不见的第二行，
-            // 放得下就照常截断出省略号。完整信息在悬停提示里。
-            <span className="mt-0.5 flex h-[1.4em] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden text-2xs text-ink-3">
-              {auth ? (
-                <span
-                  className={`shrink-0 rounded px-1 font-medium ${channelAuthTypeBadgeClass(row.channelAuthType === "oauth" ? "oauth" : "api")}`}
-                >
-                  {auth}
-                </span>
-              ) : null}
-              {provider ? <span className="min-w-[4ch] flex-1 basis-0 truncate">{provider}</span> : null}
+            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-sn-label3">
+              {auth ? <span className="shrink-0">{auth}</span> : null}
+              {auth && provider ? <span aria-hidden="true">·</span> : null}
+              {provider ? <span className="min-w-0 truncate">{provider}</span> : null}
             </span>
           ) : null}
         </span>
@@ -198,18 +177,22 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
   const label = client ? (client.labelKey ? t(client.labelKey) : client.label) : t("request_logs.agent_unknown");
   const Glyph = client?.glyph ? CLIENT_GLYPH[client.glyph] : CircleHelp;
   const content = (
-    <span className="flex min-w-0 items-center gap-2.5">
-      <IconTile>
-        {client?.vendor ? (
-          <VendorIcon modelId={client.vendor} size={14} />
-        ) : (
-          <Glyph size={14} aria-hidden="true" className={client ? "" : "text-ink-4"} />
-        )}
-      </IconTile>
+    <span className="flex min-w-0 items-center gap-2">
+      {client?.vendor ? (
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <VendorIcon modelId={client.vendor} size={16} />
+        </span>
+      ) : (
+        <Glyph
+          size={15}
+          aria-hidden="true"
+          className={`shrink-0 ${client ? "text-sn-label3" : "text-sn-label-off"}`}
+        />
+      )}
       <span className="flex min-w-0 flex-col leading-tight">
-        <span className={`truncate text-sm ${client ? "text-ink" : "text-ink-4"}`}>{label}</span>
+        <span className={`truncate text-sm ${client ? "text-sn-label" : "text-sn-label-off"}`}>{label}</span>
         {row.clientVersion ? (
-          <span className="mt-0.5 truncate font-mono text-2xs text-ink-3">{row.clientVersion}</span>
+          <span className="mt-0.5 truncate font-mono text-2xs text-sn-label3">{row.clientVersion}</span>
         ) : null}
       </span>
     </span>
@@ -220,9 +203,9 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
         <span className="block max-w-[22rem]">
           <span className="mb-1 block text-xs font-semibold">{t("request_logs.user_agent")}</span>
           {row.userAgent ? (
-            <span className="block break-all font-mono text-2xs text-canvas/80">{row.userAgent}</span>
+            <span className="block break-all font-mono text-2xs opacity-80">{row.userAgent}</span>
           ) : (
-            <span className="block text-2xs text-canvas/70">{t("request_logs.user_agent_missing")}</span>
+            <span className="block text-2xs opacity-70">{t("request_logs.user_agent_missing")}</span>
           )}
         </span>
       }
@@ -264,7 +247,7 @@ export function RequestLogTokensCell({
         type="button"
         onClick={() => onOpen?.(row, side)}
         aria-label={`${label} · ${formatInteger(value)}`}
-        className="-mx-1 rounded-md px-1 underline decoration-ink-4 decoration-dotted underline-offset-[3px] transition-colors hover:bg-hover hover:decoration-current"
+        className="-mx-1 rounded-md px-1 underline decoration-sn-label-off decoration-dotted underline-offset-[3px] transition-colors hover:bg-sn-hover hover:decoration-current"
       >
         {text}
       </button>
@@ -306,12 +289,12 @@ export function RequestLogTokensCell({
       }
     >
       <span className="flex min-w-0 flex-col items-end gap-1">
-        <span className="flex items-baseline gap-1 whitespace-nowrap text-ink">
+        <span className="flex items-baseline gap-1 whitespace-nowrap text-sn-label">
           {number("input", input)}
-          <span className="text-2xs text-ink-4" aria-hidden="true">
+          <span className="text-2xs text-sn-label-off" aria-hidden="true">
             →
           </span>
-          {output > 0 ? number("output", output) : <span className="text-ink-4">{DASH}</span>}
+          {output > 0 ? number("output", output) : <span className="text-sn-label-off">{DASH}</span>}
         </span>
         <CacheMeter
           ratio={ratio}
@@ -337,15 +320,15 @@ function CacheMeter({
   unknownHint?: string;
 }) {
   const { t } = useTranslation();
-  const label = <span className="text-ink-4">{t("request_logs.cache_short")}</span>;
+  const label = <span className="text-sn-label-off">{t("request_logs.cache_short")}</span>;
   if (ratio === null) {
     return (
       <span className="flex items-center gap-1.5 text-2xs leading-none">
         {label}
         {legacyCached > 0 ? (
-          <span className="tabular-nums text-ink-3">{formatCompactNumber(legacyCached)}</span>
+          <span className="tabular-nums text-sn-label3">{formatCompactNumber(legacyCached)}</span>
         ) : (
-          <span className="text-ink-4" aria-label={unknownHint}>
+          <span className="text-sn-label-off" aria-label={unknownHint}>
             {DASH}
           </span>
         )}
@@ -354,17 +337,17 @@ function CacheMeter({
   }
   const tone =
     ratio >= 0.8
-      ? "bg-ink/40 bar-semantic:bg-emerald-500"
+      ? "bg-sn-label/40 bar-semantic:bg-emerald-500"
       : ratio >= 0.4
-        ? "bg-ink/30 bar-semantic:bg-amber-500"
-        : "bg-ink/20 bar-semantic:bg-rose-400";
+        ? "bg-sn-label/30 bar-semantic:bg-amber-500"
+        : "bg-sn-label/20 bar-semantic:bg-rose-400";
   return (
     <span className="flex items-center gap-1.5 text-2xs leading-none">
       {label}
-      <span className="h-1 w-9 overflow-hidden rounded-full bg-ink/[0.07] dark:bg-white/[0.08]" aria-hidden="true">
+      <span className="h-1 w-9 overflow-hidden rounded-full bg-sn-label/[0.07] dark:bg-white/[0.08]" aria-hidden="true">
         <span className={`block h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, ratio * 100)}%` }} />
       </span>
-      <span className="w-[5ch] text-right tabular-nums text-ink-2">{Math.round(ratio * 100)}%</span>
+      <span className="w-[5ch] text-right tabular-nums text-sn-label2">{Math.round(ratio * 100)}%</span>
     </span>
   );
 }
@@ -373,7 +356,7 @@ function CacheMeter({
 function durationTone(ms: number): string {
   if (ms >= 30_000) return "text-rose-600 dark:text-rose-400";
   if (ms >= 10_000) return "text-amber-600 dark:text-amber-400";
-  return "text-ink";
+  return "text-sn-label";
 }
 
 /** 两行：总耗时（按阈值着色）+ 首字。一眼分得清慢在等首字还是慢在生成；流式与否写在提示里。 */
@@ -403,7 +386,7 @@ export function RequestLogLatencyCell({ row }: { row: RequestLogsRow }) {
     >
       <span className="flex min-w-0 flex-col items-end leading-tight">
         <span className={`tabular-nums ${durationTone(latency)}`}>{formatDurationMs(latency)}</span>
-        <span className="mt-0.5 whitespace-nowrap text-2xs text-ink-3">
+        <span className="mt-0.5 whitespace-nowrap text-2xs text-sn-label3">
           {row.streaming ? (
             <>
               {t("request_logs.first_token_short")}{" "}
@@ -455,9 +438,9 @@ export function RequestLogThroughputCell({ row }: { row: RequestLogsRow }) {
         />
       }
     >
-      <span className="whitespace-nowrap tabular-nums text-ink">
+      <span className="whitespace-nowrap tabular-nums text-sn-label">
         {value}
-        <span className="ml-0.5 text-2xs text-ink-3">tok/s</span>
+        <span className="ml-0.5 text-2xs text-sn-label3">tok/s</span>
       </span>
     </GridCellTooltip>
   );
@@ -476,7 +459,7 @@ export function RequestLogCostCell({ row }: { row: RequestLogsRow }) {
         />
       }
     >
-      <span className="tabular-nums text-ink">{formatUsd(row.cost)}</span>
+      <span className="tabular-nums text-sn-label">{formatUsd(row.cost)}</span>
     </GridCellTooltip>
   );
 }
@@ -495,34 +478,32 @@ export function RequestLogStatusCell({
   const { t } = useTranslation();
   if (!row.failed) {
     return (
-      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-ink-2">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+      <StatusTag size="sm" tone="ok">
         {t("request_logs.status_success")}
-      </span>
+      </StatusTag>
     );
   }
   const loop = Boolean(row.guardKind);
   const label = t(loop ? "request_logs.status_loop_stopped" : "request_logs.status_failed");
-  const tone = loop
-    ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:bg-amber-400/15 dark:text-amber-300 dark:hover:bg-amber-400/25"
-    : "bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 dark:bg-rose-400/15 dark:text-rose-300 dark:hover:bg-rose-400/25";
-  const dot = loop ? "bg-amber-500" : "bg-rose-500";
   const hint = loop ? loopStoppedExplanation(t, row.guardKind) : t("request_logs.view_error");
-  const pill = (
-    <>
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
-      {label}
-    </>
-  );
-  const className = `inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium transition-colors ${tone}`;
+  const tagClassName = [
+    "sn-tag sn-sm",
+    loop ? "sn-warn" : "sn-bad",
+    onOpenError ? "cursor-pointer transition-opacity hover:opacity-80" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <GridCellTooltip content={<span className="block max-w-[18rem] text-xs">{hint}</span>}>
       {onOpenError ? (
-        <button type="button" onClick={() => onOpenError(row)} className={className}>
-          {pill}
+        <button type="button" onClick={() => onOpenError(row)} className={tagClassName}>
+          <i aria-hidden="true" />
+          {label}
         </button>
       ) : (
-        <span className={className}>{pill}</span>
+        <StatusTag size="sm" tone={loop ? "warn" : "bad"}>
+          {label}
+        </StatusTag>
       )}
     </GridCellTooltip>
   );

@@ -6,8 +6,7 @@ import {
   formatPercent,
   formatUsd,
 } from "@code-proxy/ui";
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Check, Copy } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Copy } from "@code-proxy/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { STATUS_LABEL } from "./LabCells";
 import { labCacheRatio, maskLabKey, type LabLogRow } from "./labData";
@@ -32,26 +31,18 @@ function CopyValue({ value, label }: { value: string; label: string }) {
         setCopied(true);
       }}
       aria-label={copied ? `已复制${label}` : `复制${label}`}
-      className="group/copy inline-flex min-w-0 items-center gap-1.5 rounded-md font-mono text-xs text-ink transition-colors hover:text-ink-2"
+      className="group/copy inline-flex min-w-0 items-center gap-1.5 rounded-md font-mono text-xs text-sn-label transition-colors hover:text-sn-label2"
     >
       <span className="truncate">{value}</span>
-      <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-ink-3">
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.span
-            key={copied ? "done" : "copy"}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.6 }}
-            transition={{ duration: 0.16 }}
-            className={copied ? "text-emerald-600 dark:text-emerald-400" : ""}
-          >
-            {copied ? (
-              <Check size={13} aria-hidden="true" />
-            ) : (
-              <Copy size={12} aria-hidden="true" />
-            )}
-          </motion.span>
-        </AnimatePresence>
+      <span className="relative inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center text-sn-label3">
+        <span className={copied ? "sn-swap sn-on" : "sn-swap"}>
+          <span className="sn-a">
+            <Copy size={12} aria-hidden="true" />
+          </span>
+          <span className="sn-b text-emerald-600 dark:text-emerald-400">
+            <Check size={13} aria-hidden="true" />
+          </span>
+        </span>
       </span>
     </button>
   );
@@ -61,8 +52,8 @@ function CopyValue({ value, label }: { value: string; label: string }) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-3 py-1">
-      <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className="flex min-w-0 text-xs text-ink">{children}</dd>
+      <dt className="text-xs text-sn-label3">{label}</dt>
+      <dd className="flex min-w-0 text-xs text-sn-label">{children}</dd>
     </div>
   );
 }
@@ -70,7 +61,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="min-w-0">
-      <h4 className="mb-1.5 text-2xs font-semibold tracking-wide text-ink-3">{title}</h4>
+      <h4 className="mb-1.5 text-2xs font-semibold tracking-wide text-sn-label3">{title}</h4>
       <dl className="flex flex-col">{children}</dl>
     </section>
   );
@@ -85,23 +76,21 @@ function SegmentBar({
   const total = segments.reduce((sum, segment) => sum + segment.value, 0) || 1;
   return (
     <div className="mt-1">
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-ink/[0.06] dark:bg-white/[0.08]">
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-sn-label/[0.06] dark:bg-white/[0.08]">
         {segments.map((segment) => (
-          <motion.span
+          <span
             key={segment.label}
-            initial={{ width: 0 }}
-            animate={{ width: `${(segment.value / total) * 100}%` }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className={`h-full ${segment.className}`}
+            style={{ width: `${(segment.value / total) * 100}%` }}
+            className={`h-full transition-[width] duration-500 ease-[var(--sn-ease-out-strong)] ${segment.className}`}
           />
         ))}
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-ink-3">
+      <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-sn-label3">
         {segments.map((segment) => (
           <span key={segment.label} className="inline-flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${segment.className}`} aria-hidden="true" />
             {segment.label}
-            <span className="tabular-nums text-ink-2">{segment.display}</span>
+            <span className="tabular-nums text-sn-label2">{segment.display}</span>
           </span>
         ))}
       </div>
@@ -154,8 +143,8 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
             <span className="flex min-w-0 items-center gap-1.5">
               <VendorIcon modelId={row.model} size={13} />
               <span className="truncate">{row.model}</span>
-              <ArrowRight size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
-              <span className="truncate text-ink-2">{row.upstreamModel}</span>
+              <ArrowRight size={12} className="shrink-0 text-sn-label3" aria-hidden="true" />
+              <span className="truncate text-sn-label2">{row.upstreamModel}</span>
             </span>
           </Field>
           <Field label="渠道">
@@ -178,13 +167,13 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
                 label: "首字",
                 value: row.firstTokenMs,
                 display: row.firstTokenMs > 0 ? formatDurationMs(row.firstTokenMs) : "—",
-                className: "bg-ink/30 dark:bg-white/35",
+                className: "bg-sn-label/30 dark:bg-white/35",
               },
               {
                 label: "生成",
                 value: generation,
                 display: formatDurationMs(generation),
-                className: "bg-ink/70 dark:bg-white/70",
+                className: "bg-sn-label/70 dark:bg-white/70",
               },
             ]}
           />
@@ -192,7 +181,7 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
             <Field label="输入 tokens">
               <span className="tabular-nums">
                 {formatInteger(row.inputTokens)}
-                <span className="ml-1.5 text-ink-3">命中 {formatPercent(labCacheRatio(row))}</span>
+                <span className="ml-1.5 text-sn-label3">命中 {formatPercent(labCacheRatio(row))}</span>
               </span>
             </Field>
             <SegmentBar
@@ -202,21 +191,21 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
                   value: row.cacheReadTokens,
                   display: formatInteger(row.cacheReadTokens),
                   className:
-                    "bg-ink/60 dark:bg-white/60 bar-semantic:bg-emerald-500 bar-semantic:dark:bg-emerald-400",
+                    "bg-sn-label/60 dark:bg-white/60 bar-semantic:bg-emerald-500 bar-semantic:dark:bg-emerald-400",
                 },
                 {
                   label: "缓存写入",
                   value: row.cacheWriteTokens,
                   display: formatInteger(row.cacheWriteTokens),
                   className:
-                    "bg-ink/35 dark:bg-white/35 bar-semantic:bg-sky-500 bar-semantic:dark:bg-sky-400",
+                    "bg-sn-label/35 dark:bg-white/35 bar-semantic:bg-sky-500 bar-semantic:dark:bg-sky-400",
                 },
                 {
                   label: "未命中",
                   value: uncached,
                   display: formatInteger(uncached),
                   className:
-                    "bg-ink/15 dark:bg-white/15 bar-semantic:bg-amber-400 bar-semantic:dark:bg-amber-300",
+                    "bg-sn-label/15 dark:bg-white/15 bar-semantic:bg-amber-400 bar-semantic:dark:bg-amber-300",
                 },
               ]}
             />
@@ -225,7 +214,7 @@ export function LabDetailPanel({ row }: { row: LabLogRow }) {
             <Field label="费用">
               <span className="tabular-nums">
                 {formatUsd(row.cost.total)}
-                <span className="ml-1.5 text-ink-3">
+                <span className="ml-1.5 text-sn-label3">
                   输入 {formatUsd(row.cost.input)} · 输出 {formatUsd(row.cost.output)} · 缓存{" "}
                   {formatUsd(row.cost.cache)}
                 </span>

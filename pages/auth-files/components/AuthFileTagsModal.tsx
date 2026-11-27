@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Plus, Tags, X } from "lucide-react";
+import { Eye, Plus, Tags, X } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { AuthFileItem } from "@code-proxy/api-client";
 import { Button, Checkbox, FormSection, Modal, TextInput } from "@code-proxy/ui";
@@ -107,7 +107,7 @@ export function AuthFileTagsModal({
             {selectedDisplayTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-selected px-2 py-0.5 text-2xs font-medium text-ink-2"
+                className="rounded-full bg-sn-active px-2 py-0.5 text-2xs font-medium text-sn-label2"
               >
                 {tag}
               </span>
@@ -169,14 +169,14 @@ export function AuthFileTagsModal({
               {customTags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] py-1 pr-1 pl-2.5 text-xs font-medium text-ink dark:bg-white/[0.07]"
+                  className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] py-1 pr-1 pl-2.5 text-xs font-medium text-sn-label dark:bg-white/[0.07]"
                 >
                   <span>{tag}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveCustomTag(tag)}
                     aria-label={t("auth_files.remove_custom_tag", { tag })}
-                    className="rounded-full p-0.5 text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full p-0.5 text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={saving}
                   >
                     <X size={12} />
@@ -185,7 +185,7 @@ export function AuthFileTagsModal({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-ink-3">{t("auth_files.no_custom_tags")}</p>
+            <p className="text-xs text-sn-label3">{t("auth_files.no_custom_tags")}</p>
           )}
         </FormSection>
 
@@ -205,8 +205,8 @@ export function AuthFileTagsModal({
                     key={tag}
                     // 不描边：未选是淡底，选中换成强调色淡底（勾选框本身也是强调色）。
                     className={[
-                      "flex cursor-pointer items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-sm transition-colors",
-                      checked ? "bg-accent-soft text-ink" : "bg-subtle text-ink-2 hover:bg-hover",
+                      "flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-colors",
+                      checked ? "bg-sn-accent-soft text-sn-label" : "bg-sn-subtle text-sn-label2 hover:bg-sn-hover",
                     ].join(" ")}
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
@@ -219,11 +219,11 @@ export function AuthFileTagsModal({
                       <span className="min-w-0 truncate font-medium">{tag}</span>
                     </span>
                     {custom ? (
-                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
+                      <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300">
                         {t("auth_files.custom_tag_label")}
                       </span>
                     ) : inherited ? (
-                      <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+                      <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-medium text-sn-label3 dark:bg-white/[0.07]">
                         {t("auth_files.default_tags_label")}
                       </span>
                     ) : null}
@@ -232,7 +232,7 @@ export function AuthFileTagsModal({
               })}
             </div>
           ) : (
-            <p className="text-xs text-ink-3">{t("auth_files.no_tags")}</p>
+            <p className="text-xs text-sn-label3">{t("auth_files.no_tags")}</p>
           )}
         </FormSection>
       </form>

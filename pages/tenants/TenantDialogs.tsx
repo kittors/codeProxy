@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Ban, Building2, CalendarClock } from "lucide-react";
+import { Ban, Building2, CalendarClock } from "@code-proxy/ui/icons";
 import type { TenantIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -219,7 +219,7 @@ export function RenewTenantModal({
           />
         </FormField>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-ink-3">{t("identity_admin.renew_quick")}</span>
+          <span className="text-xs text-sn-label3">{t("identity_admin.renew_quick")}</span>
           {QUICK_EXTENSIONS.map((option) => (
             <Button
               key={option.months}
@@ -271,7 +271,7 @@ export function DisableTenantConfirm({
         tenant ? (
           <span className="flex min-w-0 items-center justify-between gap-3">
             <span className="truncate font-medium">{name}</span>
-            <span className="shrink-0 font-mono text-xs text-ink-3">{tenant.slug}</span>
+            <span className="shrink-0 font-mono text-xs text-sn-label3">{tenant.slug}</span>
           </span>
         ) : null
       }

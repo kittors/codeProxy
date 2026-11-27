@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Save, ShieldAlert, Wand2, X } from "lucide-react";
+import { Save, ShieldAlert, Wand2, X } from "@code-proxy/ui/icons";
 import {
   ipAccessApi,
   type AutoBanMode,
@@ -39,13 +39,13 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
   const [lockdownConfirm, setLockdownConfirm] = useState(false);
   // 生效中的限流：只读的小表，放在分区卡片里，不再套外框。
   const throttleColumns = useMemo<DataGridColumn<ThrottleScopeView>[]>(() => {
-    const value = (text: string) => <span className="tabular-nums text-ink-2">{text}</span>;
+    const value = (text: string) => <span className="tabular-nums text-sn-label2">{text}</span>;
     return [
       {
         id: "scope",
         header: t("ip_access.effective_scope"),
         width: 144,
-        cell: (row) => <span className="truncate text-ink-2">{t(`ip_access.scope_${row.scope}`)}</span>,
+        cell: (row) => <span className="truncate text-sn-label2">{t(`ip_access.scope_${row.scope}`)}</span>,
       },
       {
         id: "key",
@@ -53,7 +53,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
         width: 144,
         grow: true,
         cell: (row) => (
-          <span className="truncate text-ink-3">{t(`ip_access.dimension_${row.key_dimension}`)}</span>
+          <span className="truncate text-sn-label3">{t(`ip_access.dimension_${row.key_dimension}`)}</span>
         ),
       },
       {
@@ -148,7 +148,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       >
         <div className="flex flex-wrap items-center gap-2">
           {proxies.length === 0 ? (
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {status?.trusted_proxies_source === "config"
                 ? t("ip_access.proxies_from_config", {
                     list: (status.trusted_proxies ?? []).join(", "),
@@ -159,7 +159,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
             proxies.map((proxy) => (
               <span
                 key={proxy}
-                className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] py-0.5 pr-1 pl-2 font-mono text-xs text-ink-2 dark:bg-white/[0.07]"
+                className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] py-0.5 pr-1 pl-2 font-mono text-xs text-sn-label2 dark:bg-white/[0.07]"
               >
                 {proxy}
                 <PermissionGate permission="platform.ip_access.write">
@@ -172,7 +172,7 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
                       })
                     }
                     aria-label={t("ip_access.proxy_remove", { cidr: proxy })}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full transition hover:bg-hover hover:text-ink"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full transition hover:bg-sn-hover hover:text-sn-label"
                   >
                     <X size={11} aria-hidden="true" />
                   </button>
@@ -185,12 +185,12 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           // Without this an operator is guessing which hops to declare, and a
           // chain declared one hop short resolves to loopback and silently
           // exempts everyone.
-          <div className="mt-3 rounded-inner bg-subtle px-3 py-2">
-            <p className="text-xs font-medium text-ink-2">{t("ip_access.chain_title")}</p>
-            <p className="mt-1 font-mono text-xs text-ink-2">
+          <div className="mt-3 rounded-inner bg-sn-subtle px-3 py-2">
+            <p className="text-xs font-medium text-sn-label2">{t("ip_access.chain_title")}</p>
+            <p className="mt-1 font-mono text-xs text-sn-label2">
               {[...status.forwarded_chain, status.peer].filter(Boolean).join("  ←  ")}
             </p>
-            <p className="mt-1 text-xs text-ink-3">
+            <p className="mt-1 text-xs text-sn-label3">
               {t("ip_access.chain_hint", { client: status.client_ip || "-" })}
             </p>
           </div>
@@ -248,8 +248,8 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-ink-2">{t("ip_access.lockdown_label")}</p>
-            <p className="mt-0.5 text-xs text-ink-3">
+            <p className="text-sm font-medium text-sn-label2">{t("ip_access.lockdown_label")}</p>
+            <p className="mt-0.5 text-xs text-sn-label3">
               {lockdownBlocked && !policy.lockdown
                 ? t("ip_access.lockdown_blocked_hint", {
                     cidr: status?.suggested_self_rule ?? "",
@@ -400,8 +400,8 @@ export function ProtectionPolicyTab({ status, onPolicySaved }: ProtectionPolicyT
           />
           <div className="flex items-start justify-between gap-4 sm:col-span-2">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-ink-2">{t("ip_access.alert_notify_observe")}</p>
-              <p className="mt-0.5 text-xs text-ink-3">
+              <p className="text-sm font-medium text-sn-label2">{t("ip_access.alert_notify_observe")}</p>
+              <p className="mt-0.5 text-xs text-sn-label3">
                 {t("ip_access.alert_notify_observe_hint")}
               </p>
             </div>
@@ -486,9 +486,9 @@ function Section({
 }) {
   return (
     // 外层大卡片去掉后，分区就是页面上唯一一层卡片：伪元素细边 + 投影，不画 border。
-    <div className={`p-4 [--cp-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}>
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
-      <p className="mt-0.5 mb-3 text-xs text-ink-3">{description}</p>
+    <div className={`p-4 [--sn-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}>
+      <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
+      <p className="mt-0.5 mb-3 text-xs text-sn-label3">{description}</p>
       {children}
     </div>
   );
@@ -505,9 +505,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-ink-2">{label}</label>
+      <label className="block text-sm font-medium text-sn-label2">{label}</label>
       {children}
-      {hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
+      {hint ? <p className="text-xs text-sn-label3">{hint}</p> : null}
     </div>
   );
 }

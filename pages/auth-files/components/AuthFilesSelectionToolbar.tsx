@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleOff, Download, Power, Share2, Zap } from "lucide-react";
+import { CircleOff, Download, Power, Share2, Zap } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 
 interface AuthFilesSelectionToolbarProps {

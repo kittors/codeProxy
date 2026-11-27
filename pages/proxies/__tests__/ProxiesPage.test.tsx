@@ -238,9 +238,10 @@ describe("ProxiesPage", () => {
     const table = await screen.findByRole("table", { name: /proxy pool table/i });
     expect(table).toBeInTheDocument();
     // 外壳内容区就是页面面板：表格自己的圆角外框是这一页唯一的一层卡片，外面不再套卡片。
-    const frame = table.closest(".cp-grid");
-    expect(frame).toHaveClass("cp-grid-frame");
-    expect(frame?.parentElement?.closest(".cp-edge")).toBeNull();
+    const frame = table.closest(".sn-tbl-wrap");
+    expect(frame).toBeInTheDocument();
+    expect(frame).not.toHaveClass("sn-plain");
+    expect(frame?.parentElement?.closest("section.border-sn-line")).toBeNull();
     expect(screen.queryByText("Proxy Pool")).not.toBeInTheDocument();
     expect(screen.queryByText(/Manage proxy entries in a compact table/i)).not.toBeInTheDocument();
     expect(screen.getByText("No proxies yet")).toBeInTheDocument();

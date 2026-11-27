@@ -12,17 +12,21 @@ export interface PortalGrants {
   words: boolean;
   /** 后端有门户脱敏。 */
   privacyMasking: boolean;
+  /** 后端与当前租户开放了自助支付充值。 */
+  billing: boolean;
 }
 
-export const NO_PORTAL_GRANTS: PortalGrants = { words: false, privacyMasking: false };
+export const NO_PORTAL_GRANTS: PortalGrants = { words: false, privacyMasking: false, billing: false };
 
 /** 字段缺省按旧后端处理（单测里 me() 的假数据也常常不带它们）。 */
 export const portalGrantsOf = (me: {
   wordPolicyAllowed?: boolean;
   privacyMasking?: boolean;
+  billingEnabled?: boolean;
 }): PortalGrants => ({
   words: me.wordPolicyAllowed === true,
   privacyMasking: me.privacyMasking === true,
+  billing: me.billingEnabled === true,
 });
 
 /** 当前账号还有没有这个标签：退出、切换账号、权限被收回后不再停在没有的标签上。 */
@@ -33,5 +37,6 @@ export function portalTabAvailable(
 ): boolean {
   if (tab === "words") return signedIn && grants.words;
   if (tab === "privacy") return signedIn && grants.privacyMasking;
+  if (tab === "billing") return signedIn && grants.billing;
   return true;
 }

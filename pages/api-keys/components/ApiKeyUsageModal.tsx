@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { RefreshCw, ScrollText } from "lucide-react";
+import { RefreshCw, ScrollText } from "@code-proxy/ui/icons";
 import { useMemo } from "react";
 import {
   Button,
@@ -81,9 +81,9 @@ export function ApiKeyUsageModal({
   setUsagePageSize: (size: number) => void;
 }) {
   const { t } = useTranslation();
-  const metricLabel = "text-2xs text-ink-3";
-  const metricValue = "mt-0.5 font-mono text-base font-semibold tabular-nums text-ink";
-  const summaryCard = "rounded-2xl bg-subtle px-4 py-3";
+  const metricLabel = "text-2xs text-sn-label3";
+  const metricValue = "mt-0.5 font-mono text-base font-semibold tabular-nums text-sn-label";
+  const summaryCard = "rounded-xl bg-sn-subtle px-4 py-3";
   const defaultHidden = useMemo(
     () => usageLogColumns.filter((column) => column.defaultHidden).map((column) => column.id),
     [usageLogColumns],
@@ -174,7 +174,7 @@ export function ApiKeyUsageModal({
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs text-ink-3">{usageLastUpdatedText}</span>
+            <span className="text-xs text-sn-label3">{usageLastUpdatedText}</span>
             <Button
               variant="secondary"
               size="sm"
@@ -199,7 +199,7 @@ export function ApiKeyUsageModal({
           className="grid gap-2 py-3 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))]"
         >
           <section aria-label={t("api_keys_page.usage_summary_tokens")} className={summaryCard}>
-            <div className="text-xs font-medium text-ink-2">
+            <div className="text-xs font-medium text-sn-label2">
               {t("api_keys_page.usage_summary_tokens")}
             </div>
             <div className="mt-2 grid grid-cols-3 gap-3">
@@ -220,13 +220,13 @@ export function ApiKeyUsageModal({
           </section>
 
           <section aria-label={t("api_keys_page.usage_summary_requests")} className={summaryCard}>
-            <div className="text-xs font-medium text-ink-2">
+            <div className="text-xs font-medium text-sn-label2">
               {t("api_keys_page.usage_summary_requests")}
             </div>
             <RequestLogUsageMetricValue
               value={usageSummary.requestCount}
               compact
-              className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink"
+              className="mt-2 font-mono text-xl font-semibold tabular-nums text-sn-label"
             />
             <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>
           </section>
@@ -235,10 +235,10 @@ export function ApiKeyUsageModal({
             aria-label={t("api_keys_page.usage_summary_success_rate")}
             className={summaryCard}
           >
-            <div className="text-xs font-medium text-ink-2">
+            <div className="text-xs font-medium text-sn-label2">
               {t("api_keys_page.usage_summary_success_rate")}
             </div>
-            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-ink colorful:text-emerald-700 colorful:dark:text-emerald-300">
+            <div className="mt-2 font-mono text-xl font-semibold tabular-nums text-sn-label colorful:text-emerald-700 colorful:dark:text-emerald-300">
               {usageSummary.successRate.toFixed(1)}%
             </div>
             <div className={`mt-0.5 ${metricLabel}`}>{t("api_keys_page.usage_summary_filtered")}</div>

@@ -45,7 +45,7 @@ export function PortalDeleteKeyModal({
           <span className="flex min-w-0 items-center justify-between gap-3">
             <span className="truncate font-medium">{target.name || target.id.slice(0, 8)}</span>
             {target.key_masked ? (
-              <code className="shrink-0 font-mono text-xs text-ink-3">{target.key_masked}</code>
+              <code className="shrink-0 font-mono text-xs text-sn-label3">{target.key_masked}</code>
             ) : null}
           </span>
         ) : null

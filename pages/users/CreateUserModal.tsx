@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyRound, ShieldCheck, UserPlus, UserRound, Wand2 } from "lucide-react";
+import { KeyRound, ShieldCheck, UserPlus, UserRound, Wand2 } from "@code-proxy/ui/icons";
 import {
   Button,
   ChoiceCards,

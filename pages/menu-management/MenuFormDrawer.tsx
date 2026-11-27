@@ -18,7 +18,7 @@ import {
   MousePointerClick,
   PanelsTopLeft,
   Route,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import type { MenuIdentity, MenuType, MenuWriteBody } from "@code-proxy/api-client";
 import {
   Button,

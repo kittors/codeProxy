@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ListPlus, Search } from "lucide-react";
+import { Check, ListPlus, Search } from "@code-proxy/ui/icons";
 import { Button, Checkbox, EmptyState, Modal, ScrollFade, Skeleton, TextInput } from "@code-proxy/ui";
 import type { AuthFileModelItem } from "@code-proxy/domain";
 
@@ -112,14 +112,14 @@ export function ImportModelsModal({
             value={importSearch}
             onChange={(e) => setImportSearch(e.currentTarget.value)}
             placeholder={t("auth_files.search_models_placeholder")}
-            startAdornment={<Search size={15} className="text-ink-3" aria-hidden="true" />}
+            startAdornment={<Search size={15} className="text-sn-label3" aria-hidden="true" />}
             data-dismiss-safe=""
           />
 
           {/* 一层无边淡底装下「全选」行和列表，不再描边、也不再用分隔线切出表头。 */}
-          <div className="overflow-hidden rounded-2xl bg-subtle">
+          <div className="overflow-hidden rounded-xl bg-sn-subtle">
             <div className="flex items-center justify-between gap-3 px-3 pt-2.5 pb-1">
-              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-ink-2">
+              <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-sn-label2">
                 <Checkbox
                   checked={allVisibleSelected}
                   indeterminate={
@@ -134,14 +134,14 @@ export function ImportModelsModal({
                 <button
                   type="button"
                   onClick={() => setImportSelected(new Set())}
-                  className="rounded-full px-2 py-0.5 text-xs text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="rounded-full px-2 py-0.5 text-xs text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
                 >
                   {t("auth_files.import_clear_selection")}
                 </button>
               ) : null}
             </div>
             {importFilteredModels.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-ink-3">
+              <p className="px-4 py-8 text-center text-sm text-sn-label3">
                 {t("auth_files.import_no_match", { query: importSearch.trim() })}
               </p>
             ) : (
@@ -153,7 +153,7 @@ export function ImportModelsModal({
                       key={model.id}
                       className={[
                         "flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                        checked ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
+                        checked ? "bg-sn-active text-sn-label" : "text-sn-label2 hover:bg-sn-hover hover:text-sn-label",
                       ].join(" ")}
                     >
                       <Checkbox

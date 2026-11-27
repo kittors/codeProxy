@@ -1,10 +1,9 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { Upload } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
+import { Icon } from "satin-ui/react";
 
 /**
- * Drop files here or click to choose. JSON credentials are usually sitting in a
- * downloads folder, so dragging them in beats a native file dialog.
+ * 基于 Satin `.sn-drop` 的凭证拖放上传区：
+ * 拖入文件时虚线边框切换实线、图标容器微浮缩放（.sn-over），零 framer-motion。
  */
 export function FileDropZone({
   title,
@@ -21,7 +20,6 @@ export function FileDropZone({
   onFiles: (files: File[]) => void;
   children?: ReactNode;
 }) {
-  const reduceMotion = useReducedMotion();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -33,7 +31,7 @@ export function FileDropZone({
   };
 
   return (
-    <motion.div
+    <div
       role="button"
       tabIndex={busy ? -1 : 0}
       aria-disabled={busy || undefined}
@@ -54,16 +52,13 @@ export function FileDropZone({
         setDragging(false);
         if (!busy) take(event.dataTransfer.files);
       }}
-      animate={reduceMotion ? undefined : { scale: dragging ? 1.01 : 1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={[
-        "grid cursor-pointer justify-items-center gap-2 rounded-2xl border border-dashed px-5 py-8 text-center transition-colors",
-        // 虚线框只留给文件拖放区；拖进来时简约风格换成强调色，多彩风格是天蓝。
-        dragging
-          ? "border-accent bg-accent-soft colorful:border-sky-500 colorful:bg-sky-500/8"
-          : "border-line-strong bg-subtle hover:border-ink-4",
+        "sn-drop",
+        dragging ? "sn-over" : "",
         busy ? "cursor-progress opacity-60" : "",
-      ].join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <input
         ref={inputRef}
@@ -76,12 +71,12 @@ export function FileDropZone({
           event.currentTarget.value = "";
         }}
       />
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-surface text-ink-2 shadow-xs">
-        <Upload size={18} aria-hidden="true" />
+      <span className="sn-art">
+        <Icon name="cloud-upload" size={20} />
       </span>
-      <p className="text-sm font-medium text-ink">{title}</p>
-      {hint ? <div className="max-w-sm text-xs text-ink-3">{hint}</div> : null}
+      <b>{title}</b>
+      {hint ? <div className="sn-hint max-w-sm">{hint}</div> : null}
       {children}
-    </motion.div>
+    </div>
   );
 }

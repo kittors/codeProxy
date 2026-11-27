@@ -1,13 +1,13 @@
 import { useMemo, type ReactNode } from "react";
-import { Activity, Coins, MessagesSquare, ShieldCheck, Sigma } from "lucide-react";
-import { AnimatedNumber, ScrollFade } from "@code-proxy/ui";
+import { Activity, CalendarClock, Coins, MessagesSquare, ShieldCheck, Sigma } from "@code-proxy/ui/icons";
+import { AnimatedNumber, Button, ScrollFade, cn } from "@code-proxy/ui";
 import { Reveal } from "@code-proxy/ui";
 import { Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { EChart } from "@code-proxy/ui";
 import { ChartLegend } from "@code-proxy/ui";
 import { HoverTooltip } from "@code-proxy/ui";
 import { useTheme } from "@code-proxy/ui";
-import { KpiCard, MonitorCard as Card } from "@features/monitor-widgets";
+import { MonitorCard as Card } from "@features/monitor-widgets";
 import { dailyTrendColors } from "@features/monitor-widgets/chart-options/daily-trend";
 import type {
   ModelDistributionDatum,
@@ -15,7 +15,7 @@ import type {
 } from "@features/monitor-widgets/chart-options/types";
 import type { PublicQuotaScope, PublicUsageLimits } from "../types";
 import { QuotaLimitKpiCards } from "./QuotaLimitsBanner";
-import { formatQuotaUsd, kpiValueSizeClass } from "./kpiValueSize";
+import { formatQuotaUsd } from "./kpiValueSize";
 
 const DAILY_LEGEND_KEYS = {
   input: "daily_input",
@@ -32,10 +32,10 @@ type HeatmapPoint = {
 };
 
 // 热力图按请求数着色，用请求身份色（蓝）的单色深浅阶：越忙越浓，与监控中心的「活跃时段」热力格
-// 同一套。没有请求的格子保持中性的槽色（bg-track）——它表示「没有数据」，不是「量很少」。
+// 同一套。没有请求的格子保持中性的槽色（bg-sn-sunken）——它表示「没有数据」，不是「量很少」。
 // 格子不再各描一圈细边：三百多个小方块每个都带轮廓，整块读起来是一张网格纸。
 const HEATMAP_LEVEL_CLASSES = [
-  "bg-track",
+  "bg-sn-sunken",
   "bg-blue-500/20 dark:bg-blue-400/20",
   "bg-blue-500/40 dark:bg-blue-400/40",
   "bg-blue-500/65 dark:bg-blue-400/65",
@@ -94,7 +94,7 @@ function HeatmapTooltip({
           <span className="text-right">${(point?.cost ?? 0).toFixed(4)}</span>
         </span>
       ) : (
-        <span className="block text-canvas/60">
+        <span className="block opacity-70">
           {t("apikey_lookup.no_usage_on_day")}
         </span>
       )}
@@ -144,7 +144,7 @@ function CalendarHeatmap({
               >
                 <span
                   tabIndex={0}
-                  className={`block h-3 w-3 cursor-pointer rounded-sm transition duration-150 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${HEATMAP_LEVEL_CLASSES[level]}`}
+                  className={`block h-3 w-3 cursor-pointer rounded-sm transition-transform duration-150 hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-sn-accent/60 ${HEATMAP_LEVEL_CLASSES[level]}`}
                   aria-label={`${date}: ${point?.requests ?? 0} ${t("apikey_lookup.requests")}`}
                 />
               </HoverTooltip>
@@ -152,7 +152,7 @@ function CalendarHeatmap({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-center gap-1 text-xs text-ink-3 sm:justify-end">
+      <div className="flex items-center justify-center gap-1 text-xs text-sn-label3 sm:justify-end">
         <span>{t("apikey_lookup.heatmap_less")}</span>
         {HEATMAP_LEVEL_CLASSES.map((className) => (
           <span
@@ -178,12 +178,12 @@ function HeatmapSkeleton() {
           {Array.from({ length: 371 }, (_, index) => (
             <span
               key={index}
-              className="h-3 w-3 rounded-sm bg-track motion-safe:animate-pulse"
+              className="h-3 w-3 rounded-sm bg-sn-sunken motion-safe:animate-pulse"
             />
           ))}
         </div>
       </div>
-      <div className="ml-auto h-3 w-28 rounded bg-track motion-safe:animate-pulse" />
+      <div className="ml-auto h-3 w-28 rounded bg-sn-sunken motion-safe:animate-pulse" />
     </div>
   );
 }
@@ -191,7 +191,7 @@ function HeatmapSkeleton() {
 function ChartSkeleton() {
   return (
     <div
-      className="h-72 rounded-inner bg-track motion-safe:animate-pulse"
+      className="h-72 rounded-inner bg-sn-sunken motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -200,7 +200,7 @@ function ChartSkeleton() {
 function KpiValueSkeleton() {
   return (
     <span
-      className="block h-8 w-24 rounded-md bg-track motion-safe:animate-pulse"
+      className="block h-8 w-24 rounded-md bg-sn-sunken motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -213,6 +213,9 @@ export function UsageTabSection({
   chartLoading,
   quotaLimits,
   quotaScopes,
+  expiresAt,
+  showBillingShortcut,
+  onOpenBilling,
   showApiKeyDistribution,
   apiKeyMetric,
   setApiKeyMetric,
@@ -245,6 +248,9 @@ export function UsageTabSection({
   chartLoading: boolean;
   quotaLimits?: PublicUsageLimits | null;
   quotaScopes?: PublicQuotaScope[] | null;
+  expiresAt?: string | null;
+  showBillingShortcut?: boolean;
+  onOpenBilling?: () => void;
   showApiKeyDistribution: boolean;
   apiKeyMetric: "requests" | "tokens";
   setApiKeyMetric: (value: "requests" | "tokens") => void;
@@ -285,94 +291,142 @@ export function UsageTabSection({
   const showInitialLoading = chartLoading && !chartStats;
   const renderKpiValue = (value: ReactNode) => (showInitialLoading ? <KpiValueSkeleton /> : value);
 
+  const expiryMeta = useMemo(() => {
+    if (!expiresAt) return null;
+    const ms = new Date(expiresAt).getTime();
+    if (Number.isNaN(ms)) return null;
+    const diff = ms - Date.now();
+    const expired = diff <= 0;
+    const days = Math.max(1, Math.ceil(diff / (24 * 3600 * 1000)));
+    return {
+      expired,
+      soon: !expired && diff <= 3 * 24 * 3600 * 1000,
+      days,
+      formatted: new Date(ms).toLocaleString(),
+    };
+  }, [expiresAt]);
+
+  const rangeHint = t("apikey_lookup.last_n_days", { days: timeRange });
+  const metricItems = [
+    {
+      key: "cost",
+      title: t("apikey_lookup.total_cost"),
+      icon: Coins,
+      hint: rangeHint,
+      accent: true,
+      value: (
+        <AnimatedNumber value={chartStats?.total_cost ?? 0} format={formatQuotaUsd} />
+      ),
+    },
+    {
+      key: "requests",
+      title: t("apikey_lookup.total_requests"),
+      icon: Activity,
+      hint: rangeHint,
+      value: (
+        <AnimatedNumber value={chartStats?.total ?? 0} format={formatInteger} />
+      ),
+    },
+    {
+      key: "success-rate",
+      title: t("common.success_rate"),
+      icon: ShieldCheck,
+      hint: rangeHint,
+      value: (
+        <AnimatedNumber
+          value={chartStats?.success_rate ?? 0}
+          format={(value) => `${value.toFixed(1)}%`}
+        />
+      ),
+    },
+    {
+      key: "tokens",
+      title: t("apikey_lookup.total_tokens"),
+      icon: Sigma,
+      hint: rangeHint,
+      value: (
+        <AnimatedNumber value={chartStats?.total_tokens ?? 0} format={formatInteger} />
+      ),
+    },
+    {
+      key: "sessions",
+      title: t("apikey_lookup.total_sessions"),
+      icon: MessagesSquare,
+      hint: rangeHint,
+      value: (
+        <AnimatedNumber value={chartStats?.total_sessions ?? 0} format={formatInteger} />
+      ),
+    },
+  ];
+
   return (
     <Reveal>
-      <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <QuotaLimitKpiCards
-            t={t}
-            limits={quotaLimits}
-            quotaScopes={quotaScopes}
-            renderValue={renderKpiValue}
-          />
-          <div className="min-w-0">
-            <KpiCard
-              tone="portal"
-              title={t("apikey_lookup.total_requests")}
-              icon={Activity}
-              hue="blue"
-              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-              valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total ?? 0))}
-              value={renderKpiValue(
-                <span className="block whitespace-nowrap tabular-nums">
-                  <AnimatedNumber value={chartStats?.total ?? 0} format={formatInteger} />
-                </span>,
-              )}
-            />
+      <div className="flex flex-col gap-4">
+        {expiryMeta ? (
+          <div
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 text-xs",
+              expiryMeta.expired
+                ? "border-rose-500/20 bg-rose-500/8 text-rose-700 dark:text-rose-300"
+                : expiryMeta.soon
+                  ? "border-amber-500/20 bg-amber-500/8 text-amber-800 dark:text-amber-300"
+                  : "border-sn-line bg-sn-raised text-sn-label2",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <CalendarClock size={14} className="shrink-0" />
+              <span>
+                {expiryMeta.expired
+                  ? t("billing.expiry_banner_expired", { date: expiryMeta.formatted })
+                  : t("billing.expiry_banner_active", {
+                      date: expiryMeta.formatted,
+                      days: expiryMeta.days,
+                    })}
+              </span>
+            </div>
+            {showBillingShortcut && onOpenBilling ? (
+              <Button size="sm" variant={expiryMeta.expired ? "primary" : "secondary"} onClick={onOpenBilling}>
+                {t("billing.go_recharge")}
+              </Button>
+            ) : null}
           </div>
-          <div className="min-w-0">
-            <KpiCard
-              tone="portal"
-              title={t("common.success_rate")}
-              icon={ShieldCheck}
-              hue="emerald"
-              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-              valueClassName={kpiValueSizeClass(`${(chartStats?.success_rate ?? 0).toFixed(1)}%`)}
-              value={renderKpiValue(
-                <span className="block whitespace-nowrap tabular-nums">
-                  <AnimatedNumber
-                    value={chartStats?.success_rate ?? 0}
-                    format={(value) => `${value.toFixed(1)}%`}
-                  />
-                </span>,
-              )}
-            />
-          </div>
-          <div className="min-w-0">
-            <KpiCard
-              tone="portal"
-              title={t("apikey_lookup.total_tokens")}
-              icon={Sigma}
-              hue="violet"
-              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-              valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_tokens ?? 0))}
-              value={renderKpiValue(
-                <span className="block whitespace-nowrap tabular-nums">
-                  <AnimatedNumber value={chartStats?.total_tokens ?? 0} format={formatInteger} />
-                </span>,
-              )}
-            />
-          </div>
-          <div className="min-w-0">
-            <KpiCard
-              tone="portal"
-              title={t("apikey_lookup.total_sessions")}
-              icon={MessagesSquare}
-              hue="cyan"
-              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-              valueClassName={kpiValueSizeClass(formatInteger(chartStats?.total_sessions ?? 0))}
-              value={renderKpiValue(
-                <span className="block whitespace-nowrap tabular-nums">
-                  <AnimatedNumber value={chartStats?.total_sessions ?? 0} format={formatInteger} />
-                </span>,
-              )}
-            />
-          </div>
-          <div className="min-w-0">
-            <KpiCard
-              tone="portal"
-              title={t("apikey_lookup.total_cost")}
-              icon={Coins}
-              hue="amber"
-              hint={t("apikey_lookup.last_n_days", { days: timeRange })}
-              valueClassName={kpiValueSizeClass(formatQuotaUsd(chartStats?.total_cost ?? 0))}
-              value={renderKpiValue(
-                <span className="block whitespace-nowrap tabular-nums">
-                  <AnimatedNumber value={chartStats?.total_cost ?? 0} format={formatQuotaUsd} />
-                </span>,
-              )}
-            />
-          </div>
+        ) : null}
+
+        {/* 独立横向配额条带：按配额数量自适应铺满整行，彻底消除 6+1 孤儿卡与宽金额截断 */}
+        <QuotaLimitKpiCards
+          t={t}
+          limits={quotaLimits}
+          quotaScopes={quotaScopes}
+          renderValue={renderKpiValue}
+        />
+
+        {/* 核心 5 项用量：统一扁平发丝分隔指标带（gap-px 无双边线），与下方卡片保持统一 rounded-2xl */}
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-sn-line bg-sn-line sm:grid-cols-3 lg:grid-cols-5">
+          {metricItems.map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <div
+                key={metric.key}
+                className={cn(
+                  "min-w-0 bg-sn-raised px-5 py-4 transition-colors duration-150 hover:bg-sn-hover/60",
+                  index === 0 && "col-span-2 sm:col-span-1",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 text-xs font-medium text-sn-label3">
+                  <span className="truncate">{metric.title}</span>
+                  <Icon size={14} className="shrink-0 opacity-75" />
+                </div>
+                <div className="mt-2.5 text-2xl font-semibold tracking-tight text-sn-label">
+                  {renderKpiValue(
+                    <span className="block whitespace-nowrap tabular-nums leading-tight">
+                      {metric.value}
+                    </span>,
+                  )}
+                </div>
+                <p className="mt-1.5 text-xs text-sn-label3">{metric.hint}</p>
+              </div>
+            );
+          })}
         </div>
 
         <Card tone="portal"
@@ -426,18 +480,18 @@ export function UsageTabSection({
                           className="h-3.5 w-3.5 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
+                        <span className="min-w-0 truncate text-sn-label2">{item.name}</span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-ink">
+                      <span className="text-right font-semibold tabular-nums text-sn-label">
                         {item.valueLabel}
                       </span>
-                      <span className="text-right tabular-nums text-ink-3">{item.percentLabel}</span>
+                      <span className="text-right tabular-nums text-sn-label3">{item.percentLabel}</span>
                     </div>
                   ))}
                 </ScrollFade>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -468,25 +522,27 @@ export function UsageTabSection({
             {showInitialLoading ? (
               <ChartSkeleton />
             ) : modelDistributionData.length > 0 ? (
-              <div className="flex flex-col gap-4 sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="flex flex-col gap-4 sm:grid sm:h-72 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,16rem)]">
                 <EChart option={modelDistributionOption} className="h-52 min-w-0 sm:h-72" />
-                <ScrollFade className="flex flex-row flex-wrap justify-center gap-2 overflow-y-auto pr-1 sm:h-72 sm:flex-col">
+                <ScrollFade className="flex flex-row flex-wrap justify-center gap-2 overflow-y-auto pr-1 sm:h-72 sm:flex-col sm:justify-start">
                   {modelDistributionLegend.map((item) => (
                     <div
                       key={item.name}
-                      className="inline-flex items-center gap-x-1 text-xs sm:grid sm:grid-cols-[minmax(0,120px)_40px_52px] sm:text-sm"
+                      className="inline-flex items-center gap-x-1.5 text-xs sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-2 sm:text-sm"
                     >
                       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                         <span
-                          className="h-3 w-3 shrink-0 rounded-full sm:h-3.5 sm:w-3.5"
+                          className="h-2.5 w-2.5 shrink-0 rounded-full sm:h-3 sm:w-3"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
+                        <span className="min-w-0 truncate text-sn-label2" title={item.name}>
+                          {item.name}
+                        </span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-ink">
+                      <span className="text-right font-semibold tabular-nums text-sn-label">
                         {item.valueLabel}
                       </span>
-                      <span className="hidden text-right tabular-nums text-ink-3 sm:inline">
+                      <span className="hidden text-right tabular-nums text-sn-label3 sm:inline">
                         {item.percentLabel}
                       </span>
                     </div>
@@ -494,7 +550,7 @@ export function UsageTabSection({
                 </ScrollFade>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -556,7 +612,7 @@ export function UsageTabSection({
                 />
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}

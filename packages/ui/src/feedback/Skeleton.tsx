@@ -1,11 +1,6 @@
 /**
- * 骨架屏占位。
- *
- * 相比转圈 spinner，骨架屏能提前把版面撑开，内容到位时不会整页跳动——
- * 这对表格、卡片这类高度可预测的区域是更好的等待反馈。
- *
- * 微光扫过用 CSS 动画（`skeleton-sweep`），不进 JS 主线程；
- * prefers-reduced-motion 下退化为静态底色，仍然保留占位作用。
+ * 基于 Satin `.sn-sk` 的骨架屏占位：
+ * 整列共用一道视口级微光扫过（纯 CSS，1.6s 节奏），尊重 prefers-reduced-motion。
  */
 export function Skeleton({
   className,
@@ -21,23 +16,10 @@ export function Skeleton({
     full: "rounded-full",
   }[rounded];
 
-  return (
-    <span
-      aria-hidden
-      className={[
-        // 半透明叠层：放在白卡片、灰侧栏、深色弹层上都是「比底色深一档」。
-        "block bg-selected",
-        "motion-safe:animate-[skeleton-sweep_1.6s_ease-in-out_infinite]",
-        roundedClass,
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    />
-  );
+  return <span aria-hidden className={["sn-sk", roundedClass, className].filter(Boolean).join(" ")} />;
 }
 
-/** 表格/列表的多行骨架。行宽递减，读起来更像真实文本块而不是一排等长灰条。 */
+/** 表格/列表的多行骨架。行宽递减，更贴近真实文本块节奏。 */
 export function SkeletonLines({ rows = 3, className }: { rows?: number; className?: string }) {
   const widths = ["w-full", "w-11/12", "w-9/12", "w-10/12", "w-8/12"];
   return (

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { PanelRightOpen, type LucideIcon } from "lucide-react";
-import { HoverTooltip, surface } from "@code-proxy/ui";
+import { PanelRightOpen, type SatinIconComponent } from "@code-proxy/ui/icons";
+import { HoverTooltip, StatusTag, surface } from "@code-proxy/ui";
 import {
   LevelPill,
   MetricIcon,
@@ -31,7 +31,7 @@ export const CARD_ROWS = 5;
 
 /** 告警档对应的文字色；正常档不着色。 */
 export function levelText(level: UsageLevel | undefined): string {
-  if (!level || level === "normal") return "text-ink";
+  if (!level || level === "normal") return "text-sn-label";
   return meterTone(level).text;
 }
 
@@ -55,8 +55,8 @@ export function CardShell({
       aria-label={label}
       data-testid={testId}
       className={[
-        surface({ tone: "card", radius: "3xl" }),
-        "row-span-5 grid min-w-0 grid-rows-subgrid gap-y-3 p-4 [--cp-inner-radius:var(--radius-lg)]",
+        surface({ tone: "card", radius: "2xl" }),
+        "row-span-5 grid min-w-0 grid-rows-subgrid gap-y-3 p-4 [--sn-inner-radius:var(--radius-lg)]",
       ].join(" ")}
     >
       {children}
@@ -73,7 +73,7 @@ export function CardHeader({
   subtitle,
   issues,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue: MonitorHue;
   title: string;
   tags?: ReactNode;
@@ -86,10 +86,10 @@ export function CardHeader({
         <MetricIcon icon={icon} hue={hue} />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
-            <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>
+            <h3 className="truncate text-sm font-semibold text-sn-label">{title}</h3>
             {tags}
           </div>
-          <p className="truncate text-2xs text-ink-3" title={subtitle}>
+          <p className="truncate text-2xs text-sn-label3" title={subtitle}>
             {subtitle || " "}
           </p>
         </div>
@@ -178,10 +178,10 @@ export function MetricCell({
   return (
     <div data-testid={testId} data-level={level} className="min-w-0 space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-xs font-medium text-ink-3">{label}</span>
+        <span className="truncate text-xs font-medium text-sn-label3">{label}</span>
         {aside !== undefined && aside !== null ? (
           <span
-            className={`shrink-0 text-xs font-semibold tabular-nums ${level === "normal" ? "text-ink-2" : levelText(level)}`}
+            className={`shrink-0 text-xs font-semibold tabular-nums ${level === "normal" ? "text-sn-label2" : levelText(level)}`}
           >
             {aside}
           </span>
@@ -196,7 +196,7 @@ export function MetricCell({
       {bar ?? <div className="h-bar-sm" aria-hidden="true" />}
       <p
         title={footTitle ?? (typeof foot === "string" ? foot : undefined)}
-        className={`truncate text-2xs ${footLevel && footLevel !== "normal" ? levelText(footLevel) : "text-ink-3"}`}
+        className={`truncate text-2xs ${footLevel && footLevel !== "normal" ? levelText(footLevel) : "text-sn-label3"}`}
       >
         {foot ?? " "}
       </p>
@@ -226,7 +226,7 @@ export function Stat({
 }) {
   return (
     <div className="min-w-0" title={title}>
-      <dt className="truncate text-2xs text-ink-3">{label}</dt>
+      <dt className="truncate text-2xs text-sn-label3">{label}</dt>
       <dd className={`truncate text-xs font-semibold tabular-nums ${levelText(level)}`}>{value}</dd>
     </div>
   );
@@ -244,7 +244,7 @@ export function ChipRow({ children, dimmed }: { children: ReactNode; dimmed?: bo
   );
 }
 
-/** 依赖与状态的小胶囊：圆点 + 文字；出问题时整块换成琥珀 / 红淡底。 */
+/** 依赖与状态的小胶囊：使用 Satin 原生 `.sn-tag.sn-sm`（圆点 + 文字）。 */
 export function Chip({
   level = "normal",
   children,
@@ -256,23 +256,18 @@ export function Chip({
   title?: string;
   testId?: string;
 }) {
-  const tone =
-    level === "critical"
-      ? "bg-rose-500/10 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300"
-      : level === "warn"
-        ? "bg-amber-500/10 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
-        : "bg-ink/[0.04] text-ink-2 dark:bg-white/[0.06]";
-  const dot = level === "critical" ? "bg-rose-500" : level === "warn" ? "bg-amber-500" : "bg-emerald-500";
+  const tone = level === "critical" ? "bad" : level === "warn" ? "warn" : "ok";
   return (
-    <span
+    <StatusTag
+      size="sm"
+      tone={tone}
       data-testid={testId}
       data-level={level}
       title={title}
-      className={`inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-2xs font-medium tabular-nums ${tone}`}
+      className="min-w-0 max-w-full tabular-nums"
     >
-      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${dot}`} />
       <span className="truncate">{children}</span>
-    </span>
+    </StatusTag>
   );
 }
 
@@ -293,17 +288,17 @@ export function CardFooter({
   return (
     // 固定高度：没有详情按钮的卡片（还没有快照的节点）页脚文字也和别的卡片落在同一条线上。
     <div className="flex h-7 min-w-0 items-center justify-between gap-2 self-end" data-testid="card-footer">
-      <p className="min-w-0 truncate text-2xs text-ink-3">{meta}</p>
+      <p className="min-w-0 truncate text-2xs text-sn-label3">{meta}</p>
       {onOpenDetails ? (
         <button
           type="button"
           aria-haspopup="dialog"
           aria-label={detailsLabel}
           onClick={onOpenDetails}
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-ink-2 transition-colors hover:bg-ink/[0.05] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 dark:hover:bg-white/[0.07]"
+          className="sn-btn sn-ghost sn-xs shrink-0 text-[var(--sn-label2)]"
         >
           {t("cluster_nodes.details")}
-          <PanelRightOpen size={14} aria-hidden="true" />
+          <PanelRightOpen size={13} aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -332,14 +327,14 @@ export function CpuSplitBar({ cpu }: { cpu: NodeCpuView }) {
       {busy > 0 ? (
         <div
           data-testid="node-cpu-busy"
-          className={`absolute inset-y-0 left-0 ${tone.bar} transition-[width] duration-700 ease-pop motion-reduce:transition-none`}
+          className={`absolute inset-y-0 left-0 ${tone.bar} transition-[width] duration-700 ease-sn-strong motion-reduce:transition-none`}
           style={{ width: `${busy}%` }}
         />
       ) : null}
       {steal > 0 ? (
         <div
           data-testid="node-cpu-steal"
-          className="absolute inset-y-0 bg-amber-500 transition-[left,width] duration-700 ease-pop motion-reduce:transition-none dark:bg-amber-400 colorful:bg-gradient-to-r colorful:from-amber-300 colorful:to-orange-500"
+          className="absolute inset-y-0 bg-amber-500 transition-[left,width] duration-700 ease-sn-strong motion-reduce:transition-none dark:bg-amber-400 colorful:bg-gradient-to-r colorful:from-amber-300 colorful:to-orange-500"
           style={{ left: `${busy}%`, width: `${steal}%` }}
         />
       ) : null}
@@ -347,11 +342,11 @@ export function CpuSplitBar({ cpu }: { cpu: NodeCpuView }) {
   );
 }
 
-/** 小标签：Leader、当前节点、主机名。中性灰，不和状态抢颜色。 */
+/** 小标签：Leader、当前节点、主机名。使用 Satin 中性胶囊，不和状态抢颜色。 */
 export function Tag({ children }: { children: ReactNode }) {
   return (
-    <span className="shrink-0 rounded-full bg-ink/[0.05] px-1.5 py-px text-2xs font-semibold text-ink-2 dark:bg-white/[0.07]">
+    <StatusTag size="sm" tone="neutral" dot={false} className="shrink-0">
       {children}
-    </span>
+    </StatusTag>
   );
 }

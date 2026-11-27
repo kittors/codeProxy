@@ -91,6 +91,35 @@ export const authFilesApi = {
   }) => apiClient.patch("/auth-files/fields", payload),
 
   /**
+   * 消耗 Codex 账号的重置额度（POST /auth-files/reset-credit）。
+   * 由后端按凭据出口代理与 Codex 客户端指纹直连上游执行 FIFO 消耗并清理本地配额限制，
+   * 避免通用 /api-call 走宿主机直连 DNS 时被 TUN/Fake-IP 误杀或返回模糊的 blocked url。
+   */
+  resetCredit: async (input: {
+    authIndex?: string;
+    id?: string;
+    name?: string;
+    creditId?: string;
+    redeemRequestId?: string;
+  }): Promise<{
+    status: string;
+    auth_index?: string;
+    auth_id?: string;
+    credit_id?: string;
+    redeem_request_id?: string;
+    quota_status_cleared?: boolean;
+    upstream_status?: number;
+  }> => {
+    const body: Record<string, string> = {};
+    if (input.authIndex?.trim()) body.auth_index = input.authIndex.trim();
+    if (input.id?.trim()) body.id = input.id.trim();
+    if (input.name?.trim()) body.name = input.name.trim();
+    if (input.creditId?.trim()) body.credit_id = input.creditId.trim();
+    if (input.redeemRequestId?.trim()) body.redeem_request_id = input.redeemRequestId.trim();
+    return apiClient.post("/auth-files/reset-credit", body, { timeoutMs: 60000 });
+  },
+
+  /**
    * 只清除这个账号上这一个模型的冷却（POST /auth-files/model-cooldown/clear），下一次请求马上可以
    * 再试它；账号的其它模型和凭据状态不动。changed=false 表示这个模型本来就没在冷却。
    * 旧后端没有这个接口，列表也不会带 `model_cooldowns`，所以调用方只对带了它的条目才会走到这里。

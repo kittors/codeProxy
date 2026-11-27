@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button, Callout, Modal, OverflowTooltip } from "@code-proxy/ui";
 
@@ -51,7 +51,7 @@ export function RoutingIssueModal({
             tone="danger"
             title={t("channel_groups_page.stale_alert_title")}
             actions={
-              <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300">
+              <span className="rounded-full bg-sn-raised px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300">
                 {t("channel_groups_page.deleted_channels_count", { count: staleChannels.length })}
               </span>
             }
@@ -60,18 +60,18 @@ export function RoutingIssueModal({
           </Callout>
           {/* 弹窗里不再套描边表格框：表头一条淡底，行与行之间只留数据分隔线。 */}
           <div>
-            <div className="grid grid-cols-[minmax(0,1fr)_88px] rounded-lg bg-subtle px-3 py-2 text-xs font-medium text-ink-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_88px] rounded-lg bg-sn-subtle px-3 py-2 text-xs font-medium text-sn-label3">
               <span>{t("channel_groups_page.table_channels")}</span>
               <span className="text-center">{t("channel_groups_page.table_status")}</span>
             </div>
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-sn-line">
               {staleChannels.map((channel) => (
                 <li
                   key={channel.id}
                   className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3 px-3 py-2.5 text-sm"
                 >
                   <OverflowTooltip content={channel.name} className="block min-w-0">
-                    <span className="block truncate font-medium text-ink">{channel.name}</span>
+                    <span className="block truncate font-medium text-sn-label">{channel.name}</span>
                   </OverflowTooltip>
                   <span className="inline-flex justify-center rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-300">
                     {t("channel_groups_page.deleted_badge")}
@@ -82,7 +82,7 @@ export function RoutingIssueModal({
           </div>
         </div>
       ) : (
-        <p className="rounded-2xl bg-subtle px-4 py-6 text-center text-sm text-ink-3">
+        <p className="rounded-xl bg-sn-subtle px-4 py-6 text-center text-sm text-sn-label3">
           {t("channel_groups_page.issue_modal_empty")}
         </p>
       )}

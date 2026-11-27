@@ -33,12 +33,12 @@ export function MenuDeleteConfirm({
       subject={
         menu ? (
           <span className="flex min-w-0 items-center gap-3">
-            <Icon size={16} className={`shrink-0 text-ink-3 ${iconHueClass(Icon)}`} aria-hidden="true" />
+            <Icon size={16} className={`shrink-0 text-sn-label3 ${iconHueClass(Icon)}`} aria-hidden="true" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{name}</span>
-              <span className="block truncate font-mono text-xs text-ink-3">{menu.code}</span>
+              <span className="block truncate font-mono text-xs text-sn-label3">{menu.code}</span>
             </span>
-            <span className="shrink-0 rounded-md bg-selected px-2 py-0.5 text-xs text-ink-2">
+            <span className="shrink-0 rounded-md bg-sn-active px-2 py-0.5 text-xs text-sn-label2">
               {typeLabel}
             </span>
           </span>

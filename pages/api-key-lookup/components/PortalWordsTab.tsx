@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldOff } from "lucide-react";
+import { ShieldOff } from "@code-proxy/ui/icons";
 import {
   ApiError,
   extractApiErrorCode,

@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Database, Server } from "lucide-react";
+import { Database, Server } from "@code-proxy/ui/icons";
 import type { ClusterNode } from "@code-proxy/api-client";
 import { Drawer, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import type { UsageLevel } from "@features/monitor-widgets/monitorVisuals";

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "@code-proxy/ui/icons";
 import { Select, TextInput, Textarea } from "@code-proxy/ui";
 import type { ModelTestMode, ModelTestModeInfo, ModelTestOptions } from "@code-proxy/api-client";
 import {
@@ -72,7 +72,7 @@ export function ModelTestForm({
     <div className="space-y-4">
       {modes.length > 1 ? (
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-ink-2">
+          <span className="mb-1.5 block text-sm font-medium text-sn-label2">
             {t("models_page.test_mode")}
           </span>
           <div
@@ -94,8 +94,8 @@ export function ModelTestForm({
                   className={[
                     "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
                     active
-                      ? "bg-accent text-accent-fg"
-                      : "bg-hover text-ink-2 hover:bg-selected hover:text-ink",
+                      ? "bg-sn-accent text-sn-on-primary"
+                      : "bg-sn-hover text-sn-label2 hover:bg-sn-active hover:text-sn-label",
                   ].join(" ")}
                 >
                   {t(MODE_LABEL_KEY[mode.mode])}
@@ -103,7 +103,7 @@ export function ModelTestForm({
               );
             })}
           </div>
-          <p className="mt-1.5 text-xs text-ink-3">
+          <p className="mt-1.5 text-xs text-sn-label3">
             {t(MODE_HINT_KEY[state.mode])}
           </p>
         </div>
@@ -112,12 +112,12 @@ export function ModelTestForm({
       <div>
         <label
           htmlFor="model-test-channel"
-          className="mb-1 block text-sm font-medium text-ink-2"
+          className="mb-1 block text-sm font-medium text-sn-label2"
         >
           {t("models_page.test_channel")}
         </label>
         {noChannels ? (
-          <p className="bg-subtle rounded-lg px-3 py-2 text-sm text-ink-3">
+          <p className="bg-sn-subtle rounded-lg px-3 py-2 text-sm text-sn-label3">
             {t("models_page.test_no_channels")}
           </p>
         ) : (
@@ -134,15 +134,15 @@ export function ModelTestForm({
 
       {requiresImage ? (
         <div>
-          <span className="mb-1 block text-sm font-medium text-ink-2">
+          <span className="mb-1 block text-sm font-medium text-sn-label2">
             {t("models_page.test_reference_images")}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             {state.images.map((image, index) => (
               <div
                 key={`${index}-${image.slice(0, 32)}`}
-                // 细边用伪元素（cp-edge）画在图片上面，浅色图片也看得出轮廓，不再用 border。
-                className="cp-edge group relative h-16 w-16 overflow-hidden rounded-lg"
+                // 细边用伪元素（border border-sn-line）画在图片上面，浅色图片也看得出轮廓，不再用 border。
+                className="border border-sn-line group relative h-16 w-16 overflow-hidden rounded-lg"
               >
                 <img src={image} alt="" className="h-full w-full object-cover" />
                 <button
@@ -160,7 +160,7 @@ export function ModelTestForm({
                 type="button"
                 disabled={disabled}
                 onClick={() => fileInput.current?.click()}
-                className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-subtle text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+                className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-sn-subtle text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label disabled:opacity-50"
               >
                 <ImagePlus size={16} aria-hidden />
                 <span className="text-2xs">{t("models_page.test_add_image")}</span>
@@ -178,7 +178,7 @@ export function ModelTestForm({
               event.target.value = "";
             }}
           />
-          <p className="mt-1 text-xs text-ink-3">
+          <p className="mt-1 text-xs text-sn-label3">
             {t("models_page.test_reference_images_hint", { count: maxImages })}
           </p>
         </div>
@@ -187,7 +187,7 @@ export function ModelTestForm({
       <div>
         <label
           htmlFor="model-test-prompt"
-          className="mb-1 block text-sm font-medium text-ink-2"
+          className="mb-1 block text-sm font-medium text-sn-label2"
         >
           {t("models_page.test_prompt")}
         </label>
@@ -248,7 +248,7 @@ export function ModelTestForm({
           <div>
             <label
               htmlFor="model-test-count"
-              className="mb-1 block text-xs font-medium text-ink-2"
+              className="mb-1 block text-xs font-medium text-sn-label2"
             >
               {t("models_page.test_count")}
             </label>
@@ -269,7 +269,7 @@ export function ModelTestForm({
           <div>
             <label
               htmlFor="model-test-duration"
-              className="mb-1 block text-xs font-medium text-ink-2"
+              className="mb-1 block text-xs font-medium text-sn-label2"
             >
               {t("models_page.test_duration_seconds")}
             </label>
@@ -287,7 +287,7 @@ export function ModelTestForm({
             />
           </div>
           {options?.max_duration_seconds ? (
-            <p className="self-end pb-2 text-xs text-ink-3">
+            <p className="self-end pb-2 text-xs text-sn-label3">
               {t("models_page.test_duration_max", { seconds: options.max_duration_seconds })}
             </p>
           ) : null}
@@ -313,7 +313,7 @@ function LabeledSelect({
   if (options.length === 0) return null;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-ink-2">
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-sn-label2">
         {label}
       </label>
       <Select id={id} value={value} onChange={onChange} options={options} aria-label={label} />

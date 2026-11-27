@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleCheck, FileWarning, OctagonAlert } from "lucide-react";
+import { CircleCheck, FileWarning, OctagonAlert } from "@code-proxy/ui/icons";
 import type { MonitorBreakdownRow, MonitorOverview } from "@code-proxy/api-client";
-import { Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
+import { Button, Card, ScrollArea, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { ErrorDetailModal } from "@features/log-content-viewer";
 import { MeterBar, meterTone } from "@features/monitor-widgets/monitorVisuals";
 import {
@@ -114,11 +114,11 @@ export function FailureCard({
           ) : null}
 
           <section aria-label={t("monitor_center.failures.sources")} className="space-y-1">
-            <h4 className="text-xs font-medium text-ink-3">
+            <h4 className="text-xs font-medium text-sn-label3">
               {t("monitor_center.failures.sources")}
             </h4>
             {sources.length === 0 ? (
-              <p className="py-2 text-xs text-ink-3">
+              <p className="py-2 text-xs text-sn-label3">
                 {t("monitor_center.failures.sources_empty")}
               </p>
             ) : (
@@ -135,16 +135,16 @@ export function FailureCard({
                     title={t("monitor_center.click_to_filter")}
                     className={[
                       "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-xl px-2.5 py-2 text-left transition-colors",
-                      selected ? "bg-selected" : "hover:bg-hover",
+                      selected ? "bg-sn-active" : "hover:bg-sn-hover",
                       "disabled:cursor-default disabled:hover:bg-transparent",
                     ].join(" ")}
                   >
-                    <span className="truncate text-sm text-ink">{labelOf(row)}</span>
-                    <span className="text-xs tabular-nums text-ink-2">
+                    <span className="truncate text-sm text-sn-label">{labelOf(row)}</span>
+                    <span className="text-xs tabular-nums text-sn-label2">
                       <span className="font-semibold text-rose-600 dark:text-rose-300">
                         {formatMonitorCompact(row.failed)}
                       </span>
-                      <span className="text-ink-4"> / {formatMonitorCompact(row.requests)}</span>
+                      <span className="text-sn-label-off"> / {formatMonitorCompact(row.requests)}</span>
                       <span className="ml-2 inline-block w-12 text-right">
                         {formatMonitorPercent(rowRate, 1)}
                       </span>
@@ -159,24 +159,24 @@ export function FailureCard({
           </section>
 
           <section aria-label={t("monitor_center.failures.recent")} className="min-h-0 space-y-1">
-            <h4 className="text-xs font-medium text-ink-3">
+            <h4 className="text-xs font-medium text-sn-label3">
               {t("monitor_center.failures.recent")}
             </h4>
             {overview.recent_failures.length === 0 ? (
-              <p className="py-2 text-xs text-ink-3">{t("monitor_center.failures.recent_empty")}</p>
+              <p className="py-2 text-xs text-sn-label3">{t("monitor_center.failures.recent_empty")}</p>
             ) : (
               <ScrollArea viewportClassName="max-h-60" edgeFade scrollbarVisibility="hover">
-                <ul className="divide-y divide-line">
+                <ul className="divide-y divide-sn-line">
                   {overview.recent_failures.map((failure) => (
                     <li key={failure.id} className="flex items-center gap-3 py-2 text-xs">
-                      <span className="w-28 shrink-0 tabular-nums text-ink-3">
+                      <span className="w-28 shrink-0 tabular-nums text-sn-label3">
                         {formatMonitorLocalTime(failure.timestamp)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium text-ink">
+                        <span className="block truncate font-medium text-sn-label">
                           {failure.model || "—"}
                         </span>
-                        <span className="block truncate text-ink-3">
+                        <span className="block truncate text-sn-label3">
                           {[
                             failure.channel || t("monitor_center.unknown_channel"),
                             failure.consumer,
@@ -185,17 +185,18 @@ export function FailureCard({
                             .join(" · ")}
                         </span>
                       </span>
-                      <span className="shrink-0 tabular-nums text-ink-2">
+                      <span className="shrink-0 tabular-nums text-sn-label2">
                         {failure.latency_ms > 0 ? formatMonitorDuration(failure.latency_ms) : "—"}
                       </span>
                       {canViewDetail ? (
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
+                          size="xs"
                           onClick={() => setDetail({ id: failure.id, model: failure.model })}
-                          className="shrink-0 rounded-full px-2 py-1 font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+                          className="shrink-0"
                         >
                           {t("monitor_center.failures.view_detail")}
-                        </button>
+                        </Button>
                       ) : null}
                     </li>
                   ))}

@@ -1,5 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, Check, Circle, ClipboardPaste, CornerDownLeft, X } from "lucide-react";
+import { AlertTriangle, Check, Circle, ClipboardPaste, CornerDownLeft, X } from "@code-proxy/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@code-proxy/ui";
@@ -13,7 +12,6 @@ import { useLoginProblemText } from "../hooks/useLoginProblemText";
 type Chip = { key: string; tone: "ok" | "pending" | "bad" | "warn"; label: string };
 
 function CheckChip({ tone, label }: Omit<Chip, "key">) {
-  const reduceMotion = useReducedMotion();
   const icon =
     tone === "ok" ? (
       <Check size={12} strokeWidth={3} />
@@ -25,26 +23,21 @@ function CheckChip({ tone, label }: Omit<Chip, "key">) {
       <Circle size={10} />
     );
   return (
-    <motion.span
-      layout={!reduceMotion}
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85 }}
-      transition={{ type: "spring", stiffness: 500, damping: 32 }}
+    <span
       className={[
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        "sn-pop-in inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
         tone === "ok"
-          ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
+          ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/18 dark:text-emerald-300 dark:ring-emerald-400/25"
           : tone === "bad"
-            ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
+            ? "bg-rose-500/12 text-rose-700 ring-rose-500/20 dark:bg-rose-500/18 dark:text-rose-300 dark:ring-rose-400/25"
             : tone === "warn"
-              ? "bg-amber-500/14 text-amber-800 dark:text-amber-300"
-              : "bg-hover text-ink-3",
+              ? "bg-amber-500/14 text-amber-800 ring-amber-500/20 dark:bg-amber-500/18 dark:text-amber-300 dark:ring-amber-400/25"
+              : "bg-[var(--sn-fill-subtle)] text-[var(--sn-label3)] ring-[var(--sn-line)]",
       ].join(" ")}
     >
       <span aria-hidden="true">{icon}</span>
       {label}
-    </motion.span>
+    </span>
   );
 }
 
@@ -191,23 +184,25 @@ export function CallbackPasteBox({
   // Without the async Clipboard API (plain-HTTP panels) the button could only fail.
   const clipboardReadable = canReadClipboard();
 
+  const textareaRows = value.trim().length > 100 ? 4 : 2;
+
   return (
     <div className="grid gap-2">
       <div
-        // 和输入框同一套阴影描边（不画 border）：出错是红色描边，可以提交是绿色描边。
+        // 输入区与底栏采用纵向独立流式分层，彻底避免长回调 URL 换行后被底栏校验徽章或按钮遮挡（深浅色均保持清晰分层）。
         className={[
-          "group relative rounded-2xl bg-field transition-shadow duration-200",
+          "group flex flex-col overflow-hidden rounded-xl bg-[var(--sn-field)] transition-shadow duration-200",
           message?.tone === "bad"
-            ? "shadow-[0_0_0_1px_rgb(229_72_77/0.8)]"
+            ? "shadow-[0_0_0_1px_var(--sn-danger)]"
             : ready
-              ? "shadow-[0_0_0_1px_rgb(16_163_127/0.7)]"
-              : "shadow-control hover:shadow-control-hover focus-within:shadow-control-focus",
+              ? "shadow-[0_0_0_1px_var(--sn-success)]"
+              : "border border-sn-line-control hover:border-sn-line-control-hover focus-within:border-sn-focus focus-within:shadow-[0_0_0_3px_var(--sn-ring)]",
         ].join(" ")}
       >
         <textarea
           ref={inputRef}
           value={value}
-          rows={2}
+          rows={textareaRows}
           spellCheck={false}
           autoComplete="off"
           aria-label={t(
@@ -242,17 +237,18 @@ export function CallbackPasteBox({
               void submit(check);
             }
           }}
-          className="block w-full resize-none bg-transparent px-4 pt-3 pb-12 font-mono text-xs leading-5 break-all text-ink outline-none placeholder:font-sans placeholder:text-sm placeholder:text-ink-3 disabled:opacity-60"
+          className="block max-h-36 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3 pb-2.5 font-mono text-xs leading-5 break-all text-[var(--sn-label)] outline-none placeholder:font-sans placeholder:text-sm placeholder:text-[var(--sn-label3)] disabled:opacity-60"
         />
-        <div className="absolute right-2 bottom-2 left-3 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5" aria-live="polite">
-            <AnimatePresence initial={false}>
-              {chips.map(({ key, ...chip }) => (
-                <CheckChip key={key} {...chip} />
-              ))}
-            </AnimatePresence>
+        <div
+          data-callback-footer=""
+          className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] px-3 py-2"
+        >
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5" aria-live="polite">
+            {chips.map(({ key, ...chip }) => (
+              <CheckChip key={key} {...chip} />
+            ))}
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
             {value.trim() ? (
               <Button
                 size="xs"
@@ -267,11 +263,9 @@ export function CallbackPasteBox({
             ) : clipboardReadable ? (
               <span className="relative inline-flex">
                 {nudge ? (
-                  <motion.span
+                  <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -inset-1 rounded-full shadow-control-focus"
-                    animate={{ opacity: [0.2, 1, 0.2] }}
-                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                    className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-sn-focus shadow-[0_0_0_3px_var(--sn-ring)]"
                   />
                 ) : null}
                 <Button
@@ -285,7 +279,7 @@ export function CallbackPasteBox({
                 </Button>
               </span>
             ) : (
-              <kbd className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-sans text-2xs text-ink-3 dark:bg-white/[0.07]">
+              <kbd className="rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 font-sans text-2xs text-sn-label3 dark:bg-white/[0.07]">
                 {t("add_account.paste.shortcut")}
               </kbd>
             )}
@@ -293,39 +287,30 @@ export function CallbackPasteBox({
         </div>
       </div>
       <div ref={messageRef} className="scroll-mb-4">
-        <AnimatePresence initial={false} mode="wait">
-          {message ? (
-            <motion.p
-              key={typeof message.text === "string" ? message.text : message.tone}
-              role={message.tone === "bad" ? "alert" : "status"}
-              initial={{ opacity: 0, y: -3 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              className={[
-                "text-xs",
-                message.tone === "bad"
-                  ? "text-rose-600 dark:text-rose-300"
-                  : message.tone === "warn"
-                    ? "text-amber-700 dark:text-amber-300"
-                    : "text-ink-2",
-              ].join(" ")}
-            >
-              {message.text}
-            </motion.p>
-          ) : nudge ? (
-            <motion.p
-              key="nudge"
-              role="status"
-              initial={{ opacity: 0, y: -3 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-xs text-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300"
-            >
-              {t("add_account.paste.nudge")}
-            </motion.p>
-          ) : null}
-        </AnimatePresence>
+        {message ? (
+          <p
+            key={typeof message.text === "string" ? message.text : message.tone}
+            role={message.tone === "bad" ? "alert" : "status"}
+            className={[
+              "sn-fade-up text-xs",
+              message.tone === "bad"
+                ? "text-rose-600 dark:text-rose-300"
+                : message.tone === "warn"
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-sn-label2",
+            ].join(" ")}
+          >
+            {message.text}
+          </p>
+        ) : nudge ? (
+          <p
+            key="nudge"
+            role="status"
+            className="sn-fade-up text-xs text-sn-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300"
+          >
+            {t("add_account.paste.nudge")}
+          </p>
+        ) : null}
       </div>
     </div>
   );

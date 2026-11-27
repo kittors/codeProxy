@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { Pencil, Plus, ShieldCheck, Trash2 } from "@code-proxy/ui/icons";
 import {
   ipAccessApi,
   type IpAccessEffect,
@@ -206,7 +206,7 @@ export function AccessRulesTab({
             </span>
           ))}
           {hidden > 0 ? (
-            <span className="text-ink-3">
+            <span className="text-sn-label3">
               {t("ip_access.bulk_delete_more", { count: hidden })}
             </span>
           ) : null}
@@ -255,7 +255,7 @@ export function AccessRulesTab({
         width: GRID_WIDTH.name,
         overflowTooltip: true,
         cell: (item) => (
-          <span className="font-mono text-sm text-ink">{item.cidr}</span>
+          <span className="font-mono text-sm text-sn-label">{item.cidr}</span>
         ),
       },
       {
@@ -279,7 +279,7 @@ export function AccessRulesTab({
         header: t("ip_access.col_rule_source"),
         width: GRID_WIDTH.compact,
         cell: (item) => (
-          <span className="text-sm text-ink-2">
+          <span className="text-sm text-sn-label2">
             {t(`ip_access.source_${item.source}`)}
           </span>
         ),
@@ -292,7 +292,7 @@ export function AccessRulesTab({
           item.expires_at ? (
             new Date(item.expires_at).toLocaleString(i18n.language)
           ) : (
-            <span className="text-ink-3">{t("ip_access.never_expires")}</span>
+            <span className="text-sn-label3">{t("ip_access.never_expires")}</span>
           ),
       },
       {
@@ -307,7 +307,7 @@ export function AccessRulesTab({
         width: GRID_WIDTH.composite,
         overflowTooltip: true,
         cell: (item) => (
-          <span className="text-sm text-ink-2">
+          <span className="text-sm text-sn-label2">
             {item.note || item.reason || "—"}
           </span>
         ),
@@ -489,19 +489,19 @@ export function AccessRulesTab({
       {protectedEntries.length > 0 ? (
         <div className="pt-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <span className="text-xs font-medium text-ink-2">
+            <span className="text-xs font-medium text-sn-label2">
               {t("ip_access.protected_title")}
             </span>
             {protectedEntries.map((entry) => (
               <span
                 key={entry.cidr}
                 title={t(`ip_access.protected_${entry.reason}`)}
-                className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 font-mono text-xs text-ink-2 dark:bg-white/[0.07]"
+                className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 font-mono text-xs text-sn-label2 dark:bg-white/[0.07]"
               >
                 {entry.cidr}
               </span>
             ))}
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {t("ip_access.protected_hint")}
             </span>
           </div>
@@ -543,7 +543,7 @@ export function AccessRulesTab({
           deleteTarget ? (
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate font-mono">{deleteTarget.cidr}</span>
-              <span className="flex shrink-0 items-center gap-2 text-xs text-ink-3">
+              <span className="flex shrink-0 items-center gap-2 text-xs text-sn-label3">
                 <span
                   className={`rounded-full px-2 py-0.5 font-medium ${
                     deleteTarget.effect === "deny"

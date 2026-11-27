@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check, Copy, Import } from "lucide-react";
+import { Check, Copy, Import } from "@code-proxy/ui/icons";
 import { Button, EmptyState, Modal, surface } from "@code-proxy/ui";
 import type { CcSwitchImportConfigListItem } from "@code-proxy/domain/ccswitch/ccswitchImportConfigList";
 import { getCcSwitchClientConfig } from "@code-proxy/domain/ccswitch/ccswitchClients";
@@ -22,7 +22,7 @@ export interface CcSwitchImportCardListProps {
  * 卡片和「添加 AI 账号」里的提供商选择用同一种外观。
  *
  * 卡片本身已是弹窗里的一层淡底，图标不再垫一个带底色的方块（卡片角落里的底色块圆角对不上），
- * 标签也用叠加淡底——和卡片同色的 bg-subtle 落在卡片上等于没有。
+ * 标签也用叠加淡底——和卡片同色的 bg-sn-subtle 落在卡片上等于没有。
  */
 export function CcSwitchImportCardList({
   open,
@@ -56,7 +56,7 @@ export function CcSwitchImportCardList({
             return (
               <li
                 key={config.id}
-                className={`${surface({ tone: "raised", radius: "2xl" })} grid grid-cols-[minmax(0,1fr)_auto] transition-colors hover:bg-hover`}
+                className={`${surface({ tone: "raised", radius: "2xl" })} grid grid-cols-[minmax(0,1fr)_auto] transition-colors hover:bg-sn-hover`}
               >
                 <button
                   type="button"
@@ -66,22 +66,22 @@ export function CcSwitchImportCardList({
                   <CcSwitchClientIcon clientType={config.clientType} className="mt-0.5 h-5 w-5" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-ink">
+                      <span className="truncate text-sm font-semibold text-sn-label">
                         {config.providerName}
                       </span>
-                      <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-semibold text-ink-3 dark:bg-white/[0.07]">
+                      <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-semibold text-sn-label3 dark:bg-white/[0.07]">
                         {t(getCcSwitchClientConfig(config.clientType).labelKey)}
                       </span>
                     </span>
                     {config.note ? (
-                      <span className="mt-0.5 block truncate text-xs text-ink-3">{config.note}</span>
+                      <span className="mt-0.5 block truncate text-xs text-sn-label3">{config.note}</span>
                     ) : null}
                     <span className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-mono text-2xs text-ink-2 dark:bg-white/[0.07]">
+                      <span className="inline-flex max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 font-mono text-2xs text-sn-label2 dark:bg-white/[0.07]">
                         {getPrimaryModel(config)}
                       </span>
                       {config.allowedChannelGroups.length > 0 ? (
-                        <span className="truncate text-2xs text-ink-3">
+                        <span className="truncate text-2xs text-sn-label3">
                           {config.allowedChannelGroups.join(", ")}
                         </span>
                       ) : null}

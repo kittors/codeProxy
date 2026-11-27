@@ -80,8 +80,8 @@ export function ImageResultStage({
 
       {activeImage?.revisedPrompt ? (
         <div className={[surface({ tone: "inset", radius: "2xl" }), "shrink-0 px-4 py-3"].join(" ")}>
-          <p className="text-xs font-medium text-ink-3">{t("image_generation.revised_prompt_label")}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-ink-2">{activeImage.revisedPrompt}</p>
+          <p className="text-xs font-medium text-sn-label3">{t("image_generation.revised_prompt_label")}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-sn-label2">{activeImage.revisedPrompt}</p>
         </div>
       ) : null}
     </div>

@@ -9,7 +9,7 @@ describe("LanguageSelector", () => {
     await i18n.changeLanguage("en");
   });
 
-  test("renders translated language labels instead of missing translation keys", () => {
+  test("renders translated language labels with clean language codes instead of emoji flags", () => {
     render(<LanguageSelector className="inline-flex" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Language" }));
@@ -17,9 +17,10 @@ describe("LanguageSelector", () => {
     expect(screen.getByRole("option", { name: /中文/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /English/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Русский/ })).toBeInTheDocument();
-    expect(screen.getAllByText("🇨🇳").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("🇬🇧").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("🇷🇺").length).toBeGreaterThan(0);
+    expect(screen.getByText("ZH")).toBeInTheDocument();
+    expect(screen.getAllByText("EN").length).toBeGreaterThan(0);
+    expect(screen.getByText("RU")).toBeInTheDocument();
+    expect(screen.queryByText("🇨🇳")).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: /English/ }).className).not.toMatch(
       /(^|\s)bg-\[#EBEBEC\](\s|$)/,
     );

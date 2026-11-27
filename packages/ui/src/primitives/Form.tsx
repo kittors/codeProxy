@@ -4,8 +4,10 @@ import {
   createContext,
   isValidElement,
   useContext,
+  useEffect,
   useId,
   useMemo,
+  useRef,
   type FormHTMLAttributes,
   type HTMLAttributes,
   type LabelHTMLAttributes,
@@ -17,9 +19,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils/selectStyles";
 
-/* ------------------------------------------------------------------ */
-/*  Context                                                            */
-/* ------------------------------------------------------------------ */
+function triggerSatinShake(field: HTMLElement | null) {
+  if (!field || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+  const target = field.querySelector<HTMLElement>(".sn-input, .sn-trigger, [role='combobox']") ?? field;
+  target.classList.remove("sn-shake");
+  void target.offsetWidth;
+  target.classList.add("sn-shake");
+  target.addEventListener("animationend", () => target.classList.remove("sn-shake"), { once: true });
+}
 
 type FormFieldContextValue = {
   id: string;
@@ -32,10 +39,6 @@ type FormFieldContextValue = {
 
 const FormFieldContext = createContext<FormFieldContextValue | null>(null);
 
-/**
- * 给不是原生表单元素的组合控件用（卡片单选是一组按钮，`<label for>` 指不到它）：
- * 在 FormField 里时拿到字段标签与说明的 id，自己挂 aria-labelledby / aria-describedby。
- */
 export function useOptionalFormField(): FormFieldContextValue | null {
   return useContext(FormFieldContext);
 }
@@ -48,51 +51,27 @@ function useFormFieldContext(component: string): FormFieldContextValue {
   return ctx;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Form                                                               */
-/* ------------------------------------------------------------------ */
-
-/**
- * React 19 里 ref 是普通 prop，展开到 `<form>` 上就能拿到节点——提交校验失败时
- * `focusFirstInvalid(formRef.current)` 要用它，不必再在 Form 外面另包一层原生 form。
- */
 export type FormProps = FormHTMLAttributes<HTMLFormElement> & { ref?: Ref<HTMLFormElement> };
 
 function FormRoot({ className, ...props }: FormProps) {
   return <form data-slot="form" className={cn("space-y-4", className)} {...props} />;
 }
 
-/* ------------------------------------------------------------------ */
-/*  FormField                                                          */
-/* ------------------------------------------------------------------ */
-
 export type FormFieldOrientation = "vertical" | "horizontal";
 
 export type FormFieldProps = PropsWithChildren<
   HTMLAttributes<HTMLDivElement> & {
-    /** Field label. Prefer this for the common label-above-control layout. */
     label?: ReactNode;
-    /** Optional helper text under the control. */
     description?: ReactNode;
-    /** Optional error message; also marks the field invalid for a11y. */
     error?: ReactNode;
-    /** Show a required marker next to the label. */
     required?: boolean;
-    /** Show a muted "optional" hint next to the label (instead of baking it into the label text). */
     optional?: boolean;
-    /** Layout: vertical stacks label above control; horizontal puts label beside control. */
     orientation?: FormFieldOrientation;
-    /** Optional explicit control id; defaults to a generated id. */
     htmlFor?: string;
-    /** Reserve min height for meta rows so error appearance does not jump layout. Default true. */
     reserveMeta?: boolean;
-    /** Current value length for the counter (pair with maxLength). */
     valueLength?: number;
-    /** Max length shown in counter (display only; pass maxLength to control separately). */
     maxLength?: number;
-    /** Horizontal label width class. Default w-28. */
     labelWidth?: string;
-    /** Extra class for the label element. */
     labelClassName?: string;
   }
 >;
@@ -118,14 +97,24 @@ function FormField({
 }: FormFieldProps) {
   const generatedId = useId();
   const id = htmlFor ?? generatedId;
+  const fieldRef = useRef<HTMLDivElement | null>(null);
   const showCount = typeof maxLength === "number" && maxLength > 0;
   const descriptionId = description ? `${id}-description` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const countId = showCount ? `${id}-count` : undefined;
   const invalid = Boolean(error);
+  const wasInvalidRef = useRef(invalid);
   const isHorizontal = orientation === "horizontal";
   const resolvedLabelWidth = labelWidth ?? DEFAULT_HORIZONTAL_LABEL_WIDTH;
   const length = typeof valueLength === "number" ? valueLength : 0;
+
+  // Satin 校验反馈微动效：错误首次出现时触发输入框轻微横向抖动。
+  useEffect(() => {
+    if (invalid && !wasInvalidRef.current && fieldRef.current) {
+      triggerSatinShake(fieldRef.current);
+    }
+    wasInvalidRef.current = invalid;
+  }, [invalid]);
 
   const contextValue = useMemo<FormFieldContextValue>(
     () => ({ id, labelId: `${id}-label`, descriptionId, errorId, countId, invalid }),
@@ -138,7 +127,10 @@ function FormField({
 
   const infoRow =
     description || showCount ? (
-      <div data-slot="form-field-info" className="flex min-h-5 items-start justify-between gap-3">
+      <div
+        data-slot="form-field-info"
+        className="flex items-start justify-between gap-2 text-xs leading-[18px] text-[var(--sn-label3)]"
+      >
         <div className="min-w-0 flex-1">
           {description ? <FormDescription id={descriptionId}>{description}</FormDescription> : null}
         </div>
@@ -146,10 +138,7 @@ function FormField({
           <span
             data-slot="form-field-count"
             id={countId}
-            className={cn(
-              "shrink-0 text-xs leading-5 tabular-nums text-ink-3",
-              length > maxLength! ? "text-rose-600 dark:text-rose-400" : null,
-            )}
+            className={cn("sn-count shrink-0 tabular-nums", length > maxLength! ? "sn-over text-[var(--sn-danger)]" : null)}
           >
             {length} / {maxLength}
           </span>
@@ -157,46 +146,42 @@ function FormField({
       </div>
     ) : null;
 
-  // 只预留一行：没有说明时，这一行留给随时可能出现的错误，出现时不会把下面的字段往下推；
-  // 以前说明和错误各预留一行，每个字段下面都空着两行，弹窗里的表单显得很松。
   const errorRow = error ? (
-    <div data-slot="form-field-error-slot" className="min-h-5">
-      <FormError id={errorId}>{error}</FormError>
+    <div data-slot="form-field-error-slot" className="sn-err">
+      <span>
+        <FormError id={errorId}>{error}</FormError>
+      </span>
     </div>
   ) : reserveMeta && !infoRow ? (
-    <div data-slot="form-field-error-slot" className="invisible min-h-5" aria-hidden="true">
-      <span className="block text-xs leading-5">&nbsp;</span>
+    <div data-slot="form-field-error-slot" className="invisible min-h-[18px]" aria-hidden="true">
+      <span className="block text-xs leading-[18px]">&nbsp;</span>
     </div>
   ) : null;
 
-  // 竖排时说明 / 错误贴近输入框（往上收 4px），和下一个字段的标签拉开距离，
-  // 一眼看得出这行小字属于上面的输入框。
   const meta =
     infoRow || errorRow ? (
-      <div
-        data-slot="form-field-meta"
-        className={cn("space-y-0.5", isHorizontal ? null : "-mt-1")}
-      >
+      <div data-slot="form-field-meta" className="space-y-0.5">
         {infoRow}
         {errorRow}
       </div>
     ) : null;
 
   const labelClasses = cn(
-    isHorizontal ? cn(resolvedLabelWidth, "shrink-0 text-left leading-9") : null,
+    isHorizontal ? cn(resolvedLabelWidth, "shrink-0 text-left leading-8") : null,
     labelClassName,
   );
 
   return (
     <FormFieldContext.Provider value={contextValue}>
       <div
+        ref={fieldRef}
         data-slot="form-field"
         data-orientation={orientation}
         data-invalid={invalid || undefined}
         className={cn(
-          // 竖排时标签和输入框之间留 0.625rem：输入框聚焦会向外画 4px 光晕，间距太小时
-          // 标签看上去贴在框上。
-          isHorizontal ? "flex items-start gap-x-3" : "flex flex-col gap-2.5",
+          "sn-field",
+          invalid ? "sn-bad" : null,
+          isHorizontal ? "flex items-start gap-x-3" : null,
           className,
         )}
         {...props}
@@ -226,10 +211,6 @@ function FormField({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  FormLabel                                                          */
-/* ------------------------------------------------------------------ */
-
 export type FormLabelProps = LabelHTMLAttributes<HTMLLabelElement> & {
   required?: boolean;
   optional?: boolean;
@@ -249,28 +230,21 @@ function FormLabel({
       data-slot="form-label"
       id={labelId}
       htmlFor={id}
-      // 标签用正文色、说明用浅灰：两层信息一眼分得开（以前标签和说明都是灰的）。
-      className={cn("text-sm font-medium text-ink", className)}
+      className={cn("sn-lbl", className)}
       {...props}
     >
       {children}
       {required ? (
-        <span className="ml-0.5 text-rose-500" aria-hidden="true">
+        <span className="ml-0.5 text-[var(--sn-danger)]" aria-hidden="true">
           *
         </span>
       ) : null}
       {optional && !required ? (
-        <span className="ml-1.5 text-xs font-normal text-ink-3">
-          {t("common.optional", { defaultValue: "可选" })}
-        </span>
+        <span className="sn-opt">{t("common.optional", { defaultValue: "可选" })}</span>
       ) : null}
     </label>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  FormControl                                                        */
-/* ------------------------------------------------------------------ */
 
 export type FormControlProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>;
 
@@ -305,20 +279,11 @@ function FormControl({ children, className, ...props }: FormControlProps) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  FormDescription / FormError                                        */
-/* ------------------------------------------------------------------ */
-
 export type FormDescriptionProps = PropsWithChildren<HTMLAttributes<HTMLParagraphElement>>;
 
 function FormDescription({ children, className, id, ...props }: FormDescriptionProps) {
   return (
-    <p
-      data-slot="form-description"
-      id={id}
-      className={cn("text-xs leading-5 text-ink-3", className)}
-      {...props}
-    >
+    <p data-slot="form-description" id={id} className={cn("sn-help", className)} {...props}>
       {children}
     </p>
   );
@@ -332,17 +297,13 @@ function FormError({ children, className, id, ...props }: FormErrorProps) {
       data-slot="form-error"
       id={id}
       role="alert"
-      className={cn("text-xs leading-5 text-rose-600 dark:text-rose-400", className)}
+      className={cn("text-xs leading-[18px] text-[var(--sn-danger)]", className)}
       {...props}
     >
       {children}
     </p>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Export compound                                                    */
-/* ------------------------------------------------------------------ */
 
 export const Form = Object.assign(FormRoot, {
   Field: FormField,

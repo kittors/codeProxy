@@ -1,22 +1,16 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, Languages } from "lucide-react";
+import { Icon as SatinIcon } from "satin-ui/react";
 import {
   ensureLanguageResources,
   LANGUAGE_ORDER,
   STORAGE_KEY_LANGUAGE,
   type Language,
 } from "@code-proxy/i18n";
-import { HoverTooltip } from "../overlays/Tooltip";
-import {
-  cn,
-  selectOptionBase,
-  selectOptionCheck,
-  selectOptionIdle,
-  selectOptionSelected,
-  selectPanel,
-} from "../utils/selectStyles";
+import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
+import { cn } from "../utils/selectStyles";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
 const LANGUAGE_LABEL_KEYS: Record<Language, string> = {
@@ -32,18 +26,48 @@ const SHORT_LABELS: Record<Language, string> = {
   ru: "RU",
 };
 
-const FLAG_ICONS: Record<Language, string> = {
-  "zh-CN": "🇨🇳",
-  en: "🇬🇧",
-  ru: "🇷🇺",
+/** 遵循 Satin 禁 emoji 规范，采用跨平台一致的等宽语种缩写徽标。 */
+const LANGUAGE_CODES: Record<Language, string> = {
+  "zh-CN": "ZH",
+  en: "EN",
+  ru: "RU",
 };
 
-export function LanguageSelector({ className }: { className?: string }) {
+export interface LanguageSelectorProps {
+  className?: string;
+  variant?: "ghost" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+const SIZE_CLASS: Record<NonNullable<LanguageSelectorProps["size"]>, string> = {
+  sm: "sn-sm",
+  md: "",
+  lg: "sn-lg",
+};
+
+export function LanguageSelector({
+  className,
+  variant = "ghost",
+  size = "sm",
+}: LanguageSelectorProps) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const floating = useSatinFloatingLayer({
+    open,
+    anchorRef: triggerRef,
+    panelRef: listRef,
+    placement: "bottom",
+    align: "end",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
   const currentLanguage = i18n.language as Language;
   const currentValue =
@@ -66,48 +90,36 @@ export function LanguageSelector({ className }: { className?: string }) {
         // ignore
       }
       setOpen(false);
+      triggerRef.current?.focus();
     },
     [i18n],
   );
 
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const width = 170;
-    const margin = 8;
-    const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, window.innerWidth - width - margin);
-    const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-    setPos({ top: rect.bottom + 6, left });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      if (triggerRef.current?.contains(target) || listRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", handleClick);
-    return () => document.removeEventListener("pointerdown", handleClick);
-  }, [open]);
-
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") {
+        return;
+      }
+      const panel = listRef.current;
+      if (!panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="option"]'));
+      if (items.length === 0) return;
+      e.preventDefault();
+      if (e.key === "Home") {
+        items[0]?.focus();
+        return;
+      }
+      if (e.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const cur = items.indexOf(document.activeElement as HTMLElement);
+      const nextIdx =
+        e.key === "ArrowDown"
+          ? (cur + 1 + items.length) % items.length
+          : (cur - 1 + items.length) % items.length;
+      items[nextIdx]?.focus();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
@@ -119,31 +131,53 @@ export function LanguageSelector({ className }: { className?: string }) {
 
   return (
     <>
-      <HoverTooltip content={tooltip}>
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          className={className}
-          aria-label={label}
-          aria-expanded={open}
-          aria-haspopup="listbox"
-        >
-          <Languages size={16} />
-          <span className="ml-1 text-xs font-bold leading-none">{shortLabel}</span>
-        </button>
-      </HoverTooltip>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && !open) {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className={cn(
+          "sn-btn gap-1.5",
+          variant === "secondary" ? "sn-secondary" : "sn-ghost",
+          SIZE_CLASS[size],
+          open ? "sn-is-open" : null,
+          className,
+        )}
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        data-tip={tooltip}
+        data-tip-side="bottom"
+      >
+        <SatinIcon name="compass" size={15} />
+        <span className="text-xs font-semibold leading-none">{shortLabel}</span>
+      </button>
 
-      {open
+      {floating.mounted
         ? createPortal(
             <div
               ref={listRef}
               role="listbox"
-              data-state="open"
-              data-side="bottom"
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-state={floating.isOpen ? "open" : "closed"}
+              data-side={floating.side}
               aria-label={label}
-              className={cn(selectPanel, "w-[170px]")}
-              style={{ top: pos.top, left: pos.left }}
+              className={cn(
+                "sn-menu sn-float sn-solid !w-44 !min-w-44 outline-none",
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
+              style={{
+                top: floating.top,
+                left: floating.left,
+                transformOrigin: floating.origin,
+              }}
             >
               {SUPPORTED_LANGUAGES.map((lng) => {
                 const selected = lng === currentValue;
@@ -155,20 +189,27 @@ export function LanguageSelector({ className }: { className?: string }) {
                     aria-selected={selected}
                     onClick={() => handleLanguageChange(lng)}
                     className={cn(
-                      selectOptionBase,
-                      selected ? selectOptionSelected : selectOptionIdle,
+                      "sn-item w-full border-0 bg-transparent text-left outline-none hover:bg-[var(--sn-b-ghost-hover)] focus:bg-[var(--sn-b-ghost-hover)]",
+                      selected ? "sn-sel font-medium" : null,
                     )}
                   >
-                    <span className="shrink-0 text-base leading-none" aria-hidden="true">
-                      {FLAG_ICONS[lng]}
-                    </span>
-                    <span className="flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
-                    {selected ? <Check size={15} className={selectOptionCheck} aria-hidden="true" /> : null}
+                    <code
+                      className="inline-flex h-5 w-7 flex-none items-center justify-center rounded-md bg-[var(--sn-fill-subtle)] font-mono text-2xs font-semibold text-[var(--sn-label2)]"
+                      aria-hidden="true"
+                    >
+                      {LANGUAGE_CODES[lng]}
+                    </code>
+                    <span className="min-w-0 flex-1 truncate">{t(LANGUAGE_LABEL_KEYS[lng])}</span>
+                    {selected ? (
+                      <span className="sn-chk">
+                        <SatinIcon name="check" size={14} />
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>,
-            document.body,
+            resolvePortalContainer(triggerRef.current),
           )
         : null}
     </>

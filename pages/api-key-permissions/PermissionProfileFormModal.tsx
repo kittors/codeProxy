@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Boxes, Gauge, ListFilter, Route, ShieldCheck, SlidersHorizontal, Tag } from "lucide-react";
+import { Boxes, Gauge, ListFilter, Route, ShieldCheck, SlidersHorizontal, Tag } from "@code-proxy/ui/icons";
 import {
   LEGACY_PROFILE_CELLS,
   QUOTA_METRICS,
@@ -196,7 +196,7 @@ export function PermissionProfileFormModal({
             idPrefix="profile-limits"
             label={t("access_policy.profile_limits_title")}
           />
-          <p className="mt-4 text-2xs leading-5 text-ink-3">{t("access_policy.limits_input_hint")}</p>
+          <p className="mt-4 text-2xs leading-5 text-sn-label3">{t("access_policy.limits_input_hint")}</p>
         </div>
       ),
     },

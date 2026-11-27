@@ -26,11 +26,19 @@ const inlineScript = (entry: (typeof ENTRIES)[number]) => {
 
 const root = () => document.documentElement;
 
+/** 仅提取外观模型管理的 DOM 状态；主题域写入的 color-scheme 与 data-theme 单独断言。 */
+const appearanceStyle = () =>
+  (root().getAttribute("style") ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && !part.startsWith("color-scheme:"))
+    .join("; ");
+
 const snapshot = () => ({
   palette: root().dataset.palette,
   icons: root().dataset.icons,
   bars: root().dataset.bars,
-  style: root().getAttribute("style") ?? "",
+  style: appearanceStyle(),
 });
 
 const resetRoot = () => {
@@ -49,18 +57,26 @@ describe.each(ENTRIES)("%s pre-paint script", (entry) => {
     resetRoot();
   });
 
-  test("ships the colourful defaults on <html> for the first paint", () => {
+  test("ships the Satin quiet defaults on <html> for the first paint", () => {
     const { html } = inlineScript(entry);
-    expect(html).toContain('<html lang="zh-CN" data-palette="colorful" data-icons="colorful" data-bars="semantic">');
+    expect(html).toContain('<html lang="zh-CN" data-palette="quiet" data-icons="mono" data-bars="semantic">');
   });
 
   test("writes exactly what the app writes for a stored appearance", () => {
-    const settings = { ...applyStylePreset(DEFAULT_APPEARANCE, "quiet"), barThickness: 11, textScale: 1.1 };
+    const settings = {
+      ...applyStylePreset(DEFAULT_APPEARANCE, "colorful"),
+      accent: "blue",
+      barThickness: 11,
+      textScale: 1.1,
+    };
     localStorage.setItem(APPEARANCE_STORAGE_KEY, serializeAppearance(settings));
     new Function(inlineScript(entry).script)();
     const fromScript = snapshot();
-    expect(fromScript.palette).toBe("quiet");
-    expect(root().style.getPropertyValue("--cp-pref-accent")).toBe("#2a6ee8");
+    expect(fromScript.palette).toBe("colorful");
+    expect(root().style.getPropertyValue("--sn-pref-accent")).toBe("#2a6ee8");
+    // 首屏脚本在未持久化主题时也要显式写入 data-theme 与 color-scheme，防止 Satin 兜底暗色媒体查询抢生效。
+    expect(root().getAttribute("data-theme")).toBe("light");
+    expect(root().style.colorScheme).toBe("light");
 
     resetRoot();
     applyAppearanceToDom(settings);
@@ -71,12 +87,12 @@ describe.each(ENTRIES)("%s pre-paint script", (entry) => {
     localStorage.setItem(
       APPEARANCE_STORAGE_KEY,
       JSON.stringify({
-        version: 1,
+        version: 2,
         attrs: { palette: "quiet", icons: "x y", bars: 1 },
         vars: {
-          "--cp-pref-accent": "red;background:url(https://evil.test)",
-          "--cp-pref-accent-dark": "url(//evil.test/x)",
-          "--cp-pref-bar": "12",
+          "--sn-pref-accent": "red;background:url(https://evil.test)",
+          "--sn-pref-accent-dark": "url(//evil.test/x)",
+          "--sn-pref-bar": "12",
           "--other": "#000000",
           color: "#000000",
           "--color-sky-500": "#000000",
@@ -87,19 +103,19 @@ describe.each(ENTRIES)("%s pre-paint script", (entry) => {
     expect(root().dataset.palette).toBe("quiet");
     expect(root().dataset.icons).toBeUndefined();
     expect(root().dataset.bars).toBeUndefined();
-    expect(root().style.getPropertyValue("--cp-pref-bar")).toBe("12");
-    expect(root().style.getPropertyValue("--cp-pref-accent")).toBe("");
-    expect(root().style.getPropertyValue("--cp-pref-accent-dark")).toBe("");
+    expect(root().style.getPropertyValue("--sn-pref-bar")).toBe("12");
+    expect(root().style.getPropertyValue("--sn-pref-accent")).toBe("");
+    expect(root().style.getPropertyValue("--sn-pref-accent-dark")).toBe("");
     expect(root().style.getPropertyValue("--other")).toBe("");
     expect(root().style.getPropertyValue("--color-sky-500")).toBe("");
 
     resetRoot();
     localStorage.setItem(
       APPEARANCE_STORAGE_KEY,
-      JSON.stringify({ version: 2, attrs: { palette: "quiet" }, vars: { "--cp-pref-bar": "12" } }),
+      JSON.stringify({ version: 1, attrs: { palette: "colorful" }, vars: { "--sn-pref-bar": "12" } }),
     );
     new Function(inlineScript(entry).script)();
     expect(root().dataset.palette).toBeUndefined();
-    expect(root().getAttribute("style") ?? "").not.toContain("--cp-pref-bar");
+    expect(root().getAttribute("style") ?? "").not.toContain("--sn-pref-bar");
   });
 });

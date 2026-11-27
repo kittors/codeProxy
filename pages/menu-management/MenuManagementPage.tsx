@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Pencil, Plus, Trash2 } from "@code-proxy/ui/icons";
 import {
   identityApi,
   type MenuIdentity,
@@ -34,7 +34,7 @@ const displayCell = (value: string | null | undefined, fallback = "—") => {
  * 菜单类型、徽标的基础样式是中性淡底标签：简约风格下类型只靠文字区分。
  * 多彩风格下按类型叠一层颜色（目录蓝 / 按钮红 / 内嵌绿 / 外链琥珀，普通菜单保持中性），徽标是实色蓝。
  */
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 const TYPE_TAG_HUE: Partial<Record<MenuType, string>> = {
   directory: "colorful:bg-blue-500/15 colorful:text-blue-600 colorful:dark:text-blue-300",
@@ -251,16 +251,16 @@ export function MenuManagementPage() {
                 >
                   <ChevronRight
                     size={15}
-                    className={`transition-[rotate] duration-200 ease-pop ${isExpanded ? "rotate-90" : ""}`}
+                    className={`transition-[rotate] duration-200 ease-sn-strong ${isExpanded ? "rotate-90" : ""}`}
                   />
                 </Button>
               ) : (
                 <span className="h-7 w-7" aria-hidden="true" />
               )}
-              <Icon size={16} className="shrink-0 text-ink-3" aria-hidden="true" />
+              <Icon size={16} className="shrink-0 text-sn-label3" aria-hidden="true" />
               <span className="min-w-0">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate font-medium text-ink">{label}</span>
+                  <span className="truncate font-medium text-sn-label">{label}</span>
                   {menu.badge_content ? (
                     <span
                       className={`shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium ${NEUTRAL_TAG} colorful:bg-blue-500 colorful:text-white`}
@@ -269,7 +269,7 @@ export function MenuManagementPage() {
                     </span>
                   ) : null}
                 </span>
-                <span className="block truncate text-xs text-ink-3">{menu.code}</span>
+                <span className="block truncate text-xs text-sn-label3">{menu.code}</span>
               </span>
             </div>
           );
@@ -292,7 +292,7 @@ export function MenuManagementPage() {
         header: t("identity_admin.permission_code"),
         width: GRID_WIDTH.badgeStacked,
         cell: (menu) => (
-          <span className="truncate text-xs text-ink-2">
+          <span className="truncate text-xs text-sn-label2">
             {displayCell(menu.permission_code)}
           </span>
         ),
@@ -303,8 +303,8 @@ export function MenuManagementPage() {
         width: GRID_WIDTH.badgeStacked,
         cell: (menu) => (
           <div className="min-w-0 text-xs">
-            <div className="truncate text-ink-2">{displayCell(menu.path)}</div>
-            {menu.link_url ? <div className="truncate text-ink-3">{menu.link_url}</div> : null}
+            <div className="truncate text-sn-label2">{displayCell(menu.path)}</div>
+            {menu.link_url ? <div className="truncate text-sn-label3">{menu.link_url}</div> : null}
           </div>
         ),
       },
@@ -313,7 +313,7 @@ export function MenuManagementPage() {
         header: t("identity_admin.page_component"),
         width: GRID_WIDTH.timestamp,
         cell: (menu) => (
-          <span className="truncate text-xs text-ink-2">
+          <span className="truncate text-xs text-sn-label2">
             {menu.type === "directory"
               ? displayCell(menu.component, "Layout")
               : displayCell(menu.component)}
@@ -381,10 +381,10 @@ export function MenuManagementPage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-3 pb-3">
           <div>
-            <h2 className="text-base font-semibold text-ink">
+            <h2 className="text-base font-semibold text-sn-label">
               {t("identity_admin.menu_management_title")}
             </h2>
-            <p className="text-sm text-ink-3">{t("identity_admin.menu_management_description")}</p>
+            <p className="text-sm text-sn-label3">{t("identity_admin.menu_management_description")}</p>
           </div>
           {canUpdate ? (
             <Button variant="primary" size="sm" onClick={() => openCreate("")}>

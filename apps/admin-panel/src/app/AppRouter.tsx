@@ -1,11 +1,11 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { FileQuestion } from "lucide-react";
 import { Navigate, Route, Routes, createPath, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@app/providers/AuthProvider";
 import { ProtectedRoute } from "@/app/guards/ProtectedRoute";
 import { DashboardLayout } from "@app/layout/DashboardLayout";
 import { AppearanceProvider, Button, ThemeProvider, ToastProvider } from "@code-proxy/ui";
+import { Icon, SatinProvider } from "satin-ui/react";
 import { OnlineUpdateProvider } from "@features/online-update";
 import { ChunkLoadErrorBoundary } from "@/app/bootstrap/ChunkLoadErrorBoundary";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
@@ -83,10 +83,10 @@ function StaleRoutePage() {
   return (
     <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center text-center">
       <div>
-        <FileQuestion className="mx-auto mb-5 text-ink-3 colorful:text-amber-500" size={48} />
-        <h2 className="text-2xl font-semibold text-ink">{t("shell.stale_route_title")}</h2>
-        <p className="mt-2 text-sm text-ink-2">{t("shell.stale_route_description")}</p>
-        <p className="mt-2 text-xs text-ink-3">
+        <Icon name="file" className="mx-auto mb-5 text-sn-label3 colorful:text-amber-500" size={48} />
+        <h2 className="text-2xl font-semibold text-sn-label">{t("shell.stale_route_title")}</h2>
+        <p className="mt-2 text-sm text-sn-label2">{t("shell.stale_route_description")}</p>
+        <p className="mt-2 text-xs text-sn-label3">
           {t("shell.stale_route_shortcut")}
         </p>
         <Button className="mt-6" variant="primary" onClick={() => window.location.reload()}>
@@ -199,6 +199,10 @@ function AuthenticatedRoutes() {
   );
 }
 
+// 遵循 Satin 官方默认视觉语言（DEFAULTS.radius = "pill"）：胶囊按钮、胶囊搜索框、
+// 胶囊分段器、圆形页码与 12px/16px 清晰细描边表格/卡片；用户仍可在外观面板按需切换圆角档位。
+const SATIN_NATIVE_THEME = { radius: "pill" } as const;
+
 export function AppRouter() {
   const routes = pageRoutes;
   const publicRoutes = routes.filter((r) => !r.auth);
@@ -206,41 +210,43 @@ export function AppRouter() {
   const standalonePublicRoutes = publicRoutes.filter((r) => r.path !== "/login");
 
   return (
-    <ThemeProvider>
-      <AppearanceProvider>
-        <ToastProvider>
-          <div className="font-sans antialiased">
-            <ChunkLoadErrorBoundary>
-              <Suspense fallback={<RouteFallback />}>
-                <Routes>
-                  {standalonePublicRoutes.map((route) => (
-                    <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
-                  ))}
-                  {loginRoute ? (
+    <SatinProvider theme={SATIN_NATIVE_THEME} persist>
+      <ThemeProvider>
+        <AppearanceProvider>
+          <ToastProvider>
+            <div className="font-sans antialiased">
+              <ChunkLoadErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    {standalonePublicRoutes.map((route) => (
+                      <Route key={route.path} path={route.path} element={readyRoute(route.element)} />
+                    ))}
+                    {loginRoute ? (
+                      <Route
+                        path={loginRoute.path}
+                        element={
+                          <AuthProvider>
+                            <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                          </AuthProvider>
+                        }
+                      />
+                    ) : null}
+
                     <Route
-                      path={loginRoute.path}
+                      path="*"
                       element={
                         <AuthProvider>
-                          <LoginRouteReady>{loginRoute.element}</LoginRouteReady>
+                          <AuthenticatedRoutes />
                         </AuthProvider>
                       }
                     />
-                  ) : null}
-
-                  <Route
-                    path="*"
-                    element={
-                      <AuthProvider>
-                        <AuthenticatedRoutes />
-                      </AuthProvider>
-                    }
-                  />
-                </Routes>
-              </Suspense>
-            </ChunkLoadErrorBoundary>
-          </div>
-        </ToastProvider>
-      </AppearanceProvider>
-    </ThemeProvider>
+                  </Routes>
+                </Suspense>
+              </ChunkLoadErrorBoundary>
+            </div>
+          </ToastProvider>
+        </AppearanceProvider>
+      </ThemeProvider>
+    </SatinProvider>
   );
 }

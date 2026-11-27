@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { History } from "lucide-react";
+import { History } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import { DataGrid, GRID_WIDTH, Modal, type DataGridColumn } from "@code-proxy/ui";
 import { formatQuotaUsdAmount } from "./PeriodSpendingCell";
@@ -72,7 +72,7 @@ export function SpendingResetHistoryModal({
 
   /** 等宽数字的取值：时间、日期、金额都按位对齐。 */
   const numeric = (value: ReactNode) => (
-    <span className="truncate whitespace-nowrap tabular-nums text-ink-2">{value}</span>
+    <span className="truncate whitespace-nowrap tabular-nums text-sn-label2">{value}</span>
   );
   const amount = (value: number | undefined) =>
     numeric(isAmount(value) ? formatQuotaUsdAmount(value) : "—");
@@ -130,7 +130,7 @@ export function SpendingResetHistoryModal({
       width: GRID_WIDTH.numericWide,
       grow: true,
       cell: (row) => (
-        <span className="truncate text-ink-2">
+        <span className="truncate text-sn-label2">
           {row.actor_username?.trim() ||
             (row.actor_kind === "service_credential"
               ? label("actor_service")

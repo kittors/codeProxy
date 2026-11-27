@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Hourglass, Timer } from "lucide-react";
+import { Hourglass, Timer } from "@code-proxy/ui/icons";
 import type { MonitorOverview } from "@code-proxy/api-client";
 import { Card, EChart, Tabs, TabsList, TabsTrigger } from "@code-proxy/ui";
 import { createLatencyOption } from "../charts/latencyOption";
@@ -96,18 +96,18 @@ export function LatencyCard({
             {PERCENTILES.map((item) => (
               <div key={item.key} className="min-w-0">
                 <dt
-                  className={`text-2xs font-semibold tracking-wide ${item.key === "p95_ms" ? "text-accent-ink colorful:text-indigo-600 colorful:dark:text-indigo-300" : "text-ink-3"}`}
+                  className={`text-2xs font-semibold tracking-wide ${item.key === "p95_ms" ? "text-sn-accent-ink colorful:text-indigo-600 colorful:dark:text-indigo-300" : "text-sn-label3"}`}
                 >
                   {item.label}
                 </dt>
-                <dd className="mt-1 truncate text-lg leading-none font-semibold tabular-nums text-ink">
+                <dd className="mt-1 truncate text-lg leading-none font-semibold tabular-nums text-sn-label">
                   {formatMonitorDuration(stats[item.key])}
                 </dd>
               </div>
             ))}
           </dl>
           <EChart option={option} className="min-h-44 flex-1" notMerge />
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-sn-label3">
             {t("monitor_center.latency.summary", {
               avg: formatMonitorDuration(stats.avg_ms),
               max: formatMonitorDuration(stats.max_ms),

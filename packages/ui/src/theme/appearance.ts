@@ -12,7 +12,7 @@ import {
  * - 设置长什么样、怎么校验（localStorage 里读到坏数据、旧版本数据都回落到默认值）；
  * - 两套风格预设——多彩（默认，面板一贯的样子：彩色图标、语义色进度条、指标身份色）与简约
  *   （单一蓝色强调色、中性图标）——以及「改过任何一项就算自定义」的判定；
- * - 设置 → <html> 上的 data-* 开关与 --cp-pref-* 变量。AppearanceProvider 按它写 DOM，两个 HTML
+ * - 设置 → <html> 上的 data-* 开关与 --sn-pref-* 变量。AppearanceProvider 按它写 DOM，两个 HTML
  *   入口的首屏脚本读存下来的计算结果直接写，不重复实现这里的颜色计算。
  *
  * 开关在样式里怎么生效见 apps/admin-panel/src/styles/index.css 顶部的 colorful / icon-hue /
@@ -20,7 +20,7 @@ import {
  */
 
 export const APPEARANCE_STORAGE_KEY = "code-proxy-admin-appearance";
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 export type PaletteStyle = "colorful" | "quiet";
 export type IconStyle = "colorful" | "mono";
@@ -28,6 +28,9 @@ export type BarStyle = "semantic" | "accent";
 export type ChartStyle = "colorful" | "accent";
 export type StatusRole = "success" | "warning" | "danger";
 export type StylePresetId = "colorful" | "quiet";
+export type ControlRadius = "pill" | "10" | "8" | "6";
+
+export const CONTROL_RADIUS_OPTIONS: readonly ControlRadius[] = ["pill", "10", "8", "6"];
 
 export interface AppearanceSettings {
   /** 页面里的语义色与装饰色：成功 / 信息标签、指标身份色、监控分类色、徽章光效。 */
@@ -42,6 +45,8 @@ export interface AppearanceSettings {
   accent: string;
   /** 状态色：null 表示用内置色板，否则是 #rrggbb（会替换整套色阶）。 */
   status: Record<StatusRole, string | null>;
+  /** Satin 控件圆角档位：默认胶囊 pill，支持 10 / 8 / 6 像素档位实时切换。 */
+  controlRadius: ControlRadius;
   /** 进度条粗细，按 100% 缩放计的像素。 */
   barThickness: number;
   /** 整体缩放（间距、控件、文字一起）；null 表示按平台自动：Windows 100%，其它 90%。 */
@@ -68,23 +73,23 @@ export interface AccentPreset {
  * 图表的颜色；蓝是简约风格的强调色。其余几种按同样的规则（对比度）现算派生色。
  */
 export const ACCENT_PRESETS: readonly AccentPreset[] = [
-  { id: "ink", swatch: { light: "#111113", dark: "#f2f2f4" } },
+  { id: "ink", swatch: { light: "#1d1d1f", dark: "#f5f5f7" } },
   { id: "blue", swatch: { light: "#2a6ee8", dark: "#2a6ee8" } },
   { id: "indigo", swatch: { light: "#5b5bd6", dark: "#5b5bd6" } },
   { id: "violet", swatch: { light: "#7c3aed", dark: "#7c3aed" } },
   { id: "teal", swatch: { light: "#0f8f83", dark: "#0f8f83" } },
   { id: "emerald", swatch: { light: "#10a37f", dark: "#10a37f" } },
   { id: "orange", swatch: { light: "#e8590c", dark: "#e8590c" } },
-  { id: "rose", swatch: { light: "#e11d48", dark: "#e11d48" } },
+  { id: "rose", swatch: { light: "#d92d20", dark: "#d92d20" } },
 ];
 
 const isAccentPresetId = (value: string) => ACCENT_PRESETS.some((preset) => preset.id === value);
 
-/** 内置状态色板的 500 档（与 styles/index.css 的 emerald / amber / rose 重定义一致）。 */
+/** 内置状态色板的基准色（与 Satin --sn-success / --sn-warning / --sn-danger 对齐）。 */
 export const DEFAULT_STATUS_HEX: Record<StatusRole, string> = {
   success: "#10a37f",
-  warning: "#e08e1f",
-  danger: "#e5484d",
+  warning: "#d97706",
+  danger: "#d92d20",
 };
 
 /** 状态色替换哪些 Tailwind 色阶：同一语义的几个色名在 index.css 里本来就收敛成同一套。 */
@@ -98,6 +103,13 @@ export const STYLE_PRESETS: Record<
   StylePresetId,
   Pick<AppearanceSettings, "palette" | "icons" | "bars" | "charts" | "accent">
 > = {
+  quiet: {
+    palette: "quiet",
+    icons: "mono",
+    bars: "semantic",
+    charts: "colorful",
+    accent: "ink",
+  },
   colorful: {
     palette: "colorful",
     icons: "colorful",
@@ -105,12 +117,12 @@ export const STYLE_PRESETS: Record<
     charts: "colorful",
     accent: "ink",
   },
-  quiet: { palette: "quiet", icons: "mono", bars: "accent", charts: "accent", accent: "blue" },
 };
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
-  ...STYLE_PRESETS.colorful,
+  ...STYLE_PRESETS.quiet,
   status: { success: null, warning: null, danger: null },
+  controlRadius: "pill",
   barThickness: BAR_THICKNESS_RANGE.default,
   uiScale: null,
   textScale: TEXT_SCALE_RANGE.default,
@@ -167,6 +179,7 @@ export function normalizeAppearance(raw: unknown): AppearanceSettings {
       warning: normalizeStatusColor(status.warning),
       danger: normalizeStatusColor(status.danger),
     },
+    controlRadius: pick(source.controlRadius, CONTROL_RADIUS_OPTIONS, DEFAULT_APPEARANCE.controlRadius),
     barThickness: Math.round(
       clampNumber(
         source.barThickness,
@@ -235,9 +248,9 @@ export interface AccentTokens {
   focus: string;
 }
 
-/** 浅色 / 深色下文字所在的典型底色：卡片（与 styles/index.css 的 --cp-surface 一致）。 */
+/** 浅色 / 深色下文字所在的典型底色：卡片（与 Satin --sn-raised 一致）。 */
 const LIGHT_SURFACE = "#ffffff";
-const DARK_SURFACE = "#18181c";
+const DARK_SURFACE = "#1c1c1e";
 
 /*
  * 蓝色是简约风格的强调色，派生值沿用之前手调过的那组（与外观上线前的简约界面逐值一致），
@@ -311,7 +324,7 @@ export function accentTokens(accent: string): { light: AccentTokens; dark: Accen
 /** 图表、canvas 这类读不到 CSS 变量的地方要的强调色实色。 */
 export function accentFill(accent: string, isDark: boolean): string {
   const tokens = accentTokens(accent);
-  if (!tokens) return isDark ? "#f2f2f4" : "#111113";
+  if (!tokens) return isDark ? "#f5f5f7" : "#1d1d1f";
   return isDark ? tokens.dark.accent : tokens.light.accent;
 }
 
@@ -331,10 +344,10 @@ const ACCENT_TOKEN_KEYS = ["accent", "hover", "fg", "ink", "soft", "focus"] as c
 const accentVarName = (key: (typeof ACCENT_TOKEN_KEYS)[number], dark: boolean) => {
   const base =
     key === "focus"
-      ? "--cp-pref-focus"
+      ? "--sn-pref-focus"
       : key === "accent"
-        ? "--cp-pref-accent"
-        : `--cp-pref-accent-${key}`;
+        ? "--sn-pref-accent"
+        : `--sn-pref-accent-${key}`;
   return dark ? `${base}-dark` : base;
 };
 
@@ -344,10 +357,10 @@ export const APPEARANCE_VAR_NAMES: readonly string[] = [
   ...Object.values(STATUS_SCALES).flatMap((names) =>
     names.flatMap((name) => COLOR_SCALE_STEPS.map((step) => `--color-${name}-${step}`)),
   ),
-  "--cp-pref-bar",
-  "--cp-pref-ui-scale",
-  "--cp-pref-text-scale",
-  "--cp-pref-weight-shift",
+  "--sn-pref-bar",
+  "--sn-pref-ui-scale",
+  "--sn-pref-text-scale",
+  "--sn-pref-weight-shift",
 ];
 
 /** 设置 → 要写到 <html> 上的 CSS 变量。与默认值相同的项不写，交给样式表里的默认值。 */
@@ -369,13 +382,13 @@ export function appearanceVars(settings: AppearanceSettings): Record<string, str
     }
   }
   if (settings.barThickness !== BAR_THICKNESS_RANGE.default) {
-    vars["--cp-pref-bar"] = String(settings.barThickness);
+    vars["--sn-pref-bar"] = String(settings.barThickness);
   }
-  if (settings.uiScale !== null) vars["--cp-pref-ui-scale"] = String(settings.uiScale);
+  if (settings.uiScale !== null) vars["--sn-pref-ui-scale"] = String(settings.uiScale);
   if (settings.textScale !== TEXT_SCALE_RANGE.default) {
-    vars["--cp-pref-text-scale"] = String(settings.textScale);
+    vars["--sn-pref-text-scale"] = String(settings.textScale);
   }
-  if (settings.weightShift !== 0) vars["--cp-pref-weight-shift"] = String(settings.weightShift);
+  if (settings.weightShift !== 0) vars["--sn-pref-weight-shift"] = String(settings.weightShift);
   return vars;
 }
 

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { RadioTower } from "lucide-react";
+import { RadioTower } from "@code-proxy/ui/icons";
 import type { MonitorRealtime } from "@code-proxy/api-client";
 import { AnimatedNumber, Card, EChart, Skeleton } from "@code-proxy/ui";
 import { createRealtimeOption } from "../charts/realtimeOption";
@@ -113,12 +113,12 @@ export function LivePulseCard({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
           {stats.map((stat) => (
             <div key={stat.key} className="min-w-0">
-              <dt className="truncate text-xs text-ink-3">{stat.label}</dt>
+              <dt className="truncate text-xs text-sn-label3">{stat.label}</dt>
               <dd
-                className={`mt-1 text-2xl leading-none font-semibold tracking-tight tabular-nums ${stat.className ?? "text-ink"}`}
+                className={`mt-1 text-2xl leading-none font-semibold tracking-tight tabular-nums ${stat.className ?? "text-sn-label"}`}
               >
                 {stat.empty ? (
-                  <span className="text-ink-4">—</span>
+                  <span className="text-sn-label-off">—</span>
                 ) : (
                   <AnimatedNumber value={stat.value} format={stat.format} />
                 )}

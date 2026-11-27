@@ -1,0 +1,121 @@
+/* Satin：节点流程图（从 content.css 拆出的独立样式分片）。 */
+@layer satin {
+/* ———— 流程图 ———— */
+.sn-flow { position: relative; height: 560px; overflow: hidden; outline: none; cursor: grab; touch-action: none; user-select: none; border-radius: var(--sn-r-lg);
+  background-color: var(--sn-sunken); background-image: radial-gradient(circle at center, var(--sn-flow-dot) 0.9px, transparent 1.2px);
+  background-size: 20px 20px; background-position: 0 0; contain: layout style paint; }
+.sn-flow.sn-panning { cursor: grabbing; }
+.sn-flow:focus-visible { box-shadow: inset 0 0 0 2px var(--sn-focus); }
+.sn-flow-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.sn-flow-groups { position: absolute; left: 0; top: 0; }
+.sn-flow-edges { --sn-z: 1; position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
+.sn-flow-edges path { fill: none; stroke-linecap: round; }
+/* 风筝线：屏幕上 1px（或 1.5px ComfyUI 语义线），半透明类型色 */
+.sn-flow-edges .sn-e { stroke-width: calc(1.35px / var(--sn-z)); opacity: var(--sn-edge-a); transition: opacity .22s var(--sn-ease-out), stroke-width .18s var(--sn-ease-out); }
+/* 流光：同色相更亮一档的细细一段（14%），沿线从上游流到下游 */
+.sn-flow-edges .sn-light { stroke-width: calc(2px / var(--sn-z)); stroke-dasharray: 14 100; stroke-dashoffset: 14; opacity: 0; }
+.sn-flow-edges .sn-hit { stroke: transparent; stroke-width: calc(12px / var(--sn-z)); cursor: pointer; pointer-events: stroke; }
+.sn-flow-edges g.sn-sel .sn-e { opacity: 1; stroke-width: calc(1.75px / var(--sn-z)); }
+@media (hover: hover) {
+.sn-flow-edges g:hover .sn-e { opacity: 1; stroke-width: calc(1.75px / var(--sn-z)); } }
+/* 链路高亮：链路上的线变实，其余淡到 16%；不加光晕 */
+.sn-flow.sn-tracing .sn-flow-edges g:not(.sn-lit) .sn-e { opacity: .16; }
+.sn-flow.sn-tracing .sn-flow-edges g.sn-lit .sn-e { opacity: 1; stroke-width: calc(1.75px / var(--sn-z)); }
+.sn-flow.sn-tracing .sn-flow-edges g.sn-lit.sn-sweep .sn-light { animation: sn-beam-once .62s cubic-bezier(.3, .1, .3, 1) var(--sn-d, 0ms) both; }
+@keyframes sn-beam-once { 0% { stroke-dashoffset: 14; opacity: 0; } 12% { opacity: 1; } 82% { opacity: 1; } 100% { stroke-dashoffset: -100; opacity: 0; } }
+.sn-flow-edges g.sn-run .sn-light { animation: sn-beam 1.1s linear infinite; }
+@keyframes sn-beam { 0% { stroke-dashoffset: 14; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { stroke-dashoffset: -100; opacity: 0; } }
+.sn-flow-edges g.sn-run .sn-e { opacity: 1; }
+.sn-flow-edges .sn-ghost { stroke: hsl(var(--sn-hue) var(--sn-edge-s) var(--sn-edge-l)); stroke-width: calc(1.5px / var(--sn-z)); stroke-dasharray: calc(4px / var(--sn-z)) calc(4px / var(--sn-z)); }
+.sn-flow-edges g.sn-new .sn-e { animation: sn-edge-in .3s var(--sn-ease-out) both; }
+@keyframes sn-edge-in { from { opacity: 0; } }
+
+/* ComfyUI 群组分区框：低饱和半透明色块 + 清晰 1px 边框 + 可拖标题栏 */
+.sn-fgroup { position: absolute; left: 0; top: 0; border-radius: 16px; background: hsl(var(--sn-hue) 48% 54% / .055); box-shadow: inset 0 0 0 1px hsl(var(--sn-hue) 45% 50% / .22); pointer-events: none; }
+[data-theme="dark"] .sn-fgroup { background: hsl(var(--sn-hue) 52% 60% / .08); box-shadow: inset 0 0 0 1px hsl(var(--sn-hue) 52% 62% / .24); }
+.sn-fgroup.sn-drag { box-shadow: inset 0 0 0 1.5px hsl(var(--sn-hue) 58% 54% / .52); }
+.sn-fgroup-hd { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; pointer-events: auto; cursor: grab; border-radius: 16px 16px 0 0; }
+.sn-fgroup.sn-drag .sn-fgroup-hd { cursor: grabbing; }
+.sn-fgroup-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: hsl(var(--sn-hue) 58% 52%); }
+[data-theme="dark"] .sn-fgroup-dot { background: hsl(var(--sn-hue) 68% 64%); }
+.sn-fgroup-hd b { font: 600 calc(12px * var(--sn-font-scale, 1))/1 var(--sn-sans); letter-spacing: .01em; color: var(--sn-label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.sn-fnode { position: absolute; left: 0; top: 0; width: 200px; border-radius: 12px; background: var(--sn-raised); box-shadow: inset 0 0 0 1px var(--sn-card-line), 0 1px 2px rgba(0, 0, 0, .05); cursor: default;
+  transition: opacity .22s var(--sn-ease-out), box-shadow .18s var(--sn-ease-out); }
+[data-theme="dark"] .sn-fnode { box-shadow: inset 0 0 0 1px var(--sn-card-line); }
+.sn-flow.sn-tracing .sn-fnode:not(.sn-lit) { opacity: .42; }
+/* 链路上的节点：一圈 1px 的类型色细环，不加彩色光晕 */
+.sn-flow.sn-tracing .sn-fnode.sn-lit { box-shadow: inset 0 0 0 1px hsl(var(--sn-hue) 52% 54% / .7), 0 1px 2px rgba(0, 0, 0, .05); }
+.sn-fnode.sn-sel { box-shadow: inset 0 0 0 1px var(--sn-card-line), 0 0 0 2px var(--sn-label) !important; }
+.sn-fnode.sn-drag { z-index: 4; box-shadow: inset 0 0 0 1px var(--sn-card-line), 0 14px 36px rgba(0, 0, 0, .16) !important; cursor: grabbing; }
+.sn-fnode .sn-hd { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px; cursor: grab; }
+.sn-fnode .sn-nic { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: hsl(var(--sn-hue) 70% 60% / .14); color: hsl(var(--sn-hue) 45% 42%); }
+[data-theme="dark"] .sn-fnode .sn-nic { color: hsl(var(--sn-hue) 70% 75%); background: hsl(var(--sn-hue) 60% 60% / .18); }
+.sn-fnode .sn-nic .sn-ic { width: 14px; height: 14px; }
+.sn-fnode .sn-hd b { flex: 1; min-width: 0; font: 600 calc(13px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sn-fnode .sn-st { width: 16px; height: 16px; flex: none; display: grid; place-items: center; }
+.sn-fnode .sn-st .sn-spinner { width: 12px; height: 12px; border-width: 1.5px; }
+.sn-fnode .sn-st .sn-ic { width: 14px; height: 14px; color: var(--sn-success); }
+.sn-fnode .sn-bd { padding: 0 10px 10px; display: grid; gap: 8px; font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); }
+.sn-fnode .sn-th { aspect-ratio: 16 / 7; border-radius: 8px; background: var(--sn-g); display: block; width: 100%; }
+
+/* ComfyUI 多端口专业节点样式 */
+.sn-fnode.sn-fcomfy { border-radius: 12px; }
+.sn-fnode.sn-fcomfy .sn-fcomfy-hd { height: 34px; padding: 0 10px; gap: 7px; border-bottom: 1px solid var(--sn-line); border-radius: 12px 12px 0 0; background: color-mix(in srgb, var(--sn-label) 2.2%, var(--sn-raised)); }
+.sn-fnode.sn-fcomfy .sn-fcomfy-hd b { font-size: calc(12.5px * var(--sn-font-scale, 1)); }
+.sn-fnode.sn-fcomfy .sn-st:empty, .sn-fnode.sn-freroute .sn-st:empty { display: none; }
+.sn-fchip { width: 8px; height: 8px; border-radius: 50%; flex: none; background: hsl(var(--sn-hue) 62% 52%); }
+[data-theme="dark"] .sn-fchip { background: hsl(var(--sn-hue) 70% 64%); }
+.sn-fbadge { flex: none; height: 18px; padding: 0 6px; border-radius: 5px; background: var(--sn-fill-subtle); font: 500 calc(11px * var(--sn-font-scale, 1))/18px var(--sn-mono); color: var(--sn-label3); }
+.sn-fslots { position: relative; padding: 6px 0; display: grid; gap: 2px; }
+.sn-fslot { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; padding: 0 12px; }
+.sn-fs-in, .sn-fs-out { display: inline-flex; align-items: center; min-width: 0; }
+.sn-fs-out { margin-left: auto; text-align: right; }
+.sn-fs-lbl { font: 500 calc(11px * var(--sn-font-scale, 1))/16px var(--sn-mono); color: var(--sn-label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sn-fparams { padding: 4px 10px 8px; display: grid; gap: 4px; }
+.sn-fparam { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; padding: 0 8px; border-radius: 6px; background: var(--sn-fill-subtle); font: 400 calc(11px * var(--sn-font-scale, 1))/16px var(--sn-mono); }
+.sn-fparam span { color: var(--sn-label3); flex: none; }
+.sn-fparam b { font-weight: 500; color: var(--sn-label); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.sn-fprev { padding: 2px 10px 10px; }
+.sn-fprev img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: var(--sn-fill-subtle); box-shadow: inset 0 0 0 1px var(--sn-line); }
+.sn-fdesc { padding: 0 10px 8px; font: 400 calc(11.5px * var(--sn-font-scale, 1))/16px var(--sn-sans); color: var(--sn-label3); }
+.sn-fpb-wrap { padding: 0 10px 4px; }
+.sn-fnode.sn-fcomfy .sn-pb { margin-top: 0; }
+
+/* Reroute 轻量路由节点：打破规整方阵感 */
+.sn-fnode.sn-freroute { border-radius: 999px; width: auto !important; min-width: 84px; }
+.sn-fnode.sn-freroute .sn-rr-hd { height: 30px; padding: 0 14px; gap: 6px; }
+.sn-fnode.sn-freroute .sn-rr-hd b { font: 500 calc(11px * var(--sn-font-scale, 1))/1 var(--sn-mono); color: var(--sn-label2); overflow: visible; text-overflow: clip; }
+.sn-rr-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: hsl(var(--sn-hue) 65% 54%); }
+.sn-fnode.sn-freroute .sn-port { top: 50%; }
+.sn-fnode.sn-freroute .sn-pb { display: none; }
+
+/* 进度条平时收起，运行到这个节点时才展开 */
+.sn-fnode .sn-pb { display: block; height: 0; margin-top: -8px; border-radius: 2px; background: var(--sn-fill-subtle); overflow: hidden; opacity: 0;
+  transition: height .2s var(--sn-ease-out), margin .2s var(--sn-ease-out), opacity .2s var(--sn-ease-out); }
+.sn-fnode.sn-running .sn-pb, .sn-fnode.sn-done .sn-pb { height: 3px; margin-top: 0; opacity: 1; }
+.sn-fnode .sn-pb i { display: block; height: 100%; width: calc(var(--sn-p, 0) * 100%); background: hsl(var(--sn-hue) 55% 55%); transition: width .2s var(--sn-ease-out); }
+.sn-fnode.sn-done .sn-pb i { background: var(--sn-success); }
+/* 端口：经典空心圆点 & ComfyUI 类型实心圆点 */
+.sn-port { position: absolute; top: 20px; width: 14px; height: 14px; margin-top: -7px; display: grid; place-items: center; cursor: crosshair; }
+.sn-port::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sn-raised); box-shadow: inset 0 0 0 1.5px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l) / .85); transition: scale .15s var(--sn-ease-out), box-shadow .15s; }
+.sn-port.sn-fdot { top: 50%; }
+.sn-port.sn-fdot::after { width: 8px; height: 8px; background: hsl(var(--sn-ph, var(--sn-hue)) 62% 54%); box-shadow: 0 0 0 2px var(--sn-raised); }
+[data-theme="dark"] .sn-port.sn-fdot::after { background: hsl(var(--sn-ph, var(--sn-hue)) 72% 64%); }
+.sn-port.sn-in { left: -7px; } .sn-port.sn-out { right: -7px; }
+.sn-port.sn-hot::after { scale: 1.45; box-shadow: inset 0 0 0 1.5px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l)), 0 0 0 3px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l) / .14); }
+@media (hover: hover) {
+.sn-port:hover::after { scale: 1.45; box-shadow: inset 0 0 0 1.5px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l)), 0 0 0 3px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l) / .14); } }
+.sn-flow.sn-connecting .sn-port.sn-in::after { box-shadow: inset 0 0 0 1.5px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l)), 0 0 0 4px hsl(var(--sn-ph, var(--sn-hue)) var(--sn-edge-s) var(--sn-edge-l) / .16); }
+.sn-flow-tools { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: calc(var(--sn-btn-r) + 4px); background: var(--sn-overlay); box-shadow: var(--sn-e1); }
+.sn-flow-tools .sn-vr { width: 1px; height: 16px; margin: 0 4px; background: var(--sn-line); }
+.sn-fz-val { all: unset; min-width: 48px; height: 28px; border-radius: var(--sn-btn-r); text-align: center; font: 500 calc(12px * var(--sn-font-scale, 1))/calc(28px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); cursor: pointer; transition: background-color .12s; }
+@media (hover: hover) {
+.sn-fz-val:hover { background: var(--sn-b-ghost-hover); color: var(--sn-label); } }
+.sn-flow-run { position: absolute; right: 12px; top: 12px; z-index: 3; }
+.sn-flow-mini { position: absolute; right: 12px; bottom: 12px; z-index: 3; width: 168px; height: 104px; border-radius: 10px; background: var(--sn-overlay); box-shadow: var(--sn-e1); overflow: hidden; cursor: pointer; }
+.sn-flow-mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sn-flow-mini .sn-mini-view { position: absolute; left: 0; top: 0; border-radius: 3px; will-change: transform; box-shadow: inset 0 0 0 1.5px var(--sn-label2); background: color-mix(in srgb, var(--sn-label) 6%, transparent); }
+@media (prefers-reduced-motion: reduce) { .sn-flow-edges .sn-light { animation: none !important; opacity: 0 !important; } }
+.sn-reduce-motion .sn-flow-edges .sn-light { animation: none !important; opacity: 0 !important; }
+}

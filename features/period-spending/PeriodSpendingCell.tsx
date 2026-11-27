@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, Infinity as InfinityIcon } from "lucide-react";
+import { AlertCircle, AlertTriangle, Infinity as InfinityIcon } from "@code-proxy/ui/icons";
 import type {
   PeriodSpendingItem,
   PeriodSpendingLimits,
@@ -74,7 +74,7 @@ const resetHint = (
  * 「不限制」的基础形态（简约风格）是中性胶囊，多彩风格下叠回绿色胶囊。
  */
 const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
-const NEUTRAL_CHIP = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_CHIP = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 const UNLIMITED_CHIP =
   "colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/10 colorful:dark:text-emerald-300";
 
@@ -89,7 +89,7 @@ function UnlimitedChip({ label }: { label: string }) {
     <span className={`${CHIP} ${NEUTRAL_CHIP} ${UNLIMITED_CHIP}`}>
       <InfinityIcon
         size={13}
-        className="text-ink-3 colorful:text-emerald-700 colorful:dark:text-emerald-300"
+        className="text-sn-label3 colorful:text-emerald-700 colorful:dark:text-emerald-300"
         aria-hidden="true"
       />
       {label}

@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Minus, X } from "lucide-react";
+import { Check, Minus, X } from "@code-proxy/ui/icons";
 import type {
   RoutingSimulationCredential,
   RoutingSimulationError,
@@ -66,13 +66,13 @@ function errorLine(t: T, error: RoutingSimulationError | undefined): ReactNode {
     error.code ?? "",
   ].filter(Boolean);
   return (
-    <span className="flex flex-wrap items-baseline gap-x-1.5 text-xs leading-5 text-ink-2">
+    <span className="flex flex-wrap items-baseline gap-x-1.5 text-xs leading-5 text-sn-label2">
       {parts.length > 0 ? (
-        <code className="font-mono text-xs text-ink">{parts.join(" · ")}</code>
+        <code className="font-mono text-xs text-sn-label">{parts.join(" · ")}</code>
       ) : null}
       {error.message ? <span className="min-w-0 break-words">{error.message}</span> : null}
       {error["retry-after-ms"] ? (
-        <span className="text-ink-3">
+        <span className="text-sn-label3">
           {t("channel_groups_page.simulator.retry_after", {
             time: formatDuration(t, error["retry-after-ms"]),
           })}
@@ -95,7 +95,7 @@ function StageStrip({ stages }: { stages: RoutingSimulationStage[] }) {
             ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             : stage.outcome === "rejected"
               ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-              : "bg-subtle text-ink-3";
+              : "bg-sn-subtle text-sn-label3";
         const Icon = stage.outcome === "passed" ? Check : stage.outcome === "rejected" ? X : Minus;
         const outcome = ["passed", "rejected", "skipped", "not-run"].includes(stage.outcome)
           ? t(`channel_groups_page.simulator.stage_outcome.${stage.outcome}`)
@@ -172,7 +172,7 @@ function CredentialState({
     for (const window of credential.reset.windows ?? []) {
       const left = msUntil(window["resets-at"], nowMs);
       lines.push(
-        <span key={`window-${window.key}`} className="text-ink-3">
+        <span key={`window-${window.key}`} className="text-sn-label3">
           {left !== null
             ? t("channel_groups_page.simulator.reset.window", {
                 key: window.key,
@@ -187,7 +187,7 @@ function CredentialState({
       );
     }
   }
-  return <div className="flex flex-col gap-0.5 text-xs leading-5 text-ink-2">{lines}</div>;
+  return <div className="flex flex-col gap-0.5 text-xs leading-5 text-sn-label2">{lines}</div>;
 }
 
 function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: number }) {
@@ -222,7 +222,7 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
         align: "end",
         width: 72,
         cell: (credential) => (
-          <span className="text-xs tabular-nums text-ink-2">{credential.weight}</span>
+          <span className="text-xs tabular-nums text-sn-label2">{credential.weight}</span>
         ),
       },
       {
@@ -231,7 +231,7 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
         align: "end",
         width: 88,
         cell: (credential) => (
-          <span className="text-xs tabular-nums text-ink-2">
+          <span className="text-xs tabular-nums text-sn-label2">
             {credential["concurrency-limit"]
               ? `${credential["in-flight"]}/${credential["concurrency-limit"]}`
               : credential["in-flight"]}
@@ -244,10 +244,10 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
         align: "end",
         width: 96,
         cell: (credential) => (
-          <span className="flex flex-col items-end text-xs tabular-nums text-ink-2">
+          <span className="flex flex-col items-end text-xs tabular-nums text-sn-label2">
             {percent(credential["load-ratio"])}
             {leastLoad ? (
-              <span className="text-ink-3">
+              <span className="text-sn-label3">
                 {/* 后端在得分为 0 时省略这个字段。 */}
                 {t("channel_groups_page.simulator.score", {
                   score: (credential.score ?? 0).toFixed(2),
@@ -262,31 +262,31 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
   );
   return (
     <section className={`${surface({ tone: "inset" })} p-4`}>
-      <h4 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
+      <h4 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-sn-label">
         <span>
           {group.name
             ? t("channel_groups_page.simulator.group_name", { name: group.name })
             : t("channel_groups_page.simulator.group_any")}
         </span>
         {group.fallback ? (
-          <span className="rounded-md bg-canvas px-1.5 py-0.5 text-2xs font-medium text-ink-3">
+          <span className="rounded-md bg-sn-workspace px-1.5 py-0.5 text-2xs font-medium text-sn-label3">
             {t("channel_groups_page.simulator.group_fallback")}
           </span>
         ) : null}
-        <span className="text-xs font-normal text-ink-3">
+        <span className="text-xs font-normal text-sn-label3">
           {distribution}
           {group.sticky ? ` · ${t("channel_groups_page.simulator.group_sticky")}` : ""}
         </span>
       </h4>
       {group.error ? (
-        <div className="mt-2 text-xs text-ink-2">
+        <div className="mt-2 text-xs text-sn-label2">
           {t("channel_groups_page.simulator.group_error")} {errorLine(t, group.error)}
         </div>
       ) : null}
       {candidates.length > 0 ? (
         // 浅底框里的小表：不再套外框，按行收高，放不下时横向在表格里滚。
-        // 浅底框不设 --cp-backdrop，这里补上，表格的行底色、悬停色才和框一致。
-        <div className="mt-3 [--cp-backdrop:var(--cp-subtle)]">
+        // 浅底框不设 --sn-backdrop，这里补上，表格的行底色、悬停色才和框一致。
+        <div className="mt-3 [--sn-backdrop:var(--sn-fill-subtle)]">
           <DataGrid<RoutingSimulationCredential>
             frame={false}
             density="compact"
@@ -299,7 +299,7 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
       ) : null}
       {excluded.length > 0 ? (
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-ink-3">
+          <summary className="cursor-pointer text-xs text-sn-label3">
             {t("channel_groups_page.simulator.excluded_title", { count: excluded.length })}
           </summary>
           <ul className="mt-2 space-y-1">
@@ -308,8 +308,8 @@ function GroupSection({ group, nowMs }: { group: RoutingSimulationGroup; nowMs: 
                 key={credential["auth-id"]}
                 className="flex flex-wrap items-baseline gap-x-2 text-xs"
               >
-                <span className="text-ink">{credentialName(credential)}</span>
-                <span className="text-ink-3">
+                <span className="text-sn-label">{credentialName(credential)}</span>
+                <span className="text-sn-label3">
                   {exclusionReason(t, i18n.resolvedLanguage, credential)}
                 </span>
               </li>
@@ -350,21 +350,21 @@ function AccountCell({ credential }: { credential: RoutingSimulationCredential }
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="truncate text-xs font-medium text-ink" title={name}>
+        <span className="truncate text-xs font-medium text-sn-label" title={name}>
           {name}
         </span>
         <ProviderTag vendor={credential.provider} withLogo>
           {credential.provider}
         </ProviderTag>
         {credential.shared ? (
-          <span className="rounded-md bg-canvas px-1.5 py-0.5 text-2xs text-ink-3">
+          <span className="rounded-md bg-sn-workspace px-1.5 py-0.5 text-2xs text-sn-label3">
             {t("channel_groups_page.simulator.shared")}
           </span>
         ) : null}
       </div>
       {name !== credential["auth-id"] ? (
         <code
-          className="block truncate font-mono text-2xs text-ink-3"
+          className="block truncate font-mono text-2xs text-sn-label3"
           title={credential["auth-id"]}
         >
           {credential["auth-id"]}
@@ -502,22 +502,22 @@ export function RoutingSimulationResult({
     <div className="space-y-4">
       {summary}
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-ink">
+        <h4 className="text-xs font-semibold text-sn-label">
           {t("channel_groups_page.simulator.stages_title")}
         </h4>
         <StageStrip stages={result.stages} />
         {quotaSkipped ? (
-          <p className="text-xs leading-5 text-ink-3">
+          <p className="text-xs leading-5 text-sn-label3">
             {t("channel_groups_page.simulator.quota_skipped_hint")}
           </p>
         ) : null}
       </div>
       {facts.length > 0 ? (
-        <ul className="space-y-1 text-xs leading-5 text-ink-2">{facts}</ul>
+        <ul className="space-y-1 text-xs leading-5 text-sn-label2">{facts}</ul>
       ) : null}
       {selection && selection.groups.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-ink">
+          <h4 className="text-xs font-semibold text-sn-label">
             {t("channel_groups_page.simulator.groups_title")}
           </h4>
           {selection.groups.map((group, index) => (

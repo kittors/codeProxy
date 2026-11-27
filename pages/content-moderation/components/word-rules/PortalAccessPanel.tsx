@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Search } from "lucide-react";
+import { ListChecks, Search } from "@code-proxy/ui/icons";
 import { wordPolicyApi, type WordPortalUser, type WordPortalView } from "@code-proxy/api-client";
 import {
   Button,
@@ -127,8 +127,8 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         width: GRID_WIDTH.name,
         cell: (user) => (
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-ink">{user.display_name || user.username}</p>
-            <p className="truncate text-xs text-ink-3">{user.username}</p>
+            <p className="truncate text-sm font-medium text-sn-label">{user.display_name || user.username}</p>
+            <p className="truncate text-xs text-sn-label3">{user.username}</p>
           </div>
         ),
       },
@@ -157,8 +157,8 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         cell: (user) =>
           user.policy ? (
             <div className="text-xs">
-              <p className="text-ink-2">{t("content_moderation.words.word_count", { count: user.policy.rule_count })}</p>
-              <p className={user.allowed && user.policy.enabled ? "mt-0.5 text-emerald-600 dark:text-emerald-400" : "mt-0.5 text-ink-3"}>
+              <p className="text-sn-label2">{t("content_moderation.words.word_count", { count: user.policy.rule_count })}</p>
+              <p className={user.allowed && user.policy.enabled ? "mt-0.5 text-emerald-600 dark:text-emerald-400" : "mt-0.5 text-sn-label3"}>
                 {!user.allowed
                   ? t("content_moderation.words.portal_words_inactive")
                   : user.policy.enabled
@@ -167,7 +167,7 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
               </p>
             </div>
           ) : (
-            <span className="text-xs text-ink-3">{t("content_moderation.words.portal_words_none")}</span>
+            <span className="text-xs text-sn-label3">{t("content_moderation.words.portal_words_none")}</span>
           ),
       },
       {
@@ -176,7 +176,7 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
         width: GRID_WIDTH.name,
         // 右栏放不下全部列时（1280 宽左右）固定在右侧，「代为设置」不会被横向滚动藏起来。
         pin: "end",
-        className: "whitespace-nowrap md:sticky md:z-30 md:bg-backdrop",
+        className: "whitespace-nowrap md:sticky md:z-30 md:bg-sn-backdrop",
         cell: (user) => (
           <Button variant="secondary" size="sm" onClick={() => onOpenUser(user)}>
             <ListChecks size={14} />
@@ -209,8 +209,8 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
     // 分页条在下面不随行数移动；窄屏随页面流动。
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       <header className="space-y-1">
-        <h3 className="text-base font-semibold text-ink">{t("content_moderation.words.portal_title")}</h3>
-        <p className="text-xs leading-5 text-ink-3">{t("content_moderation.words.portal_description")}</p>
+        <h3 className="text-base font-semibold text-sn-label">{t("content_moderation.words.portal_title")}</h3>
+        <p className="text-xs leading-5 text-sn-label3">{t("content_moderation.words.portal_description")}</p>
       </header>
 
       <SettingGroup>
@@ -231,11 +231,11 @@ export function PortalAccessPanel({ canWrite, onOpenUser, onChanged }: PortalAcc
 
       <section className="flex min-h-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h4 className="mr-auto text-sm font-semibold text-ink">{t("content_moderation.words.portal_users_title")}</h4>
+          <h4 className="mr-auto text-sm font-semibold text-sn-label">{t("content_moderation.words.portal_users_title")}</h4>
           <div className="w-full sm:w-64">
             <TextInput
               value={query}
-              startAdornment={<Search size={15} className="text-ink-3" aria-hidden="true" />}
+              startAdornment={<Search size={15} className="text-sn-label3" aria-hidden="true" />}
               placeholder={t("content_moderation.words.portal_search")}
               aria-label={t("content_moderation.words.portal_search")}
               onChange={(event) => {

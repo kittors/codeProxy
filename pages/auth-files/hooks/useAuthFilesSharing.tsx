@@ -7,7 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, Share2 } from "lucide-react";
+import { Copy, Share2 } from "@code-proxy/ui/icons";
 import {
   authFileSharingId,
   authFilesApi,
@@ -205,11 +205,11 @@ export function useAuthFilesSharing({
       cell: (file) => {
         const badges = renderSharingBadges(file);
         const canShare = manageable && !isRuntimeOnlyAuthFile(file);
-        if (!badges && !canShare) return <span className="text-xs text-ink-3">--</span>;
+        if (!badges && !canShare) return <span className="text-xs text-sn-label3">--</span>;
         return (
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             {badges ?? (
-              <span className="text-xs text-ink-3">{t("resource_sharing.not_shared")}</span>
+              <span className="text-xs text-sn-label3">{t("resource_sharing.not_shared")}</span>
             )}
             {canShare ? (
               <Button

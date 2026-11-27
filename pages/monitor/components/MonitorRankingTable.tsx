@@ -1,8 +1,8 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@code-proxy/ui/icons";
 import type { MonitorBreakdownRow } from "@code-proxy/api-client";
-import { DataGrid, type DataGridColumn } from "@code-proxy/ui";
+import { Button, DataGrid, type DataGridColumn } from "@code-proxy/ui";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 
 export type RankingBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -136,17 +136,17 @@ export function MonitorRankingTable({
       isRowActive={(row) => row.key !== "" && selected.includes(row.key)}
       footer={
         hiddenCount > 0 || expanded || total > rows.length ? (
-          <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
+          <div className="flex items-center justify-between gap-2 text-xs text-sn-label3">
             <span>
               {total > rows.length
                 ? t("monitor_center.ranking.showing_top", { shown: rows.length, total })
                 : null}
             </span>
             {hiddenCount > 0 || expanded ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setExpanded((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
               >
                 {expanded
                   ? t("monitor_center.ranking.collapse")
@@ -156,7 +156,7 @@ export function MonitorRankingTable({
                   aria-hidden="true"
                   className={`transition-[rotate] duration-200 ${expanded ? "rotate-180" : ""}`}
                 />
-              </button>
+              </Button>
             ) : null}
           </div>
         ) : undefined
@@ -169,9 +169,9 @@ export function MonitorRankingTable({
 export function ShareBar({ share, color }: { share: number; color: string }) {
   const width = Math.max(0, Math.min(100, share));
   return (
-    <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-track">
+    <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-sn-sunken">
       <span
-        className="block h-full rounded-full transition-[width] duration-700 ease-pop motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]"
+        className="block h-full rounded-full transition-[width] duration-700 ease-sn-strong motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]"
         style={{ width: `${width}%`, backgroundColor: color }}
       />
     </span>

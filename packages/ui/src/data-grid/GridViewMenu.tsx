@@ -1,12 +1,14 @@
-import { Lock, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Icon } from "satin-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
+import { SegmentedControl } from "../forms/SegmentedControl";
 import { GridPopover } from "./GridPopover";
-import type { DataGridColumn, GridDensity } from "./types";
+import type { DataGridColumn, GridDensity, GridLines } from "./types";
 
 const DENSITIES: readonly GridDensity[] = ["compact", "default", "comfortable"];
+const LINES_OPTIONS: readonly GridLines[] = ["row", "grid"];
 
 /** 三条横线的间距示意三档密度，比文字更快认出来。 */
 function DensityGlyph({ density }: { density: GridDensity }) {
@@ -36,6 +38,8 @@ export function GridViewMenu<T>({
   columns,
   density,
   onDensityChange,
+  lines,
+  onLinesChange,
   hiddenColumnIds,
   onHiddenColumnIdsChange,
   onReset,
@@ -43,6 +47,9 @@ export function GridViewMenu<T>({
   columns: readonly DataGridColumn<T>[];
   density: GridDensity;
   onDensityChange: (density: GridDensity) => void;
+  /** Satin 表格线型（行线 / 网格）；传入后在视图菜单中提供分段切换。 */
+  lines?: GridLines;
+  onLinesChange?: (lines: GridLines) => void;
   hiddenColumnIds: ReadonlySet<string>;
   onHiddenColumnIdsChange: (ids: Set<string>) => void;
   onReset: () => void;
@@ -67,10 +74,10 @@ export function GridViewMenu<T>({
         onClick={(event) => setAnchor(anchor ? null : event.currentTarget)}
         className="h-8 px-3 text-xs"
       >
-        <SlidersHorizontal size={13} aria-hidden="true" />
+        <Icon name="sliders-horizontal" size={13} />
         {t("data_grid.view")}
         {hiddenCount > 0 ? (
-          <span className="rounded-full bg-ink/[0.08] px-1.5 text-2xs tabular-nums text-ink-2 dark:bg-white/[0.1]">
+          <span className="sn-badge sn-soft ml-0.5 tabular-nums">
             {t("data_grid.hidden_count", { count: hiddenCount })}
           </span>
         ) : null}
@@ -82,40 +89,52 @@ export function GridViewMenu<T>({
         align="end"
         label={t("data_grid.view")}
       >
-        <div className="flex w-64 flex-col p-2">
-          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold text-ink">
+        <div className="flex w-64 flex-col p-2.5">
+          <p className="px-1.5 pb-1.5 pt-0.5 text-xs font-semibold text-[var(--sn-label)]">
             {t("data_grid.density")}
           </p>
-          <div
-            className="grid grid-cols-3 gap-1 rounded-xl bg-track p-1"
-            role="radiogroup"
-            aria-label={t("data_grid.density")}
-          >
-            {DENSITIES.map((item) => {
-              const active = item === density;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  data-autofocus={active ? "" : undefined}
-                  onClick={() => onDensityChange(item)}
-                  className={[
-                    "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ease-soft",
-                    active
-                      ? "bg-surface text-ink shadow-control"
-                      : "text-ink-2 hover:bg-hover hover:text-ink",
-                  ].join(" ")}
-                >
+          <SegmentedControl
+            size="sm"
+            value={density}
+            onChange={onDensityChange}
+            ariaLabel={t("data_grid.density")}
+            className="w-full"
+            options={DENSITIES.map((item) => ({
+              value: item,
+              label: (
+                <>
                   <DensityGlyph density={item} />
                   {t(`data_grid.density_${item}`)}
-                </button>
-              );
-            })}
-          </div>
+                </>
+              ),
+            }))}
+          />
 
-          <p className="mt-3 border-t border-line px-2 pb-1 pt-3 text-xs font-semibold text-ink">
+          {lines && onLinesChange ? (
+            <>
+              <p className="mt-3 border-t border-[var(--sn-line)] px-1.5 pb-1.5 pt-3 text-xs font-semibold text-[var(--sn-label)]">
+                {t("data_grid.lines")}
+              </p>
+              <SegmentedControl
+                size="sm"
+                value={lines}
+                onChange={onLinesChange}
+                ariaLabel={t("data_grid.lines")}
+                className="w-full"
+                options={LINES_OPTIONS.map((item) => ({
+                  value: item,
+                  label: (
+                    <>
+                      <Icon name={item === "grid" ? "layout-grid" : "rows-3"} size={13} />
+                      {t(`data_grid.lines_${item}`)}
+                    </>
+                  ),
+                }))}
+              />
+            </>
+          ) : null}
+
+          <p className="mt-3 border-t border-[var(--sn-line)] px-1.5 pb-1 pt-3 text-xs font-semibold text-[var(--sn-label)]">
             {t("data_grid.columns")}
           </p>
           <div
@@ -132,8 +151,8 @@ export function GridViewMenu<T>({
                   className={[
                     "flex h-8 items-center gap-2.5 rounded-lg px-2 text-sm transition-colors",
                     locked
-                      ? "cursor-default text-ink-3"
-                      : "cursor-pointer text-ink-2 hover:bg-hover hover:text-ink",
+                      ? "cursor-default text-sn-label3"
+                      : "cursor-pointer text-sn-label2 hover:bg-sn-hover hover:text-sn-label",
                   ].join(" ")}
                 >
                   <Checkbox
@@ -143,27 +162,29 @@ export function GridViewMenu<T>({
                   />
                   <span className="min-w-0 flex-1 truncate">{column.header}</span>
                   {locked ? (
-                    <Lock
-                      size={12}
-                      className="shrink-0 text-ink-4"
+                    <span
+                      className="inline-flex shrink-0 items-center text-sn-label-off"
+                      role="img"
                       aria-label={t("data_grid.column_locked")}
-                    />
+                    >
+                      <Icon name="lock" size={12} />
+                    </span>
                   ) : null}
                 </label>
               );
             })}
           </div>
 
-          <div className="mt-2 border-t border-line pt-2">
+          <div className="mt-2 border-t border-sn-line pt-2">
             <button
               type="button"
               onClick={() => {
                 onReset();
                 setAnchor(null);
               }}
-              className="inline-flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+              className="inline-flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-medium text-sn-label2 transition-colors hover:bg-sn-hover hover:text-sn-label"
             >
-              <RotateCcw size={13} aria-hidden="true" />
+              <Icon name="rotate-ccw" size={13} />
               {t("data_grid.reset_view")}
             </button>
           </div>

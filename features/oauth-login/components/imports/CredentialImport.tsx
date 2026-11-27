@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, Check, KeyRound, Loader2, RotateCcw, ShieldCheck, X } from "@code-proxy/ui/icons";
 import { useMemo, useState, type ComponentProps } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
@@ -27,8 +27,8 @@ export interface CredentialImportProps {
 }
 
 const STATUS_TONE: Record<ImportRow["status"], string> = {
-  pending: "text-ink-3",
-  running: "text-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300",
+  pending: "text-sn-label3",
+  running: "text-sn-accent-ink colorful:text-sky-600 colorful:dark:text-sky-300",
   ok: "text-emerald-700 dark:text-emerald-300",
   error: "text-rose-600 dark:text-rose-300",
 };
@@ -79,7 +79,7 @@ export function CredentialImport({
     return (
       <ScrollFade className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
         <div className="grid gap-4">
-          <p className="text-sm text-ink-2">
+          <p className="text-sm text-sn-label2">
             {t("add_account.credential.results_summary", {
               ok: okCount,
               total: rows.length,
@@ -89,13 +89,13 @@ export function CredentialImport({
             {rows.map((row) => (
               <li
                 key={row.id}
-                className="flex items-center gap-2.5 rounded-lg bg-subtle px-3 py-2"
+                className="flex items-center gap-2.5 rounded-lg bg-sn-subtle px-3 py-2"
               >
                 <span className={["shrink-0", STATUS_TONE[row.status]].join(" ")}>
                   <RowIcon status={row.status} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-ink">
+                  <span className="block truncate text-sm text-sn-label">
                     {row.account ?? maskCredential(row.credential)}
                   </span>
                   {row.status === "error" && row.problem ? (
@@ -105,7 +105,7 @@ export function CredentialImport({
                         : t(importProblemCopyKey(row.problem))}
                     </span>
                   ) : row.detail ? (
-                    <span className="block truncate text-xs text-ink-3">{row.detail}</span>
+                    <span className="block truncate text-xs text-sn-label3">{row.detail}</span>
                   ) : null}
                 </span>
               </li>
@@ -149,19 +149,19 @@ export function CredentialImport({
           {t(`${base}.risk`)}
         </Callout>
         {steps.length > 0 ? (
-          <ol className="grid list-decimal gap-1 pl-5 text-sm text-ink-2 marker:text-ink-3">
+          <ol className="grid list-decimal gap-1 pl-5 text-sm text-sn-label2 marker:text-sn-label3">
             {steps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
         ) : null}
-        <p className="text-xs text-ink-3">
+        <p className="text-xs text-sn-label3">
           <Trans
             i18nKey={`${base}.where`}
             components={{
               link: (
                 <a
-                  className="inline-flex items-center gap-0.5 text-accent-ink underline-offset-2 hover:underline colorful:text-sky-600 colorful:dark:text-sky-300"
+                  className="inline-flex items-center gap-0.5 text-sn-accent-ink underline-offset-2 hover:underline colorful:text-sky-600 colorful:dark:text-sky-300"
                   href={t(`${base}.where_url`)}
                   target="_blank"
                   rel="noreferrer noopener"
@@ -181,7 +181,7 @@ export function CredentialImport({
             className="min-h-32 font-mono text-xs"
           />
           {credentials.length > 0 ? (
-            <p className="inline-flex items-center gap-1.5 text-xs text-ink-2">
+            <p className="inline-flex items-center gap-1.5 text-xs text-sn-label2">
               <KeyRound size={13} aria-hidden="true" />
               {t("add_account.credential.found", { count: credentials.length })}
               {suspectCount > 0 ? (
@@ -191,7 +191,7 @@ export function CredentialImport({
               ) : null}
             </p>
           ) : (
-            <p className="text-xs text-ink-3">{t("add_account.credential.hint_multi")}</p>
+            <p className="text-xs text-sn-label3">{t("add_account.credential.hint_multi")}</p>
           )}
         </div>
         <LoginOptions

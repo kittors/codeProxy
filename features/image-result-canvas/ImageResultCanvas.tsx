@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent } from "react";
-import { ChevronLeft, ChevronRight, CircleAlert, ImageIcon } from "lucide-react";
+import { EmptyArt, Icon as SatinIcon } from "satin-ui/react";
 import { useTranslation } from "react-i18next";
 
 /** One generated image as the canvas shows it. */
@@ -12,9 +12,9 @@ export interface CanvasImage {
 
 export type CanvasState = "idle" | "generating" | "ready" | "error";
 
-// 浮在画布 / 图片上的小部件（计时、计数、翻页、像素）：半透明浮层底 + 阴影描边（shadow-control），
+// 浮在画布 / 图片上的小部件（计时、计数、翻页、像素）：半透明浮层底 + 阴影描边（border border-sn-line-control），
 // 不画 border，任何底色上都看得清。
-const FLOATING = "bg-elevated/80 text-ink-2 shadow-control backdrop-blur-md";
+const FLOATING = "bg-sn-overlay/80 text-sn-label2 border border-sn-line-control backdrop-blur-md";
 const PILL = "absolute z-20 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums";
 
 /**
@@ -98,7 +98,7 @@ export function ImageResultCanvas({
       data-testid={`${testIdPrefix}-stage`}
       data-state={state}
       aria-live="polite"
-      className={["relative isolate overflow-hidden rounded-2xl bg-subtle", className ?? ""].join(" ")}
+      className={["relative isolate overflow-hidden rounded-xl bg-sn-subtle", className ?? ""].join(" ")}
     >
       {state === "generating" ? (
         <>
@@ -146,26 +146,23 @@ export function ImageResultCanvas({
         <div className="relative z-10 flex h-full w-full items-center justify-center p-6 text-center">
           {state === "generating" ? (
             <div className="max-w-sm">
-              <p className="text-2xl font-semibold tracking-tight text-ink-2 sm:text-3xl">
+              <p className="text-2xl font-semibold tracking-tight text-sn-label2 sm:text-3xl">
                 {statusText}
               </p>
-              {statusDetail ? <p className="mt-2 text-sm text-ink-3">{statusDetail}</p> : null}
+              {statusDetail ? <p className="mt-2 text-sm text-sn-label3">{statusDetail}</p> : null}
             </div>
           ) : state === "error" ? (
-            // 画布保持中性底，只把原因放进一块淡玫红的提示：整块画布染红太刺眼，
-            // 和面板里其它危险提示条也不是一个样子。
-            <div className="flex max-h-full max-w-md items-start gap-2.5 overflow-auto rounded-xl bg-rose-500/[0.08] px-4 py-3 text-left">
-              <CircleAlert
-                size={16}
-                className="mt-1 shrink-0 text-rose-600 dark:text-rose-400"
-                aria-hidden="true"
-              />
-              <p className="min-w-0 break-words text-sm leading-6 text-ink-2">{errorMessage}</p>
+            // 画布保持中性底，错误提示采用 Satin 语义横幅（.sn-banner.sn-bad + .sn-ic + .sn-msg），与全站保持同一语言。
+            <div className="sn-banner sn-bad max-h-full max-w-md overflow-auto text-left !items-start !px-3.5 !py-3">
+              <span className="sn-ic mt-0.5 shrink-0" aria-hidden="true">
+                <SatinIcon name="circle-alert" size={16} />
+              </span>
+              <p className="sn-msg min-w-0 !py-0 break-words leading-6">{errorMessage}</p>
             </div>
           ) : (
-            <div className="max-w-xs text-ink-3">
-              <ImageIcon size={28} strokeWidth={1.6} className="mx-auto opacity-70" aria-hidden="true" />
-              <p className="mt-3 text-sm leading-6">{idleText}</p>
+            <div className="flex max-w-xs flex-col items-center text-sn-label3">
+              <EmptyArt name="projects" className="opacity-85" />
+              <p className="mt-2 text-sm leading-6">{idleText}</p>
             </div>
           )}
         </div>
@@ -180,10 +177,10 @@ export function ImageResultCanvas({
           </div>
           {(
             [
-              ["prev", -1, "left-3", ChevronLeft],
-              ["next", 1, "right-3", ChevronRight],
+              ["prev", -1, "left-3", "chevron-left"],
+              ["next", 1, "right-3", "chevron-right"],
             ] as const
-          ).map(([key, step, side, Icon]) => (
+          ).map(([key, step, side, iconName]) => (
             <button
               key={key}
               type="button"
@@ -191,12 +188,12 @@ export function ImageResultCanvas({
               disabled={step < 0 ? activeIndex <= 0 : activeIndex >= images.length - 1}
               aria-label={t(key === "prev" ? "image_generation.prev_image" : "image_generation.next_image")}
               className={[
-                "absolute top-1/2 z-20 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full transition hover:bg-elevated disabled:pointer-events-none disabled:opacity-35",
+                "sn-btn !absolute top-1/2 z-20 !h-8 !w-8 !p-0 -translate-y-1/2 !rounded-full hover:!bg-sn-overlay disabled:pointer-events-none disabled:opacity-35",
                 FLOATING,
                 side,
               ].join(" ")}
             >
-              <Icon size={16} />
+              <SatinIcon name={iconName} size={16} />
             </button>
           ))}
         </>
@@ -214,7 +211,7 @@ export function ImageResultCanvas({
         <button
           type="button"
           onClick={onPreview}
-          className="absolute bottom-3 right-3 z-20 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/90 shadow-sm backdrop-blur transition-colors hover:bg-black/75 hover:text-white"
+          className="sn-btn !absolute bottom-3 right-3 z-20 !h-auto !rounded-full !bg-black/60 !px-3 !py-1 !text-xs font-medium !text-white/90 !shadow-sm backdrop-blur hover:!bg-black/75 hover:!text-white"
         >
           {t("image_generation.open_preview")}
         </button>

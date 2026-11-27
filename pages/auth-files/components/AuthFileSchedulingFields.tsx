@@ -18,7 +18,7 @@ export function AuthFileSchedulingFields({ editor, setEditor }: AuthFileScheduli
   return (
     <>
       <div className="grid gap-2">
-        <p className="text-xs font-semibold text-ink-2">
+        <p className="text-xs font-semibold text-sn-label2">
           {t("auth_files.concurrency_limit_label")}
         </p>
         <TextInput
@@ -33,7 +33,7 @@ export function AuthFileSchedulingFields({ editor, setEditor }: AuthFileScheduli
           placeholder={t("auth_files.concurrency_limit_placeholder")}
           aria-label={t("auth_files.concurrency_limit_label")}
         />
-        <p className="text-xs text-ink-3">{t("auth_files.concurrency_limit_hint")}</p>
+        <p className="text-xs text-sn-label3">{t("auth_files.concurrency_limit_hint")}</p>
       </div>
       <ChannelCoolingField
         scope="account"

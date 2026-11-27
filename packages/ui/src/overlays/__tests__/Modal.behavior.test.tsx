@@ -9,7 +9,9 @@ import { Drawer } from "../Drawer";
 import { ImagePreviewOverlay } from "../ImagePreviewOverlay";
 import { Modal } from "../Modal";
 
-const backdrop = () => document.querySelector<HTMLButtonElement>("[data-overlay-backdrop]")!;
+/** 弹窗用原生 `<dialog>` 自身接管 `::backdrop` 点击；抽屉用独立的 `[data-overlay-backdrop]`。 */
+const modalBackdrop = () => document.querySelector<HTMLDialogElement>("dialog[data-modal-dialog]")!;
+const drawerBackdrop = () => document.querySelector<HTMLButtonElement>("[data-overlay-backdrop]")!;
 
 describe("Modal keyboard and dismissal", () => {
   test("Escape closes only the topmost of two nested dialogs", async () => {
@@ -31,7 +33,7 @@ describe("Modal keyboard and dismissal", () => {
     expect(outerClose).not.toHaveBeenCalled();
   });
 
-  test("Escape with a dropdown open only closes the dropdown", async () => {
+  test("Escape with a dropdown open only closes the dropdown, and dropdown mounts inside modal Top Layer host", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     function Harness() {
@@ -53,7 +55,14 @@ describe("Modal keyboard and dismissal", () => {
     render(<Harness />);
 
     await user.click(screen.getByRole("combobox", { name: "Fruit" }));
-    expect(await screen.findByRole("option", { name: "Banana" })).toBeInTheDocument();
+    const bananaOption = await screen.findByRole("option", { name: "Banana" });
+    expect(bananaOption).toBeInTheDocument();
+    // 弹窗内 Select 必须挂进当前 <dialog> 的 Top Layer 宿主，避免被原生 showModal() 遮挡。
+    const dialog = modalBackdrop();
+    const portalHost = dialog.querySelector("[data-modal-portal-host]");
+    expect(portalHost).not.toBeNull();
+    expect(portalHost?.contains(bananaOption)).toBe(true);
+
     await user.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("option", { name: "Banana" })).toBeNull());
@@ -70,7 +79,7 @@ describe("Modal keyboard and dismissal", () => {
         <TextInput aria-label="Name" />
       </Modal>,
     );
-    fireEvent.click(backdrop());
+    fireEvent.click(modalBackdrop());
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -83,9 +92,9 @@ describe("Modal keyboard and dismissal", () => {
       </Modal>,
     );
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Ada");
-    fireEvent.click(backdrop());
+    fireEvent.click(modalBackdrop());
     expect(onClose).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByRole("dialog")).toHaveClass("overlay-nudge"));
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveAttribute("data-nudging", "true"));
 
     // Esc 是明确的关闭意图：没有显式 dirty 时照常关闭。
     fireEvent.keyDown(window, { key: "Escape" });
@@ -103,7 +112,7 @@ describe("Modal keyboard and dismissal", () => {
       </Modal>,
     );
     fireEvent.keyDown(window, { key: "Escape" });
-    fireEvent.click(backdrop());
+    fireEvent.click(modalBackdrop());
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -117,9 +126,43 @@ describe("Modal keyboard and dismissal", () => {
     );
     expect(screen.queryByRole("button", { name: /close|关闭/i })).toBeNull();
     fireEvent.keyDown(window, { key: "Escape" });
-    fireEvent.click(backdrop());
+    fireEvent.click(modalBackdrop());
     expect(onClose).not.toHaveBeenCalled();
     expect(onBlockedClose).toHaveBeenCalledTimes(2);
+  });
+
+  test("supports Satin header dragging and double-click reset", () => {
+    render(
+      <Modal open title="Draggable" onClose={() => undefined}>
+        body
+      </Modal>,
+    );
+    const dialog = modalBackdrop();
+    const header = dialog.querySelector<HTMLElement>(".sn-hd")!;
+    expect(header).not.toBeNull();
+
+    vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({
+      left: 300,
+      top: 200,
+      right: 700,
+      bottom: 500,
+      width: 400,
+      height: 300,
+      x: 300,
+      y: 200,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.pointerDown(header, { button: 0, pointerId: 1, clientX: 350, clientY: 220 });
+    fireEvent.pointerMove(dialog, { pointerId: 1, clientX: 430, clientY: 260 });
+    expect(dialog).toHaveClass("sn-dragging");
+    expect(dialog.style.translate).toBe("80px 40px");
+
+    fireEvent.pointerUp(dialog, { pointerId: 1, clientX: 430, clientY: 260 });
+    expect(dialog).not.toHaveClass("sn-dragging");
+
+    fireEvent.doubleClick(header);
+    expect(dialog.style.translate).toBe("");
   });
 
   test("focuses the first field on open and returns focus to the trigger on close", async () => {
@@ -254,13 +297,13 @@ describe("Drawer dismissal", () => {
         <TextInput aria-label="Code" />
       </Drawer>,
     );
-    fireEvent.click(backdrop());
+    fireEvent.click(drawerBackdrop());
     expect(onClose).toHaveBeenCalledTimes(1);
 
     await user.type(screen.getByRole("textbox", { name: "Code" }), "system.config");
-    fireEvent.click(backdrop());
+    fireEvent.click(drawerBackdrop());
     expect(onClose).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.getByRole("dialog")).toHaveClass("overlay-nudge"));
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveAttribute("data-nudging", "true"));
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(2);
@@ -277,7 +320,7 @@ describe("Drawer dismissal", () => {
       </Drawer>,
     );
     fireEvent.keyDown(window, { key: "Escape" });
-    fireEvent.click(backdrop());
+    fireEvent.click(drawerBackdrop());
     expect(onClose).not.toHaveBeenCalled();
     expect(onBlockedClose).toHaveBeenCalledTimes(2);
   });
@@ -307,7 +350,9 @@ describe("ImagePreviewOverlay inside a dialog", () => {
     render(<Harness />);
     const trigger = screen.getByRole("button", { name: "Open image" });
     await user.click(trigger);
-    expect(screen.getByRole("dialog", { name: "Preview" })).toBeInTheDocument();
+    const previewDialog = screen.getByRole("dialog", { name: "Preview" });
+    expect(previewDialog).toBeInTheDocument();
+    expect(previewDialog.tagName).toBe("DIALOG");
 
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Preview" })).toBeNull());

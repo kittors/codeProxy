@@ -1,0 +1,5 @@
+/* 兼容入口：原 data.css 已拆分为 table.css / display.css / media.css / nav.css（按分类存放），保留此聚合入口向下兼容。 */
+@import "./data/table.css";
+@import "./data/display.css";
+@import "./media/media.css";
+@import "./navigation/nav.css";

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "@code-proxy/ui/icons";
 import { identityApi, type AuditLogIdentity } from "@code-proxy/api-client";
 import {
   Button,
@@ -202,9 +202,9 @@ export function AuditLogsPage() {
         // "Who changed this" is only half an answer without "from where".
         cell: (item) =>
           item.ip_address ? (
-            <span className="font-mono text-xs text-ink-2">{item.ip_address}</span>
+            <span className="font-mono text-xs text-sn-label2">{item.ip_address}</span>
           ) : (
-            <span className="text-ink-3">—</span>
+            <span className="text-sn-label3">—</span>
           ),
       },
       {
@@ -265,8 +265,8 @@ export function AuditLogsPage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-ink">{t("identity_admin.audit_logs_title")}</h2>
-            <p className="text-sm text-ink-3">{t("identity_admin.audit_logs_description")}</p>
+            <h2 className="text-base font-semibold text-sn-label">{t("identity_admin.audit_logs_title")}</h2>
+            <p className="text-sm text-sn-label3">{t("identity_admin.audit_logs_description")}</p>
           </div>
           <PermissionGate permission="tenant.audit.delete">
             <Button
@@ -326,7 +326,7 @@ export function AuditLogsPage() {
           deleteTarget ? (
             <span className="block min-w-0">
               <span className="block truncate font-medium">{formatWhatHappened(deleteTarget)}</span>
-              <span className="mt-0.5 block truncate text-xs text-ink-3">
+              <span className="mt-0.5 block truncate text-xs text-sn-label3">
                 {formatActor(deleteTarget)} ·{" "}
                 {new Date(deleteTarget.created_at).toLocaleString(i18n.language)}
               </span>
@@ -355,7 +355,7 @@ export function AuditLogsPage() {
             <span className="truncate font-medium">
               {t("identity_admin.audit_log_count", { count: totalCount })}
             </span>
-            <span className="shrink-0 text-xs text-ink-3">
+            <span className="shrink-0 text-xs text-sn-label3">
               {clearsAllTenants
                 ? t("identity_admin.audit_scope_all_tenants")
                 : t("identity_admin.audit_scope_current_tenant")}

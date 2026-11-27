@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link2 } from "lucide-react";
+import { Link2 } from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   extractApiErrorCode,
@@ -375,8 +375,8 @@ export function ModerationChannelPickerModal({
         grow: true,
         cell: (row) => (
           <div className="min-w-0">
-            <p className="truncate font-semibold text-ink">{row.name}</p>
-            <p className="mt-0.5 truncate font-mono text-xs text-ink-3">{row.channel_id}</p>
+            <p className="truncate font-semibold text-sn-label">{row.name}</p>
+            <p className="mt-0.5 truncate font-mono text-xs text-sn-label3">{row.channel_id}</p>
           </div>
         ),
       },
@@ -396,13 +396,13 @@ export function ModerationChannelPickerModal({
               {row.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07]"
+                  className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs text-sn-label2 dark:bg-white/[0.07]"
                 >
                   {tag}
                 </span>
               ))}
               {row.tags.length > 3 ? (
-                <span className="rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-3 dark:bg-white/[0.07]">
+                <span className="rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs text-sn-label3 dark:bg-white/[0.07]">
                   +{row.tags.length - 3}
                 </span>
               ) : null}
@@ -419,7 +419,7 @@ export function ModerationChannelPickerModal({
           if (!row.profile_id) {
             return (
               // 「未绑定」是要读得清的信息，用弱化色 ink-3（ink-4 只给占位装饰，对比度不够）。
-              <span className="text-ink-3">{t("content_moderation.profile_none")}</span>
+              <span className="text-sn-label3">{t("content_moderation.profile_none")}</span>
             );
           }
           const isCurrentProfile = row.profile_id === profile?.id;
@@ -428,7 +428,7 @@ export function ModerationChannelPickerModal({
               className={[
                 "inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold",
                 isCurrentProfile
-                  ? "bg-accent-soft text-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300"
+                  ? "bg-sn-accent-soft text-sn-accent-ink colorful:bg-sky-500/10 colorful:text-sky-700 colorful:dark:text-sky-300"
                   : "bg-amber-500/10 text-amber-700 dark:text-amber-300",
               ].join(" ")}
             >
@@ -481,7 +481,7 @@ export function ModerationChannelPickerModal({
       bodyClassName="flex min-h-0 flex-col"
       footerStart={
         <span>
-          <span className="font-medium text-ink-2">
+          <span className="font-medium text-sn-label2">
             {t("content_moderation.selected_count", { count: selected.size })}
           </span>
           <span className="ml-2">{t("content_moderation.page_selection_hint")}</span>

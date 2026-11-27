@@ -1,0 +1,27 @@
+// en · theme-panel
+export default {
+  "theme-panel.0": "Accent",
+  "theme-panel.1": "Custom color",
+  "theme-panel.2": "Custom accent",
+  "theme-panel.3": "Status colors",
+  "theme-panel.4": "Success",
+  "theme-panel.5": "Warning",
+  "theme-panel.6": "Danger",
+  "theme-panel.7": "Font",
+  "theme-panel.8": "Text size",
+  "theme-panel.9": "Radius",
+  "theme-panel.10": "Reset",
+  "theme-panel.11": "Line contrast",
+  "theme-panel.12": "Transitions",
+  "theme-panel.13": "Saturation & brightness",
+  "theme-panel.14": "Hue",
+  "theme-panel.15": "Hex color value",
+  "theme-panel.16": "Pick from screen",
+  "theme-panel.17": "Curated swatches",
+  "theme-panel.18": "Reset",
+  "theme-panel.19": "Close color picker",
+  "theme-panel.20": "Success color",
+  "theme-panel.21": "Warning color",
+  "theme-panel.22": "Danger color",
+  "theme-panel.23": "Auto-adjusted for contrast"
+};

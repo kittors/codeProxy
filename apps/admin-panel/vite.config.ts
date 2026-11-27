@@ -81,6 +81,47 @@ export default defineConfig({
           // chunk; left to auto-placement it can land in a heavy lazy chunk and
           // drag it into every page's modulepreload list.
           if (id.includes("vite/preload-helper")) return "vendor-react";
+          if (id.includes("/vendor/satin-ui/")) {
+            if (
+              id.includes("/src/charts.js") ||
+              id.includes("/src/data/charts.js") ||
+              id.includes("/react/charts.js")
+            ) {
+              return "vendor-satin-charts";
+            }
+            if (
+              id.includes("/src/grid.js") ||
+              id.includes("/src/data/grid.js") ||
+              id.includes("/src/canvas-grid.js") ||
+              id.includes("/src/data/canvas-grid.js") ||
+              id.includes("/react/grid.js")
+            ) {
+              return "vendor-satin-grid";
+            }
+            if (id.includes("/src/data/table.js") || id.includes("/react/table.js")) {
+              return "vendor-satin-table";
+            }
+            if (
+              id.includes("/src/media/lightbox.js") ||
+              id.includes("/src/media/media.js") ||
+              id.includes("/src/media/carousel.js")
+            ) {
+              return "vendor-satin-media";
+            }
+            if (
+              id.includes("/src/markdown.js") ||
+              id.includes("/src/data/markdown.js") ||
+              id.includes("/react/markdown.js") ||
+              id.includes("/css/md.css") ||
+              id.includes("/css/data/md.css")
+            ) {
+              return "vendor-satin-markdown";
+            }
+            // CSS 文件不得被强行归入同步预加载的 vendor-satin chunk，否则 Vite 会将其
+            // 提到入口 index.css 之前注入，颠倒 @layer base 与 @layer satin 的级联顺序。
+            if (id.endsWith(".css")) return undefined;
+            return "vendor-satin";
+          }
           if (!id.includes("node_modules")) return undefined;
           const match = (...packages: string[]) =>
             packages.some((name) => id.includes(`/node_modules/${name}/`));
@@ -89,11 +130,6 @@ export default defineConfig({
           }
           if (match("i18next", "react-i18next")) return "vendor-i18n";
           if (match("echarts", "echarts-for-react", "zrender")) return "vendor-echarts";
-          if (match("framer-motion")) return "vendor-animation";
-          if (match("react-markdown", "react-syntax-highlighter", "remark-gfm")) {
-            return "vendor-markdown";
-          }
-          if (match("@radix-ui/react-dropdown-menu")) return "vendor-radix-dropdown";
           return undefined;
         },
       },

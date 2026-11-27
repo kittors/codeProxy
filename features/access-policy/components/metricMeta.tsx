@@ -1,4 +1,4 @@
-import { Activity, Binary, CircleDollarSign, type LucideIcon } from "lucide-react";
+import { Activity, Binary, CircleDollarSign, type SatinIconComponent } from "@code-proxy/ui/icons";
 import type { QuotaMetric } from "@code-proxy/api-client";
 import { HUE_GLYPH, HUE_SOFT, HUE_TILE, type Hue } from "@code-proxy/ui";
 
@@ -7,7 +7,7 @@ import { HUE_GLYPH, HUE_SOFT, HUE_TILE, type Hue } from "@code-proxy/ui";
  * 花费琥珀（钱，与全站「额度与费用」同色），请求翠绿（流量脉搏），Token 紫罗兰（模型产出）。
  * 色相只在多彩外观下生效，简约 / 单色时落回调用方的中性基础类。
  */
-export const METRIC_META: Record<QuotaMetric, { icon: LucideIcon; hue: Hue }> = {
+export const METRIC_META: Record<QuotaMetric, { icon: SatinIconComponent; hue: Hue }> = {
   cost: { icon: CircleDollarSign, hue: "amber" },
   requests: { icon: Activity, hue: "emerald" },
   tokens: { icon: Binary, hue: "violet" },
@@ -23,7 +23,7 @@ export function MetricGlyph({
   className?: string;
 }) {
   const { icon: Icon, hue } = METRIC_META[metric];
-  return <Icon size={size} aria-hidden="true" className={`shrink-0 text-ink-3 ${HUE_GLYPH[hue]} ${className}`} />;
+  return <Icon size={size} aria-hidden="true" className={`shrink-0 text-sn-label3 ${HUE_GLYPH[hue]} ${className}`} />;
 }
 
 /** 带渐变淡底的小图标块（矩阵行头、规则卡片）。 */
@@ -33,7 +33,7 @@ export function MetricTile({ metric, size = "sm" }: { metric: QuotaMetric; size?
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07] ${box} ${HUE_TILE[hue]}`}
+      className={`inline-flex shrink-0 items-center justify-center bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07] ${box} ${HUE_TILE[hue]}`}
     >
       <Icon size={size === "md" ? 16 : 14} />
     </span>

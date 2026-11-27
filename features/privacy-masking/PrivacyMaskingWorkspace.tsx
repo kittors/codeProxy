@@ -126,7 +126,7 @@ export function PrivacyMaskingWorkspace({
             （MaskingSettingsPanel portal 进来），钉住区只有这一条，不会两条都吸在 top-0 互相盖住。 */}
         <div
           data-scroll-fade-pin="top"
-          className={`sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 bg-canvas px-4 pb-1 sm:-mx-6 sm:px-6 ${portal ? "" : "pt-3"}`}
+          className={`sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 bg-sn-workspace px-4 pb-1 sm:-mx-6 sm:px-6 ${portal ? "" : "pt-3"}`}
         >
           <TabsList aria-label={t("privacy_masking.title")} className="max-w-full">
             <TabsTrigger value="overview">{t("privacy_masking.tab.overview")}</TabsTrigger>

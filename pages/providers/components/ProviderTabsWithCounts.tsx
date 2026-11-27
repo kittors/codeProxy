@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Cloud, SquareTerminal } from "lucide-react";
+import { Cloud, SquareTerminal } from "@code-proxy/ui/icons";
 import iconGemini from "@code-proxy/assets/icons/gemini.svg";
 import iconClaude from "@code-proxy/assets/icons/claude.svg";
 import iconCodex from "@code-proxy/assets/icons/codex.svg";
@@ -79,9 +79,9 @@ const TAB_META: Record<ProviderTabId, { icon: ReactNode }> = {
 const COUNT_BADGE_BASE =
   "absolute -right-0.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold leading-none tabular-nums";
 const COUNT_BADGE_ACTIVE =
-  "bg-accent text-accent-fg colorful:bg-[var(--brand-fill)] colorful:text-[var(--brand-on)]";
+  "bg-sn-accent text-sn-on-primary colorful:bg-[var(--brand-fill)] colorful:text-[var(--brand-on)]";
 const COUNT_BADGE_IDLE =
-  "bg-surface text-ink-2 shadow-xs colorful:bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
+  "bg-sn-raised text-sn-label2 shadow-xs colorful:bg-[color-mix(in_oklab,var(--brand)_14%,var(--color-surface))] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_26%,var(--color-surface))]";
 
 type ProviderTabsWithCountsProps = {
   tabs: ProviderTabMeta[];

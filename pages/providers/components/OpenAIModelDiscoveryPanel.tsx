@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Check, RefreshCw } from "lucide-react";
-import { Button, useScrollFade } from "@code-proxy/ui";
-import { TextInput } from "@code-proxy/ui";
+import { Check, RefreshCw } from "@code-proxy/ui/icons";
+import { Button, Checkbox, TextInput, useScrollFade } from "@code-proxy/ui";
 import { useOptionalAuth } from "@app/providers/AuthProvider";
 
 interface OpenAIModelDiscoveryPanelProps {
@@ -87,7 +86,7 @@ export function OpenAIModelDiscoveryPanel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.fetch_models")}
         </p>
         <Button
@@ -102,12 +101,12 @@ export function OpenAIModelDiscoveryPanel({
       </div>
 
       {discoveredModels.length ? (
-        <div ref={discoveredSectionRef} className="rounded-2xl bg-subtle p-4">
+        <div ref={discoveredSectionRef} className="rounded-xl bg-sn-subtle p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium text-ink-2">
+            <p className="text-xs font-medium text-sn-label2">
               {t("providers.found_models", { count: discoveredModels.length })}
             </p>
-            <p className="text-xs tabular-nums text-ink-3">
+            <p className="text-xs tabular-nums text-sn-label3">
               {t("providers.models_selected_count", {
                 count: discoverSelected.size,
               })}
@@ -141,7 +140,7 @@ export function OpenAIModelDiscoveryPanel({
               {t("providers.merge_selected")}
             </Button>
             {discoverQuery.trim() ? (
-              <span className="text-xs text-ink-3">
+              <span className="text-xs text-sn-label3">
                 {t("providers.models_filtered_count", {
                   shown: filteredDiscoveredModels.length,
                   total: discoveredModels.length,
@@ -180,12 +179,10 @@ export function OpenAIModelDiscoveryPanel({
                       transform: `translateY(${item.start}px)`,
                     }}
                   >
-                    <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-xs font-mono text-ink-2 transition-colors hover:bg-hover">
-                      <input
-                        type="checkbox"
+                    <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-xs font-mono text-sn-label2 transition-colors hover:bg-sn-hover">
+                      <Checkbox
                         checked={checked}
-                        onChange={() => handleCheckboxChange(model.id)}
-                        className="h-3.5 w-3.5 shrink-0 accent-accent"
+                        onCheckedChange={() => handleCheckboxChange(model.id)}
                       />
                       <span className="truncate">{model.id}</span>
                     </label>

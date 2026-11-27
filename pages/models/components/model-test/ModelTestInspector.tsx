@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@code-proxy/ui/icons";
 import type { ModelTestC2PA, ModelTestResult } from "@code-proxy/api-client";
 
 /**
@@ -22,7 +22,7 @@ export function ModelTestInspector({ result }: { result: ModelTestResult }) {
     <div className="space-y-1.5">
       {hasRequest ? (
         <Disclosure title={t("models_page.test_request_panel")} testId="model-test-request">
-          <p className="mb-1.5 text-2xs text-ink-3">
+          <p className="mb-1.5 text-2xs text-sn-label3">
             {t("models_page.test_request_panel_hint")}
           </p>
           <JSONBlock value={result.request} />
@@ -79,17 +79,17 @@ function MetadataRows({ result }: { result: ModelTestResult }) {
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
         {visible.map((row) => (
           <div key={row.label} className="contents">
-            <dt className="whitespace-nowrap text-2xs text-ink-3">
+            <dt className="whitespace-nowrap text-2xs text-sn-label3">
               {row.label}
             </dt>
-            <dd className="break-all text-2xs text-ink-2">{row.value}</dd>
+            <dd className="break-all text-2xs text-sn-label2">{row.value}</dd>
           </div>
         ))}
       </dl>
 
       {meta.usage && Object.keys(meta.usage).length > 0 ? (
         <div>
-          <p className="mb-1 text-2xs font-semibold text-ink-3">
+          <p className="mb-1 text-2xs font-semibold text-sn-label3">
             {t("models_page.test_meta_usage")}
           </p>
           <JSONBlock value={meta.usage} />
@@ -118,14 +118,14 @@ function RawProvenance({ provenance }: { provenance: ModelTestC2PA }) {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="text-2xs text-ink-3 underline-offset-2 hover:underline"
+        className="text-2xs text-sn-label3 underline-offset-2 hover:underline"
       >
         {open
           ? t("models_page.test_meta_hide_raw_manifest")
           : t("models_page.test_meta_show_raw_manifest")}
       </button>
       {open ? (
-        <pre className="mt-1 max-h-40 overflow-auto rounded-md bg-subtle px-2 py-1.5 text-2xs text-ink-2">
+        <pre className="mt-1 max-h-40 overflow-auto rounded-md bg-sn-subtle px-2 py-1.5 text-2xs text-sn-label2">
           {provenance.fields?.map((field) => `${field.key}: ${field.value}`).join("\n")}
         </pre>
       ) : null}
@@ -151,7 +151,7 @@ function Disclosure({
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-ink-2 transition-colors hover:bg-hover"
+        className="flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-sn-label2 transition-colors hover:bg-sn-hover"
       >
         <ChevronRight
           size={12}
@@ -167,7 +167,7 @@ function Disclosure({
 
 function JSONBlock({ value }: { value: unknown }) {
   return (
-    <pre className="max-h-56 overflow-auto rounded-md bg-subtle px-2 py-1.5 text-2xs leading-relaxed text-ink-2">
+    <pre className="max-h-56 overflow-auto rounded-md bg-sn-subtle px-2 py-1.5 text-2xs leading-relaxed text-sn-label2">
       {JSON.stringify(value, null, 2)}
     </pre>
   );

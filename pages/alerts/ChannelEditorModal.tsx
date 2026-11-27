@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Send } from "lucide-react";
+import { Send } from "@code-proxy/ui/icons";
 import type { AlertChannelKind } from "@code-proxy/api-client";
 import {
   Button,
@@ -80,7 +80,7 @@ export function ChannelEditorModal({
       onClose={onClose}
       onSubmitShortcut={commit}
       footerStart={
-        <span className="text-xs text-ink-3">{t("alerts_page.channel.draft_note")}</span>
+        <span className="text-xs text-sn-label3">{t("alerts_page.channel.draft_note")}</span>
       }
       footer={
         <>

@@ -5,7 +5,7 @@ const blockClass = (state: StatusBarData["blocks"][number]) => {
   if (state === "success") return "bg-emerald-500";
   if (state === "failure") return "bg-rose-500";
   if (state === "mixed") return "bg-amber-500";
-  return "bg-track";
+  return "bg-sn-sunken";
 };
 
 export function ProviderStatusBar({
@@ -23,9 +23,9 @@ export function ProviderStatusBar({
 
   // 偏低变琥珀、很低变红——和卡片上的成功率同一套规则；达标（≥90%）简约风格是墨色，多彩风格是绿色。
   const rateClass = !hasData
-    ? "text-ink-3"
+    ? "text-sn-label3"
     : data.successRate >= 90
-      ? "text-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
+      ? "text-sn-label colorful:text-emerald-600 colorful:dark:text-emerald-300"
       : data.successRate >= 50
         ? "text-amber-700 dark:text-amber-300"
         : "text-rose-700 dark:text-rose-300";

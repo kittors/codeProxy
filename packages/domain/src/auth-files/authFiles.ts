@@ -4,7 +4,6 @@ import type {
   AuthFileIdentityFingerprintSummary,
   AuthFileIdentityFingerprintSource,
   AuthFileRestriction,
-  AuthFileSubscriptionPeriod,
   ClaudeOAuthHealth,
   ClaudeOAuthHealthWindow,
   ClaudeOAuthRuntimeProfile,
@@ -460,12 +459,7 @@ export const mergeAuthFileWithLastGoodStatus = (
     authIndex: fresh.authIndex ?? previous.authIndex,
     auth_subject_id: fresh.auth_subject_id ?? previous.auth_subject_id,
     authSubjectId: fresh.authSubjectId ?? previous.authSubjectId,
-    shared_subscription_started_at:
-      fresh.shared_subscription_started_at ?? previous.shared_subscription_started_at,
-    shared_subscription_expires_at:
-      fresh.shared_subscription_expires_at ?? previous.shared_subscription_expires_at,
-    shared_subscription_source:
-      fresh.shared_subscription_source ?? previous.shared_subscription_source,
+    shared_subscription: fresh.shared_subscription ?? previous.shared_subscription,
     account_status_scope: fresh.account_status_scope ?? previous.account_status_scope,
     subject_scope: fresh.subject_scope ?? previous.subject_scope,
     share_eligible: fresh.share_eligible ?? previous.share_eligible,
@@ -530,9 +524,7 @@ export const sanitizeAuthFilesForCache = (files: AuthFileItem[]): AuthFileItem[]
     runtime_only: file.runtime_only,
     plan_type: file.plan_type,
     planType: file.planType,
-    shared_subscription_started_at: file.shared_subscription_started_at,
-    shared_subscription_expires_at: file.shared_subscription_expires_at,
-    shared_subscription_source: file.shared_subscription_source,
+    shared_subscription: file.shared_subscription,
     account_status_scope: file.account_status_scope,
     subject_scope: file.subject_scope,
     share_eligible: file.share_eligible,
@@ -1189,130 +1181,6 @@ export const resolveAuthFileRestrictionBadges = (
       };
     })
     .filter((badge): badge is AuthFileRestrictionBadge => Boolean(badge));
-};
-
-export type AuthFileSubscriptionStatus = {
-  startedAtMs: number;
-  startedAtText: string;
-  expiresAtMs: number;
-  expiresAtText: string;
-  remainingDays: number;
-  expired: boolean;
-  period: AuthFileSubscriptionPeriod;
-  tone: "active" | "warning" | "urgent" | "expired";
-};
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-export const normalizeAuthFileSubscriptionPeriod = (value: unknown): AuthFileSubscriptionPeriod => {
-  const normalized = String(value ?? "")
-    .trim()
-    .toLowerCase();
-  if (normalized === "year" || normalized === "yearly" || normalized === "annual") {
-    return "yearly";
-  }
-  return "monthly";
-};
-
-// Tenant manual override first (auth-file metadata); shared provider claims are fallback.
-// JWT chatgpt_subscription_* can lag after renewals, so manual must win when set.
-const hasTenantSubscriptionOverride = (file: AuthFileItem): boolean =>
-  parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) !== null ||
-  parseDateLikeMs(
-    file.subscription_started_at ??
-      file.subscriptionStartedAt ??
-      file.subscription_start_at ??
-      file.subscriptionStartAt,
-  ) !== null;
-
-const resolveSubscriptionStartMs = (file: AuthFileItem): number | null =>
-  parseDateLikeMs(file.subscription_started_at_ms ?? file.subscriptionStartedAtMs) ??
-  parseDateLikeMs(
-    file.subscription_started_at ??
-      file.subscriptionStartedAt ??
-      file.subscription_start_at ??
-      file.subscriptionStartAt,
-  ) ??
-  parseDateLikeMs(file.shared_subscription_started_at);
-
-const addCalendarMonths = (startMs: number, months: number): number | null => {
-  const date = new Date(startMs);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const day = date.getDate();
-  const result = new Date(startMs);
-  result.setDate(1);
-  result.setMonth(result.getMonth() + months);
-  const lastDayOfTargetMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
-  result.setDate(Math.min(day, lastDayOfTargetMonth));
-
-  return Number.isNaN(result.getTime()) ? null : result.getTime();
-};
-
-export const resolveAuthFileSubscriptionStatus = (
-  file: AuthFileItem,
-  nowMs = Date.now(),
-): AuthFileSubscriptionStatus | null => {
-  const startedAtMs = resolveSubscriptionStartMs(file);
-  if (startedAtMs === null) {
-    // Shared expires alone still enough when no start is known.
-    const sharedOnly = parseDateLikeMs(file.shared_subscription_expires_at);
-    if (sharedOnly === null) return null;
-    const period = normalizeAuthFileSubscriptionPeriod(
-      file.subscription_period ?? file.subscriptionPeriod,
-    );
-    const diffMs = sharedOnly - nowMs;
-    const remainingDays =
-      diffMs === 0
-        ? 0
-        : diffMs > 0
-          ? Math.ceil(diffMs / DAY_MS)
-          : -Math.ceil(Math.abs(diffMs) / DAY_MS);
-    const expired = remainingDays <= 0;
-    const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
-    return {
-      startedAtMs: sharedOnly,
-      startedAtText: new Date(sharedOnly).toLocaleString(),
-      expiresAtMs: sharedOnly,
-      expiresAtText: new Date(sharedOnly).toLocaleString(),
-      remainingDays,
-      expired,
-      period,
-      tone,
-    };
-  }
-
-  const period = normalizeAuthFileSubscriptionPeriod(
-    file.subscription_period ?? file.subscriptionPeriod,
-  );
-  const sharedExpiresAtMs = parseDateLikeMs(file.shared_subscription_expires_at);
-  const expiresAtMs =
-    !hasTenantSubscriptionOverride(file) && sharedExpiresAtMs !== null
-      ? sharedExpiresAtMs
-      : addCalendarMonths(startedAtMs, period === "yearly" ? 12 : 1);
-  if (expiresAtMs === null) return null;
-  const effectiveStartedAtMs = startedAtMs;
-
-  const diffMs = expiresAtMs - nowMs;
-  const remainingDays =
-    diffMs === 0
-      ? 0
-      : diffMs > 0
-        ? Math.ceil(diffMs / DAY_MS)
-        : -Math.ceil(Math.abs(diffMs) / DAY_MS);
-  const expired = remainingDays <= 0;
-  const tone = expired ? "expired" : remainingDays <= 5 ? "urgent" : "active";
-
-  return {
-    startedAtMs: effectiveStartedAtMs,
-    startedAtText: new Date(effectiveStartedAtMs).toLocaleString(),
-    expiresAtMs,
-    expiresAtText: new Date(expiresAtMs).toLocaleString(),
-    remainingDays,
-    expired,
-    period,
-    tone,
-  };
 };
 
 const padDatePart = (value: number): string => String(value).padStart(2, "0");

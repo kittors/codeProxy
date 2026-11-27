@@ -1,12 +1,45 @@
+export type { SatinIconComponent, SatinIconProps } from "./icons";
 export { AnimatedNumber } from "./feedback/AnimatedNumber";
 export { EmptyState } from "./feedback/EmptyState";
 export { PageLoader } from "./feedback/PageLoader";
 export { Skeleton, SkeletonLines } from "./feedback/Skeleton";
 export type { PageLoaderVariant } from "./feedback/PageLoader";
 export { Reveal } from "./feedback/Reveal";
+export { StatusTag } from "./feedback/StatusTag";
+export type { StatusTagProps, StatusTagTone } from "./feedback/StatusTag";
 export { ToastProvider, useToast } from "./feedback/ToastProvider";
 export { toast } from "./feedback/toastStore";
 export type { ToastAction, ToastOptions } from "./feedback/toastStore";
+
+/* 原生 Satin React 组件统一转出，供全站业务页按需直接使用 */
+export {
+  Avatar,
+  Chip,
+  Collapse,
+  ContextMenu as SatinContextMenu,
+  DatePicker as SatinDatePicker,
+  EmptyArt,
+  Icon,
+  Lightbox as SatinLightbox,
+  Loader,
+  Menu as SatinMenu,
+  NumberFlow,
+  Otp as SatinOtp,
+  Pager as SatinPager,
+  Popconfirm,
+  Popover,
+  Progress,
+  Segmented as SatinSegmented,
+  Slider,
+  Spinner,
+  Stepper,
+  Steps as SatinSteps,
+  Tabs as SatinTabs,
+  TagInput,
+  Text as SatinText,
+  Upload,
+} from "satin-ui/react";
+export { Table as SatinTable } from "satin-ui/react/table";
 
 export * from "./data-grid";
 
@@ -31,6 +64,7 @@ export { PageBackground } from "./layout/PageBackground";
 export { NavList } from "./navigation/NavList";
 export type { NavListGroup, NavListItem } from "./navigation/NavList";
 export { resolveMenuIcon } from "./navigation/menuIconMap";
+export type { MenuIconComponent, MenuIconProps } from "./navigation/menuIconMap";
 
 export { ConfirmModal } from "./overlays/ConfirmModal";
 export { ConfirmHost, confirmDialog } from "./overlays/confirmDialog";
@@ -38,7 +72,6 @@ export { DialogIcon, dialogToneClass } from "./overlays/DialogIcon";
 export type { DialogIconSize, DialogSemanticTone, DialogTone } from "./overlays/DialogIcon";
 export {
   HUES,
-  HUE_BUTTON_ICON,
   HUE_DOT,
   HUE_GLYPH,
   HUE_HEX,
@@ -58,6 +91,15 @@ export { useScrollFade } from "./hooks/useScrollFade";
 export { ScrollFade } from "./primitives/ScrollFade";
 export { PlanBadge, ProviderTag, brandVars } from "./brand/BrandBadges";
 export type { PlanBadgeTier } from "./brand/BrandBadges";
+export {
+  GitHubIcon,
+  GitHubRepoLink,
+  GITHUB_PROJECT_URL,
+  GITHUB_PROJECT_SLUG,
+  GITHUB_PANEL_URL,
+  GITHUB_PANEL_SLUG,
+} from "./brand/GitHubRepoLink";
+export type { GitHubRepoLinkProps, GitHubRepoLinkVariant } from "./brand/GitHubRepoLink";
 export type { ModalSize } from "./overlays/Modal";
 export { Drawer } from "./overlays/Drawer";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";
@@ -65,11 +107,22 @@ export { Modal } from "./overlays/Modal";
 export {
   drawerPanelMotion,
   overlayBackdropMotion,
-  overlayBackdropVariants,
   overlayPanelMotion,
-  overlayPanelVariants,
   useOverlayPresence,
 } from "./overlays/overlayMotion";
+export {
+  resolvePortalContainer,
+  showTopLayerPopover,
+  hideTopLayerPopover,
+  notifyTopLayerDialogOpened,
+} from "./overlays/portalContainer";
+export {
+  useSatinFloatingLayer,
+  type SatinFloatingAlign,
+  type SatinFloatingPlacement,
+  type SatinFloatingState,
+  type UseSatinFloatingLayerOptions,
+} from "./overlays/useSatinFloatingLayer";
 export {
   TooltipBubble,
   HoverTooltip,
@@ -94,7 +147,6 @@ export type { EntityCardProps } from "./primitives/EntityCard";
 export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";
 export type { DropdownMenuRootProps } from "./primitives/DropdownMenu";
-export { Fieldset } from "./primitives/Fieldset";
 export {
   Form,
   FormField,
@@ -143,6 +195,7 @@ export {
   ACCENT_PRESETS,
   APPEARANCE_STORAGE_KEY,
   BAR_THICKNESS_RANGE,
+  CONTROL_RADIUS_OPTIONS,
   DEFAULT_APPEARANCE,
   DEFAULT_STATUS_HEX,
   STYLE_PRESETS,
@@ -165,6 +218,7 @@ export type {
   AppearanceSettings,
   BarStyle,
   ChartStyle,
+  ControlRadius,
   IconStyle,
   PaletteStyle,
   StatusRole,
@@ -175,9 +229,8 @@ export { LanguageSelector } from "./theme/LanguageSelector";
 export { useCapsLock } from "./hooks/useCapsLock";
 export { useInterval } from "./hooks/useInterval";
 export { useLocalStorage } from "./hooks/useLocalStorage";
+export { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
-export { useShake } from "./hooks/useShake";
-export { useStaggerVariants } from "./hooks/useStaggerVariants";
 export {
   useSensitiveDataMasking,
   SENSITIVE_DATA_MASKING_STORAGE_KEY,
@@ -204,19 +257,22 @@ export {
   cn,
   floatingPanelSurface,
   getSelectTriggerBase,
-  selectTriggerBase,
   selectTriggerState,
 } from "./utils/selectStyles";
 export {
+  DRAWER_ENTER_MS,
+  DRAWER_EXIT_MS,
   EASE_IN,
+  EASE_OPEN,
   EASE_OUT,
   EASE_POP,
+  EASE_SPRING,
+  OVERLAY_BACKDROP_ENTER_MS,
   OVERLAY_ENTER_MS,
   OVERLAY_EXIT_MS,
+  OVERLAY_NUDGE_MS,
   OVERLAY_PANEL_EXIT_MS,
   OVERLAY_TRANSFORM_ENTER_MS,
-  popoverEnterTransition,
-  popoverExitTransition,
 } from "./utils/motion";
 
 export { FormSection } from "./forms/FormSection";

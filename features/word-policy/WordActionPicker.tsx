@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Eraser, ListChecks, ShieldX, Undo2 } from "lucide-react";
+import { Eraser, ListChecks, ShieldX, Undo2 } from "@code-proxy/ui/icons";
 import type { WordAction, WordPolicyLimits, WordPolicyView } from "@code-proxy/api-client";
 import { ChoiceCards, FormField, TextInput, type ChoiceCardOption } from "@code-proxy/ui";
 import type { WordPolicyDraft } from "./wordPolicyModel";
@@ -114,7 +114,7 @@ export function WordActionPicker({
             />
           </FormField>
           {/* 替换做不到的情形要说在前面：那时请求会被拦下，而不是带着敏感词放行。 */}
-          <p className="text-xs leading-5 text-ink-3">{t("content_moderation.words.setting_action_replace_note")}</p>
+          <p className="text-xs leading-5 text-sn-label3">{t("content_moderation.words.setting_action_replace_note")}</p>
         </>
       ) : null}
     </div>

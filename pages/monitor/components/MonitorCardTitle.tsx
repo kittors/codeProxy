@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { SatinIconComponent } from "@code-proxy/ui/icons";
 import type { ReactNode } from "react";
 import { HUE_GLYPH, dialogToneClass, iconHueClass, type Hue } from "@code-proxy/ui";
 
@@ -15,7 +15,7 @@ export function MonitorCardTitle({
   label,
   note,
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   hue?: Hue;
   label: string;
   note?: ReactNode;
@@ -25,12 +25,12 @@ export function MonitorCardTitle({
       <span className="flex items-center gap-2">
         <Icon
           size={16}
-          className={`shrink-0 text-ink-3 ${hue ? HUE_GLYPH[hue] : iconHueClass(Icon)}`}
+          className={`shrink-0 text-sn-label3 ${hue ? HUE_GLYPH[hue] : iconHueClass(Icon)}`}
           aria-hidden="true"
         />
         {label}
       </span>
-      {note ? <span className="text-xs font-normal text-ink-3">{note}</span> : null}
+      {note ? <span className="text-xs font-normal text-sn-label3">{note}</span> : null}
     </span>
   );
 }
@@ -45,7 +45,7 @@ export function MonitorInlineNotice({
   description,
   className = "py-10",
 }: {
-  icon: LucideIcon;
+  icon: SatinIconComponent;
   title: string;
   description?: string;
   className?: string;
@@ -57,8 +57,8 @@ export function MonitorInlineNotice({
       >
         <Icon size={18} aria-hidden="true" />
       </span>
-      <p className="text-sm font-medium text-ink-2">{title}</p>
-      {description ? <p className="max-w-sm text-xs text-ink-3">{description}</p> : null}
+      <p className="text-sm font-medium text-sn-label2">{title}</p>
+      {description ? <p className="max-w-sm text-xs text-sn-label3">{description}</p> : null}
     </div>
   );
 }

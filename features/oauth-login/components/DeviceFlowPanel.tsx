@@ -1,9 +1,15 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { Check, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Loader2 } from "@code-proxy/ui/icons";
 import { useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Step, Steps, type StepState, ScrollFade } from "@code-proxy/ui";
+import {
+  Button,
+  Step,
+  Steps,
+  type StepState,
+  ScrollFade,
+  usePrefersReducedMotion,
+} from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import type { AccountProvider } from "../model/catalog";
@@ -16,30 +22,31 @@ import { LoginStatusBar } from "./LoginStatusBar";
 /** The device code, large enough to compare at a glance with the provider's page. */
 function UserCode({ code }: { code: string }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const [copied, setCopied] = useState(false);
   const characters = code.split("");
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div
-        className="flex items-center gap-1 rounded-2xl bg-subtle px-4 py-3"
+        className="flex items-center gap-1 rounded-xl bg-sn-subtle px-4 py-3"
         aria-label={t("add_account.device.code_label")}
         role="group"
       >
         {characters.map((character, index) => (
-          <motion.span
+          <span
             // Codes can repeat characters, so position is part of the key.
             key={`${index}-${character}`}
-            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: reduceMotion ? 0 : index * 0.035, duration: 0.25 }}
+            style={reduceMotion ? undefined : { animationDelay: `${index * 35}ms` }}
             className={[
-              "font-mono text-2xl font-semibold tracking-wider text-ink tabular-nums",
-              character === "-" ? "px-0.5 text-ink-3" : "",
-            ].join(" ")}
+              reduceMotion ? "" : "sn-fade-up",
+              "font-mono text-2xl font-semibold tracking-wider text-sn-label tabular-nums",
+              character === "-" ? "px-0.5 text-sn-label3" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             {character}
-          </motion.span>
+          </span>
         ))}
       </div>
       <Button

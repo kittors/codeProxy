@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Gauge, RefreshCw } from "lucide-react";
+import { Gauge, RefreshCw } from "@code-proxy/ui/icons";
 import { VendorIcon } from "@code-proxy/assets";
 import { Button, Skeleton, surface } from "@code-proxy/ui";
 import {
@@ -16,26 +16,26 @@ import { usePoolCapacity } from "./usePoolCapacity";
 /** 默认只列最紧的几个池；其余收在「显示全部」后面，渠道分组页的表格才有高度可用。 */
 const COLLAPSED_ROWS = 3;
 
-const CARD_CLASS = `p-4 [--cp-inner-radius:var(--radius-lg)] md:shrink-0 ${surface({ radius: "3xl" })}`;
+const CARD_CLASS = `p-4 [--sn-inner-radius:var(--radius-lg)] md:shrink-0 ${surface({ radius: "3xl" })}`;
 
 // 分档和配色与 AI 账号卡的额度条一致：绿色是产品特色，只在余量吃紧时才换成琥珀和红。
 const TONE_STYLE: Record<PoolTone, { fill: string; track: string; text: string }> = {
   healthy: {
-    fill: "bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
-    track: "bg-track bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
-    text: "text-ink",
+    fill: "bg-sn-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
+    track: "bg-sn-sunken bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
+    text: "text-sn-label",
   },
   warning: {
     fill: "bg-amber-500 dark:bg-amber-400 bar-semantic:bg-gradient-to-r bar-semantic:from-amber-300 bar-semantic:to-amber-500 bar-semantic:dark:from-amber-500 bar-semantic:dark:to-amber-300",
-    track: "bg-track bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
+    track: "bg-sn-sunken bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
     text: "text-amber-700 dark:text-amber-300",
   },
   danger: {
     fill: "bg-rose-500 dark:bg-rose-400 bar-semantic:bg-gradient-to-r bar-semantic:from-rose-400 bar-semantic:to-rose-500 bar-semantic:dark:from-rose-500 bar-semantic:dark:to-rose-400",
-    track: "bg-track bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
+    track: "bg-sn-sunken bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
     text: "text-rose-600 dark:text-rose-400",
   },
-  unknown: { fill: "bg-ink-4", track: "bg-track", text: "text-ink-3" },
+  unknown: { fill: "bg-sn-label-off", track: "bg-sn-sunken", text: "text-sn-label3" },
 };
 
 function PoolRowView({ row, nowMs, locale }: { row: PoolRow; nowMs: number; locale: string }) {
@@ -88,9 +88,9 @@ function PoolRowView({ row, nowMs, locale }: { row: PoolRow; nowMs: number; loca
         <VendorIcon modelId={row.provider} size={16} />
       </span>
       <div className="min-w-0">
-        <p className="text-sm leading-5 text-ink">{sentence}</p>
+        <p className="text-sm leading-5 text-sn-label">{sentence}</p>
         {projectionText || coverageText || staleText ? (
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs leading-5 text-ink-3">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs leading-5 text-sn-label3">
             {projectionText ? (
               // 「会用完」是要注意的；「用不完」只是补充，保持和其它说明同色。
               <span
@@ -169,10 +169,10 @@ export function PoolCapacityCard() {
     >
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <Gauge size={16} className="mt-0.5 shrink-0 text-ink-3" aria-hidden="true" />
+          <Gauge size={16} className="mt-0.5 shrink-0 text-sn-label3" aria-hidden="true" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-ink">{t("pool_capacity.title")}</h3>
-            <p className="mt-0.5 text-xs text-ink-3">{t("pool_capacity.description")}</p>
+            <h3 className="text-sm font-semibold text-sn-label">{t("pool_capacity.title")}</h3>
+            <p className="mt-0.5 text-xs text-sn-label3">{t("pool_capacity.description")}</p>
           </div>
         </div>
         <Button
@@ -199,7 +199,7 @@ export function PoolCapacityCard() {
       ) : null}
 
       {rows.length > 0 ? (
-        <ul className="mt-3 divide-y divide-line">
+        <ul className="mt-3 divide-y divide-sn-line">
           {visible.map((row) => (
             <PoolRowView key={row.id} row={row} nowMs={nowMs} locale={locale} />
           ))}
@@ -211,7 +211,7 @@ export function PoolCapacityCard() {
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
-          className="mt-2 text-xs font-medium text-ink-3 transition-colors hover:text-ink"
+          className="mt-2 text-xs font-medium text-sn-label3 transition-colors hover:text-sn-label"
         >
           {expanded
             ? t("pool_capacity.show_less")

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListFilter } from "lucide-react";
+import { ListFilter } from "@code-proxy/ui/icons";
 import type { WordPolicyLimits, WordRuleKind } from "@code-proxy/api-client";
 import {
   Button,

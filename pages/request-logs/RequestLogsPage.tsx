@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, ScrollText, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2 } from "@code-proxy/ui/icons";
 import { configApi, usageApi } from "@code-proxy/api-client";
 import type {
   ClearUsageLogsPayload,
@@ -12,7 +12,6 @@ import { cacheRatePercent, readCacheRate } from "@code-proxy/domain";
 import {
   Button,
   MaskToggleButton,
-  iconHueClass,
   useGridPreferences,
   useSensitiveDataMasking,
   useToast,
@@ -326,76 +325,74 @@ export function RequestLogsPage() {
   const guardVisible = guardFilterVisible(guardFacet.supported, guardFacet.kinds, guardFilter);
 
   return (
-    <section data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-3">
+    <section data-page-fill="always" className="flex min-h-0 flex-1 flex-col gap-3.5">
       <h1 className="sr-only">{t("request_logs.title")}</h1>
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
-            <ScrollText
-              size={18}
-              className={`text-ink-3 ${iconHueClass(ScrollText)}`}
-              aria-hidden="true"
-            />
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-xl leading-7 font-semibold tracking-tight text-[var(--sn-label)]">
             {t("request_logs.heading")}
           </h2>
-          <div className="-m-1 flex flex-wrap items-center gap-2 p-1">
-            <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
-            <MaskToggleButton
-              masked={masked}
-              onToggle={() => setMasked((prev) => !prev)}
-              className="h-9 w-9"
-            />
-            <Button
-              variant="secondary-danger"
-              onClick={() => {
-                setClearOptions(DEFAULT_CLEAR_OPTIONS);
-                setConfirmClearOpen(true);
-              }}
-              disabled={loading || clearingLogs}
-              aria-label={t("request_logs.clear_database_logs")}
-              title={t("request_logs.clear_database_logs")}
-              className="h-9 w-9"
-            >
-              <Trash2 size={14} aria-hidden="true" />
-            </Button>
-            <Button
-              // 刷新回到第一页：日志按时间倒序，新请求都在第一页。
-              onClick={() => void fetchLogs(1, pageSize)}
-              disabled={loading}
-              aria-busy={loading}
-              aria-label={t("request_logs.refresh")}
-              title={t("request_logs.refresh")}
-              // 加载中刷新按钮禁用但图标在转，别淡到看不清。
-              className="h-9 w-9 disabled:opacity-70"
-            >
-              <RefreshCw
-                size={14}
-                className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
-                aria-hidden="true"
-              />
-            </Button>
-          </div>
+          <RequestLogSummary
+            pending={statsPending}
+            stats={{
+              total: stats.total,
+              successRate: stats.success_rate,
+              totalTokens: stats.total_tokens,
+              totalCost: stats.total_cost,
+              cache: {
+                percent: cacheRatePercent(cacheView, stats.total > 0),
+                label: t(
+                  cacheView.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate",
+                ),
+                hint: t(
+                  cacheView.kind === "hit_rate"
+                    ? "request_logs.summary_cache_hit_hint"
+                    : "request_logs.summary_cache_share_hint",
+                ),
+              },
+            }}
+          />
         </div>
-        <RequestLogSummary
-          pending={statsPending}
-          stats={{
-            total: stats.total,
-            successRate: stats.success_rate,
-            totalTokens: stats.total_tokens,
-            totalCost: stats.total_cost,
-            cache: {
-              percent: cacheRatePercent(cacheView, stats.total > 0),
-              label: t(
-                cacheView.kind === "hit_rate" ? "request_logs.cache_hit_rate" : "request_logs.cache_rate",
-              ),
-              hint: t(
-                cacheView.kind === "hit_rate"
-                  ? "request_logs.summary_cache_hit_hint"
-                  : "request_logs.summary_cache_share_hint",
-              ),
-            },
-          }}
-        />
+        <div className="-m-1 flex flex-wrap items-center gap-1.5 p-1">
+          <RequestLogsTimeRangeSelector value={timeRange} onChange={setTimeRange} />
+          <MaskToggleButton
+            masked={masked}
+            onToggle={() => setMasked((prev) => !prev)}
+            className="h-8 w-8"
+          />
+          <Button
+            variant="ghost-danger"
+            size="sm"
+            onClick={() => {
+              setClearOptions(DEFAULT_CLEAR_OPTIONS);
+              setConfirmClearOpen(true);
+            }}
+            disabled={loading || clearingLogs}
+            aria-label={t("request_logs.clear_database_logs")}
+            title={t("request_logs.clear_database_logs")}
+            className="h-8 w-8"
+          >
+            <Trash2 size={15} aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            // 刷新回到第一页：日志按时间倒序，新请求都在第一页。
+            onClick={() => void fetchLogs(1, pageSize)}
+            disabled={loading}
+            aria-busy={loading}
+            aria-label={t("request_logs.refresh")}
+            title={t("request_logs.refresh")}
+            // 加载中刷新按钮禁用但图标在转，别淡到看不清。
+            className="h-8 w-8 disabled:opacity-70"
+          >
+            <RefreshCw
+              size={15}
+              className={loading ? "motion-reduce:animate-none motion-safe:animate-spin" : ""}
+              aria-hidden="true"
+            />
+          </Button>
+        </div>
       </header>
 
       <RequestLogFilterBar

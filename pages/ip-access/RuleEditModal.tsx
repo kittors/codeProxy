@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Lock } from "lucide-react";
+import { ListChecks, Lock } from "@code-proxy/ui/icons";
 import { ipAccessApi, type IpAccessRule } from "@code-proxy/api-client";
 import {
   Button,
@@ -151,7 +151,7 @@ export function RuleEditModal({
                 },
               ]}
             />
-            <p className="flex items-start gap-1.5 text-xs leading-5 text-ink-3">
+            <p className="flex items-start gap-1.5 text-xs leading-5 text-sn-label3">
               <Lock size={12} className="mt-1 shrink-0" aria-hidden="true" />
               <span>{t("ip_access.edit_cidr_locked")}</span>
             </p>

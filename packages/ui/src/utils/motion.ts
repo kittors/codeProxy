@@ -1,59 +1,48 @@
 /**
- * 全局动效常量。
+ * 全局动效常量（严格对齐 Satin 设计系统 `tokens.css` 权威缓动与时长）：
  *
- * 目的是让弹窗、抽屉、下拉、菜单、toast 共用同一套时间与曲线——各处各写一套
- * duration 与 cubic-bezier 时，界面会显得「每个控件性格不同」，这是廉价感的主要来源。
- * 这里的曲线与 styles/index.css 里的 `--ease-soft` / `--ease-pop` / `--ease-spring` 是同一组数值，
- * Tailwind 类（ease-soft / ease-pop / ease-spring）和 JS 动画因此能保持一致。
+ * - `--sn-ease-out`:        cubic-bezier(0, 0, 0.58, 1)      普通淡入、悬停、颜色过渡
+ * - `--sn-ease-out-strong`: cubic-bezier(0.22, 1, 0.36, 1)   弹窗/浮层缩放与位移动效、双击复位
+ * - `--sn-ease-open`:       cubic-bezier(0.32, 0.72, 0, 1)   抽屉滑入、面板展开与折叠推合
+ * - `--sn-ease-overshoot`:  cubic-bezier(0.34, 1.56, 0.64, 1) 小徽章/勾选框弹性微回弹
+ * - `--sn-ease-in`:         cubic-bezier(0.42, 0, 1, 1)      退场收起（干脆利落）
  *
- * 弹出物（下拉、菜单、弹窗、抽屉、toast）统一的节奏：
- * - 进场：透明度很快到位（约 120–200ms），位移 / 缩放用指数减速曲线走得更久一点（200–320ms），
- *   读起来是「一下就出现，再轻轻落稳」；不用回弹——弹出物越过终点再回来，看着像在晃。
- * - 退场：更短的 ease-in，位移更小。用户已经决定关闭，不该再等动画。
- * - 弹窗、抽屉的遮罩与面板分层：面板先走，遮罩稍后褪去，关闭时不会整块一起闪掉。
+ * 与 `styles/index.css` 的 `--ease-soft` / `--ease-pop` / `--ease-spring` 保持完全一致。
  */
 
-/** 普通过渡（悬停、展开、颜色）：起步快、收尾缓。对应 CSS 的 --ease-soft。 */
-export const EASE_OUT = [0.2, 0.8, 0.2, 1] as const;
-/**
- * 弹出物进场（指数减速）：前三成时间走完大半程，随后长长地收尾，不越过终点。
- * 对应 CSS 的 --ease-pop。
- */
-export const EASE_POP = [0.16, 1, 0.3, 1] as const;
-/** 轻回弹：落位时略微越过再回正。对应 CSS 的 --ease-spring，只留给开关、勾选这类小控件。 */
-export const EASE_SPRING = [0.3, 1.25, 0.5, 1] as const;
-/** 退场缓动：略微加速离场。 */
-export const EASE_IN = [0.4, 0, 1, 1] as const;
+/** 普通减速过渡（悬停、淡入、颜色）：对齐 `--sn-ease-out`。 */
+export const EASE_OUT = [0, 0, 0.58, 1] as const;
+/** 弹出物进场减速（弹窗、浮层、下拉）：对齐 `--sn-ease-out-strong`。 */
+export const EASE_POP = [0.22, 1, 0.36, 1] as const;
+/** 抽屉滑入与区块展开曲线：对齐 `--sn-ease-open`。 */
+export const EASE_OPEN = [0.32, 0.72, 0, 1] as const;
+/** 轻回弹（勾选、胶囊弹出、计数徽章）：对齐 `--sn-ease-overshoot`。 */
+export const EASE_SPRING = [0.34, 1.56, 0.64, 1] as const;
+/** 退场加速收起：对齐 `--sn-ease-in`。 */
+export const EASE_IN = [0.42, 0, 1, 1] as const;
 
-/** 下拉、菜单、浮层：透明度、位移 / 缩放、退场的时长，单位毫秒。 */
-export const POPOVER_FADE_MS = 120;
-export const POPOVER_ENTER_MS = 200;
-export const POPOVER_EXIT_MS = 110;
+/** 下拉、菜单、浮层：透明度、位移 / 缩放、退场的时长（对齐 Satin `.sn-pop` / `.sn-menu`）。 */
+export const POPOVER_FADE_MS = 140;
+export const POPOVER_ENTER_MS = 220;
+export const POPOVER_EXIT_MS = 160;
 
-/** 弹窗 / 抽屉：遮罩与面板淡入、面板位移 / 缩放、面板退场、遮罩退场。 */
-export const OVERLAY_ENTER_MS = 200;
-export const OVERLAY_TRANSFORM_ENTER_MS = 320;
-export const OVERLAY_PANEL_EXIT_MS = 150;
-/** 遮罩比面板晚一点褪完；也是关闭后卸载 DOM 的时刻。 */
-export const OVERLAY_EXIT_MS = 200;
+/** 弹窗：遮罩 200ms 淡入、面板透明度 140ms 淡入、缩放 300ms 落位；退场统一 180ms 同节奏收起。 */
+export const OVERLAY_ENTER_MS = 140;
+export const OVERLAY_BACKDROP_ENTER_MS = 200;
+export const OVERLAY_TRANSFORM_ENTER_MS = 300;
+export const OVERLAY_PANEL_EXIT_MS = 180;
+/** 弹窗退场后卸载 DOM 的时刻（与 `dialog.sn-dlg::backdrop` 180ms 退场同步）。 */
+export const OVERLAY_EXIT_MS = 180;
+
+/** 抽屉：对齐 Satin `.sn-drawer` 320ms `var(--sn-ease-open)` 滑入、220ms `var(--sn-ease-in)` 滑出。 */
+export const DRAWER_ENTER_MS = 320;
+export const DRAWER_EXIT_MS = 220;
+
+/** 弹窗/抽屉被拦下关闭时的轻顶反馈时长（对齐 Satin `overlay.js` nudge 260ms）。 */
+export const OVERLAY_NUDGE_MS = 260;
 
 /** 小控件（toast、提示条、行内展开）的时长。 */
 export const CONTROL_ENTER_MS = 200;
 
-/** 悬停/按压的弹簧参数。刚度高、阻尼足，手感是「跟手」而不是「晃」。 */
-export const PRESS_SPRING = { type: "spring", stiffness: 420, damping: 26 } as const;
-
 export const cssEase = (curve: readonly [number, number, number, number]): string =>
   `cubic-bezier(${curve.join(", ")})`;
-
-/**
- * framer-motion 驱动的浮层（Select 系列下拉、侧边栏收起后的分区浮层）共用的过渡：
- * 透明度单独走更短的线性淡入，位移 / 缩放走 EASE_POP。
- */
-export const popoverEnterTransition = {
-  duration: POPOVER_ENTER_MS / 1000,
-  ease: EASE_POP,
-  opacity: { duration: POPOVER_FADE_MS / 1000, ease: "linear" },
-} as const;
-
-export const popoverExitTransition = { duration: POPOVER_EXIT_MS / 1000, ease: EASE_IN } as const;

@@ -1,6 +1,6 @@
 import { type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { Copy } from "@code-proxy/ui/icons";
 import { TextInput } from "@code-proxy/ui";
 import { Select } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -12,7 +12,7 @@ import { isModelAccessProvider } from "../provider-model-access";
  * 叠着五六张描边小卡，读起来像一摞框。只读的渠道 ID 传 `well`，用无边淡底和可编辑的字段区分开。
  */
 const FieldGroup = ({ children, well = false }: { children: React.ReactNode; well?: boolean }) => (
-  <div className={well ? "rounded-xl bg-subtle px-4 py-3" : undefined}>{children}</div>
+  <div className={well ? "rounded-xl bg-sn-subtle px-4 py-3" : undefined}>{children}</div>
 );
 
 interface ProviderKeyBasicTabProps {
@@ -50,17 +50,17 @@ export function ProviderKeyBasicTab({
 
       {keyDraft.id ? (
         <FieldGroup well>
-          <p className="text-xs font-semibold text-ink-3">
+          <p className="text-xs font-semibold text-sn-label3">
             {t("content_moderation.channel_id")}
           </p>
-          <p className="mt-1 break-all font-mono text-xs text-ink-2">
+          <p className="mt-1 break-all font-mono text-xs text-sn-label2">
             {keyDraft.id}
           </p>
         </FieldGroup>
       ) : null}
 
       <FieldGroup>
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.channel_name_label")}
         </p>
         <div className="mt-2">
@@ -73,7 +73,7 @@ export function ProviderKeyBasicTab({
             placeholder={t("providers.channel_placeholder")}
           />
         </div>
-        <p className="mt-2 text-xs text-ink-3">
+        <p className="mt-2 text-xs text-sn-label3">
           {t("providers.channel_name_hint")}
         </p>
       </FieldGroup>
@@ -93,14 +93,14 @@ export function ProviderKeyBasicTab({
           checked={editKeyEnabled}
           onCheckedChange={editKeyEnabledToggle}
         />
-        <p className="mt-2 text-xs text-ink-3">
+        <p className="mt-2 text-xs text-sn-label3">
           {t(usesDisabledFlag ? "providers.disable_hint_flag" : "providers.disable_hint")}
         </p>
       </FieldGroup>
 
       {isBedrock ? (
         <FieldGroup>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.bedrock_auth_mode")}
           </p>
           <div className="mt-2">
@@ -119,7 +119,7 @@ export function ProviderKeyBasicTab({
               aria-label={t("providers.bedrock_auth_mode")}
             />
           </div>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {t("providers.bedrock_auth_mode_hint")}
           </p>
         </FieldGroup>
@@ -128,10 +128,10 @@ export function ProviderKeyBasicTab({
       {!isBedrockSigV4 ? (
         <FieldGroup>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {isBedrock ? t("providers.bedrock_auth_api_key") : t("providers.api_key")}
             </p>
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {t("providers.show_masked_key", { key: maskApiKey(keyDraft.apiKey) })}
             </span>
           </div>
@@ -148,7 +148,7 @@ export function ProviderKeyBasicTab({
                   type="button"
                   onClick={() => void copyText(keyDraft.apiKey.trim())}
                   disabled={!keyDraft.apiKey.trim()}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label disabled:opacity-50"
                   aria-label={t("providers.copy_api_key")}
                   title={t("providers.copy")}
                 >
@@ -157,7 +157,7 @@ export function ProviderKeyBasicTab({
               }
             />
           </div>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {isBedrock ? t("providers.bedrock_api_key_hint") : t("providers.api_key_hint")}
           </p>
         </FieldGroup>
@@ -165,12 +165,12 @@ export function ProviderKeyBasicTab({
 
       {isBedrockSigV4 ? (
         <FieldGroup>
-          <p className="text-sm font-semibold text-ink">
+          <p className="text-sm font-semibold text-sn-label">
             {t("providers.bedrock_sigv4_credentials")}
           </p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-ink-2">
+              <p className="text-xs font-semibold text-sn-label2">
                 {t("providers.bedrock_access_key_id")}
               </p>
               <TextInput
@@ -183,7 +183,7 @@ export function ProviderKeyBasicTab({
               />
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-ink-2">
+              <p className="text-xs font-semibold text-sn-label2">
                 {t("providers.bedrock_secret_access_key")}
               </p>
               <TextInput
@@ -197,7 +197,7 @@ export function ProviderKeyBasicTab({
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <p className="text-xs font-semibold text-ink-2">
+              <p className="text-xs font-semibold text-sn-label2">
                 {t("providers.bedrock_session_token")}
               </p>
               <TextInput
@@ -210,14 +210,14 @@ export function ProviderKeyBasicTab({
               />
             </div>
           </div>
-          <p className="mt-2 text-xs text-ink-3">
+          <p className="mt-2 text-xs text-sn-label3">
             {t("providers.bedrock_sigv4_hint")}
           </p>
         </FieldGroup>
       ) : null}
 
       <FieldGroup>
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.prefix_label")}
         </p>
         <div className="mt-2">
@@ -230,7 +230,7 @@ export function ProviderKeyBasicTab({
             placeholder={t("providers.prefix_placeholder")}
           />
         </div>
-        <p className="mt-2 text-xs text-ink-3">
+        <p className="mt-2 text-xs text-sn-label3">
           {t("providers.prefix_hint")}
         </p>
       </FieldGroup>

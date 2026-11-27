@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, ShieldOff } from "lucide-react";
+import { ShieldCheck, ShieldOff } from "@code-proxy/ui/icons";
 import { AnimatedNumber, Button, SegmentedControl, Skeleton, surface } from "@code-proxy/ui";
 import type { MaskSummary } from "@code-proxy/api-client";
 import { formatCompact } from "./format";
@@ -41,18 +41,18 @@ export function MaskingSummaryCard({
   if (summary && summary.requests === 0 && !enabled) {
     return (
       <section className={`${card} flex flex-col items-center gap-3 py-12 text-center`}>
-        <span className="grid size-11 place-items-center rounded-full bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]">
+        <span className="grid size-11 place-items-center rounded-full bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]">
           <ShieldOff size={20} aria-hidden="true" />
         </span>
         {scope === "portal" ? (
           <>
-            <h2 className="text-base font-semibold text-ink">{t("privacy_masking.portal.off_title")}</h2>
-            <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.portal.off_desc")}</p>
+            <h2 className="text-base font-semibold text-sn-label">{t("privacy_masking.portal.off_title")}</h2>
+            <p className="max-w-md text-sm text-sn-label3">{t("privacy_masking.portal.off_desc")}</p>
           </>
         ) : (
           <>
-            <h2 className="text-base font-semibold text-ink">{t("privacy_masking.off.title")}</h2>
-            <p className="max-w-md text-sm text-ink-3">{t("privacy_masking.off.description")}</p>
+            <h2 className="text-base font-semibold text-sn-label">{t("privacy_masking.off.title")}</h2>
+            <p className="max-w-md text-sm text-sn-label3">{t("privacy_masking.off.description")}</p>
             <Button size="sm" variant="primary" onClick={onOpenSettings}>
               <ShieldCheck size={14} aria-hidden="true" />
               {t("privacy_masking.off.turn_on")}
@@ -67,10 +67,10 @@ export function MaskingSummaryCard({
     <section className={card} aria-labelledby="pm-summary-title">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="pm-summary-title" className="text-base font-semibold text-ink">
+          <h2 id="pm-summary-title" className="text-base font-semibold text-sn-label">
             {t("privacy_masking.summary.title")}
           </h2>
-          <p className="mt-0.5 text-xs text-ink-3">
+          <p className="mt-0.5 text-xs text-sn-label3">
             {enabled ? t("privacy_masking.summary.subtitle_on") : t("privacy_masking.summary.subtitle_off")}
           </p>
         </div>
@@ -80,10 +80,10 @@ export function MaskingSummaryCard({
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
               enabled
                 ? "bg-violet-500/10 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200"
-                : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+                : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
             ].join(" ")}
           >
-            <span aria-hidden="true" className={`size-1.5 rounded-full ${enabled ? "bg-violet-500" : "bg-ink-3"}`} />
+            <span aria-hidden="true" className={`size-1.5 rounded-full ${enabled ? "bg-violet-500" : "bg-sn-label3"}`} />
             {enabled ? t("privacy_masking.status_on") : t("privacy_masking.status_off")}
           </span>
           <SegmentedControl
@@ -107,17 +107,17 @@ export function MaskingSummaryCard({
                 <AnimatedNumber
                   value={summary.places}
                   format={(v) => Math.round(v).toLocaleString(i18n.language)}
-                  className="text-5xl leading-none font-light tracking-tight text-ink tabular-nums"
+                  className="text-5xl leading-none font-light tracking-tight text-sn-label tabular-nums"
                 />
               </div>
-              <p className="mt-1.5 text-sm text-ink-2">{t("privacy_masking.summary.places", { count: summary.places })}</p>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-3">
+              <p className="mt-1.5 text-sm text-sn-label2">{t("privacy_masking.summary.places", { count: summary.places })}</p>
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-sn-label3">
                 <li className="flex items-baseline gap-1">
-                  <span className="font-semibold text-ink tabular-nums">{formatCompact(summary.distinct)}</span>
+                  <span className="font-semibold text-sn-label tabular-nums">{formatCompact(summary.distinct)}</span>
                   <span>{t("privacy_masking.summary.distinct")}</span>
                 </li>
                 <li className="flex items-baseline gap-1">
-                  <span className="font-semibold text-ink tabular-nums">{formatCompact(summary.requests)}</span>
+                  <span className="font-semibold text-sn-label tabular-nums">{formatCompact(summary.requests)}</span>
                   <span>{t("privacy_masking.summary.requests")}</span>
                 </li>
                 {summary.blocked > 0 ? (
@@ -140,7 +140,7 @@ export function MaskingSummaryCard({
               channelsSelectable={scope !== "portal"}
             />
           ) : (
-            <div className="grid place-items-center rounded-2xl bg-subtle px-6 py-10 text-center text-sm text-ink-3">
+            <div className="grid place-items-center rounded-xl bg-sn-subtle px-6 py-10 text-center text-sm text-sn-label3">
               {t("privacy_masking.summary.nothing_yet")}
             </div>
           )}

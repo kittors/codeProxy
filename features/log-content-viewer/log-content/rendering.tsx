@@ -13,7 +13,7 @@ import {
   User,
   Wrench,
   Zap,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { Modal, surface, useScrollFade } from "@code-proxy/ui";
 
 const LARGE_TEXT_CHAR_THRESHOLD = 50_000;
@@ -32,7 +32,7 @@ const LazyRichMarkdown = lazy(() =>
 
 /**
  * 角色色（多彩风格）：标题行的淡底与文字色；标题行里的图标和展开箭头基础类是弱化墨色，
- * 多彩时跟着角色色走。悬停时基础类的 hover:bg-hover 会盖掉淡底，所以多彩下悬停重申同一层淡底、
+ * 多彩时跟着角色色走。悬停时基础类的 hover:bg-sn-hover 会盖掉淡底，所以多彩下悬停重申同一层淡底、
  * 只压暗一点。
  */
 type RoleTint = { header: string; icon: string };
@@ -114,13 +114,13 @@ const PROSE_CLASSES = `prose prose-sm dark:prose-invert max-w-none break-words l
   prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
   prose-p:my-2 prose-p:leading-relaxed
   prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-  prose-code:rounded-md prose-code:bg-selected prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-ink-2 prose-code:before:content-none prose-code:after:content-none
+  prose-code:rounded-md prose-code:bg-sn-active prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:text-sn-label2 prose-code:before:content-none prose-code:after:content-none
   prose-pre:rounded-lg prose-pre:bg-slate-900 prose-pre:text-xs dark:prose-pre:bg-neutral-900
   prose-strong:font-semibold
-  prose-blockquote:border-l-2 prose-blockquote:border-line-strong
+  prose-blockquote:border-l-2 prose-blockquote:border-sn-line-control
   prose-table:border-collapse prose-table:text-sm prose-table:w-full
-  prose-th:border prose-th:border-line prose-th:bg-subtle prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold
-  prose-td:border prose-td:border-line prose-td:px-3 prose-td:py-2`;
+  prose-th:border prose-th:border-sn-line prose-th:bg-sn-subtle prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+  prose-td:border prose-td:border-sn-line prose-td:px-3 prose-td:py-2`;
 
 function MarkdownBlock({ text }: { text: string }) {
   return (
@@ -134,15 +134,15 @@ function MarkdownBlock({ text }: { text: string }) {
  * 消息正文里的 XML 标签段（<context>…</context> 这类）：消息本身已经是一块淡底，标签段再叠一层
  * 半透明的墨色 / 白色，比所在的块深（浅色）或亮（深色）一档，不描边。
  */
-const TAG_BLOCK = "rounded-lg bg-ink/[0.04] dark:bg-white/[0.05]";
+const TAG_BLOCK = "rounded-lg bg-sn-label/[0.04] dark:bg-white/[0.05]";
 
 function TagBadge({ name, content }: { name: string; content: string }) {
   return (
     <div className={`flex items-baseline gap-2 px-3 py-2 ${TAG_BLOCK}`}>
-      <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-3">
+      <code className="shrink-0 rounded bg-sn-active px-1.5 py-0.5 font-mono text-xs text-sn-label3">
         {name}
       </code>
-      <span className="text-sm text-ink-2">{content}</span>
+      <span className="text-sm text-sn-label2">{content}</span>
     </div>
   );
 }
@@ -162,9 +162,9 @@ function TagSection({
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-xs font-medium text-ink-3 transition-colors hover:bg-hover"
+        className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-xs font-medium text-sn-label3 transition-colors hover:bg-sn-hover"
       >
-        <code className="shrink-0 rounded bg-selected px-1.5 py-0.5 font-mono text-xs text-ink-2">
+        <code className="shrink-0 rounded bg-sn-active px-1.5 py-0.5 font-mono text-xs text-sn-label2">
           {name}
         </code>
         <span className="flex-1" />
@@ -174,7 +174,7 @@ function TagSection({
         />
       </button>
       {expanded && (
-        <div className="px-3.5 pb-3 text-sm text-ink">
+        <div className="px-3.5 pb-3 text-sm text-sn-label">
           <MarkdownContent content={content} />
         </div>
       )}
@@ -302,23 +302,23 @@ export function MessageBlock({
   // 一条消息是弹窗里的一块淡底（不描边），标题行与正文之间靠留白分开，不画分隔线。
   // 多彩风格下有角色色的标题行是一条色带，正文补回上边距，不贴着色带。
   return (
-    <div className="overflow-hidden rounded-xl bg-subtle [contain:layout_paint]">
+    <div className="overflow-hidden rounded-xl bg-sn-subtle [contain:layout_paint]">
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-hover ${tint ? `${tint.header} ${ROLE_TINT_HOVER}` : ""}`}
+        className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-sn-label transition-colors hover:bg-sn-hover ${tint ? `${tint.header} ${ROLE_TINT_HOVER}` : ""}`}
       >
-        <span className={`flex shrink-0 items-center text-ink-3 ${tint?.icon ?? ""}`}>
+        <span className={`flex shrink-0 items-center text-sn-label3 ${tint?.icon ?? ""}`}>
           {style.icon}
         </span>
         <span className="flex-1 truncate">{t(style.labelKey)}</span>
         <ChevronDown
           size={16}
-          className={`shrink-0 text-ink-3 transition-transform duration-200 ${tint?.icon ?? ""} ${expanded ? "rotate-180" : ""}`}
+          className={`shrink-0 text-sn-label3 transition-transform duration-200 ${tint?.icon ?? ""} ${expanded ? "rotate-180" : ""}`}
         />
       </button>
       {expanded && (
-        <div className={`px-4 pb-3 text-sm text-ink ${tint ? "colorful:pt-3" : ""}`}>
+        <div className={`px-4 pb-3 text-sm text-sn-label ${tint ? "colorful:pt-3" : ""}`}>
           <MarkdownContent content={content} />
         </div>
       )}
@@ -336,7 +336,7 @@ export function PlainPre({ text }: { text: string }) {
   }
 
   return (
-    <pre className={[surface({ tone: "inset", radius: "xl" }), "whitespace-pre-wrap break-words p-4 text-xs leading-relaxed font-mono text-ink"].join(" ")}>
+    <pre className={[surface({ tone: "inset", radius: "xl" }), "whitespace-pre-wrap break-words p-4 text-xs leading-relaxed font-mono text-sn-label"].join(" ")}>
       {text}
     </pre>
   );
@@ -374,7 +374,7 @@ function VirtualPlainPre({ rows }: { rows: string[] }) {
   return (
     <div
       ref={parentRef}
-      className={[surface({ tone: "inset", radius: "xl" }), "h-[min(58vh,620px)] overflow-y-auto overscroll-contain text-xs leading-relaxed font-mono [contain:layout_paint] text-ink"].join(" ")}
+      className={[surface({ tone: "inset", radius: "xl" }), "h-[min(58vh,620px)] overflow-y-auto overscroll-contain text-xs leading-relaxed font-mono [contain:layout_paint] text-sn-label"].join(" ")}
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualRows.map((virtualRow) => (

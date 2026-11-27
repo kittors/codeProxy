@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, ChevronRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronRight, ShieldCheck } from "@code-proxy/ui/icons";
 import { surface } from "@code-proxy/ui";
 
 /**
@@ -53,19 +53,19 @@ export function MaskingExplainer() {
         aria-expanded={open}
         aria-controls={bodyId}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-ink/[0.02] dark:hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-sn-label/[0.02] dark:hover:bg-white/[0.03]"
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300">
           <ShieldCheck size={18} aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-ink">{t("privacy_masking.explain.title")}</span>
-          <span className="block truncate text-xs text-ink-3">{t("privacy_masking.explain.subtitle")}</span>
+          <span className="block text-sm font-medium text-sn-label">{t("privacy_masking.explain.title")}</span>
+          <span className="block truncate text-xs text-sn-label3">{t("privacy_masking.explain.subtitle")}</span>
         </span>
         <ChevronRight
           size={16}
           aria-hidden="true"
-          className={`shrink-0 text-ink-3 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          className={`shrink-0 text-sn-label3 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
         />
       </button>
       <div id={bodyId} hidden={!open} className="px-5 pb-5">
@@ -73,20 +73,20 @@ export function MaskingExplainer() {
           {steps.map((step, index) => (
             <li key={step.key} className="contents">
               {index > 0 ? (
-                <span aria-hidden="true" className="hidden place-items-center text-ink-3 md:grid">
+                <span aria-hidden="true" className="hidden place-items-center text-sn-label3 md:grid">
                   <ArrowRight size={14} />
                 </span>
               ) : null}
-              <div className="rounded-2xl bg-subtle px-3.5 py-3">
-                <p className="text-2xs font-medium text-ink-3">
+              <div className="rounded-xl bg-sn-subtle px-3.5 py-3">
+                <p className="text-2xs font-medium text-sn-label3">
                   {index + 1}. {step.label}
                 </p>
-                <p className="mt-1.5 font-mono text-xs break-all text-ink-2">{step.text}</p>
+                <p className="mt-1.5 font-mono text-xs break-all text-sn-label2">{step.text}</p>
               </div>
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-xs leading-relaxed text-ink-3">{t("privacy_masking.explain.where")}</p>
+        <p className="mt-3 text-xs leading-relaxed text-sn-label3">{t("privacy_masking.explain.where")}</p>
       </div>
     </section>
   );

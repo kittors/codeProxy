@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Copy, Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, Trash2 } from "@code-proxy/ui/icons";
 import { Button } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
 import { ToggleSwitch } from "@code-proxy/ui";
@@ -15,7 +15,7 @@ import { useModerationPermissions } from "@app/providers/useModerationPermission
  * 条目里面的审核配置不再垫第二层底。
  */
 const FieldGroup = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl bg-subtle p-4">{children}</div>
+  <div className="rounded-xl bg-sn-subtle p-4">{children}</div>
 );
 
 interface OpenAIKeyEntriesEditorProps {
@@ -39,7 +39,7 @@ export function OpenAIKeyEntriesEditor({
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-sm font-semibold text-sn-label">
           {t("providers.api_key_entries")}
         </p>
         <Button
@@ -72,11 +72,11 @@ export function OpenAIKeyEntriesEditor({
           <FieldGroup key={entry.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-sn-label">
                   {t("providers.key_number", { num: idx + 1 })}
                 </p>
                 {entry.channelId ? (
-                  <span className="max-w-full truncate font-mono text-xs text-ink-3" title={entry.channelId}>
+                  <span className="max-w-full truncate font-mono text-xs text-sn-label3" title={entry.channelId}>
                     {entry.channelId}
                   </span>
                 ) : null}
@@ -92,7 +92,7 @@ export function OpenAIKeyEntriesEditor({
                     }));
                   }}
                 />
-                <span className="text-xs font-semibold text-ink-3">
+                <span className="text-xs font-semibold text-sn-label3">
                   {!entry.disabled ? t("providers.enabled") : t("providers.disabled")}
                 </span>
               </div>
@@ -126,7 +126,7 @@ export function OpenAIKeyEntriesEditor({
 
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-ink">
+                <p className="text-sm font-semibold text-sn-label">
                   {t("providers.api_key")}
                 </p>
                 <TextInput
@@ -142,7 +142,7 @@ export function OpenAIKeyEntriesEditor({
                   }}
                   placeholder={t("providers.api_key_placeholder")}
                 />
-                <div className="flex items-center justify-between text-xs text-ink-3">
+                <div className="flex items-center justify-between text-xs text-sn-label3">
                   <span>{t("providers.show_masked_key", { key: maskApiKey(entry.apiKey) })}</span>
                   <Button
                     variant="ghost"

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Play, Route } from "lucide-react";
+import { Play, Route } from "@code-proxy/ui/icons";
 import { apiKeyEntriesApi, type ApiKeyEntry } from "@code-proxy/api-client/endpoints/api-keys";
 import { modelsApi } from "@code-proxy/api-client/endpoints/models";
 import {
@@ -125,7 +125,7 @@ export function RoutingSimulatorDialog({
           label: name,
           searchText: `${name} ${id}`,
           trailing: entry.disabled ? (
-            <span className="rounded-md bg-subtle px-1.5 py-0.5 text-2xs text-ink-3">
+            <span className="rounded-md bg-sn-subtle px-1.5 py-0.5 text-2xs text-sn-label3">
               {t("channel_groups_page.simulator.key_disabled")}
             </span>
           ) : undefined,
@@ -191,7 +191,7 @@ export function RoutingSimulatorDialog({
       onClose={onClose}
       footerStart={
         outcome && !sameParams(outcome.params, params) ? (
-          <span className="text-xs text-ink-3">{t("channel_groups_page.simulator.stale")}</span>
+          <span className="text-xs text-sn-label3">{t("channel_groups_page.simulator.stale")}</span>
         ) : undefined
       }
       footer={

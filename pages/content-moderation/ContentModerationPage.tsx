@@ -10,7 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Trash2,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import {
   contentModerationApi,
   NO_CONTENT_MODERATION_PROFILE_CAPABILITIES,
@@ -228,7 +228,7 @@ export function ContentModerationPage() {
         id: "name",
         header: t("content_moderation.profile_name"),
         width: GRID_WIDTH.badgeGroup,
-        className: "font-medium text-ink",
+        className: "font-medium text-sn-label",
         cell: (profile) => profile.name,
       },
       {
@@ -245,7 +245,7 @@ export function ContentModerationPage() {
                 ariaLabel={t("content_moderation.toggle_enabled", { name: profile.name })}
                 onCheckedChange={(next) => void updateProfileMode(profile, next)}
               />
-              <span className="text-xs text-ink-2">
+              <span className="text-xs text-sn-label2">
                 {enabled
                   ? t("content_moderation.mode_pre_block")
                   : t("content_moderation.mode_off")}
@@ -258,7 +258,7 @@ export function ContentModerationPage() {
         id: "method",
         header: t("content_moderation.moderation_method"),
         width: GRID_WIDTH.badgeGroup,
-        className: "text-ink-2",
+        className: "text-sn-label2",
         cell: (profile) => t(`content_moderation.keyword_mode_${profile.keyword_mode}`),
       },
       {
@@ -266,7 +266,7 @@ export function ContentModerationPage() {
         header: t("content_moderation.backend"),
         width: GRID_WIDTH.badgeGroup,
         cell: (profile) => (
-          <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
+          <span className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs font-medium text-sn-label2 dark:bg-white/[0.07]">
             {t(`content_moderation.backend_${profile.backend}`)}
           </span>
         ),
@@ -277,10 +277,10 @@ export function ContentModerationPage() {
         width: 240,
         cell: (profile) => (
           <div className="min-w-0 text-xs">
-            <p className="truncate font-mono text-ink-2">
+            <p className="truncate font-mono text-sn-label2">
               {profile.base_url}
             </p>
-            <p className="mt-1 truncate text-ink-3">{profile.model}</p>
+            <p className="mt-1 truncate text-sn-label3">{profile.model}</p>
           </div>
         ),
       },
@@ -290,11 +290,11 @@ export function ContentModerationPage() {
         width: GRID_WIDTH.name,
         cell: (profile) =>
           profile.api_key_configured ? (
-            <span className="font-mono text-xs text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
+            <span className="font-mono text-xs text-sn-label2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {profile.api_key_masked ?? "****"}
             </span>
           ) : (
-            <span className="text-xs text-ink-3">{t("content_moderation.not_configured")}</span>
+            <span className="text-xs text-sn-label3">{t("content_moderation.not_configured")}</span>
           ),
       },
       {
@@ -302,9 +302,9 @@ export function ContentModerationPage() {
         header: t("content_moderation.bindings"),
         width: GRID_WIDTH.badgeStacked,
         cell: (profile) => (
-          <div className="text-xs text-ink-2">
+          <div className="text-xs text-sn-label2">
             <p>{t("content_moderation.binding_total", { count: bindingCount(profile) })}</p>
-            <p className="mt-1 text-ink-3">
+            <p className="mt-1 text-sn-label3">
               {t("content_moderation.binding_breakdown", {
                 auth: profile.binding_counts.auth_file ?? 0,
                 keys: profile.binding_counts.provider_key ?? 0,
@@ -319,7 +319,7 @@ export function ContentModerationPage() {
         header: t("content_moderation.updated_at"),
         width: GRID_WIDTH.timestamp,
         cell: (profile) => (
-          <span className="text-xs tabular-nums text-ink-2">
+          <span className="text-xs tabular-nums text-sn-label2">
             {new Intl.DateTimeFormat(undefined, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -477,10 +477,10 @@ export function ContentModerationPage() {
         </Callout>
       ) : activeTab === "masking" ? (
         <section className="max-w-3xl space-y-3">
-          <h3 className="text-base font-semibold text-ink">
+          <h3 className="text-base font-semibold text-sn-label">
             {t("content_moderation.secret_masking.label")}
           </h3>
-          <p className="text-xs leading-5 text-ink-3">
+          <p className="text-xs leading-5 text-sn-label3">
             {t("content_moderation.secret_masking.explainer")}
           </p>
           <SettingGroup>
@@ -539,7 +539,7 @@ export function ContentModerationPage() {
           deleteTarget ? (
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate font-medium">{deleteTarget.name}</span>
-              <span className="shrink-0 text-xs text-ink-3">
+              <span className="shrink-0 text-xs text-sn-label3">
                 {t(`content_moderation.backend_${deleteTarget.backend}`)} ·{" "}
                 {t(`content_moderation.keyword_mode_${deleteTarget.keyword_mode}`)}
               </span>

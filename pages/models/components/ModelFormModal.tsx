@@ -1,4 +1,4 @@
-import { Boxes, CircleDollarSign, Info } from "lucide-react";
+import { Boxes, CircleDollarSign, Info } from "@code-proxy/ui/icons";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -119,7 +119,7 @@ export function ModelFormModal({
         onChange={(event) => onUpdateForm({ [key]: event.target.value } as Partial<ModelFormState>)}
         {...validation.bind(key)}
         placeholder={placeholder}
-        startAdornment={<span className="text-xs text-ink-3">$</span>}
+        startAdornment={<span className="text-xs text-sn-label3">$</span>}
         className="tabular-nums"
       />
     </FormField>
@@ -222,15 +222,15 @@ export function ModelFormModal({
                           aria-selected={form.id === model.id}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => onApplyReusableModel(model)}
-                          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-hover"
+                          className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-sn-hover"
                         >
                           <span className="min-w-0">
-                            <span className="block truncate font-medium text-ink">{model.id}</span>
-                            <span className="block truncate text-xs text-ink-3">
+                            <span className="block truncate font-medium text-sn-label">{model.id}</span>
+                            <span className="block truncate text-xs text-sn-label3">
                               {model.description || model.owned_by}
                             </span>
                           </span>
-                          <span className="shrink-0 text-xs font-medium text-ink-3">
+                          <span className="shrink-0 text-xs font-medium text-sn-label3">
                             {formatPrice(model, t("models_page.not_priced"))}
                           </span>
                         </button>

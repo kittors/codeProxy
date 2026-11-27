@@ -22,7 +22,7 @@ export type DialogTone = DialogSemanticTone | Hue | "auto";
  * 都只比底色亮一档。多彩时在上面叠同色系渐变（HUE_TILE）。
  */
 const SEMANTIC_CLASS: Record<DialogSemanticTone, string> = {
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: "bg-sn-subtle text-sn-label2",
   info: `bg-sky-500/10 text-sky-600 dark:bg-sky-400/15 dark:text-sky-300 ${HUE_TILE.sky}`,
   success: `bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300 ${HUE_TILE.emerald}`,
   warning: `bg-amber-500/12 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300 ${HUE_TILE.amber}`,
@@ -32,13 +32,13 @@ const SEMANTIC_CLASS: Record<DialogSemanticTone, string> = {
 const isSemanticTone = (tone: DialogTone): tone is DialogSemanticTone =>
   tone === "neutral" || tone === "info" || tone === "success" || tone === "warning" || tone === "danger";
 
-// 只统一 lucide 图标的尺寸（它们的 width/height 写在属性上，再由全局 zoom 跟随根字号缩放）；
+// 只统一 lucide / Satin Solar 图标的尺寸（它们的 width/height 写在属性上，再由全局 zoom 跟随根字号缩放）；
 // 厂商 logo 之类的自带 svg 尺寸由调用方决定。
 const SIZE_CLASS = {
-  xs: "h-6 w-6 rounded-md [&_svg.lucide]:size-[13px]",
-  sm: "h-8 w-8 rounded-lg [&_svg.lucide]:size-[16px]",
-  md: "h-10 w-10 rounded-xl [&_svg.lucide]:size-[20px]",
-  lg: "h-12 w-12 rounded-2xl [&_svg.lucide]:size-[24px]",
+  xs: "h-6 w-6 rounded-md [&_svg:is(.lucide,.sn-ic)]:size-[13px]",
+  sm: "h-8 w-8 rounded-lg [&_svg:is(.lucide,.sn-ic)]:size-[16px]",
+  md: "h-10 w-10 rounded-xl [&_svg:is(.lucide,.sn-ic)]:size-[20px]",
+  lg: "h-12 w-12 rounded-2xl [&_svg:is(.lucide,.sn-ic)]:size-[24px]",
 } as const;
 
 export type DialogIconSize = keyof typeof SIZE_CLASS;

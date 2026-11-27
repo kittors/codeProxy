@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { ShieldCheck, UserPlus } from "lucide-react";
+import { ShieldCheck, UserPlus } from "@code-proxy/ui/icons";
 import type { ApiKeyPermissionProfile } from "@code-proxy/api-client";
 import {
   Button,
@@ -168,7 +168,7 @@ export function EndUserCreateModal({
                       <ShieldCheck
                         size={14}
                         aria-hidden="true"
-                        className="text-ink-3 icon-hue:text-violet-500 icon-hue:dark:text-violet-400"
+                        className="text-sn-label3 icon-hue:text-violet-500 icon-hue:dark:text-violet-400"
                       />
                       {profile.name}
                     </span>

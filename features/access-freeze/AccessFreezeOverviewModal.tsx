@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { Eye, Lock, RefreshCw, Unlock } from "lucide-react";
+import { Eye, Lock, RefreshCw, Unlock } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { AccessFreeze } from "@code-proxy/api-client";
 import {
@@ -91,8 +91,8 @@ export function AccessFreezeOverviewModal({
           const subject = subjectOf(row);
           return (
             <div className="min-w-0">
-              <div className="truncate font-medium text-ink">{subject.name}</div>
-              <div className="text-2xs text-ink-3">
+              <div className="truncate font-medium text-sn-label">{subject.name}</div>
+              <div className="text-2xs text-sn-label3">
                 {t(
                   row.subject.kind === "api_key"
                     ? "access_freeze.kind_api_key"
@@ -120,7 +120,7 @@ export function AccessFreezeOverviewModal({
         width: 144,
         minWidth: 128,
         cell: (row) => (
-          <span className="truncate font-mono text-xs text-ink-2">{row.model || "—"}</span>
+          <span className="truncate font-mono text-xs text-sn-label2">{row.model || "—"}</span>
         ),
       },
       {
@@ -129,7 +129,7 @@ export function AccessFreezeOverviewModal({
         width: 184,
         minWidth: 170,
         cell: (row) => (
-          <span className="truncate whitespace-nowrap tabular-nums text-ink-2">
+          <span className="truncate whitespace-nowrap tabular-nums text-sn-label2">
             {formatFreezeTime(row.frozen_at, language)}
           </span>
         ),
@@ -140,7 +140,7 @@ export function AccessFreezeOverviewModal({
         align: "end",
         width: 96,
         minWidth: 80,
-        cell: (row) => <span className="tabular-nums text-ink-2">{row.strike_count}</span>,
+        cell: (row) => <span className="tabular-nums text-sn-label2">{row.strike_count}</span>,
       },
       {
         id: "actions",
@@ -194,16 +194,16 @@ export function AccessFreezeOverviewModal({
       >
         <div className="space-y-6">
           <section aria-label={t("access_freeze.threshold_title")}>
-            <h3 className="mb-2 text-sm font-medium text-ink">
+            <h3 className="mb-2 text-sm font-medium text-sn-label">
               {t("access_freeze.threshold_title")}
             </h3>
             <FreezeThresholdSetting canWrite={canWrite} />
           </section>
 
           <section aria-labelledby={headingId}>
-            <h3 id={headingId} className="mb-2 text-sm font-medium text-ink">
+            <h3 id={headingId} className="mb-2 text-sm font-medium text-sn-label">
               {t("access_freeze.overview_active_title")}
-              <span className="ml-2 text-xs font-normal tabular-nums text-ink-3">
+              <span className="ml-2 text-xs font-normal tabular-nums text-sn-label3">
                 {freezes.length}
               </span>
             </h3>

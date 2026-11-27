@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter } from "react-router-dom";
+import { setup as setupSatin } from "satin-ui";
 import { AppRouter } from "@/app/AppRouter";
 import { dismissAppLoader } from "@/app/bootstrap/dismissAppLoader";
 import { installChunkLoadRecoveryHandlers } from "@pages/chunkLoadRecovery";
@@ -8,6 +9,8 @@ import { GlobalIconButtonTooltip } from "@code-proxy/ui";
 import "@/styles/index.css";
 import "@code-proxy/i18n";
 
+// 启用 Satin 页面级全局交互（Tooltip、浮层栈、Lightbox 键盘与表单增强）。
+setupSatin();
 // Catch unhandled dynamic-import failures after deploy (stale hashed chunks).
 installChunkLoadRecoveryHandlers();
 

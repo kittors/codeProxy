@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   PERIOD_SPENDING_PERIODS,
@@ -109,7 +109,7 @@ export function PeriodQuotaResetModal({
   const subject = (
     <span className="flex min-w-0 items-center justify-between gap-3">
       <span className="truncate font-medium">{subjectName}</span>
-      <span className="shrink-0 text-xs text-ink-3">{t(`quota.reset.subject_${scope}`)}</span>
+      <span className="shrink-0 text-xs text-sn-label3">{t(`quota.reset.subject_${scope}`)}</span>
     </span>
   );
 
@@ -171,7 +171,7 @@ export function PeriodQuotaResetModal({
       }
     >
       <div className="space-y-4">
-        <div className={`${surface({ tone: "inset", radius: "2xl" })} px-4 py-3 text-sm text-ink`}>
+        <div className={`${surface({ tone: "inset", radius: "2xl" })} px-4 py-3 text-sm text-sn-label`}>
           {subject}
         </div>
         <div className="space-y-2">

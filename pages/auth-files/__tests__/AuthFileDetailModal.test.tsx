@@ -367,8 +367,8 @@ describe("AuthFileDetailModal", () => {
     const chart = screen.getByTestId("auth-file-trend-chart");
     // 图表直接放在弹窗上：弹窗本身是一层，不再套灰底面板或白底卡片，也不描边。
     const chartBox = chart.parentElement?.className ?? "";
-    expect(chartBox).not.toMatch(/\bbg-(subtle|surface)\b/);
-    expect(chartBox).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
+    expect(chartBox).not.toMatch(/\bbg-sn-(subtle|raised)\b/);
+    expect(chartBox).not.toMatch(/\b(border|ring-1|shadow-sn-card)\b/);
 
     // 数据色留在图里：默认的多彩图表下请求数是请求蓝（#3b82f6）的渐变柱，费用是琥珀线
     // （与仪表盘、监控中心同一组身份色）。
@@ -382,8 +382,8 @@ describe("AuthFileDetailModal", () => {
     for (const label of ["Current cycle cost", "Current cycle tokens"]) {
       const card = screen.getByText(label).closest("div");
       if (!(card instanceof HTMLElement)) throw new Error(`Missing summary card for ${label}`);
-      expect(card.className).toContain("bg-subtle");
-      expect(card.className).not.toMatch(/\b(border|ring-1|shadow-card|cp-edge)\b/);
+      expect(card.className).toContain("bg-sn-subtle");
+      expect(card.className).not.toMatch(/\b(border|ring-1|shadow-sn-card)\b/);
       const [plainIcon, hueTile] = Array.from(card.querySelector("p")?.children ?? []).filter(
         (node) => node.getAttribute("aria-hidden") === "true",
       );
@@ -393,7 +393,7 @@ describe("AuthFileDetailModal", () => {
       expect(hueTile?.className ?? "").not.toMatch(hueClass);
     }
     const costCard = screen.getByText("Current cycle cost").closest("div") as HTMLElement;
-    expect(within(costCard).getByText("$1.2345")).toHaveClass("text-ink");
+    expect(within(costCard).getByText("$1.2345")).toHaveClass("text-sn-label");
   });
 
   test("hides zero and empty summary cards when Codex trend data is incomplete", () => {
@@ -897,9 +897,9 @@ describe("AuthFileDetailModal", () => {
     expect(
       within(fields).queryByTestId("auth-file-identity-table-desktop"),
     ).not.toBeInTheDocument();
-    // 窄屏：表格按行收高、跟着详情一起纵向滚，横向在表格自己的视口里滚。
-    expect(mobileTable.querySelector('.cp-grid[data-fill="false"]')).toBeInTheDocument();
-    expect(mobileTable.querySelector(".cp-grid-viewport")?.className).toContain("overflow-auto");
+    // 窄屏：表格按行收高、跟着详情一起纵向滚，横向在表格自己的 Satin 滚动容器里滚。
+    expect(mobileTable.querySelector('.sn-tbl-wrap[data-fill="false"]')).toBeInTheDocument();
+    expect(mobileTable.querySelector(".sn-tbl-sc")).toBeInTheDocument();
   });
 
   test("lists isolated Codex identities and selects exactly one outbound profile", async () => {
@@ -1098,13 +1098,13 @@ describe("AuthFileDetailModal", () => {
     const desktopTable = within(fields).getByTestId("auth-file-identity-table-desktop");
     expect(desktopTable.className).toContain("min-h-0");
     expect(within(fields).queryByTestId("auth-file-identity-table-mobile")).not.toBeInTheDocument();
-    // 宽屏：表格铺满右栏，自己的视口纵横都能滚。
-    expect(desktopTable.querySelector('.cp-grid[data-fill="true"]')).toBeInTheDocument();
-    const tableViewport = desktopTable.querySelector(".cp-grid-viewport");
+    // 宽屏：表格铺满右栏，自己的 Satin 滚动视口纵横都能滚。
+    expect(desktopTable.querySelector('.sn-tbl-wrap[data-fill="true"]')).toBeInTheDocument();
+    const tableViewport = desktopTable.querySelector(".sn-tbl-sc");
     if (!(tableViewport instanceof HTMLElement)) {
       throw new Error("identity fingerprint fields table must own its scroll viewport");
     }
-    expect(tableViewport.className).toContain("overflow-auto");
+    expect(tableViewport).toHaveClass("sn-tbl-sc");
   });
 
   test("five-hour trend uses only the latest five hourly buckets and maps quota timestamps to local hours", () => {

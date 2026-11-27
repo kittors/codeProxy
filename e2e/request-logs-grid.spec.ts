@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 // 请求日志的偏好 id 带版本（REQUEST_LOG_GRID_IDS），旧表格的键不再迁移。
-const PREFS_KEY = "cp-grid:request-logs.v2:v1";
+const PREFS_KEY = "cp-grid:request-logs.v3:v1";
 
 type Row = Record<string, unknown>;
 
@@ -113,10 +113,10 @@ async function openRequestLogs(page: Page, options: { withClients?: boolean } = 
 }
 
 const headerBox = (page: Page, columnId: string) =>
-  page.locator(`.cp-grid thead th[data-col="${columnId}"]`).boundingBox();
+  page.locator(`.sn-tbl-wrap thead th[data-col="${columnId}"]`).boundingBox();
 
 const headerOrder = (page: Page) =>
-  page.locator(".cp-grid thead th[data-col]").evaluateAll((cells) =>
+  page.locator(".sn-tbl-wrap thead th[data-col]").evaluateAll((cells) =>
     cells.map((cell) => cell.getAttribute("data-col")),
   );
 
@@ -134,7 +134,7 @@ test.describe("request logs grid", () => {
     expect(box).not.toBeNull();
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(800);
     // 浮层不在表格、也不在带渐隐遮罩的滚动区里，不会被裁掉一截。
-    expect(await dialog.evaluate((node) => Boolean(node.closest(".cp-grid, [data-scroll-fade-host]")))).toBe(false);
+    expect(await dialog.evaluate((node) => Boolean(node.closest(".sn-tbl-wrap, [data-scroll-fade-host]")))).toBe(false);
   });
 
   test("拖宽：只按下不拖不写偏好，拖过头停在最小宽度，双击恢复默认", async ({ page }) => {
@@ -157,10 +157,10 @@ test.describe("request logs grid", () => {
     await page.mouse.move(x - 600, y, { steps: 12 });
     await page.mouse.up();
     const narrowed = await headerBox(page, "model");
-    // 模型列最小 168 设计像素：存下的就是下限。表格这时放得下、有剩余宽度，模型列是 grow 列会再分到一点，
+    // 模型列最小 144 设计像素：存下的就是下限。表格这时放得下、有剩余宽度，模型列是 grow 列会再分到一点，
     // 所以显示宽度不小于下限（0.9 的根字号）即可。
-    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").widths?.model, PREFS_KEY)).toBe(168);
-    expect(narrowed?.width ?? 0).toBeGreaterThanOrEqual(168 * 0.9 - 0.5);
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "{}").widths?.model, PREFS_KEY)).toBe(144);
+    expect(narrowed?.width ?? 0).toBeGreaterThanOrEqual(144 * 0.9 - 0.5);
     expect(narrowed?.width ?? 0).toBeLessThan(before.width);
 
     await handle.dblclick();
@@ -208,7 +208,7 @@ test.describe("request logs grid", () => {
 
   test("旧后端没有调用方字段：Agent 列与它的筛选都不出现", async ({ page }) => {
     await openRequestLogs(page, { withClients: false });
-    await expect(page.locator('.cp-grid thead th[data-col="agent"]')).toHaveCount(0);
+    await expect(page.locator('.sn-tbl-wrap thead th[data-col="agent"]')).toHaveCount(0);
     await expect(page.getByRole("search").getByRole("button", { name: /^Agent/ })).toHaveCount(0);
   });
 

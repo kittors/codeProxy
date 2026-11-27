@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Globe2, KeyRound, Lock, UsersRound } from "lucide-react";
+import { Building2, Globe2, KeyRound, Lock, UsersRound } from "@code-proxy/ui/icons";
 import type { WordPolicyBrief, WordPolicyOverview } from "@code-proxy/api-client";
 import { HUE_GLYPH, hueForIcon } from "@code-proxy/ui";
 
@@ -39,26 +39,26 @@ function RailButton({
       onClick={onClick}
       className={[
         "flex w-full min-w-0 items-start gap-3 rounded-xl px-3 py-2.5 text-left transition",
-        selected ? "bg-accent-soft" : "hover:bg-hover",
+        selected ? "bg-sn-accent-soft" : "hover:bg-sn-hover",
       ].join(" ")}
     >
       <span
         aria-hidden="true"
         className={[
           "mt-0.5 shrink-0 [&>svg]:size-4",
-          selected ? "text-accent-ink" : ["text-ink-3", hue ? HUE_GLYPH[hue] : ""].join(" "),
+          selected ? "text-sn-accent-ink" : ["text-sn-label3", hue ? HUE_GLYPH[hue] : ""].join(" "),
         ].join(" ")}
       >
         {icon}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className={["truncate text-sm font-medium", selected ? "text-accent-ink" : "text-ink"].join(" ")}>
+          <span className={["truncate text-sm font-medium", selected ? "text-sn-accent-ink" : "text-sn-label"].join(" ")}>
             {title}
           </span>
           {badge}
         </span>
-        <span className="mt-0.5 block truncate text-xs text-ink-3">{detail}</span>
+        <span className="mt-0.5 block truncate text-xs text-sn-label3">{detail}</span>
       </span>
     </button>
   );
@@ -88,7 +88,7 @@ export function WordScopeRail({ overview, value, showPortal, onChange }: WordSco
         detail={describe(overview.platform, t("content_moderation.words.audience_platform"))}
         badge={
           overview.can_manage_platform ? null : (
-            <Lock size={12} aria-label={t("content_moderation.words.read_only")} className="shrink-0 text-ink-3" />
+            <Lock size={12} aria-label={t("content_moderation.words.read_only")} className="shrink-0 text-sn-label3" />
           )
         }
         onClick={() => onChange("platform")}

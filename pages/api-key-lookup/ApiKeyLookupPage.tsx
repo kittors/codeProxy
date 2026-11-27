@@ -994,7 +994,7 @@ export function ApiKeyLookupPage() {
         >
           {/* Error */}
           {error && (
-            <div className="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
+            <div className="rounded-xl bg-rose-500/10 p-4 text-sm text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
               {error}
             </div>
           )}
@@ -1005,45 +1005,35 @@ export function ApiKeyLookupPage() {
               {portalUser ? <PortalAccessFreezes enabled={portalCaps.accessFreezes} accountId={portalUser.id} /> : null}
               <LookupResultsToolbar
                 t={t}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
+                activeTab={activeTab} setActiveTab={setActiveTab}
+                timeRange={timeRange} setTimeRange={setTimeRange}
                 handleRefresh={handleRefresh}
-                loading={loading || portalKeysLoading}
-                chartLoading={chartLoading}
-                modelsLoading={modelsLoading}
-                quotaLimits={quotaLimits}
-                quotaScopes={quotaScopes}
+                loading={loading || portalKeysLoading} chartLoading={chartLoading} modelsLoading={modelsLoading}
+                quotaLimits={quotaLimits} quotaScopes={quotaScopes}
                 showKeysTab={Boolean(portalUser)}
+                showBillingTab={Boolean(portalUser) && portalGrants.billing}
                 showWordsTab={Boolean(portalUser) && portalGrants.words}
                 showPrivacyTab={Boolean(portalUser) && portalGrants.privacyMasking}
+                pinned={pinnedTab}
               />
 
               {activeTab === "usage" && usageReady ? (
                 <UsageTabSection
-                  t={t}
-                  timeRange={timeRange}
-                  chartStats={chartStats}
-                  chartLoading={chartLoading}
-                  quotaLimits={quotaLimits}
-                  quotaScopes={quotaScopes}
+                  t={t} timeRange={timeRange} chartStats={chartStats} chartLoading={chartLoading}
+                  quotaLimits={quotaLimits} quotaScopes={quotaScopes}
+                  expiresAt={portalUser?.expires_at}
+                  showBillingShortcut={Boolean(portalUser) && portalGrants.billing}
+                  onOpenBilling={() => setActiveTab("billing")}
                   showApiKeyDistribution={Boolean(portalUser)}
-                  apiKeyMetric={apiKeyMetric}
-                  setApiKeyMetric={setApiKeyMetric}
-                  apiKeyDistributionData={apiKeyDistributionData}
-                  apiKeyDistributionOption={apiKeyDistributionOption}
+                  apiKeyMetric={apiKeyMetric} setApiKeyMetric={setApiKeyMetric}
+                  apiKeyDistributionData={apiKeyDistributionData} apiKeyDistributionOption={apiKeyDistributionOption}
                   apiKeyDistributionLegend={apiKeyDistributionLegend}
-                  modelMetric={modelMetric}
-                  setModelMetric={setModelMetric}
-                  heatmapSeries={heatmapSeries}
-                  modelDistributionData={modelDistributionData}
+                  modelMetric={modelMetric} setModelMetric={setModelMetric}
+                  heatmapSeries={heatmapSeries} modelDistributionData={modelDistributionData}
                   modelDistributionOption={modelDistributionOption as Record<string, unknown>}
                   modelDistributionLegend={modelDistributionLegend}
-                  dailySeries={dailySeries}
-                  dailyTrendOption={dailyTrendOption as Record<string, unknown>}
-                  dailyLegendAvailability={dailyLegendAvailability}
-                  dailyLegendSelected={dailyLegendSelected}
+                  dailySeries={dailySeries} dailyTrendOption={dailyTrendOption as Record<string, unknown>}
+                  dailyLegendAvailability={dailyLegendAvailability} dailyLegendSelected={dailyLegendSelected}
                   toggleDailyLegend={toggleDailyLegend}
                 />
               ) : null}
@@ -1081,7 +1071,7 @@ export function ApiKeyLookupPage() {
                 </Reveal>
               ) : null}
 
-              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} /> : null}
+              {portalUser ? <PortalSelfServiceTabs key={portalUser.id} activeTab={activeTab} grants={portalGrants} onOrderFulfilled={() => { void hydratePortalSession(); if (usageSubject) void fetchQuotaLimits(usageSubject); }} /> : null}
 
               {activeTab === "logs" && usageReady ? (
                 <PublicLogsSection

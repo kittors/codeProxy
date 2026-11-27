@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Edit3, FlaskConical, Power, Trash2 } from "lucide-react";
+import { Check, Edit3, FlaskConical, Power, Trash2 } from "@code-proxy/ui/icons";
 import {
   GRID_ROW_ACTIONS_COLUMN,
   GRID_WIDTH,
@@ -55,7 +55,7 @@ export function useModelColumns({
               </OverflowTooltip>
               {row.description ? (
                 <OverflowTooltip content={row.description} className="block min-w-0">
-                  <span className="block min-w-0 truncate text-xs text-ink-3">
+                  <span className="block min-w-0 truncate text-xs text-sn-label3">
                     {row.description}
                   </span>
                 </OverflowTooltip>
@@ -88,7 +88,7 @@ export function useModelColumns({
         id: "price",
         header: t("models_page.col_price"),
         width: GRID_WIDTH.name,
-        className: "font-mono text-xs tabular-nums text-ink-2",
+        className: "font-mono text-xs tabular-nums text-sn-label2",
         cell: (row) => formatPrice(row, t("models_page.not_priced")),
       },
       {
@@ -102,7 +102,7 @@ export function useModelColumns({
               "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-2xs font-semibold",
               row.enabled
                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+                : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
             ].join(" ")}
           >
             {row.enabled ? <Check size={10} /> : null}

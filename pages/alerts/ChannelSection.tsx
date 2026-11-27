@@ -7,8 +7,8 @@ import {
   Send,
   Trash2,
   Webhook,
-  type LucideIcon,
-} from "lucide-react";
+  type SatinIconComponent,
+} from "@code-proxy/ui/icons";
 import type { AlertChannelKind } from "@code-proxy/api-client";
 import { Button, EmptyState, ToggleSwitch, surface } from "@code-proxy/ui";
 import { ChannelEditorModal } from "./ChannelEditorModal";
@@ -18,7 +18,7 @@ import type { TestOutcome } from "./useChannelTest";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
-const KIND_ICON: Record<AlertChannelKind, LucideIcon> = {
+const KIND_ICON: Record<AlertChannelKind, SatinIconComponent> = {
   webhook: Webhook,
   feishu: MessageSquareText,
   telegram: Send,
@@ -77,20 +77,20 @@ export function ChannelSection({
   return (
     <section
       aria-labelledby="alerts-channels-title"
-      className={`p-4 [--cp-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}
+      className={`p-4 [--sn-inner-radius:var(--radius-lg)] ${surface({ radius: "3xl" })}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3
             id="alerts-channels-title"
-            className="flex items-center gap-2 text-sm font-semibold text-ink"
+            className="flex items-center gap-2 text-sm font-semibold text-sn-label"
           >
             {t("alerts_page.channels.title")}
-            <span className="rounded-full bg-subtle px-2 py-px text-2xs font-medium tabular-nums text-ink-3">
+            <span className="rounded-full bg-sn-subtle px-2 py-px text-2xs font-medium tabular-nums text-sn-label3">
               {channels.length} / {maxChannels}
             </span>
           </h3>
-          <p className="mt-0.5 text-xs text-ink-3">
+          <p className="mt-0.5 text-xs text-sn-label3">
             {t("alerts_page.channels.desc", { max: maxChannels })}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function ChannelSection({
           description={t("alerts_page.channels.empty_desc")}
         />
       ) : (
-        <ul className="mt-2 divide-y divide-line">
+        <ul className="mt-2 divide-y divide-sn-line">
           {channels.map((channel, index) => {
             const Icon = KIND_ICON[channel.kind];
             const name = channel.name.trim() || t("alerts_page.channel.unnamed");
@@ -124,12 +124,12 @@ export function ChannelSection({
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <span
                     aria-hidden="true"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-subtle text-ink-3"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sn-subtle text-sn-label3"
                   >
                     <Icon size={15} />
                   </span>
                   <div className="min-w-0 flex-1 basis-48">
-                    <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
+                    <p className="flex min-w-0 items-center gap-2 text-sm font-medium text-sn-label">
                       <span className="truncate">{name}</span>
                       {changedKeys.has(channel.key) ? (
                         <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-px text-2xs font-medium text-amber-800 dark:text-amber-200">
@@ -137,7 +137,7 @@ export function ChannelSection({
                         </span>
                       ) : null}
                     </p>
-                    <p className="mt-0.5 break-all text-xs leading-5 text-ink-3">
+                    <p className="mt-0.5 break-all text-xs leading-5 text-sn-label3">
                       {t(`alerts_page.kind.${channel.kind}`)} · {destinationText(channel, t)}
                     </p>
                   </div>

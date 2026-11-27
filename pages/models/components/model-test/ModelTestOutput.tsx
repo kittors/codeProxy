@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Download, ShieldAlert, ShieldCheck } from "@code-proxy/ui/icons";
 import { ImagePreviewOverlay } from "@code-proxy/ui";
 import type { ModelTestImage, ModelTestPayload, ModelTestResult } from "@code-proxy/api-client";
 import { formatBytes } from "./modelTestModes";
@@ -33,7 +33,7 @@ function TextOutput({ text }: { text: string }) {
       data-testid="model-test-text"
       // 成功用一层很淡的绿底表达；简约风格下正文是中性墨色（整段绿字读起来费劲，同 Callout），
       // 多彩风格下正文沿用深绿字。
-      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-xs text-ink colorful:text-emerald-900 colorful:dark:text-emerald-100"
+      className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-emerald-500/[0.07] px-3 py-2 text-xs text-sn-label colorful:text-emerald-900 colorful:dark:text-emerald-100"
     >
       {text || t("models_page.test_empty_response")}
     </pre>
@@ -90,24 +90,24 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
 
   return (
     // 弹窗里不再套描边小卡片：图和说明落在同一块淡底上。
-    <figure className="overflow-hidden rounded-lg bg-subtle">
+    <figure className="overflow-hidden rounded-lg bg-sn-subtle">
       <button
         type="button"
         onClick={onPreview}
-        className="block w-full bg-subtle"
+        className="block w-full bg-sn-subtle"
         aria-label={t("models_page.test_preview_image")}
       >
         <img src={source} alt="" className="h-40 w-full object-contain" />
       </button>
       <figcaption className="space-y-1 px-2 py-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-2xs tabular-nums text-ink-3">
+          <span className="truncate text-2xs tabular-nums text-sn-label3">
             {meta}
           </span>
           <a
             href={source}
             download={`model-test.${image.format || "png"}`}
-            className="shrink-0 text-ink-3 transition-colors hover:text-ink"
+            className="shrink-0 text-sn-label3 transition-colors hover:text-sn-label"
             aria-label={t("models_page.test_download_image")}
           >
             <Download size={12} aria-hidden />
@@ -115,7 +115,7 @@ function ImageCard({ image, onPreview }: { image: ModelTestImage; onPreview: () 
         </div>
         {image.c2pa?.present ? <ProvenanceLine image={image} /> : null}
         {image.revised_prompt ? (
-          <p className="line-clamp-2 text-2xs text-ink-3">
+          <p className="line-clamp-2 text-2xs text-sn-label3">
             {t("models_page.test_revised_prompt")}: {image.revised_prompt}
           </p>
         ) : null}
@@ -136,7 +136,7 @@ function ProvenanceLine({ image }: { image: ModelTestImage }) {
     .join(" ");
   if (!generator) return null;
   return (
-    <p className="flex items-center gap-1 text-2xs text-ink-2">
+    <p className="flex items-center gap-1 text-2xs text-sn-label2">
       <ShieldCheck size={11} className="shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
       <span className="truncate">
         {t("models_page.test_provenance_generator")}: {generator}
@@ -164,7 +164,7 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
         playsInline
         className="max-h-[min(60vh,480px)] w-full rounded-lg bg-black object-contain"
       />
-      <div className="flex items-center justify-between gap-2 text-2xs text-ink-3">
+      <div className="flex items-center justify-between gap-2 text-2xs text-sn-label3">
         <span className="tabular-nums">
           {payload.video?.duration
             ? t("models_page.test_clip_length", { seconds: payload.video.duration })
@@ -173,7 +173,7 @@ function VideoOutput({ payload }: { payload: ModelTestPayload }) {
         <a
           href={url}
           download
-          className="transition-colors hover:text-ink"
+          className="transition-colors hover:text-sn-label"
           aria-label={t("models_page.test_download_video")}
         >
           <Download size={12} aria-hidden />

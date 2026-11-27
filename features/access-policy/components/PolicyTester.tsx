@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical } from "@code-proxy/ui/icons";
 import { HUE_TILE, cn } from "@code-proxy/ui";
 import { matchesAnyModelPattern } from "../model/modelMatch";
 import type { ModelOption } from "./ModelPatternInput";
@@ -64,13 +64,13 @@ export function PolicyTester({
   }
 
   return (
-    <div className="rounded-2xl bg-subtle p-3.5">
+    <div className="rounded-xl bg-sn-subtle p-3.5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-ink-2">
+        <span className="flex shrink-0 items-center gap-2 text-xs font-semibold text-sn-label2">
           <span
             aria-hidden="true"
             className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded-lg bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+              "inline-flex h-6 w-6 items-center justify-center rounded-lg bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
               HUE_TILE.teal,
             )}
           >
@@ -90,7 +90,7 @@ export function PolicyTester({
         </div>
       </div>
       {requested ? (
-        <ul id={resultId} aria-live="polite" className="mt-2.5 space-y-1 pl-8 text-xs text-ink-2">
+        <ul id={resultId} aria-live="polite" className="mt-2.5 space-y-1 pl-8 text-xs text-sn-label2">
           {lines.map((line) => (
             <li key={line} className="list-disc">
               {line}

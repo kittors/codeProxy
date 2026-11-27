@@ -280,7 +280,7 @@ describe("RequestLogsPage", () => {
         within(grid).getByRole("button", { name: "Click to view output · 13,100,000" }),
       ).toHaveTextContent("13.1M");
 
-      const tokens = screen.getByText("Total Token", { selector: "span.text-ink-3" });
+      const tokens = screen.getByText("Total Token", { selector: "span.text-sn-label3" });
       expect(tokens.nextElementSibling).toHaveTextContent("2.82B");
       expect(await tooltipOf(user, tokens)).toContain("2,819,900,000");
     });

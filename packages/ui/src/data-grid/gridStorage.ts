@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { GridDensity } from "./types";
+import type { GridDensity, GridLines } from "./types";
 
 /**
- * 每张表的视图偏好（列宽、列顺序、隐藏列、密度）存在 localStorage 的同一个键里。
+ * 每张表的视图偏好（列宽、列顺序、隐藏列、密度、线型）存在 localStorage 的同一个键里。
  *
- * 列宽与列顺序由 DataGrid 自己读写，隐藏列和密度由页面通过 useGridPreferences 读写——两边各管各的字段，
+ * 列宽与列顺序由 DataGrid 自己读写，隐藏列、密度和线型由页面通过 useGridPreferences 读写——两边各管各的字段，
  * 所以每次写入都是「读最新值 → 只改自己的字段 → 写回」，不会拿着一份旧快照把对方的改动盖掉。
  * 写完派发 cp-grid-prefs 事件，另一方据此重新读取（例如页面上「恢复默认视图」同时清掉列宽）。
  *
@@ -15,6 +15,7 @@ export interface GridPreferences {
   widths?: Record<string, number>;
   hidden?: string[];
   density?: GridDensity;
+  lines?: GridLines;
   /** 用户拖过的列顺序（列 id），没拖过就没有这一项。 */
   order?: string[];
 }
@@ -26,6 +27,7 @@ export const GRID_PREFS_EVENT = "cp-grid-prefs";
 const storageKey = (id: string) => `${STORAGE_PREFIX}${id}:${STORAGE_VERSION}`;
 
 const DENSITIES: readonly GridDensity[] = ["compact", "default", "comfortable"];
+const LINES: readonly GridLines[] = ["row", "grid"];
 
 function sanitize(raw: unknown): GridPreferences {
   if (!raw || typeof raw !== "object") return {};
@@ -46,6 +48,9 @@ function sanitize(raw: unknown): GridPreferences {
   }
   if (typeof value.density === "string" && DENSITIES.includes(value.density as GridDensity)) {
     prefs.density = value.density as GridDensity;
+  }
+  if (typeof value.lines === "string" && LINES.includes(value.lines as GridLines)) {
+    prefs.lines = value.lines as GridLines;
   }
   return prefs;
 }
@@ -130,29 +135,41 @@ export function useGridPreferenceEvents(id: string | undefined, onChange: () => 
   }, [id, onChange]);
 }
 
+/** 读取并订阅单张表的线型偏好；若调用方显式传入受控值，以受控值为准。 */
+export function useGridLines(id: string | undefined, controlled?: GridLines): GridLines {
+  const [stored, setStored] = useState<GridLines>(() => readGridPreferences(id).lines ?? "row");
+  const reload = useCallback(() => setStored(readGridPreferences(id).lines ?? "row"), [id]);
+  useGridPreferenceEvents(id, reload);
+  return controlled ?? stored;
+}
+
 export interface UseGridPreferencesResult {
   density: GridDensity;
   setDensity: (density: GridDensity) => void;
+  lines: GridLines;
+  setLines: (lines: GridLines) => void;
   hiddenColumnIds: ReadonlySet<string>;
   setHiddenColumnIds: (ids: ReadonlySet<string>) => void;
-  /** 清掉这张表的全部偏好（列宽、列顺序、隐藏列、密度）。 */
+  /** 清掉这张表的全部偏好（列宽、列顺序、隐藏列、密度、线型）。 */
   resetView: () => void;
 }
 
-/** 页面侧读写密度与隐藏列；defaults 只在用户从没改过时生效。 */
+/** 页面侧读写密度、线型与隐藏列；defaults 只在用户从没改过时生效。 */
 export function useGridPreferences(
   id: string | undefined,
-  defaults: { density?: GridDensity; hidden?: readonly string[] } = {},
+  defaults: { density?: GridDensity; lines?: GridLines; hidden?: readonly string[] } = {},
 ): UseGridPreferencesResult {
   const defaultDensity = defaults.density ?? "default";
+  const defaultLines = defaults.lines ?? "row";
   const defaultHiddenKey = (defaults.hidden ?? []).join("\u0000");
   const readState = useCallback(() => {
     const prefs = readGridPreferences(id);
     return {
       density: prefs.density ?? defaultDensity,
+      lines: prefs.lines ?? defaultLines,
       hidden: new Set(prefs.hidden ?? (defaultHiddenKey ? defaultHiddenKey.split("\u0000") : [])),
     };
-  }, [defaultDensity, defaultHiddenKey, id]);
+  }, [defaultDensity, defaultHiddenKey, defaultLines, id]);
 
   const [state, setState] = useState(readState);
   const reload = useCallback(() => setState(readState()), [readState]);
@@ -162,6 +179,13 @@ export function useGridPreferences(
     (density: GridDensity) => {
       setState((prev) => ({ ...prev, density }));
       writeGridPreferences(id, { density });
+    },
+    [id],
+  );
+  const setLines = useCallback(
+    (lines: GridLines) => {
+      setState((prev) => ({ ...prev, lines }));
+      writeGridPreferences(id, { lines });
     },
     [id],
   );
@@ -176,13 +200,16 @@ export function useGridPreferences(
     writeGridPreferences(id, null);
     setState({
       density: defaultDensity,
+      lines: defaultLines,
       hidden: new Set(defaultHiddenKey ? defaultHiddenKey.split("\u0000") : []),
     });
-  }, [defaultDensity, defaultHiddenKey, id]);
+  }, [defaultDensity, defaultHiddenKey, defaultLines, id]);
 
   return {
     density: state.density,
     setDensity,
+    lines: state.lines,
+    setLines,
     hiddenColumnIds: state.hidden,
     setHiddenColumnIds,
     resetView,

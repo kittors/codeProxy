@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Gauge, RefreshCcw } from "lucide-react";
+import { Gauge, RefreshCcw } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { OpenCodeGoUsageItem } from "@code-proxy/api-client";
 import { QuotaBar } from "@features/quota-preview/QuotaBar";
@@ -260,7 +260,7 @@ export function OpenCodeGoUsageCardSection({
         "flex h-6 w-full items-center gap-1.5 rounded-md px-2 text-xs font-medium",
         tone === "error"
           ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
-          : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+          : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
       ].join(" ")}
       data-testid="opencode-go-usage-footprint"
     >
@@ -365,8 +365,8 @@ export function OpenCodeGoUsageRefreshButton({
       className={[
         // Matches the power and menu buttons it now sits beside in the header.
         "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors duration-150",
-        "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
-        "focus-visible:outline-none focus-visible:shadow-control-focus",
+        "bg-sn-label/[0.05] text-sn-label3 hover:bg-sn-label/[0.08] hover:text-sn-label2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+        "focus-visible:outline-none focus-visible:border-sn-focus focus-visible:shadow-[0_0_0_3px_var(--sn-ring)]",
       ].join(" ")}
       aria-label={refreshLabel}
       title={refreshLabel}

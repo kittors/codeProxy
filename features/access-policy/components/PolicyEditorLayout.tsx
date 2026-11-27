@@ -1,7 +1,6 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, useReducedMotion } from "framer-motion";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert } from "@code-proxy/ui/icons";
 import { DialogIcon, NavList, useScrollFade, type NavListGroup } from "@code-proxy/ui";
 
 export interface PolicyEditorSection {
@@ -57,7 +56,6 @@ export function PolicyEditorLayout({
   const { t } = useTranslation();
   const idPrefix = `policy-tab-${useId().replace(/:/g, "")}`;
   const panelId = `${idPrefix}-panel`;
-  const reduceMotion = useReducedMotion();
   const navFade = useScrollFade<HTMLElement>({ size: 24 });
   const active = sections.find((section) => section.id === value) ?? sections[0];
   const navGroups: NavListGroup[] = groups
@@ -86,12 +84,12 @@ export function PolicyEditorLayout({
 
   return (
     <div className="flex h-full min-h-0 flex-col sm:flex-row">
-      <aside className="flex shrink-0 flex-col sm:w-60 sm:bg-subtle">
+      <aside className="flex shrink-0 flex-col sm:w-60 sm:bg-sn-subtle">
         <div className="flex items-center gap-3 px-5 pb-2 pt-5 pr-14 sm:pr-5">
           <DialogIcon>{icon}</DialogIcon>
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight text-ink">{title}</h2>
-            {subtitle ? <p className="truncate text-xs text-ink-3">{subtitle}</p> : null}
+            <h2 className="truncate text-base font-semibold tracking-tight text-sn-label">{title}</h2>
+            {subtitle ? <p className="truncate text-xs text-sn-label3">{subtitle}</p> : null}
           </div>
         </div>
         <nav ref={navFade.ref} className="min-h-0 sm:flex-1 sm:overflow-y-auto">
@@ -106,7 +104,7 @@ export function PolicyEditorLayout({
           />
         </nav>
         {sidebarNote ? (
-          <div className="hidden px-5 pb-5 pt-2 text-2xs leading-5 text-ink-3 sm:block">{sidebarNote}</div>
+          <div className="hidden px-5 pb-5 pt-2 text-2xs leading-5 text-sn-label3 sm:block">{sidebarNote}</div>
         ) : null}
       </aside>
       {/* overflow-hidden：分区切换的入场位移（y: 6）不能把内容推出盒子，否则会撑大外层弹窗
@@ -117,7 +115,7 @@ export function PolicyEditorLayout({
         aria-labelledby={active ? `${idPrefix}-${active.id}` : undefined}
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       >
-        {active ? <SectionPane key={active.id} section={active} animate={!reduceMotion} /> : null}
+        {active ? <SectionPane key={active.id} section={active} /> : null}
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-4 gap-y-3 px-6 pb-6 pt-3">
           {footerStart ? <div className="min-w-0 flex-1">{footerStart}</div> : null}
           <div className="flex items-center gap-2.5 max-sm:w-full max-sm:[&>button]:flex-1">{footer}</div>
@@ -131,27 +129,23 @@ export function PolicyEditorLayout({
  * 一段的内容区，按分段 key 重新挂载：切换分段时滚动位置回到顶部，滚动渐隐也重新测量。
  * 按钮栏紧贴在下面、中间没有分隔线，内容滚到按钮上方时靠底部渐隐收尾，而不是一刀切断。
  */
-function SectionPane({ section, animate }: { section: PolicyEditorSection; animate: boolean }) {
+function SectionPane({ section }: { section: PolicyEditorSection }) {
   const fade = useScrollFade<HTMLDivElement>({ size: 32 });
   return (
-    <motion.div
+    <div
       ref={fade.ref}
-      className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-5 sm:pt-6"
-      initial={animate ? { opacity: 0, y: 6 } : false}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-      // 入场位移结束后再量一次：transform 的变化不触发 ResizeObserver。
-      onAnimationComplete={fade.measure}
+      className="sn-fade-up min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-5 sm:pt-6"
+      onAnimationEnd={fade.measure}
     >
       {/* 右上角是弹窗的关闭按钮，标题区让出位置。 */}
       <header className="mb-5 sm:pr-10">
-        <h3 className="text-base font-semibold text-ink">{section.title}</h3>
+        <h3 className="text-base font-semibold text-sn-label">{section.title}</h3>
         {section.description ? (
-          <p className="mt-1 text-xs leading-5 text-ink-3">{section.description}</p>
+          <p className="mt-1 text-xs leading-5 text-sn-label3">{section.description}</p>
         ) : null}
       </header>
       {section.content}
-    </motion.div>
+    </div>
   );
 }
 
@@ -159,7 +153,7 @@ function SectionPane({ section, animate }: { section: PolicyEditorSection; anima
 export function NavCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink/[0.06] px-1.5 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.08]">
+    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sn-label/[0.06] px-1.5 text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.08]">
       {count}
     </span>
   );

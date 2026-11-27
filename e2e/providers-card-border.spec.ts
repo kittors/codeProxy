@@ -40,7 +40,7 @@ const openProviders = async (page: Page) => {
   await page.goto("/#/access/ai-providers");
 };
 
-test("provider list card draws its edge inside the card, not as a clipped ring", async ({ page }) => {
+test("provider list card draws its Satin 1px hairline border inside border-box without clipping", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openProviders(page);
 
@@ -49,22 +49,19 @@ test("provider list card draws its edge inside the card, not as a clipped ring",
 
   const style = await card.evaluate((el) => {
     const cs = getComputedStyle(el);
-    const edge = getComputedStyle(el, "::after");
     return {
+      boxSizing: cs.boxSizing,
       borders: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth],
-      edgePosition: edge.position,
-      edgeInset: [edge.top, edge.right, edge.bottom, edge.left],
-      edgeShadow: edge.boxShadow,
+      borderStyle: cs.borderTopStyle,
+      boxShadow: cs.boxShadow,
     };
   });
 
-  // No drawn border: the outline is not a frame around the card.
-  for (const w of style.borders) expect(w).toBe("0px");
-  // The hairline covers the card exactly and is an inset 1px ring.
-  expect(style.edgePosition).toBe("absolute");
-  for (const inset of style.edgeInset) expect(inset).toBe("0px");
-  expect(style.edgeShadow).toMatch(/inset/);
-  expect(style.edgeShadow).toMatch(/0px 0px 0px 1px/);
+  // Satin 原生 .sn-panel 卡片：1px 实线边框画在 border-box 内部，永不被祖先 overflow-hidden 裁剪，无外扩脏阴影。
+  expect(style.boxSizing).toBe("border-box");
+  for (const w of style.borders) expect(w).toBe("1px");
+  expect(style.borderStyle).toBe("solid");
+  expect(style.boxShadow).toBe("none");
 
   await page.screenshot({ path: "/tmp/providers-border.png" });
 });

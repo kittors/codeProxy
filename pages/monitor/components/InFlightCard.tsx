@@ -1,7 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { CircleCheck, Hourglass } from "lucide-react";
+import { CircleCheck, Hourglass } from "@code-proxy/ui/icons";
 import {
   MONITOR_IN_FLIGHT_STAGES,
   type MonitorInFlight,
@@ -25,7 +24,7 @@ const KNOWN_STAGES: ReadonlySet<string> = new Set(MONITOR_IN_FLIGHT_STAGES);
 // 阶段小标签：状态色淡底加同色圆点，深浅色由同一组类名覆盖（与请求详情的小标签同一套）。
 // 圆点是静止的：这张表每 5 秒刷新，任何闪烁、呼吸效果都会让整张表看起来在跳。
 const STAGE_TONE: Record<string, string> = {
-  preparing: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  preparing: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
   queued: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   waiting: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   upstream: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
@@ -35,20 +34,6 @@ const STAGE_TONE: Record<string, string> = {
 const NEUTRAL_TONE = STAGE_TONE.preparing;
 
 const pad = (value: number) => String(value).padStart(2, "0");
-
-/**
- * 空和有请求之间切换（夜里流量低时每几秒就来回一次）：提示和表格交叉淡入淡出，同时一个收起、一个
- * 展开，卡片高度平滑过渡，不再一下跳成另一个样子。曲线和时长与表格行展开收起相同（DataGrid.css 的
- * --grid-fold-ease、useRowMotion 的 ROW_FOLD_MS）。减少动效时直接切换。
- */
-const SWAP_TRANSITION = { duration: 0.28, ease: [0.37, 0, 0.63, 1] as const };
-const SWAP_MOTION = {
-  initial: { opacity: 0, height: 0, overflow: "hidden" },
-  animate: { opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } },
-  exit: { opacity: 0, height: 0, overflow: "hidden" },
-  transition: SWAP_TRANSITION,
-};
-const SWAP_INSTANT = { initial: false, transition: { duration: 0 } } as const;
 
 /** 开始时刻按浏览器本地时间显示到秒：在途请求都是刚刚开始的，不用写日期。 */
 function clockOf(iso: string): string {
@@ -113,7 +98,6 @@ export function InFlightCard({
 }) {
   const { t } = useTranslation();
   const visible = usePageVisible();
-  const reduceMotion = useReducedMotion();
   const requests = inFlight?.requests;
   const rows = useMemo(() => newestFirst(requests ?? [], receivedAt), [requests, receivedAt]);
   const running = visible && rows.length > 0;
@@ -139,8 +123,7 @@ export function InFlightCard({
       }
       loading={!inFlight && !error}
     >
-      <AnimatePresence initial={false}>
-        <motion.div key={view} {...(reduceMotion ? SWAP_INSTANT : SWAP_MOTION)}>
+      <div key={view} className="sn-fade-up">
           {view === "error" ? (
             <MonitorInlineNotice
               icon={Hourglass}
@@ -168,8 +151,7 @@ export function InFlightCard({
               />
             </InFlightClock.Provider>
           )}
-        </motion.div>
-      </AnimatePresence>
+      </div>
     </Card>
   );
 }
@@ -189,8 +171,8 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         overflowTooltip: false,
         cell: (request) => (
           <span className="flex flex-col whitespace-nowrap" title={request.request_id || undefined}>
-            <span className="tabular-nums text-ink">{clockOf(request.started_at)}</span>
-            <span className="text-xs tabular-nums text-ink-3">
+            <span className="tabular-nums text-sn-label">{clockOf(request.started_at)}</span>
+            <span className="text-xs tabular-nums text-sn-label3">
               <Running baseMs={request.elapsed_ms}>
                 {(ms) => t("monitor_center.in_flight.elapsed", { duration: formatMonitorDuration(ms) })}
               </Running>
@@ -219,7 +201,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
                   return (
                     <span
                       data-slow={slow ? "true" : undefined}
-                      className={`mt-1 text-xs tabular-nums transition-colors duration-300 ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-ink-3"}`}
+                      className={`mt-1 text-xs tabular-nums transition-colors duration-300 ${slow ? "font-medium text-amber-700 dark:text-amber-300" : "text-sn-label3"}`}
                       title={slow ? t("monitor_center.in_flight.slow_hint") : undefined}
                     >
                       {t("monitor_center.in_flight.in_stage", { duration: formatMonitorDuration(inStage) })}
@@ -243,16 +225,16 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
           return (
             <span className="flex min-w-0 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
-                <span className="truncate text-ink" title={request.model || undefined}>
+                <span className="truncate text-sn-label" title={request.model || undefined}>
                   {request.model || "—"}
                 </span>
                 {request.stream ? (
-                  <span className="shrink-0 rounded-md bg-ink/[0.05] px-1.5 text-2xs leading-5 text-ink-2 dark:bg-white/[0.07]">
+                  <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs leading-5 text-sn-label2 dark:bg-white/[0.07]">
                     {t("monitor_center.in_flight.stream")}
                   </span>
                 ) : null}
               </span>
-              <span className="mt-0.5 truncate text-xs text-ink-3" title={route || undefined}>
+              <span className="mt-0.5 truncate text-xs text-sn-label3" title={route || undefined}>
                 {endpoint || route || "—"}
               </span>
             </span>
@@ -268,7 +250,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         cell: (request) => {
           const account = request.account;
           if (!account) {
-            return <span className="text-xs text-ink-3">{t("monitor_center.in_flight.no_account")}</span>;
+            return <span className="text-xs text-sn-label3">{t("monitor_center.in_flight.no_account")}</span>;
           }
           // 第一次尝试是常态，不写；重试了才写「第 n 次尝试」并标琥珀色。
           const retried = request.attempt > 1;
@@ -278,12 +260,12 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
           ].filter(Boolean);
           return (
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-ink" title={accountTitle(account)}>
+              <span className="truncate text-sn-label" title={accountTitle(account)}>
                 {account.label || account.auth_id}
-                {account.provider ? <span className="text-ink-3"> · {account.provider}</span> : null}
+                {account.provider ? <span className="text-sn-label3"> · {account.provider}</span> : null}
               </span>
               {retried || details.length > 0 ? (
-                <span className="mt-0.5 truncate text-xs text-ink-3">
+                <span className="mt-0.5 truncate text-xs text-sn-label3">
                   {retried ? (
                     <span className="font-medium text-amber-700 dark:text-amber-300">
                       {t("monitor_center.in_flight.attempt", { attempt: request.attempt })}
@@ -303,7 +285,7 @@ function useInFlightColumns(): DataGridColumn<MonitorInFlightRequest>[] {
         width: 128,
         overflowTooltip: false,
         cell: (request) => (
-          <span className="truncate text-ink-2" title={request.api_key_id || undefined}>
+          <span className="truncate text-sn-label2" title={request.api_key_id || undefined}>
             {request.api_key_name || request.api_key_id || "—"}
           </span>
         ),

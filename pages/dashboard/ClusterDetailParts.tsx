@@ -26,8 +26,8 @@ export function DetailSection({
     <section className="min-w-0 space-y-2">
       <div className="flex items-baseline justify-between gap-3">
         {/* 不用 uppercase：「近 5m」会被转成「近 5M」，像五百万。 */}
-        <h3 className="text-xs font-semibold tracking-wide text-ink-2">{title}</h3>
-        {aside ? <span className="text-2xs text-ink-3">{aside}</span> : null}
+        <h3 className="text-xs font-semibold tracking-wide text-sn-label2">{title}</h3>
+        {aside ? <span className="text-2xs text-sn-label3">{aside}</span> : null}
       </div>
       {children}
     </section>
@@ -54,7 +54,7 @@ export function DetailItem({
 }) {
   return (
     <div className={`flex min-w-0 items-baseline justify-between gap-3 ${wide ? "sm:col-span-2" : ""}`}>
-      <dt className="shrink-0 text-xs text-ink-3">{label}</dt>
+      <dt className="shrink-0 text-xs text-sn-label3">{label}</dt>
       <dd title={title} className={`truncate text-right text-xs font-medium tabular-nums ${levelText(level)}`}>
         {value}
       </dd>
@@ -68,7 +68,7 @@ export function IssueList({ issues }: { issues: HealthIssue[] }) {
   return (
     <DetailSection title={t("cluster_nodes.issues")}>
       {issues.length === 0 ? (
-        <p className="text-xs text-ink-3">{t("cluster_nodes.no_issues")}</p>
+        <p className="text-xs text-sn-label3">{t("cluster_nodes.no_issues")}</p>
       ) : (
         <ul className="space-y-1">
           {issues.map((issue, index) => (
@@ -113,7 +113,7 @@ export function DiskRows({ disks, hue = "sky" }: { disks: DiskView[]; hue?: Moni
   const useLabel = useDiskUseLabel();
   const growthText = useDiskGrowthText();
   if (disks.length === 0) {
-    return <p className="text-xs text-ink-3">{t("cluster_nodes.disks_unavailable")}</p>;
+    return <p className="text-xs text-sn-label3">{t("cluster_nodes.disks_unavailable")}</p>;
   }
   return (
     <ul className="space-y-3">
@@ -124,21 +124,21 @@ export function DiskRows({ disks, hue = "sky" }: { disks: DiskView[]; hue?: Moni
           <li key={disk.mount} data-testid="disk-row" data-level={disk.level} className="min-w-0 space-y-1">
             <div className="flex items-baseline justify-between gap-2">
               <span className="flex min-w-0 items-baseline gap-1.5" title={paths}>
-                <span className="truncate font-mono text-xs font-semibold text-ink">{disk.mount}</span>
-                {disk.fsType ? <span className="shrink-0 text-2xs text-ink-3">{disk.fsType}</span> : null}
+                <span className="truncate font-mono text-xs font-semibold text-sn-label">{disk.mount}</span>
+                {disk.fsType ? <span className="shrink-0 text-2xs text-sn-label3">{disk.fsType}</span> : null}
                 {disk.readOnly ? (
                   <span className="shrink-0 rounded-full bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-700 dark:bg-rose-400/15 dark:text-rose-300">
                     {t("cluster_nodes.read_only")}
                   </span>
                 ) : null}
-                <span className="truncate text-2xs text-ink-3">{disk.uses.map(useLabel).join(" · ")}</span>
+                <span className="truncate text-2xs text-sn-label3">{disk.uses.map(useLabel).join(" · ")}</span>
               </span>
               <span className={`shrink-0 text-xs font-semibold tabular-nums ${levelText(disk.level)}`}>
                 {Math.round(disk.pct)}%
               </span>
             </div>
             <MeterBar pct={disk.pct} tone={meterTone(disk.level, hue)} className="h-bar-sm" />
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-2xs text-ink-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-2xs text-sn-label3">
               <span className="tabular-nums">
                 {t("cluster_nodes.disk_usage", {
                   used: formatBytes(disk.usedBytes),
@@ -153,7 +153,7 @@ export function DiskRows({ disks, hue = "sky" }: { disks: DiskView[]; hue?: Moni
               </span>
             </div>
             {growth ? (
-              <p className={`text-2xs ${disk.concern === "fill" ? levelText(disk.level) : "text-ink-3"}`}>{growth}</p>
+              <p className={`text-2xs ${disk.concern === "fill" ? levelText(disk.level) : "text-sn-label3"}`}>{growth}</p>
             ) : null}
           </li>
         );

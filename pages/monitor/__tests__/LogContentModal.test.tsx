@@ -31,9 +31,9 @@ describe("LogContentModal", () => {
     expect(renderingSource).toContain('size="2xl"');
     expect(renderingSource).toContain("h-[min(82dvh,760px)]");
     expect(modalSource).toContain("LOADING_EXIT_MS");
-    expect(modalSource).toContain("CONTENT_ENTER_MS");
-    expect(modalSource).toContain('contentPhase === "loading" ? 1 : 0');
-    expect(modalSource).toContain('filter: "blur(3px)"');
+    expect(modalSource).toContain('contentPhase === "loading" ? "opacity-100" : "opacity-0"');
+    expect(modalSource).toContain("sn-fade-up");
+    expect(modalSource).not.toContain("framer-motion");
     expect(modalSource).not.toContain("y: 10");
     expect(modalSource).toContain("relative min-h-0 flex-1");
     // 内容区：外层负责定位与进退场，里面是带上下渐隐的滚动容器。
@@ -41,7 +41,6 @@ describe("LogContentModal", () => {
       '<ScrollFade className="h-full overflow-y-auto overscroll-contain">',
     );
     expect(modalSource).toContain("min-h-0 flex-1 items-center justify-center");
-    expect(modalSource).toContain("exit={{ opacity: 0");
   });
 
   test("is a labelled modal dialog that closes on Escape through the shared overlay stack", async () => {

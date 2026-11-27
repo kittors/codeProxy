@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, KeyRound } from "lucide-react";
+import { ArrowLeft, KeyRound } from "@code-proxy/ui/icons";
 import {
   apiKeyEntriesApi,
   wordPolicyApi,
@@ -141,7 +141,7 @@ export function WordPoliciesTab({ canWrite, canTest, portalSupported, onDirtyCha
     const trailing = (id: string) => {
       const brief = withPolicy.get(id);
       return brief ? (
-        <span className="text-xs text-ink-3">{t("content_moderation.words.word_count", { count: brief.rule_count })}</span>
+        <span className="text-xs text-sn-label3">{t("content_moderation.words.word_count", { count: brief.rule_count })}</span>
       ) : undefined;
     };
     for (const entry of keyEntries ?? []) {
@@ -260,7 +260,7 @@ export function WordPoliciesTab({ canWrite, canTest, portalSupported, onDirtyCha
           showPortal={portalSupported}
           onChange={(rail) => select({ rail, keyId: rail === "keys" ? selection.keyId : "", endUser: null })}
         />
-        <p className="mt-3 hidden px-3 text-xs leading-5 text-ink-3 lg:block">{t("content_moderation.words.rail_order_hint")}</p>
+        <p className="mt-3 hidden px-3 text-xs leading-5 text-sn-label3 lg:block">{t("content_moderation.words.rail_order_hint")}</p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">

@@ -50,6 +50,7 @@ export type {
   GridFilterOption,
   GridFilterValue,
   GridFilters,
+  GridLines,
   GridPin,
   GridRangePreset,
   GridRowTone,

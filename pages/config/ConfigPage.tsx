@@ -8,7 +8,7 @@ import {
   Loader2,
   RotateCcw,
   Search,
-} from "lucide-react";
+} from "@code-proxy/ui/icons";
 import { parse as parseYaml } from "yaml";
 import { configApi, configFileApi, readConfigCapabilities } from "@code-proxy/api-client";
 import { FloatingSaveBar } from "./FloatingSaveBar";
@@ -25,7 +25,7 @@ import {
   useVisualConfig,
   type LiveConfig,
 } from "@features/visual-config-editor";
-import { Callout, Card } from "@code-proxy/ui";
+import { Button, Callout, Card } from "@code-proxy/ui";
 import { ConfirmModal } from "@code-proxy/ui";
 import { EmptyState } from "@code-proxy/ui";
 import { TextInput } from "@code-proxy/ui";
@@ -542,8 +542,8 @@ export function ConfigPage() {
       data-page-fill="always"
       className={
         visualLayoutEnabled
-          ? "flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden"
-          : "space-y-6 overflow-x-hidden"
+          ? "-mx-1 flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden px-1"
+          : "-mx-1 space-y-6 overflow-x-hidden px-1"
       }
     >
       <div className={visualLayoutEnabled ? "flex min-h-0 flex-1 flex-col gap-4" : undefined}>
@@ -587,8 +587,8 @@ export function ConfigPage() {
                 </div>
                 {loading ? (
                   // 首次加载前表单里是默认值，盖一层淡色遮罩，别让人以为那就是服务器上的配置。
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-2xl bg-canvas/70 backdrop-blur-[2px]">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-sn-workspace/70 backdrop-blur-[2px]">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-sn-overlay px-4 py-2 text-sm font-medium text-sn-label2 shadow-sn-e1">
                       <Loader2 size={15} className="animate-spin" aria-hidden="true" />
                       {t("common.loading_ellipsis")}
                     </span>
@@ -649,13 +649,13 @@ export function ConfigPage() {
                                 content={t("config_page.search_hint")}
                                 placement="bottom"
                               >
-                                <span className="inline-flex h-6 w-6 items-center justify-center text-ink-3">
+                                <span className="inline-flex h-6 w-6 items-center justify-center text-sn-label3">
                                   <Search size={16} aria-hidden="true" />
                                 </span>
                               </HoverTooltip>
                             }
                           />
-                          <p className="text-xs text-ink-3">
+                          <p className="text-xs text-sn-label3">
                             Enter: next · Shift+Enter: prev · Results:
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()
@@ -666,36 +666,36 @@ export function ConfigPage() {
                             </span>
                           </p>
                         </div>
-                        <div className="flex h-11 items-center justify-end gap-3">
+                        <div className="flex h-11 items-center justify-end gap-1.5">
                           <HoverTooltip
                             content={t("config_page.prev_match_hint")}
                             placement="top"
                             disabled={!searchStats.total}
                           >
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => executeSearch("prev")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.prev_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <ChevronUp size={18} aria-hidden="true" />
-                            </button>
+                              <ChevronUp size={16} aria-hidden="true" />
+                            </Button>
                           </HoverTooltip>
                           <HoverTooltip
                             content={t("config_page.next_match_hint")}
                             placement="bottom"
                             disabled={!searchStats.total}
                           >
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => executeSearch("next")}
                               disabled={!searchStats.total}
                               aria-label={t("config_page.next_match")}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                              <ChevronDown size={18} aria-hidden="true" />
-                            </button>
+                              <ChevronDown size={16} aria-hidden="true" />
+                            </Button>
                           </HoverTooltip>
                         </div>
                       </div>
