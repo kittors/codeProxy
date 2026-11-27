@@ -106,10 +106,10 @@ async function openRequestLogs(page: Page, init?: () => void) {
 /** 表体视口的横向溢出量，以及几列表头相对视口、右侧冻结区的位置。 */
 const measure = (page: Page) =>
   page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     if (!viewport) throw new Error("grid viewport missing");
     const rect = viewport.getBoundingClientRect();
-    const header = (id: string) => document.querySelector(`.cp-grid thead th[data-col="${id}"]`)?.getBoundingClientRect() ?? null;
+    const header = (id: string) => document.querySelector(`.sn-tbl-wrap thead th[data-col="${id}"]`)?.getBoundingClientRect() ?? null;
     const status = header("status");
     const columns = Object.fromEntries(
       ["agent", "tokens", "latency", "throughput", "cost"].map((id) => {
@@ -145,8 +145,8 @@ for (const [width, height] of [
     }
     // 没有溢出时右侧冻结列不画阴影（没有东西在它下面）。
     const shadow = await page
-      .locator('.cp-grid thead th[data-col="status"]')
-      .evaluate((node) => getComputedStyle(node, "::after").opacity);
+      .locator('.sn-tbl-wrap thead th[data-col="status"]')
+      .evaluate((node) => getComputedStyle(node, "::before").opacity);
     expect(shadow).toBe("0");
   });
 }
@@ -167,38 +167,58 @@ test("旧表格存下的列宽不会把新默认布局撑宽", async ({ page }) 
   const state = await measure(page);
   expect(state.overflowX).toBeLessThanOrEqual(1);
   const order = await page
-    .locator(".cp-grid thead th[data-col]")
+    .locator(".sn-tbl-wrap thead th[data-col]")
     .evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-col")));
   expect(order.slice(0, 4)).toEqual(["time", "identity", "model", "channel"]);
   const stored = await page.evaluate(() => localStorage.getItem("cp-grid:request-logs.v2:v1"));
   expect(stored === null || !JSON.parse(stored).widths).toBe(true);
 });
 
-test("1280 宽允许横向滚动，冻结列朝向滚动内容的一侧有阴影", async ({ page }) => {
+test("1280 宽允许横向滚动，冻结列朝向滚动内容的一侧有柔和阴影且不遮挡相邻列文字", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await openRequestLogs(page);
-  const viewport = page.locator(".cp-grid-viewport").first();
+  const viewport = page.locator(".sn-tbl-sc").first();
   expect(await viewport.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeGreaterThan(1);
-  const afterOpacity = (selector: string) =>
-    page.locator(selector).first().evaluate((node) => getComputedStyle(node, "::after").opacity);
+  const pinEdge = (selector: string, pseudo: "::before" | "::after") =>
+    page.locator(selector).first().evaluate((node, p) => {
+      const style = getComputedStyle(node, p);
+      return { opacity: style.opacity, width: style.width, boxShadow: style.boxShadow };
+    }, pseudo);
 
-  // 起点：右侧冻结列下面压着内容，阴影亮；左侧还没滚开，不亮。
-  await expect.poll(() => afterOpacity('.cp-grid thead th[data-col="status"]')).toBe("1");
-  await expect.poll(() => afterOpacity('.cp-grid tbody td[data-col="status"]')).toBe("1");
-  await expect.poll(() => afterOpacity('.cp-grid thead th[data-col="time"]')).toBe("0");
+  // 起点：右侧冻结列下面压着内容，1px 细线 + 柔雾投影亮起（无旧版 22px 白色遮罩）；左侧还没滚开，不亮。
+  await expect.poll(() => pinEdge('.sn-tbl-wrap thead th[data-col="status"]', "::before")).toMatchObject({
+    opacity: "1",
+    width: "1px",
+  });
+  await expect.poll(() => pinEdge('.sn-tbl-wrap tbody td[data-col="status"]', "::before")).toMatchObject({
+    opacity: "1",
+    width: "1px",
+  });
+  expect((await pinEdge('.sn-tbl-wrap tbody td[data-col="status"]', "::before")).boxShadow).not.toBe("none");
+  await expect.poll(() => pinEdge('.sn-tbl-wrap thead th[data-col="time"]', "::after")).toMatchObject({
+    opacity: "0",
+  });
 
   // 滚到中间：两侧都亮。
   await viewport.evaluate((node) => {
     node.scrollLeft = (node.scrollWidth - node.clientWidth) / 2;
     node.dispatchEvent(new Event("scroll"));
   });
-  await expect.poll(() => afterOpacity('.cp-grid thead th[data-col="time"]')).toBe("1");
-  await expect.poll(() => afterOpacity('.cp-grid thead th[data-col="status"]')).toBe("1");
+  await expect.poll(() => pinEdge('.sn-tbl-wrap thead th[data-col="time"]', "::after")).toMatchObject({
+    opacity: "1",
+    width: "1px",
+  });
+  await expect.poll(() => pinEdge('.sn-tbl-wrap thead th[data-col="status"]', "::before")).toMatchObject({
+    opacity: "1",
+    width: "1px",
+  });
 
   // 滚到底：右侧冻结列下面没有内容了，阴影熄掉。
   await viewport.evaluate((node) => {
     node.scrollLeft = node.scrollWidth;
     node.dispatchEvent(new Event("scroll"));
   });
-  await expect.poll(() => afterOpacity('.cp-grid thead th[data-col="status"]')).toBe("0");
+  await expect.poll(() => pinEdge('.sn-tbl-wrap thead th[data-col="status"]', "::before")).toMatchObject({
+    opacity: "0",
+  });
 });

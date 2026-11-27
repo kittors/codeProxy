@@ -122,9 +122,10 @@ export function mountSelect(h, { onChange } = {}) {
   };
   const onRe = () => place(false), onSc = (e) => { if (!menu || (e.target !== menu && !menu.contains?.(e.target))) place(true); };
   let dl = null;
+  menu?.setAttribute("aria-hidden", h.classList.contains("sn-open") ? "false" : "true");
   const close = (refocus) => {
     if (!h.classList.contains("sn-open")) return;
-    h.classList.remove("sn-open"); trig?.setAttribute("aria-expanded", "false"); items.forEach((x) => x.classList.remove("sn-hl"));
+    h.classList.remove("sn-open"); trig?.setAttribute("aria-expanded", "false"); menu?.setAttribute("aria-hidden", "true"); items.forEach((x) => x.classList.remove("sn-hl"));
     if (dl) { dropDismiss(dl); dl = null; }
     globalThis.removeEventListener?.("resize", onRe); globalThis.removeEventListener?.("scroll", onSc, true); globalThis.removeEventListener?.("satin-reposition", onRe);
     if (refocus) trig?.focus();
@@ -132,7 +133,7 @@ export function mountSelect(h, { onChange } = {}) {
   const open = () => {
     for (const o of selects) if (o !== api) o.close();
     place(false);
-    h.classList.add("sn-open"); trig?.setAttribute("aria-expanded", "true"); hideTip();
+    h.classList.add("sn-open"); trig?.setAttribute("aria-expanded", "true"); menu?.setAttribute("aria-hidden", "false"); hideTip();
     // 精准判定交互面：只认触发按钮与菜单本体，绝不把宿主容器里的多余空白区当成内部
     dl = pushDismiss({ panel: menu || h, trigger: trig || h, close, contains: (t, p) => hitAny(t, p, [trig || h, menu]) });
     globalThis.addEventListener?.("resize", onRe); globalThis.addEventListener?.("scroll", onSc, { passive: true, capture: true }); globalThis.addEventListener?.("satin-reposition", onRe);

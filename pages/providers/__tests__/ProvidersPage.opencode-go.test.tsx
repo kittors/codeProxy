@@ -688,9 +688,9 @@ describe("ProvidersPage OpenCode Go tab", () => {
     const modelsTable = within(dialog).getByRole("table", {
       name: /OpenCode Go model access/i,
     });
-    // 表单里的小表：不套外框、按行收高，封顶后在表格自己的视口里滚动。
-    expect(modelsTable.closest(".cp-grid-viewport")).toBeInTheDocument();
-    expect(modelsTable.closest(".cp-grid")).toHaveAttribute("data-fill", "false");
+    // 表单里的小表：不套外框、按行收高，封顶后在表格自己的 Satin 滚动视口里滚动。
+    expect(modelsTable.closest(".sn-tbl-sc")).toBeInTheDocument();
+    expect(modelsTable.closest(".sn-tbl-wrap")).toHaveAttribute("data-fill", "false");
     expect(within(dialog).getByRole("checkbox", { name: /Enabled/i })).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: /Select all/i })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: /Select none/i })).not.toBeInTheDocument();

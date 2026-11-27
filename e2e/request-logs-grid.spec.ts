@@ -113,10 +113,10 @@ async function openRequestLogs(page: Page, options: { withClients?: boolean } = 
 }
 
 const headerBox = (page: Page, columnId: string) =>
-  page.locator(`.cp-grid thead th[data-col="${columnId}"]`).boundingBox();
+  page.locator(`.sn-tbl-wrap thead th[data-col="${columnId}"]`).boundingBox();
 
 const headerOrder = (page: Page) =>
-  page.locator(".cp-grid thead th[data-col]").evaluateAll((cells) =>
+  page.locator(".sn-tbl-wrap thead th[data-col]").evaluateAll((cells) =>
     cells.map((cell) => cell.getAttribute("data-col")),
   );
 
@@ -134,7 +134,7 @@ test.describe("request logs grid", () => {
     expect(box).not.toBeNull();
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(800);
     // 浮层不在表格、也不在带渐隐遮罩的滚动区里，不会被裁掉一截。
-    expect(await dialog.evaluate((node) => Boolean(node.closest(".cp-grid, [data-scroll-fade-host]")))).toBe(false);
+    expect(await dialog.evaluate((node) => Boolean(node.closest(".sn-tbl-wrap, [data-scroll-fade-host]")))).toBe(false);
   });
 
   test("拖宽：只按下不拖不写偏好，拖过头停在最小宽度，双击恢复默认", async ({ page }) => {
@@ -208,7 +208,7 @@ test.describe("request logs grid", () => {
 
   test("旧后端没有调用方字段：Agent 列与它的筛选都不出现", async ({ page }) => {
     await openRequestLogs(page, { withClients: false });
-    await expect(page.locator('.cp-grid thead th[data-col="agent"]')).toHaveCount(0);
+    await expect(page.locator('.sn-tbl-wrap thead th[data-col="agent"]')).toHaveCount(0);
     await expect(page.getByRole("search").getByRole("button", { name: /^Agent/ })).toHaveCount(0);
   });
 

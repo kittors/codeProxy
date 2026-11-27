@@ -105,10 +105,19 @@ function regionsOf(rows, dcols, order, o) {
 const coversCol = (g, k, order) => { const j = order.indexOf(g.k), c = order.indexOf(k); return c >= j && c < j + g.cs; };
 
 // ———— 3. 标记 ————
-const tdClass = (c) => cx(c.align === "right" && "sn-r", (c.num ?? c.align === "right") && "sn-num", c.className);
+const tdClass = (c) => cx(c.align === "right" && "sn-r", c.align === "center" && "sn-c", (c.num ?? c.align === "right") && "sn-num", c.className);
 const attrsHTML = (o) => Object.entries(o || {}).filter(([k, v]) => v != null && v !== false && !/^(class|style|hidden|data-(id|lv|parent))$/.test(k)).map(([k, v]) => (v === true ? ` ${k}` : ` ${k}="${esc(v)}"`)).join("");
-const check = (label, on, mixed) => `<label class="sn-check"><input type="checkbox" aria-label="${esc(label)}"${on ? " checked" : ""}${mixed ? " data-indeterminate" : ""}>${BOX}</label>`;
-const GRIP = () => `<span class="sn-grip" aria-label="${esc(tt("table.grip"))}">${icon("grip-vertical", 16)}</span>`, RH = '<i class="sn-g-rh" aria-hidden="true"></i>', RZ = '<i class="sn-g-rz" aria-hidden="true"></i>';
+const check = (label, on, mixed, disabled = false) => `<label class="sn-check"><input type="checkbox" aria-label="${esc(label)}"${on ? " checked" : ""}${mixed ? ' data-indeterminate aria-checked="mixed"' : ""}${disabled ? " disabled" : ""}>${BOX}</label>`;
+const GRIP = (label, disabled = false) => `<button type="button" class="sn-grip" data-row-grip aria-label="${esc(label || tt("table.grip"))}" title="${esc(label || tt("table.grip"))}"${disabled ? " disabled" : ""}>${icon("grip-vertical", 16)}</button>`;
+const RH = '<i class="sn-g-rh" aria-hidden="true"></i>';
+const rzHTML = (c, cw, minw, maxw) => {
+  const val = Math.round(c.designWidth ?? cw ?? 0);
+  const min = Math.round(c.minDesignWidth ?? minw ?? 56);
+  const max = Math.round(c.maxDesignWidth ?? maxw ?? 960);
+  const lbl = c.resizeLabel ?? tt("table.colWidth", { p0: c.title ?? c.key });
+  const cls = cx("sn-g-rz", c.fixed === "right" && "sn-g-rz-start");
+  return `<div class="${cls}" role="separator" aria-orientation="vertical" aria-label="${esc(lbl)}" aria-valuenow="${val}" aria-valuemin="${min}" aria-valuemax="${max}" tabindex="0" data-no-drag=""></div>`;
+};
 // 格子里放的东西（字符串阶段：render 返回节点、React / Vue 的节点时先空着，挂上以后再画）
 function cellInner(c, nd, i, wrapText) {
   const v = nd.row?.[c.key];
@@ -135,35 +144,56 @@ function canDetailOf(o, nd, i) {
 // 一张表的样子：选项 + 当前状态（顺序、展开、勾选、排序、筛选）→ 画标记要用的东西。tableHTML 和挂载以后重画都用它
 function modelOf(o, st) {
   const { data: dcols0, acts } = colsOf(o.columns), byKey = new Map(dcols0.map((c) => [c.key, c]));
-  const order = st.order && st.order.length === dcols0.length && st.order.every((k) => byKey.has(k)) ? st.order : dcols0.map((c) => c.key);
+  const baseOrder = st.order && st.order.length === dcols0.length && st.order.every((k) => byKey.has(k))
+    ? st.order
+    : (Array.isArray(o.columnOrder) && o.columnOrder.length === dcols0.length && o.columnOrder.every((k) => byKey.has(k)) ? o.columnOrder : dcols0.map((c) => c.key));
+  const order = baseOrder;
   const dcols = order.map((k) => byKey.get(k)), T = st.T;
   const prim = (dcols0.find((c) => c.primary) ?? dcols0[0])?.key ?? null;
-  const hasCk = !!(o.draggableRows || o.resizableRows), hasPick = !!o.selectable && !hasCk;
-  const hasDetail = typeof o.detail === "function", hasExp = T.tree || hasDetail;
+  const hasCk = !!(o.draggableRows || o.resizableRows), ckOnly = hasCk && !o.selectable && !o.resizableRows;
+  const hasPick = !!o.selectable && !hasCk;
+  const hasDetail = typeof o.detail === "function", hasExpCol = !!o.expandColumn && hasDetail && !T.tree;
+  const hasExp = T.tree || hasDetail;
+  const leadCols = [];
+  if (hasCk) leadCols.push(ckOnly ? "ck-only" : "ck");
+  if (hasPick) leadCols.push("pick");
+  if (hasExpCol) leadCols.push("exp");
   const pinL = new Set(dcols.filter((c) => c.fixed === "left").map((c) => c.key));
   const pinR = new Set(dcols.filter((c) => c.fixed === "right").map((c) => c.key));
   const actsPin = !!acts && (acts.fixed === "right" || ((pinL.size > 0 || pinR.size > 0) && acts.fixed !== false));
-  const hasPin = pinL.size > 0 || pinR.size > 0 || actsPin;
-  const leadPin = hasPin && (hasCk || hasPick) && pinL.size > 0;
-  const lastPinL = pinL.size ? [...dcols].reverse().find((c) => pinL.has(c.key))?.key : (leadPin ? "__lead__" : null);
+  const leadPin = leadCols.length > 0 && (o.leadFixed === true || (o.leadFixed !== false && pinL.size > 0));
+  const hasPin = pinL.size > 0 || pinR.size > 0 || actsPin || leadPin;
+  const lastPinL = pinL.size ? [...dcols].reverse().find((c) => pinL.has(c.key))?.key : (leadPin ? `__lead_${leadCols.at(-1)}__` : null);
   const firstPinR = pinR.size ? dcols.find((c) => pinR.has(c.key))?.key : (actsPin ? "__acts__" : null);
-  const useCols = !!o.draggableColumns || dcols0.some((c) => c.resizable) || hasPin;
+  const useCols = !!o.draggableColumns || dcols0.some((c) => c.resizable) || hasPin || o.tableWidth != null || o.resizeMode === "single";
   const merging = dcols0.some((c) => "merge" in c) || typeof o.spans === "function";
-  const useDataC = T.tree || hasDetail || useCols || merging || !!o.cellSelect || dcols0.some((c) => c.editable || typeof c.render === "function");
-  return { o, st, dcols, dcols0, acts, order, prim, hasCk, hasPick, hasDetail, hasExp, pinL, pinR, hasPin, leadPin, actsPin, lastPinL, firstPinR, useCols, useDataC, T, byKey, n: dcols.length + (hasCk || hasPick ? 1 : 0) + (acts ? 1 : 0) };
+  const useDataC = T.tree || hasDetail || useCols || merging || !!o.cellSelect || dcols0.some((c) => c.editable || typeof c.render === "function" || typeof c.headerRender === "function");
+  return { o, st, dcols, dcols0, acts, order, prim, hasCk, ckOnly, hasPick, hasDetail, hasExpCol, hasExp, leadCols, pinL, pinR, hasPin, leadPin, actsPin, lastPinL, firstPinR, useCols, useDataC, T, byKey, n: dcols.length + leadCols.length + (acts ? 1 : 0) };
 }
-// 列宽（有 colgroup 的交互表格）：width 是数字的列固定宽度，没写的是弹性列（分剩下的宽度）；minWidth 是拖边线时最窄多少
-const widthsOf = (dcols0) => { const CW = {}, MINW = {}; for (const c of dcols0) { CW[c.key] = typeof c.width === "number" ? c.width : 0; MINW[c.key] = c.minWidth ?? Math.min(64, CW[c.key] || 64); } return { CW, MINW }; };
+// 列宽（有 colgroup 的交互表格）：width 是数字的列固定宽度，没写的是弹性列（分剩下的宽度）；minWidth / maxWidth 约束拖边线范围
+const widthsOf = (dcols0) => {
+  const CW = {}, MINW = {}, MAXW = {};
+  for (const c of dcols0) {
+    CW[c.key] = typeof c.width === "number" ? c.width : 0;
+    MINW[c.key] = c.minWidth ?? Math.min(64, CW[c.key] || 64);
+    MAXW[c.key] = c.maxWidth ?? Math.max(960, CW[c.key] || 960);
+  }
+  return { CW, MINW, MAXW };
+};
+const leadWidthOf = (kind, o) => (kind === "ck-only" ? (o?.reorderColWidth ?? 36) : kind === "ck" ? 60 : kind === "pick" ? (o?.selectColWidth ?? 44) : (o?.expandColWidth ?? 32));
 const actsWidthOf = (acts) => (typeof acts?.width === "number" ? acts.width : 84);
-// 表格最窄 = 勾选列 + 操作列 + 各固定列宽度 + 弹性列的最小宽度：容器再窄就在框里横着滚，不把弹性列挤没
-const minWidthOf = (M, CW, MINW) => (M.hasCk ? 60 : M.hasPick ? 44 : 0) + (M.acts ? actsWidthOf(M.acts) : 0) + M.dcols.reduce((t, c) => t + (CW[c.key] || MINW[c.key] || 0), 0);
+// 表格最窄 = 前导列 + 操作列 + 各固定列宽度 + 弹性列的最小宽度：容器再窄就在框里横着滚，不把弹性列挤没
+const minWidthOf = (M, CW, MINW) => M.leadCols.reduce((t, k) => t + leadWidthOf(k, M.o), 0) + (M.acts ? actsWidthOf(M.acts) : 0) + M.dcols.reduce((t, c) => t + (CW[c.key] || MINW[c.key] || 0), 0);
 const pinCls = (M, k) => cx(M.pinL.has(k) && "sn-pin-l", M.lastPinL === k && "sn-pin-l-end", M.pinR.has(k) && "sn-pin-r", M.firstPinR === k && "sn-pin-r-start");
-const leadPinCls = (M) => cx(M.leadPin && "sn-pin-l", M.lastPinL === "__lead__" && "sn-pin-l-end");
+const leadPinCls = (M, kind) => cx(M.leadPin && "sn-pin-l", M.lastPinL === `__lead_${kind}__` && "sn-pin-l-end");
 const actsPinCls = (M) => cx(M.actsPin && "sn-pin-r", M.firstPinR === "__acts__" && "sn-pin-r-start");
 // 初始固定偏移（字符串阶段先用列宽算出来，首帧零抖动；挂上后 syncPinned 再按实际渲染宽校准）
 function pinOffsets(M, CW, MINW) {
   const off = new Map();
-  let lx = M.leadPin ? (M.hasCk ? 60 : 44) : 0;
+  let lx = 0;
+  if (M.leadPin) {
+    for (const kind of M.leadCols) { off.set(`__lead_${kind}__`, lx); lx += leadWidthOf(kind, M.o); }
+  }
   for (const c of M.dcols) if (M.pinL.has(c.key)) { off.set(c.key, lx); lx += CW[c.key] || MINW[c.key] || 120; }
   let rx = M.actsPin ? actsWidthOf(M.acts) : 0;
   for (let i = M.dcols.length - 1; i >= 0; i--) { const c = M.dcols[i]; if (M.pinR.has(c.key)) { off.set(c.key, rx); rx += CW[c.key] || MINW[c.key] || 100; } }
@@ -182,54 +212,134 @@ function normPageCfg(p) {
   };
 }
 
-function headHTML(M, PINS) {
-  const { o, st } = M, nOn = M.T.top.filter((nd) => st.picked.has(nd.key)).length, nTop = M.T.top.length;
-  const allBox = check(tt("table.all"), nTop > 0 && nOn === nTop, !(nTop > 0 && nOn === nTop) && st.picked.size > 0);
-  const lead = M.hasCk ? `<th class="${cx("sn-ck", leadPinCls(M))}">${o.selectable ? allBox : ""}</th>` : M.hasPick ? `<th class="${cx("sn-tbl-pick", leadPinCls(M))}">${allBox}</th>` : "";
+const pinAttr = (M, k) => (M.pinL.has(k) ? ' data-pin="start"' : M.pinR.has(k) ? ' data-pin="end"' : "");
+const leadPinAttr = (M) => (M.leadPin ? ' data-pin="start"' : "");
+const actsPinAttr = (M) => (M.actsPin ? ' data-pin="end"' : "");
+
+function leadHeadHTML(M, PINS) {
+  const { o, st } = M;
+  const nOn = M.T.top.filter((nd) => st.picked.has(nd.key)).length, nTop = M.T.top.length;
+  const disabledAll = !!(o.loading || o.error || nTop === 0);
+  const allBox = check(o.selectPageLabel ?? tt("table.all"), nTop > 0 && nOn === nTop, !(nTop > 0 && nOn === nTop) && nOn > 0, disabledAll);
+  return M.leadCols.map((kind) => {
+    const pKey = `__lead_${kind}__`;
+    const pStyle = PINS?.has(pKey) ? ` style="left:${PINS.get(pKey)}px;--sn-pin-x:${PINS.get(pKey)}px;"` : "";
+    const pCls = leadPinCls(M, kind);
+    const pAt = leadPinAttr(M);
+    if (kind === "ck-only") {
+      return `<th scope="col" class="${cx("sn-ck sn-ck-only", pCls)}"${pAt}${pStyle}><span class="sn-sr">${esc(o.rowOrderLabel ?? tt("table.grip"))}</span>${icon("grip-vertical", 14)}</th>`;
+    }
+    if (kind === "ck") {
+      return `<th scope="col" class="${cx("sn-ck", pCls)}"${pAt}${pStyle}>${o.selectable ? allBox : ""}</th>`;
+    }
+    if (kind === "pick") {
+      return `<th scope="col" class="${cx("sn-tbl-pick", pCls)}"${pAt}${pStyle}>${allBox}</th>`;
+    }
+    return `<th scope="col" class="${cx("sn-tbl-exp", pCls)}"${pAt}${pStyle}><span class="sn-sr">${esc(o.expandLabel ?? tt("table.expand"))}</span></th>`;
+  }).join("");
+}
+
+function leadRowHTML(M, nd, i, on, mixed, rowOpen, canExp, PINS, skeleton) {
+  const { o } = M;
+  const rowName = typeof o.rowLabel === "function" ? o.rowLabel(nd.row) : (o.selectRowLabel ? "" : String(nd.row?.[M.prim] ?? ""));
+  const pickLabel = rowName ? (typeof o.selectNamedLabel === "function" ? o.selectNamedLabel(rowName) : tt("table.pickRow", { p0: rowName })) : (o.selectRowLabel ?? tt("table.pick"));
+  const box = o.selectable ? (skeleton ? '<span class="sn-sk" style="display:inline-block;width:16px;height:16px;border-radius:4px;"></span>' : check(pickLabel, on, mixed)) : "";
+  const gripLabel = typeof o.reorderRowLabel === "function" ? o.reorderRowLabel(i) : tt("table.grip");
+  const expAria = rowOpen ? (o.collapseRowLabel ?? tt("table.expand")) : (o.expandRowLabel ?? tt("table.expand"));
+  return M.leadCols.map((kind) => {
+    const pKey = `__lead_${kind}__`;
+    const pStyle = PINS?.has(pKey) ? ` style="left:${PINS.get(pKey)}px;--sn-pin-x:${PINS.get(pKey)}px"` : "";
+    const pCls = leadPinCls(M, kind);
+    const pAt = leadPinAttr(M);
+    if (kind === "ck-only") {
+      return `<td class="${cx("sn-ck sn-ck-only", pCls)}"${pAt}${pStyle}>${skeleton ? "" : GRIP(gripLabel, !!o.rowDragDisabled)}</td>`;
+    }
+    if (kind === "ck") {
+      return `<td class="${cx("sn-ck", pCls)}"${pAt}${pStyle}>${skeleton ? "" : (o.draggableRows ? GRIP(gripLabel, !!o.rowDragDisabled) : "")}${box}${!skeleton && o.resizableRows ? RH : ""}</td>`;
+    }
+    if (kind === "pick") {
+      return `<td class="${cx("sn-tbl-pick", pCls)}"${pAt}${pStyle}>${box}</td>`;
+    }
+    const expBtn = !skeleton && canExp
+      ? `<button type="button" class="sn-disc sn-exp" tabindex="-1" aria-label="${esc(expAria)}" aria-expanded="${rowOpen}">${icon("chevron-right", 14)}</button>`
+      : "";
+    return `<td class="${cx("sn-tbl-exp", pCls)}"${pAt}${pStyle}>${expBtn}</td>`;
+  }).join("");
+}
+
+function headHTML(M, PINS, CW, MINW, MAXW) {
+  const { o, st } = M;
+  const lead = leadHeadHTML(M, PINS);
   const ths = M.dcols.map((c) => {
-    const on = st.sortKey === c.key, aria = on ? ` aria-sort="${st.dir < 0 ? "descending" : "ascending"}"` : "";
-    const pinStyle = PINS?.has(c.key) ? `--sn-pin-x:${PINS.get(c.key)}px;` : "";
+    const on = st.sortKey === c.key;
+    const ariaSort = on ? ` aria-sort="${st.dir < 0 ? "descending" : "ascending"}"` : (c.sortable ? ' aria-sort="none"' : "");
+    const ariaLbl = (c.ariaLabel ?? c.title) ? ` aria-label="${esc(c.ariaLabel ?? c.title)}"` : "";
+    const pinStyle = PINS?.has(c.key)
+      ? `${M.pinR.has(c.key) ? "right" : "left"}:${PINS.get(c.key)}px;--sn-pin-x:${PINS.get(c.key)}px;`
+      : "";
     const wStyle = !M.useCols && c.width != null ? `width:${esc(px(c.width))};` : "";
     const style = (wStyle || pinStyle) ? ` style="${wStyle}${pinStyle}"` : "";
-    const dc = M.useDataC ? ` data-c="${esc(c.key)}"${!o.draggableColumns || c.fixed ? " data-fixed" : ""}` : "";
-    const cls = cx(c.align === "right" && "sn-r", pinCls(M, c.key));
-    const inner = c.sortable ? `<button class="${cx("sn-sort", on && "sn-on", on && st.dir < 0 && "sn-desc")}" data-k="${esc(c.key)}">${esc(c.title ?? "")}${icon("arrow-up", 16)}</button>` : esc(c.title ?? "");
-    return `<th class="${cls}"${dc}${aria}${style}>${inner}${M.useCols && c.resizable ? RZ : ""}</th>`;
+    const fixedDrag = !o.draggableColumns || c.fixed || c.reorderable === false;
+    const dc = M.useDataC ? ` data-c="${esc(c.key)}" data-col="${esc(c.key)}"${fixedDrag ? " data-fixed" : ""}` : ` data-col="${esc(c.key)}"`;
+    const cls = cx(c.align === "right" && "sn-r", c.align === "center" && "sn-c", pinCls(M, c.key));
+    const inner = typeof c.headerRender === "function"
+      ? `<div class="sn-tbl-hcell"></div>`
+      : c.sortable
+        ? `<button type="button" class="${cx("sn-sort", on && "sn-on", on && st.dir < 0 && "sn-desc")}" data-k="${esc(c.key)}">${esc(c.title ?? "")}${icon("arrow-up", 16)}</button>`
+        : esc(c.title ?? "");
+    return `<th scope="col" class="${cls}"${dc}${pinAttr(M, c.key)}${ariaSort}${ariaLbl}${style}>${inner}${M.useCols && c.resizable ? rzHTML(c, CW?.[c.key], MINW?.[c.key], MAXW?.[c.key]) : ""}</th>`;
   }).join("");
-  const actHead = M.acts ? `<th class="${cx("sn-acts", actsPinCls(M))}">${esc(M.acts.title ?? "")}</th>` : "";
+  const actHead = M.acts ? `<th scope="col" class="${cx("sn-acts", actsPinCls(M))}"${actsPinAttr(M)}${M.actsPin ? ' style="right:0px;--sn-pin-x:0px;"' : ""}>${esc(M.acts.title ?? "")}</th>` : "";
   return `<thead><tr>${lead}${ths}${actHead}</tr></thead>`;
 }
 function colgroupHTML(M, CW) {
   if (!M.useCols) return "";
-  // 有固定列且所有数据列都给了数字宽度时：留一个中间非固定列当弹性吸收宽屏余量，避免 table-layout:fixed 把多余宽度均摊撑胖勾选列和操作列
+  // 有固定列且所有数据列都给了数字宽度且未指定精确 tableWidth 时：留一个中间非固定列当弹性吸收宽屏余量
   const hasFlex = M.dcols.some((c) => !CW[c.key]);
-  const absorbKey = M.hasPin && !hasFlex ? (M.dcols.find((c) => !M.pinL.has(c.key) && !M.pinR.has(c.key))?.key ?? null) : null;
+  const absorbKey = M.o.tableWidth == null && M.hasPin && !hasFlex ? (M.dcols.find((c) => !M.pinL.has(c.key) && !M.pinR.has(c.key))?.key ?? null) : null;
+  const leadCols = M.leadCols.map((kind) => {
+    const w = leadWidthOf(kind, M.o);
+    const cls = kind === "ck-only" ? "sn-c-ck-only" : kind === "ck" ? "sn-c-ck" : kind === "pick" ? "sn-c-pick" : "sn-c-exp";
+    return `<col class="${cls}" style="width: ${w}px;">`;
+  }).join("");
   const actCol = M.acts ? `<col class="sn-c-acts"${typeof M.acts.width === "number" ? ` style="width: ${M.acts.width}px;"` : ""}>` : "";
-  return `<colgroup>${M.hasCk ? '<col class="sn-c-ck">' : M.hasPick ? '<col class="sn-c-pick">' : ""}${M.dcols.map((c) => `<col data-c="${esc(c.key)}"${CW[c.key] && c.key !== absorbKey ? ` style="width: ${CW[c.key]}px;"` : ""}>`).join("")}${actCol}</colgroup>`;
+  return `<colgroup>${leadCols}${M.dcols.map((c) => `<col data-c="${esc(c.key)}"${CW[c.key] && c.key !== absorbKey ? ` style="width: ${CW[c.key]}px;"` : ""}>`).join("")}${actCol}</colgroup>`;
 }
 // 一行：树形时带层级（data-lv、data-parent、--sn-lv）；下级 sn-kid；展开着的 sn-open；勾上的 sn-sel；看不见的 hidden；支持行详情时紧跟一条全宽 .sn-tbl-detail
-function rowHTML(M, nd, i, vis, merged, PINS) {
+function rowHTML(M, nd, i, vis, merged, PINS, navKey) {
   const { o, st } = M, v = vis.get(nd.key), on = st.picked.has(nd.key), mixed = !on && nd.kids.length > 0 && (function m(x) { return x.kids.some((k) => st.picked.has(k.key) || m(k)); })(nd);
   const canDet = M.hasDetail && canDetailOf(o, nd, i);
   const detOpen = canDet && v.vis && (st.q && st.qOpen.has(nd.key) ? st.qOpen.get(nd.key) : st.open.has(nd.key));
   const canExp = nd.kids.length > 0 || canDet;
   const rowOpen = v.showKids || detOpen;
-  let a = ` data-id="${esc(nd.key)}"`;
+  const active = typeof o.isRowActive === "function" ? !!o.isRowActive(nd.row) : false;
+  const tone = typeof o.rowTone === "function" ? o.rowTone(nd.row) : undefined;
+  const extraCls = typeof o.rowClassName === "function" ? o.rowClassName(nd.row) : undefined;
+  let a = ` data-id="${esc(nd.key)}" data-row-key="${esc(nd.key)}"`;
   if (M.T.tree) a += ` data-lv="${nd.lv}" data-parent="${esc(nd.parent?.key ?? "")}" style="--sn-lv:${nd.lv}"`;
-  const cls = cx(nd.lv > 0 && "sn-kid", rowOpen && "sn-open", detOpen && "sn-detail-open", on && "sn-sel"); if (cls) a += ` class="${cls}"`;
+  if (o.selectable) a += ` aria-selected="${on}"`;
+  else if (typeof o.isRowActive === "function") a += ` aria-selected="${active}"`;
+  if (active) a += ' data-active="true"';
+  if (canExp) a += ` aria-expanded="${rowOpen}" data-expanded="${rowOpen}"`;
+  if (tone) a += ` data-tone="${esc(tone)}"`;
+  if (o.rowNavigation) a += ` tabindex="${navKey === nd.key ? 0 : -1}"`;
+  const clickable = !!(o.expandOnRowClick || typeof o.onRowClick === "function");
+  const cls = cx(nd.lv > 0 && "sn-kid", rowOpen && "sn-open", detOpen && "sn-detail-open", on && "sn-sel", clickable && "sn-clickable", extraCls);
+  if (cls) a += ` class="${cls}"`;
   if (typeof o.rowAttrs === "function") a += attrsHTML(o.rowAttrs(nd.row, { key: nd.key, level: nd.lv, parent: nd.parent?.row ?? null }));
   if (!v.vis) a += " hidden";
-  const name = String(nd.row?.[M.prim] ?? ""), box = o.selectable ? check(name ? tt("table.pickRow", { p0: name }) : tt("table.pick"), on, mixed) : "";
-  const lead = M.hasCk ? `<td class="${cx("sn-ck", leadPinCls(M))}">${o.draggableRows ? GRIP() : ""}${box}${o.resizableRows ? RH : ""}</td>` : M.hasPick ? `<td class="${cx("sn-tbl-pick", leadPinCls(M))}">${box}</td>` : "";
+  const lead = leadRowHTML(M, nd, i, on, mixed, rowOpen, canExp, PINS, false);
   const tds = M.dcols.map((c) => {
     const mg = merged.get(nd.key + "\u0001" + c.key), cl = cx(tdClass(c), pinCls(M, c.key), mg?.head && "sn-mg");
-    let attr = M.useDataC ? ` data-c="${esc(c.key)}"` : "";
+    let attr = M.useDataC ? ` data-c="${esc(c.key)}" data-col="${esc(c.key)}"` : ` data-col="${esc(c.key)}"`;
+    attr += pinAttr(M, c.key);
+    if (st.sortKey === c.key) attr += ' data-sorted="true"';
     if (mg) attr += (mg.rs ? ` rowspan="${mg.rs}"` : "") + (mg.cs ? ` colspan="${mg.cs}"` : "");
     if (cl) attr += ` class="${cl}"`;
-    if (PINS?.has(c.key)) attr += ` style="--sn-pin-x:${PINS.get(c.key)}px"`;
+    if (PINS?.has(c.key)) attr += ` style="${M.pinR.has(c.key) ? "right" : "left"}:${PINS.get(c.key)}px;--sn-pin-x:${PINS.get(c.key)}px"`;
     if (mg?.hidden) attr += " hidden";
     let inner = cellInner(c, nd, i, "merge" in c && !c.html && !c.render);
-    if (M.hasExp && c.key === M.prim) {
+    if (M.hasExp && !M.hasExpCol && c.key === M.prim) {
       const expEl = canExp
         ? `<button type="button" class="sn-disc sn-exp" aria-label="${esc(tt("table.expand"))}" aria-expanded="${rowOpen}">${icon("chevron-right", 16)}</button>`
         : `<i class="${M.T.tree ? "sn-leaf" : "sn-leaf sn-leaf-empty"}" aria-hidden="true"></i>`;
@@ -237,12 +347,12 @@ function rowHTML(M, nd, i, vis, merged, PINS) {
     }
     return `<td${attr}>${inner}</td>`;
   }).join("");
-  const act = M.acts ? `<td class="${cx("sn-acts", actsPinCls(M))}">${cellInner(M.acts, nd, i, false)}</td>` : "";
+  const act = M.acts ? `<td class="${cx("sn-acts", actsPinCls(M))}"${actsPinAttr(M)}${M.actsPin ? ' style="right:0px;--sn-pin-x:0px"' : ""}>${cellInner(M.acts, nd, i, false)}</td>` : "";
   let detTr = "";
   if (canDet) {
     const raw = detOpen ? detailOut(o, nd, i) : null;
     const dHtml = typeof raw === "string" ? raw : typeof raw === "number" ? esc(raw) : "";
-    detTr = `<tr class="${cx("sn-tbl-detail", detOpen && "sn-open")}" data-detail-for="${esc(nd.key)}"${detOpen ? "" : " hidden"}><td colspan="${M.n}"><div class="sn-tbl-detail-bd"><div class="sn-tbl-detail-in">${dHtml}</div></div></td></tr>`;
+    detTr = `<tr class="${cx("sn-tbl-detail", detOpen && "sn-open")}" data-detail-for="${esc(nd.key)}" data-grid-detail=""${detOpen ? "" : " hidden"}><td colspan="${M.n}"><div class="sn-tbl-detail-bd"><div class="sn-tbl-detail-in">${dHtml}</div></div></td></tr>`;
   }
   return `<tr${a}>${lead}${tds}${act}</tr>${detTr}`;
 }
@@ -258,34 +368,56 @@ function mergedOf(M, visRows) {
   }
   return out;
 }
-const emptyInner = (o, filtered) => (typeof o.empty === "function" ? String(o.empty({ filtered }) ?? "") : esc(o.empty ?? tt("table.empty")));
+const emptyInner = (o, filtered) => (typeof o.emptyRender === "function" ? '<div class="sn-tbl-empty-box"></div>' : typeof o.empty === "function" ? String(o.empty({ filtered }) ?? "") : esc(o.empty ?? tt("table.empty")));
 function errorRow(M) {
+  if (typeof M.o.errorRender === "function") {
+    return `<tr class="sn-tbl-empty sn-tbl-err"><td colspan="${M.n}"><div class="sn-tbl-empty-box"></div></td></tr>`;
+  }
   const msg = typeof M.o.error === "string" ? M.o.error : tt("table.errorHint");
   return `<tr class="sn-tbl-empty sn-tbl-err"><td colspan="${M.n}"><div class="sn-tbl-none" role="alert"><span class="sn-art">${icon("circle-alert", 16)}</span><b>${esc(tt("table.error"))}</b><span>${esc(msg)}</span><button type="button" class="sn-btn sn-secondary sn-sm" data-retry>${esc(tt("table.retry"))}</button></div></td></tr>`;
 }
+function skeletonCellHTML(c, i, j) {
+  const shape = c.skeleton ?? (c.align === "right" ? "number" : "text");
+  const justify = c.align === "right" ? "justify-content:flex-end;" : c.align === "center" ? "justify-content:center;" : "";
+  if (shape === "box") return `<div style="display:flex;${justify}"><span class="sn-sk" style="display:inline-block;width:16px;height:16px;border-radius:4px;"></span></div>`;
+  if (shape === "pill") return `<div style="display:flex;${justify}"><span class="sn-sk" style="display:inline-block;width:56px;height:20px;border-radius:999px;"></span></div>`;
+  if (shape === "number") return `<div style="display:flex;${justify || "justify-content:flex-end;"}"><span class="sn-sk" style="display:inline-block;height:12px;width:${34 + ((i * 5 + j * 7) % 4) * 6}px;"></span></div>`;
+  if (shape === "two-line") {
+    const w1 = 48 + ((i * 7 + j * 13) % 4) * 8, w2 = 34 + ((i * 5 + j * 11) % 4) * 8;
+    const alignItems = c.align === "right" ? "align-items:flex-end;" : c.align === "center" ? "align-items:center;" : "";
+    return `<div style="display:flex;flex-direction:column;gap:6px;${alignItems}"><span class="sn-sk" style="display:inline-block;height:11px;width:${w1}%;"></span><span class="sn-sk" style="display:inline-block;height:9px;width:${w2}%;opacity:.65;"></span></div>`;
+  }
+  return `<span class="sn-sk" style="display:inline-block;height:12px;width:${48 + ((i * 7 + j * 13) % 4) * 8}%;"></span>`;
+}
 function bodyHTML(M, PINS) {
   const { o, st } = M;
-  if (o.loading) {
-    const sk = Math.max(1, o.skeleton ?? 5);
-    return `<tbody>${Array.from({ length: sk }, (_, j) => `<tr class="sn-tbl-loading">${M.hasCk ? `<td class="${cx("sn-ck", leadPinCls(M))}"></td>` : M.hasPick ? `<td class="${cx("sn-tbl-pick", leadPinCls(M))}"></td>` : ""}${M.dcols.map((c, i) => `<td class="${cx(tdClass(c), pinCls(M, c.key))}"${PINS?.has(c.key) ? ` style="--sn-pin-x:${PINS.get(c.key)}px"` : ""}><span class="sn-sk" style="display:inline-block;height:12px;width:${c.align === "right" ? 36 : 48 + ((i * 7 + j * 13) % 4) * 8}%"></span></td>`).join("")}${M.acts ? `<td class="${cx("sn-acts", actsPinCls(M))}"></td>` : ""}</tr>`).join("")}</tbody>`;
+  if (o.loading && M.T.top.length === 0) {
+    const sk = Math.max(1, o.skeleton ?? (o.fill ? 10 : 5));
+    const dummy = { key: "", row: {}, lv: 0, parent: null, kids: [] };
+    return `<tbody aria-hidden="true">${Array.from({ length: sk }, (_, j) => `<tr class="sn-tbl-loading">${leadRowHTML(M, dummy, j, false, false, false, false, PINS, true)}${M.dcols.map((c, i) => `<td class="${cx(tdClass(c), pinCls(M, c.key))}"${pinAttr(M, c.key)}${PINS?.has(c.key) ? ` style="${M.pinR.has(c.key) ? "right" : "left"}:${PINS.get(c.key)}px;--sn-pin-x:${PINS.get(c.key)}px"` : ""}>${skeletonCellHTML(c, i, j)}</td>`).join("")}${M.acts ? `<td class="${cx("sn-acts", actsPinCls(M))}"${actsPinAttr(M)}${M.actsPin ? ' style="right:0px;--sn-pin-x:0px"' : ""}></td>` : ""}</tr>`).join("")}</tbody>`;
   }
   if (o.error) return `<tbody>${errorRow(M)}</tbody>`;
   const vis = visOf(M.T.top, st.open, st.q, st.qOpen), flat = []; walkAll(M.T.top, (nd) => flat.push(nd));
   const visRows = flat.filter((nd) => vis.get(nd.key).vis), merged = mergedOf(M, visRows), none = !M.T.top.some((nd) => vis.get(nd.key).vis);
-  return `<tbody>${flat.map((nd, i) => rowHTML(M, nd, i, vis, merged, PINS)).join("")}<tr class="sn-tbl-empty"${none ? "" : " hidden"}><td colspan="${M.n}">${none ? emptyInner(o, !!st.q) : ""}</td></tr></tbody>`;
+  const navKey = st.navKey && visRows.some((nd) => nd.key === st.navKey) ? st.navKey : (visRows[0]?.key ?? null);
+  return `<tbody>${flat.map((nd, i) => rowHTML(M, nd, i, vis, merged, PINS, navKey)).join("")}<tr class="sn-tbl-empty"${none ? "" : " hidden"}><td colspan="${M.n}">${none ? emptyInner(o, !!st.q) : ""}</td></tr></tbody>`;
 }
-function tableInner(M, CW, MINW) {
+function tableInner(M, CW, MINW, MAXW) {
   const { o } = M, PINS = M.hasPin ? pinOffsets(M, CW, MINW) : null;
-  return `<table class="sn-tbl"${o.cellSelect ? ' tabindex="0"' : ""}${o.label ? ` aria-label="${esc(o.label)}"` : ""}${M.useCols ? ` style="min-width: ${minWidthOf(M, CW, MINW)}px;"` : ""}${o.loading ? ' aria-busy="true"' : ""}>${colgroupHTML(M, CW)}${headHTML(M, PINS)}${bodyHTML(M, PINS)}</table>`;
+  const roleAttr = o.gridRole ? ' role="grid"' : "";
+  const multiAttr = o.selectable ? ' aria-multiselectable="true"' : "";
+  const busyAttr = o.loading || o.refreshing ? ' aria-busy="true"' : "";
+  const wStyle = o.tableWidth != null ? ` style="width: ${esc(px(o.tableWidth))};"` : M.useCols ? ` style="min-width: ${minWidthOf(M, CW, MINW)}px;"` : "";
+  return `<table class="sn-tbl"${roleAttr}${o.cellSelect ? ' tabindex="0"' : ""}${o.label ? ` aria-label="${esc(o.label)}"` : ""}${multiAttr}${wStyle}${busyAttr}>${colgroupHTML(M, CW)}${headHTML(M, PINS, CW, MINW, MAXW)}${bodyHTML(M, PINS)}</table>`;
 }
 function footHTML(cfg, totalItems, selectedCount) {
   if (!cfg) return "";
   const sizes = cfg.pageSizes
     ? `<div class="sn-select sn-tbl-ps" data-select data-tbl-ps>`
-      + `<button type="button" class="sn-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(tt("table.pageSize"))}">`
+      + `<button type="button" class="sn-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(tt("table.pageSize"))}">`
       + `<span class="sn-val">${esc(tt("table.perPage", { p0: cfg.pageSize }))}</span>${icon("chevron-down", 14)}`
       + `</button>`
-      + `<div class="sn-menu sn-up" role="listbox">${cfg.pageSizes.map((n) => `<div class="${cx("sn-item", n === cfg.pageSize && "sn-sel")}" role="option" aria-selected="${n === cfg.pageSize}" data-v="${n}">${esc(tt("table.perPage", { p0: n }))}<span class="sn-chk">${icon("check", 14)}</span></div>`).join("")}</div>`
+      + `<div class="sn-menu sn-up" role="listbox" aria-hidden="true">${cfg.pageSizes.map((n) => `<div class="${cx("sn-item", n === cfg.pageSize && "sn-sel")}" role="option" aria-selected="${n === cfg.pageSize}" data-v="${n}">${esc(tt("table.perPage", { p0: n }))}<span class="sn-chk">${icon("check", 14)}</span></div>`).join("")}</div>`
       + `</div>`
     : "";
   const sel = selectedCount > 0 ? `<span class="sn-tbl-foot-sel">· ${esc(tt("table.selected", { p0: selectedCount }))}</span>` : "";
@@ -294,20 +426,24 @@ function footHTML(cfg, totalItems, selectedCount) {
 // 初始状态（展开、勾选、排序、筛选）：tableHTML 和挂载用同一份
 function stateOf(o) {
   const T = treeOf(o.data ?? o.rows ?? [], o.rowKey ?? "id"), s = o.sort ?? o.defaultSort ?? null;
-  const st = { T, open: new Set(keyList(o.expandedKeys ?? o.defaultExpandedKeys) ?? []), picked: new Set(keyList(o.selected ?? o.defaultSelected) ?? []), sortKey: s?.key ?? null, dir: s?.dir === "desc" ? -1 : 1, q: typeof o.filter === "function" ? o.filter : null, qOpen: new Map(), order: null };
+  const st = { T, open: new Set(keyList(o.expandedKeys ?? o.defaultExpandedKeys) ?? []), picked: new Set(keyList(o.selected ?? o.defaultSelected) ?? []), sortKey: s?.key ?? null, dir: s?.dir === "desc" ? -1 : 1, q: typeof o.filter === "function" ? o.filter : null, qOpen: new Map(), order: Array.isArray(o.columnOrder) ? [...o.columnOrder] : null, navKey: null };
   if (st.sortKey && o.sortLocal !== false) sortTree(T.top, nodeCmp(colsOf(o.columns).data.find((c) => c.key === st.sortKey), st.dir));
   return st;
 }
-const wrapClass = (o, hasPin) => cx("sn-tbl-wrap", o.striped && "sn-striped", o.compact && "sn-compact", o.plain && "sn-plain", o.fill && "sn-tbl-fill", hasPin && "sn-has-pin", o.pagination && "sn-has-foot");
+const wrapClass = (o, hasPin) => cx("sn-tbl-wrap", o.striped && "sn-striped", (o.compact || o.density === "compact") && "sn-compact", o.density === "comfortable" && "sn-comfortable", o.plain && "sn-plain", o.fill && "sn-tbl-fill", hasPin && "sn-has-pin", (o.pagination || o.hasFooter) && "sn-has-foot", o.hasBulk && "sn-has-bulk", o.refreshing && "sn-refreshing", o.wrapClassName);
 export function tableHTML(o = {}) {
-  const M = modelOf(o, stateOf(o)), { CW, MINW } = widthsOf(M.dcols0), pg = normPageCfg(o.pagination);
+  const M = modelOf(o, stateOf(o)), { CW, MINW, MAXW } = widthsOf(M.dcols0), pg = normPageCfg(o.pagination);
   const total = pg ? (pg.total ?? M.T.top.length) : 0;
-  return `<div class="${wrapClass(o, M.hasPin)}"${o.lines === "grid" ? ' data-lines="grid"' : ""}${o.maxHeight != null ? ` style="--sn-tbl-max:${esc(px(o.maxHeight))}"` : ""}><div class="sn-tbl-sc">${tableInner(M, CW, MINW)}</div>${footHTML(pg, total, 0)}</div>`;
+  const linesAttr = ` data-lines="${esc(o.lines || "row")}"`;
+  const fillAttr = ` data-fill="${o.fill ? "true" : "false"}"`;
+  const resizeAttr = o.resizeMode === "single" ? ' data-resize="single"' : "";
+  return `<div class="${wrapClass(o, M.hasPin)}"${linesAttr}${fillAttr}${resizeAttr}${o.maxHeight != null ? ` style="--sn-tbl-max:${esc(px(o.maxHeight))}"` : ""}><div class="sn-tbl-sc">${tableInner(M, CW, MINW, MAXW)}</div>${footHTML(pg, total, 0)}</div>`;
 }
-// 列"长什么样"（不比函数本身）：React / Vue 每次渲染都传新数组，只要列没变就不整表重画（merge 另外比：变了只重新合并）
-const colSig = (cols = []) => cols.map((c) => [c.key, c.title, c.type, c.align, c.width, c.minWidth, c.sortable, c.sortFirst, c.resizable, c.fixed, c.primary, c.editable, c.num, c.className, "merge" in c, !!c.format, !!c.html, !!c.render].join("\u0001")).join("\u0002");
+// 列"长什么样"（拆掉纯宽度字段，避免窗口缩窄/拖宽触发整表重建销毁 DOM 与 React Portal）
+const colSig = (cols = []) => cols.map((c) => [c.key, c.title, c.ariaLabel, c.type, c.align, c.sortable, c.sortFirst, c.resizable, c.reorderable, c.fixed, c.primary, c.editable, c.num, c.className, "merge" in c, !!c.format, !!c.html, !!c.render, !!c.headerRender].join("\u0001")).join("\u0002");
+const widthSig = (cols = []) => cols.map((c) => [c.key, c.width, c.minWidth, c.maxWidth, c.designWidth, c.minDesignWidth, c.maxDesignWidth, c.resizeLabel].join("\u0001")).join("\u0002");
 const mergeSig = (cols = []) => cols.map((c) => (typeof c.merge === "function" ? "f" : String(c.merge))).join(",");
-const FLAGS = ["selectable", "draggableRows", "draggableColumns", "resizableRows", "cellSelect", "loading", "error", "detail"];
+const FLAGS = ["selectable", "draggableRows", "draggableColumns", "resizableRows", "cellSelect", "detail", "expandColumn", "leadFixed", "gridRole", "rowNavigation"];
 
 // ———— 4. 挂载 ————
 // wrap 是 .sn-tbl-wrap：里面是空的（设计稿的 #tbl、只给了外框）就先画进去，已经有标记（tableHTML / 服务端渲染出来的）就直接接。
@@ -316,18 +452,24 @@ export function mountTable(wrap, o0 = {}, emit) {
   let o = { rowKey: "id", ...o0 };
   const fire = emit || ((t, d) => o["on" + t[0].toUpperCase() + t.slice(1)]?.(d));
   const st = stateOf(o);
-  let T = st.T, picked = st.picked, sortKey = st.sortKey, dir = st.dir, q = st.q;
+  let T = st.T, picked = st.picked, sortKey = st.sortKey, dir = st.dir, q = st.q, navKey = st.navKey;
   const open = st.open, qOpen = st.qOpen, order = [];
-  const cur = () => ({ T, open, picked, sortKey, dir, q, qOpen, order });
+  const cur = () => ({ T, open, picked, sortKey, dir, q, qOpen, order, navKey });
   let M = modelOf(o, cur()); order.push(...M.order);
-  let { CW, MINW } = widthsOf(M.dcols0), FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
+  let { CW, MINW, MAXW } = widthsOf(M.dcols0), FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
   if (!wrap.querySelector("table.sn-tbl")) {
-    wrap.innerHTML = `<div class="sn-tbl-sc">${tableInner(M, CW, MINW)}</div>`;
+    wrap.innerHTML = `<div class="sn-tbl-sc">${tableInner(M, CW, MINW, MAXW)}</div>`;
     for (const k of ["sn-striped", "sn-compact", "sn-plain"]) if (o[k.slice(3)]) wrap.classList.add(k);
-    if (o.lines) wrap.dataset.lines = o.lines;
+    if (o.density === "compact") wrap.classList.add("sn-compact");
+    if (o.density === "comfortable") wrap.classList.add("sn-comfortable");
+    wrap.dataset.lines = o.lines || "row";
   }
   wrap.classList.toggle("sn-tbl-fill", !!o.fill);
   wrap.classList.toggle("sn-has-pin", M.hasPin);
+  wrap.classList.toggle("sn-refreshing", !!o.refreshing);
+  wrap.dataset.fill = o.fill ? "true" : "false";
+  wrap.dataset.lines = o.lines || "row";
+  if (o.resizeMode === "single") wrap.dataset.resize = "single"; else delete wrap.dataset.resize;
   if (o.maxHeight != null) { const v = px(o.maxHeight); if (wrap.style.getPropertyValue("--sn-tbl-max") !== v) wrap.style.setProperty("--sn-tbl-max", v); }
   // 表格内置封装 Satin 滚动区域：隐藏丑陋原生滚动条、启用细腻悬浮细条；横向锁死不回弹且不误触浏览器左右滑动返回；竖向滚到头停住不拉扯 sticky 表头；不加边缘渐隐免得表头和固定列被淡掉
   const scEl = $(".sn-tbl-sc", wrap);
@@ -338,7 +480,7 @@ export function mountTable(wrap, o0 = {}, emit) {
   const clearDetTimers = () => { for (const tid of detTimers.values()) clearTimeout(tid); detTimers.clear(); };
   const refs = () => {
     table ??= $("table.sn-tbl", wrap); thead = $(":scope > thead", table); tbody = $(":scope > tbody", table);
-    emptyRow = $(":scope > tr.sn-tbl-empty:not(.sn-tbl-err)", tbody); all = $(".sn-check input", thead); TR = new Map(); DTR = new Map(); detPainted.clear();
+    emptyRow = $(":scope > tr.sn-tbl-empty:not(.sn-tbl-err)", tbody); all = $("th.sn-tbl-pick .sn-check input, th.sn-ck .sn-check input", thead); TR = new Map(); DTR = new Map(); detPainted.clear();
     for (const tr of tbody.children) {
       if (tr.dataset.id != null && T.nodes.has(tr.dataset.id)) TR.set(tr.dataset.id, tr);
       else if (tr.dataset.detailFor != null && T.nodes.has(tr.dataset.detailFor)) {
@@ -395,14 +537,56 @@ export function mountTable(wrap, o0 = {}, emit) {
   };
   // render 返回节点 / React、Vue 的节点：挂上以后画进格子（字符串阶段先空着）
   const paintCell = (td, c, nd, i) => {
-    const box = M.hasExp && c.key === M.prim ? $(":scope > .sn-name > .sn-tbl-cell", td) : td; if (!box) return;
+    const box = M.hasExp && !M.hasExpCol && c.key === M.prim ? $(":scope > .sn-name > .sn-tbl-cell", td) : td; if (!box) return;
     const out = c.render(nd.row?.[c.key], nd.row, { cell: box, key: c.key, index: i, level: nd.lv });
     if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
     else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
   };
+  const paintHeaders = () => {
+    for (const c of M.dcols) {
+      if (typeof c.headerRender !== "function") continue;
+      const th = $(`th[data-c="${CSS.escape(c.key)}"]`, thead);
+      const box = th ? $(":scope > .sn-tbl-hcell", th) : null;
+      if (!box) continue;
+      const out = c.headerRender(c, { cell: box, key: c.key, sort: sortKey === c.key ? (dir < 0 ? "desc" : "asc") : null });
+      if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
+      else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
+    }
+  };
+  const paintStateSlots = () => {
+    if (o.error && typeof o.errorRender === "function") {
+      const box = $(".sn-tbl-err .sn-tbl-empty-box", tbody);
+      if (box) {
+        const out = o.errorRender({ cell: box, error: o.error, retry: () => fire("retry") });
+        if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
+        else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
+      }
+      return;
+    }
+    if (!o.loading && emptyRow && !emptyRow.hidden && typeof o.emptyRender === "function") {
+      let box = $(".sn-tbl-empty-box", emptyRow);
+      if (!box) { emptyRow.firstElementChild.innerHTML = '<div class="sn-tbl-empty-box"></div>'; box = $(".sn-tbl-empty-box", emptyRow); }
+      if (box) {
+        const out = o.emptyRender({ cell: box, filtered: !!q });
+        if (typeof out === "string" || typeof out === "number") { const h = typeof out === "number" ? esc(out) : out; if (box.innerHTML !== h) box.innerHTML = h; }
+        else if (out && typeof out === "object" && "nodeType" in out) box.replaceChildren(out);
+      }
+    }
+  };
+  const paintRowCells = (tr, nd, i) => {
+    for (const c of M.dcols) {
+      if (typeof c.render !== "function") continue;
+      const td = cellOf(tr, c.key); if (td) paintCell(td, c, nd, i);
+    }
+    if (typeof M.acts?.render === "function") {
+      const td = $(":scope > td.sn-acts", tr); if (td) paintCell(td, M.acts, nd, i);
+    }
+  };
   const paintRenders = () => {
+    paintHeaders();
+    paintStateSlots();
     const rc = M.dcols.filter((c) => typeof c.render === "function"); if (!rc.length && typeof M.acts?.render !== "function") return;
-    let i = 0; walkAll(T.top, (nd) => { const tr = TR.get(nd.key); if (tr) { for (const c of rc) { const td = cellOf(tr, c.key); if (td) paintCell(td, c, nd, i); } if (typeof M.acts?.render === "function") { const td = $(":scope > td.sn-acts", tr); if (td) paintCell(td, M.acts, nd, i); } } i++; });
+    let i = 0; walkAll(T.top, (nd) => { const tr = TR.get(nd.key); if (tr) paintRowCells(tr, nd, i); i++; });
   };
   paintRenders();
   // 每一行"画出来是什么"（字符串部分）：换数据时按它认出哪几行变了——Vue 里就地改了行里的字段、React 里换了新对象都认得出来
@@ -661,22 +845,44 @@ export function mountTable(wrap, o0 = {}, emit) {
     for (const nd of T.top) walk(nd, true, [], nd === lastTop);
     syncFooter();
   }
-  // ———— 固定列位置与离边投影 ————
+  // ———— 固定列位置、离边投影与视口度量 ————
+  const syncViewportMetrics = () => {
+    if (!scEl) return;
+    const cw = scEl.clientWidth, ch = scEl.clientHeight, hh = thead?.getBoundingClientRect().height || 40;
+    if (cw > 0) wrap.style.setProperty("--sn-tbl-vw", cw + "px");
+    wrap.style.setProperty("--sn-tbl-head-h", hh + "px");
+    const emptyH = o.fill ? Math.max(180, ch - hh) : 220;
+    wrap.style.setProperty("--sn-tbl-empty-h", emptyH + "px");
+    wrap.dataset.xOverflow = scEl.scrollWidth > cw + 1 ? "true" : "false";
+    wrap.dataset.yOverflow = scEl.scrollHeight > ch + 1 ? "true" : "false";
+    wrap.dataset.yScrolled = scEl.scrollTop > 1 ? "true" : "false";
+  };
   const syncPinScroll = () => {
-    if (!M.hasPin || !scEl) { wrap.classList.remove("sn-pin-scrolled-l", "sn-pin-scrolled-r"); return; }
+    if (!scEl) return;
+    syncViewportMetrics();
+    if (!M.hasPin) { wrap.classList.remove("sn-pin-scrolled-l", "sn-pin-scrolled-r"); return; }
     const sl = scEl.scrollLeft, max = scEl.scrollWidth - scEl.clientWidth;
     wrap.classList.toggle("sn-pin-scrolled-l", sl > 1);
     wrap.classList.toggle("sn-pin-scrolled-r", max > 1 && sl < max - 1);
   };
   const syncPinned = () => {
     wrap.classList.toggle("sn-has-pin", M.hasPin);
+    syncViewportMetrics();
     if (!M.hasPin) { syncPinScroll(); return; }
     const thRow = $(":scope > tr", thead); if (!thRow) return;
-    if (thRow.offsetWidth === 0) return; // 隐藏容器里不覆写初始有效偏移，等显露时由 ResizeObserver 精准校准
+    if (thRow.offsetWidth === 0) { syncPinScroll(); return; } // 隐藏容器或 jsdom 中保留初始有效偏移
     const widths = new Map();
-    const leadTh = M.hasCk ? $(":scope > th.sn-ck", thRow) : M.hasPick ? $(":scope > th.sn-tbl-pick", thRow) : null;
     const actTh = M.acts ? $(":scope > th.sn-acts", thRow) : null;
-    let lx = M.leadPin ? (leadTh?.offsetWidth || (M.hasCk ? 60 : 44)) : 0;
+    let lx = 0;
+    if (M.leadPin) {
+      for (const kind of M.leadCols) {
+        const sel = kind === "ck-only" || kind === "ck" ? "th.sn-ck" : kind === "pick" ? "th.sn-tbl-pick" : "th.sn-tbl-exp";
+        const cellSel = kind === "ck-only" || kind === "ck" ? ".sn-ck" : kind === "pick" ? ".sn-tbl-pick" : ".sn-tbl-exp";
+        const th = $(`:scope > ${sel}`, thRow);
+        for (const el of $$(cellSel, table)) { el.style.setProperty("--sn-pin-x", lx + "px"); el.style.left = lx + "px"; }
+        lx += th?.offsetWidth || leadWidthOf(kind, M.o);
+      }
+    }
     for (const c of M.dcols) if (M.pinL.has(c.key)) {
       widths.set(c.key, lx);
       const th = $(`th[data-c="${CSS.escape(c.key)}"]`, thRow);
@@ -690,14 +896,15 @@ export function mountTable(wrap, o0 = {}, emit) {
       rx += th?.offsetWidth || CW[c.key] || MINW[c.key] || 100;
     }
     for (const [k, pxv] of widths) {
-      for (const el of $$(`th[data-c="${CSS.escape(k)}"], td[data-c="${CSS.escape(k)}"]`, table)) el.style.setProperty("--sn-pin-x", pxv + "px");
+      const side = M.pinR.has(k) ? "right" : "left";
+      for (const el of $$(`th[data-c="${CSS.escape(k)}"], td[data-c="${CSS.escape(k)}"]`, table)) { el.style.setProperty("--sn-pin-x", pxv + "px"); el.style[side] = pxv + "px"; }
     }
     syncPinScroll();
   };
   // ———— 贴底分页栏（.sn-tbl-foot） ————
   const syncFooter = () => {
-    wrap.classList.toggle("sn-has-foot", !!pgCfg);
-    if (!pgCfg) { psInst?.dispose(); psInst = null; if (footEl) { footEl.remove(); footEl = null; pgInst = null; } return; }
+    wrap.classList.toggle("sn-has-foot", !!(pgCfg || o.hasFooter));
+    if (!pgCfg) { psInst?.dispose(); psInst = null; if (footEl && !footEl.classList.contains("sn-tbl-foot-custom")) { footEl.remove(); footEl = null; pgInst = null; } return; }
     const total = pgTotalItems, pages = Math.max(1, Math.ceil(total / pgSize));
     if (pgPage > pages) pgPage = pages;
     if (!footEl) {
@@ -741,27 +948,56 @@ export function mountTable(wrap, o0 = {}, emit) {
     if (pgInst) { pgInst.setTotal(pages); if (pgInst.page !== pgPage) pgInst.go(pgPage, true); }
   };
   // 空：第一级一行都看不见时显示空状态那一行（筛选的结果也在同一次变化里：外框高度一起过渡）
-  const syncEmpty = () => { if (!emptyRow) return; const none = T.top.every((nd) => TR.get(nd.key).hidden); emptyRow.hidden = !none; if (none) emptyRow.firstElementChild.innerHTML = emptyInner(o, !!q); };
-  // 按树的顺序（同级按现在的顺序）重新摆每一行（行详情紧贴在所属行正下方）
-  const placeTree = () => walkAll(T.top, (nd) => {
-    const tr = TR.get(nd.key); if (!tr) return;
-    tbody.insertBefore(tr, emptyRow);
-    const dtr = DTR.get(nd.key); if (dtr) tbody.insertBefore(dtr, emptyRow);
-  });
+  const syncEmpty = () => {
+    if (!emptyRow) return;
+    const none = T.top.every((nd) => TR.get(nd.key)?.hidden !== false);
+    emptyRow.hidden = !none;
+    if (none) {
+      if (typeof o.emptyRender === "function") paintStateSlots();
+      else emptyRow.firstElementChild.innerHTML = emptyInner(o, !!q);
+    }
+  };
+  // 按树的顺序（同级按现在的顺序）重新摆每一行（行详情紧贴在所属行正下方）；搬移时保持行内焦点不丢失
+  const placeTree = () => {
+    const active = tbody.contains(document.activeElement) ? document.activeElement : null;
+    walkAll(T.top, (nd) => {
+      const tr = TR.get(nd.key); if (!tr) return;
+      tbody.insertBefore(tr, emptyRow);
+      const dtr = DTR.get(nd.key); if (dtr) tbody.insertBefore(dtr, emptyRow);
+    });
+    if (active && active.isConnected && document.activeElement !== active) active.focus({ preventScroll: true });
+  };
   const block = (r) => [r, ...(DTR.has(r.dataset.id) ? [DTR.get(r.dataset.id)] : []), ...descTrs(r)];
 
-  // ———— 排序：点表头；同一列再点换方向，第一次按列的 sortFirst（默认升序） ————
-  const sortHead = (b) => {
-    $$(".sn-sort", thead).forEach((x) => x.classList.toggle("sn-on", x === b)); b.classList.toggle("sn-desc", dir < 0);
-    b.closest("th").setAttribute("aria-sort", dir > 0 ? "ascending" : "descending");
+  // ———— 排序：点表头；支持两态（升⇄降）与三态（sortClearable：首向 → 反向 → 取消） ————
+  const headSync = () => {
+    for (const th of $$("th[data-c]", thead)) {
+      const c = colOf(th.dataset.c); if (!c?.sortable) continue;
+      const on = sortKey === c.key;
+      const b = $(".sn-sort", th);
+      if (b) { b.classList.toggle("sn-on", on); b.classList.toggle("sn-desc", on && dir < 0); }
+      th.setAttribute("aria-sort", on ? (dir > 0 ? "ascending" : "descending") : "none");
+    }
+    for (const tr of TR.values()) {
+      for (const td of $$("td[data-c]", tr)) {
+        if (sortKey && td.dataset.c === sortKey) td.dataset.sorted = "true";
+        else td.removeAttribute("data-sorted");
+      }
+    }
   };
-  // 程序里改排序（受控的 sort）：表头只标当前这一列
-  const headSync = () => { for (const b of $$(".sn-sort", thead)) { const on = sortKey === b.dataset.k, th = b.closest("th"); b.classList.toggle("sn-on", on); b.classList.toggle("sn-desc", on && dir < 0); if (on) th.setAttribute("aria-sort", dir > 0 ? "ascending" : "descending"); else th.removeAttribute("aria-sort"); } };
   const sortNow = () => { if (!sortKey || o.sortLocal === false) return; sortTree(T.top, nodeCmp(colOf(sortKey), dir)); relayout(() => { placeTree(); if (isLocalPage()) applyVis(); }, { stagger: 15 }); };
   const onHeadClick = (e) => {
     const b = e.target.closest(".sn-sort"); if (!b || !thead.contains(b)) return;
-    dragNow?.flush(); const k = b.dataset.k; dir = sortKey === k ? -dir : (colOf(k)?.sortFirst === "desc" ? -1 : 1); sortKey = k;
-    sortHead(b); fire("sort", { key: k, dir: dir > 0 ? "asc" : "desc" }); sortNow();
+    const k = b.dataset.k; if (!k) return;
+    dragNow?.flush();
+    const firstDir = colOf(k)?.sortFirst === "desc" ? -1 : 1;
+    if (sortKey !== k) { sortKey = k; dir = firstDir; }
+    else if (o.sortClearable && dir !== firstDir) { sortKey = null; dir = 1; }
+    else { dir = -dir; }
+    headSync();
+    fire("sort", sortKey ? { key: sortKey, dir: dir > 0 ? "asc" : "desc" } : null);
+    if (sortKey) sortNow();
+    else if (o.sortLocal !== false) { T = treeOf(o.data ?? o.rows ?? [], o.rowKey); M = modelOf(o, cur()); relayout(() => { placeTree(); if (isLocalPage()) applyVis(); }, { stagger: 15 }); }
   };
 
   // ———— 展开收起（多级树 / 行详情）：树形走 relayout 推合动画；纯行详情走顺滑 Grid 展开收起，连点不断档 ————
@@ -778,7 +1014,14 @@ export function mountTable(wrap, o0 = {}, emit) {
     for (const r of list) {
       const nd = nodeOf(r);
       if (q) qOpen.set(nd.key, want); else if (want) open.add(nd.key); else open.delete(nd.key);
-      r.classList.toggle("sn-open", want); $(".sn-exp", r)?.setAttribute("aria-expanded", String(want));
+      r.classList.toggle("sn-open", want);
+      r.setAttribute("aria-expanded", String(want));
+      r.dataset.expanded = String(want);
+      const expBtn = $(".sn-exp", r);
+      if (expBtn) {
+        expBtn.setAttribute("aria-expanded", String(want));
+        if (o.expandRowLabel || o.collapseRowLabel) expBtn.setAttribute("aria-label", want ? (o.collapseRowLabel ?? tt("table.expand")) : (o.expandRowLabel ?? tt("table.expand")));
+      }
       if (nd.kids.length) needTree = true;
       else if (DTR.has(nd.key)) syncDetailRow(nd, want, true);
     }
@@ -788,18 +1031,65 @@ export function mountTable(wrap, o0 = {}, emit) {
   }
   const parents = () => [...T.nodes.values()].filter((nd) => nd.kids.length || DTR.has(nd.key));
 
-  // ———— 勾选：上下级联动——勾一个节点 = 它下面所有级一起勾；上级的状态由下级算：全勾了是勾、勾了一部分是半选 ————
+  // ———— 勾选：上下级联动 + Shift 连选 + 全选半选无障碍（严格限定在前导勾选列内，绝不干扰业务列内置 Checkbox） ————
+  const leadCheckOf = (tr) => $("td.sn-tbl-pick .sn-check input, td.sn-ck .sn-check input", tr);
+  let lastClickShift = false, selAnchorKey = null;
   function pick(nd, on) { walkAll([nd], (x) => (on ? picked.add(x.key) : picked.delete(x.key))); for (let p = nd.parent; p; p = p.parent) { if (p.kids.every((k) => picked.has(k.key))) picked.add(p.key); else picked.delete(p.key); } }
   const mixed = (nd) => !picked.has(nd.key) && nd.kids.some((k) => picked.has(k.key) || mixed(k));
   function syncSel() {
-    for (const [id, tr] of TR) { const nd = T.nodes.get(id), inp = $("input", tr), on = picked.has(id); if (inp?.type === "checkbox") { inp.checked = on; inp.indeterminate = mixed(nd); } tr.classList.toggle("sn-sel", on); }
-    if (all) { const tops = T.top.filter((nd) => !TR.get(nd.key)?.hidden); all.checked = tops.length > 0 && tops.every((nd) => picked.has(nd.key)); all.indeterminate = !all.checked && (picked.size > 0); }
+    for (const [id, tr] of TR) {
+      const nd = T.nodes.get(id), inp = o.selectable ? leadCheckOf(tr) : null, on = picked.has(id);
+      if (inp?.type === "checkbox") {
+        const m = mixed(nd);
+        inp.checked = on; inp.indeterminate = m;
+        if (m) inp.setAttribute("aria-checked", "mixed"); else inp.removeAttribute("aria-checked");
+      }
+      tr.classList.toggle("sn-sel", on);
+      if (o.selectable) tr.setAttribute("aria-selected", String(on));
+    }
+    if (all) {
+      const tops = T.top.filter((nd) => !TR.get(nd.key)?.hidden);
+      const hit = tops.filter((nd) => picked.has(nd.key)).length;
+      const isAll = tops.length > 0 && hit === tops.length;
+      const isSome = !isAll && hit > 0;
+      all.checked = isAll;
+      all.indeterminate = isSome;
+      all.disabled = !!(o.loading || o.error || tops.length === 0);
+      if (isSome) all.setAttribute("aria-checked", "mixed"); else all.removeAttribute("aria-checked");
+    }
     if (pgCfg) syncFooter();
   }
+  const onSelectClick = (e) => { lastClickShift = !!e.shiftKey; };
   const onChange = (e) => {
     const i = e.target; if (i?.tagName !== "INPUT" || i.type !== "checkbox" || !table.contains(i)) return;
-    if (i === all) { for (const nd of T.top) { const r = TR.get(nd.key); if (r && !r.hidden) pick(nd, all.checked); } } else { const tr = i.closest("tr"); if (tr?.dataset.id && T.nodes.has(tr.dataset.id)) pick(nodeOf(tr), i.checked); else return; }
-    syncSel(); fire("select", [...picked]);
+    const isLead = i === all || !!i.closest("td.sn-tbl-pick, td.sn-ck");
+    if (!isLead) return;
+    const range = lastClickShift; lastClickShift = false;
+    if (i === all) {
+      for (const nd of T.top) { const r = TR.get(nd.key); if (r && !r.hidden) pick(nd, all.checked); }
+      selAnchorKey = null;
+      syncSel();
+      fire("select", [...picked]);
+      fire("selectChange", { keys: [...picked], all: true, checked: all.checked });
+      return;
+    }
+    const tr = i.closest("tr");
+    if (!tr?.dataset.id || !T.nodes.has(tr.dataset.id)) return;
+    const key = tr.dataset.id, willSelect = i.checked;
+    if (range && selAnchorKey && !T.tree) {
+      const visKeys = visRows().map((r) => r.dataset.id);
+      const a = visKeys.indexOf(selAnchorKey), b = visKeys.indexOf(key);
+      if (a >= 0 && b >= 0) {
+        const [from, to] = a < b ? [a, b] : [b, a];
+        for (let k = from; k <= to; k++) { const nd = T.nodes.get(visKeys[k]); if (nd) pick(nd, willSelect); }
+      } else pick(nodeOf(tr), willSelect);
+    } else {
+      pick(nodeOf(tr), willSelect);
+    }
+    selAnchorKey = key;
+    syncSel();
+    fire("select", [...picked]);
+    fire("selectChange", { keys: [...picked], key, range, checked: willSelect });
   };
 
   // ———— 选中、改名、键盘（cellSelect）：单格修改框选只出现在可文字编辑（editable）单元格上；选择器与只读格不画框选（键盘巡航时仅铺极淡中性定位底色）；点表头、把手、勾选框、展开、内部控件收起 ————
@@ -823,7 +1113,7 @@ export function mountTable(wrap, o0 = {}, emit) {
     if (editing) editing.blur(); // 先把正在改的存下来——这一下照样拖得起来、选得中，不用多点一次
     dragNow?.flush(); const tr = e.target.closest("tr"); if (!tr || tr.classList.contains("sn-tbl-empty") || !tr.dataset.id) return;
     if (o.resizableRows && e.target.closest(".sn-g-rh")) { hideSel(); startRowResize(tr, e); return; }
-    if (o.draggableRows && e.target.closest(".sn-grip")) { hideSel(); startRowDrag(tr, e); return; }
+    if (o.draggableRows && !o.rowDragDisabled && e.target.closest(".sn-grip")) { hideSel(); startRowDrag(tr, e); return; }
     if (e.target.closest(".sn-exp")) { e.preventDefault(); hideSel(); setOpen([tr], !isRowExpanded(nodeOf(tr)), true); return; }
     if (e.target.closest(INTERACTIVE)) { hideSel(); return; } // 单元格内嵌选择器、按钮、开关、链接：绝不拦截也不画框选
     if (!o.cellSelect) return;
@@ -858,14 +1148,36 @@ export function mountTable(wrap, o0 = {}, emit) {
   function fillCell(td, c, nd, i = indexOf(nd)) {
     if (typeof c.render === "function") { paintCell(td, c, nd, i); return; }
     const h = cellInner(c, nd, i, "merge" in c && !c.html);
-    if (M.hasExp && c.key === M.prim) morph($(":scope > .sn-name", td), h, 1); else morph(td, h);
+    if (M.hasExp && !M.hasExpCol && c.key === M.prim) morph($(":scope > .sn-name", td), h, 1); else morph(td, h);
   }
   function refreshRow(tr, nd, i) {
-    const lead = M.hasCk || M.hasPick ? 1 : 0;
+    const lead = M.leadCols.length;
     M.dcols.forEach((c, j) => { const td = M.useDataC ? cellOf(tr, c.key) : tr.children[lead + j]; if (td) fillCell(td, c, nd, i); });
     if (M.acts) { const td = $(":scope > td.sn-acts", tr); if (td) fillCell(td, M.acts, nd, i); }
-    const inp = $(".sn-check input", tr), name = String(nd.row?.[M.prim] ?? ""), l = name ? tt("table.pickRow", { p0: name }) : tt("table.pick");
-    if (inp && inp.getAttribute("aria-label") !== l) inp.setAttribute("aria-label", l);
+    const inp = o.selectable ? leadCheckOf(tr) : null;
+    if (inp) {
+      const rowName = typeof o.rowLabel === "function" ? o.rowLabel(nd.row) : (o.selectRowLabel ? "" : String(nd.row?.[M.prim] ?? ""));
+      const l = rowName ? (typeof o.selectNamedLabel === "function" ? o.selectNamedLabel(rowName) : tt("table.pickRow", { p0: rowName })) : (o.selectRowLabel ?? tt("table.pick"));
+      if (inp.getAttribute("aria-label") !== l) inp.setAttribute("aria-label", l);
+    }
+    const grip = $("[data-row-grip]", tr);
+    if (grip) {
+      grip.disabled = !!o.rowDragDisabled;
+      if (typeof o.reorderRowLabel === "function") {
+        const gl = o.reorderRowLabel(i);
+        grip.setAttribute("aria-label", gl);
+        grip.setAttribute("title", gl);
+      }
+    }
+    if (typeof o.isRowActive === "function") {
+      const act = !!o.isRowActive(nd.row);
+      tr.toggleAttribute("data-active", act);
+      if (!o.selectable) tr.setAttribute("aria-selected", String(act));
+    }
+    if (typeof o.rowTone === "function") {
+      const tone = o.rowTone(nd.row);
+      if (tone) tr.dataset.tone = tone; else delete tr.dataset.tone;
+    }
   }
   function rename(td) {
     const r = td.closest("tr"), nd = nodeOf(r), k = td.dataset.c, inp = document.createElement("input"); inp.className = "sn-cell-ed"; inp.value = String(nd.row?.[k] ?? ""); inp.spellcheck = false; td.append(inp); td.classList.add("sn-editing"); wrap.classList.remove("sn-sel-on", "sn-kbd-on"); inp.focus(); inp.select(); editing = inp;
@@ -977,13 +1289,31 @@ export function mountTable(wrap, o0 = {}, emit) {
     }
   }
 
-  // ———— 列：改宽、换位置（和数据表格同一套手感）：拖表头右边缘改宽（一条竖的参考线 + "列宽 N"，Esc 恢复，双击按内容定宽）；
+  // ———— 列：改宽、换位置（和数据表格同一套手感）：拖表头边缘改宽（参考线 + 宽度角标，Esc 恢复，双击/回车自适应）；
   // 按住表头移动 4px 拖列（表头影子跟着指针、空位标出放下的位置、拖到表格外 40px 松手取消），只点一下就是排序。
-  const applyW = () => { for (const c of $$(":scope > colgroup > col[data-c]", table)) c.style.width = CW[c.dataset.c] ? CW[c.dataset.c] + "px" : ""; table.style.minWidth = minWidthOf(M, CW, MINW) + "px"; };
+  const syncRzAria = () => {
+    for (const c of M.dcols) {
+      const rz = $(`th[data-c="${CSS.escape(c.key)}"] > .sn-g-rz`, thead);
+      if (!rz) continue;
+      rz.setAttribute("aria-valuenow", String(Math.round(c.designWidth ?? CW[c.key] ?? 0)));
+      rz.setAttribute("aria-valuemin", String(Math.round(c.minDesignWidth ?? MINW[c.key] ?? 56)));
+      rz.setAttribute("aria-valuemax", String(Math.round(c.maxDesignWidth ?? MAXW[c.key] ?? 960)));
+      if (c.resizeLabel) rz.setAttribute("aria-label", c.resizeLabel);
+    }
+  };
+  const applyW = (liveTotal = false) => {
+    for (const c of $$(":scope > colgroup > col[data-c]", table)) c.style.width = CW[c.dataset.c] ? CW[c.dataset.c] + "px" : "";
+    if (o.tableWidth != null && !liveTotal) table.style.width = px(o.tableWidth);
+    else if (o.resizeMode === "single" || o.tableWidth != null) table.style.width = minWidthOf(M, CW, MINW) + "px";
+    else table.style.minWidth = minWidthOf(M, CW, MINW) + "px";
+    syncRzAria();
+  };
   const thOf = (k) => $(`:scope > tr > th[data-c="${CSS.escape(k)}"]`, thead), cellsOf = (k) => $$(`th[data-c="${CSS.escape(k)}"], td[data-c="${CSS.escape(k)}"]`, table);
-  function applyOrder() { // 每一行（表头、各行、合计）的格子按 order 重新摆，列宽跟着
+  function applyOrder() { // 每一行（表头、各行、合计）的格子按 order 重新摆，列宽跟着；搬移时保持焦点
+    const active = table.contains(document.activeElement) ? document.activeElement : null;
     for (const tr of table.querySelectorAll("tr")) { if (tr.classList.contains("sn-tbl-empty") || tr.classList.contains("sn-tbl-detail")) continue; const end = M.acts ? tr.lastElementChild : null; for (const k of order) { const c = tr.querySelector(`:scope > [data-c="${CSS.escape(k)}"]`); if (c) tr.insertBefore(c, end); } }
     const cg = $(":scope > colgroup", table); if (cg) { const end = M.acts ? cg.lastElementChild : null; for (const k of order) { const c = $(`col[data-c="${CSS.escape(k)}"]`, cg); if (c) cg.insertBefore(c, end); } }
+    if (active && active.isConnected && document.activeElement !== active) active.focus({ preventScroll: true });
   }
   if (M.useCols) applyW();
   // 宽度不跟着指针变的时候（Esc 恢复、双击按内容定宽）：从现在的宽度滑过去；又按下表头就停在当前宽度
@@ -992,27 +1322,100 @@ export function mountTable(wrap, o0 = {}, emit) {
   const resized = (k) => fire("columnResize", { key: k, width: CW[k] || Math.round(thOf(k).getBoundingClientRect().width), widths: Object.fromEntries(Object.entries(CW).filter(([, w]) => w)) });
   function startColResize(th, e) {
     e.preventDefault(); e.stopPropagation();
-    const A = th.dataset.c, B = order[order.indexOf(A) + 1]; if (!B) return;
-    const w0 = { ...CW }, aw0 = th.getBoundingClientRect().width, bw0 = thOf(B).getBoundingClientRect().width, x0 = e.clientX, el = e.target, line = document.createElement("i"); line.className = "sn-g-rzline"; wrap.append(line); wrap.classList.add("sn-resizing"); let done = false, moved = false;
-    const place = () => { const w = wrap.getBoundingClientRect(), r = thOf(A).getBoundingClientRect(); line.style.left = r.right - w.left - 1 + "px"; line.style.height = table.offsetHeight + "px"; line.dataset.w = tt("table.colWidth", { p0: Math.round(r.width) }); line.classList.toggle("sn-flip", r.right > w.right - 120); };
-    // 拖边线 = 把这条边线挪过去：左边那列宽多少，右边那列就窄多少（弹性列自己补）；两边都不小于最窄
-    const set = (d) => { d = Math.max(-(aw0 - MINW[A]), Math.min(bw0 - MINW[B], d)); if (!FLEX.has(A)) CW[A] = Math.round(aw0 + d); if (!FLEX.has(B)) CW[B] = Math.round(bw0 - d); applyW(); place(); };
+    const A = th.dataset.c, colA = colOf(A);
+    const single = o.resizeMode === "single";
+    const B = single ? null : order[order.indexOf(A) + 1];
+    if (!single && !B) return;
+    const invert = single && colA?.fixed === "right";
+    const w0 = { ...CW }, aw0 = th.getBoundingClientRect().width, bw0 = B ? thOf(B).getBoundingClientRect().width : 0, x0 = e.clientX, el = e.target;
+    const line = document.createElement("i"); line.className = "sn-g-rzline"; line.setAttribute("data-grid-resize-guide", "");
+    const badge = single ? document.createElement("div") : null;
+    if (badge) { badge.className = "sn-g-rz-badge"; badge.setAttribute("data-grid-resize-badge", ""); line.classList.add("sn-no-badge"); }
+    wrap.append(line); if (badge) wrap.append(badge);
+    el.setAttribute("data-active", "true");
+    wrap.classList.add("sn-resizing");
+    let done = false, moved = false;
+    const pinSpan = () => {
+      let startW = 0, endW = 0;
+      const thRow = $(":scope > tr", thead);
+      if (thRow) {
+        for (const cell of thRow.children) {
+          if (cell.classList.contains("sn-pin-l")) startW += cell.getBoundingClientRect().width;
+          if (cell.classList.contains("sn-pin-r")) endW += cell.getBoundingClientRect().width;
+        }
+      }
+      return { startW, endW };
+    };
+    const place = () => {
+      const w = wrap.getBoundingClientRect(), r = thOf(A).getBoundingClientRect();
+      const edgeX = (invert ? r.left : r.right) - w.left;
+      const h = scEl ? Math.min(scEl.clientHeight, table.offsetHeight || scEl.clientHeight) : table.offsetHeight;
+      const wText = tt("table.colWidth", { p0: Math.round(r.width) });
+      if (single && badge) {
+        const { startW, endW } = pinSpan();
+        const isUnpinned = !M.pinL.has(A) && !M.pinR.has(A);
+        const laneStart = startW, laneEnd = w.width - endW;
+        const underPin = isUnpinned && (edgeX < laneStart - 0.5 || edgeX > laneEnd + 0.5);
+        line.style.display = underPin ? "none" : "";
+        line.style.left = edgeX - 1 + "px";
+        line.style.height = h + "px";
+        line.removeAttribute("data-w");
+        const bx = isUnpinned ? Math.min(Math.max(edgeX, laneStart + 32), Math.max(laneStart + 32, laneEnd - 32)) : edgeX;
+        badge.style.left = bx + "px";
+        badge.style.top = ((thead?.getBoundingClientRect().height || 40) + 8) + "px";
+        badge.textContent = wText;
+      } else {
+        line.style.left = edgeX - 1 + "px";
+        line.style.height = h + "px";
+        line.dataset.w = wText;
+        line.classList.toggle("sn-flip", r.right > w.right - 120);
+      }
+    };
+    const set = (rawD) => {
+      if (single) {
+        const d = invert ? -rawD : rawD;
+        const nextW = Math.round(Math.max(MINW[A], Math.min(MAXW[A], aw0 + d)));
+        CW[A] = nextW;
+        applyW(true);
+        if (M.hasPin) syncPinned();
+        place();
+      } else {
+        const d = Math.max(-(aw0 - MINW[A]), Math.min(bw0 - MINW[B], rawD));
+        if (!FLEX.has(A)) CW[A] = Math.round(aw0 + d);
+        if (!FLEX.has(B)) CW[B] = Math.round(bw0 - d);
+        applyW();
+        place();
+      }
+    };
     place(); try { el.setPointerCapture(e.pointerId); } catch {}
-    const mv = (ev) => { moved = true; set(ev.clientX - x0); };
+    const mv = (ev) => { if (Math.abs(ev.clientX - x0) < 1 && !moved) return; moved = true; set(ev.clientX - x0); };
     const onKey = (ev) => { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); moved = false; fin(); glideCW(w0); } }; /* 参考线收起，宽度滑回原来的 */
-    const fin = () => { if (done) return; done = true; for (const [t, f] of evs) el.removeEventListener(t, f); document.removeEventListener("keydown", onKey, true); removeEventListener("blur", fin); line.remove(); wrap.classList.remove("sn-resizing"); if (moved) resized(A); };
+    const fin = () => {
+      if (done) return; done = true;
+      for (const [t, f] of evs) el.removeEventListener(t, f);
+      document.removeEventListener("keydown", onKey, true); removeEventListener("blur", fin);
+      line.remove(); badge?.remove(); el.removeAttribute("data-active"); wrap.classList.remove("sn-resizing");
+      if (moved) { resized(A); if (M.hasPin) syncPinned(); saInst?.refresh(); }
+    };
     const evs = [["pointermove", mv], ["pointerup", fin], ["pointercancel", fin], ["lostpointercapture", fin]];
     for (const [t, f] of evs) el.addEventListener(t, f); document.addEventListener("keydown", onKey, true); addEventListener("blur", fin);
   }
-  // 双击表头右边缘：按这一列的内容定宽（表头和看得见的每一格里，内容本来要多宽 + 左右内边距，取最宽的那个；能变宽也能变窄）
+  // 双击表头右边缘：按这一列的内容定宽（单列模式支持交由外部处理自适应或复位）
   function autoFit(th) {
-    const A = th.dataset.c, B = order[order.indexOf(A) + 1]; if (!B || FLEX.has(A)) return;
+    const A = th.dataset.c;
+    if (o.autoFitHandled) { fire("autoFitColumn", { key: A }); return; }
+    if (o.resizeMode === "single") {
+      let need = 0; for (const c of cellsOf(A)) { if (c.hidden || c.closest("tr").hidden) continue; const s = getComputedStyle(c); need = Math.max(need, contentW(c.firstElementChild ?? c) + parseFloat(s.paddingLeft) + parseFloat(s.paddingRight)); }
+      const nextW = Math.round(Math.max(MINW[A], Math.min(MAXW[A], Math.ceil(need) + 6)));
+      glideCW({ [A]: nextW }, () => { resized(A); if (M.hasPin) syncPinned(); });
+      return;
+    }
+    const B = order[order.indexOf(A) + 1]; if (!B || FLEX.has(A)) return;
     let need = 0; for (const c of cellsOf(A)) { if (c.hidden || c.closest("tr").hidden) continue; const s = getComputedStyle(c); need = Math.max(need, contentW(c.firstElementChild ?? c) + parseFloat(s.paddingLeft) + parseFloat(s.paddingRight)); }
     const aw0 = th.getBoundingClientRect().width, bw0 = thOf(B).getBoundingClientRect().width, d = Math.max(-(aw0 - MINW[A]), Math.min(bw0 - MINW[B], Math.ceil(need) - aw0)); const to = {}; if (!FLEX.has(A)) to[A] = Math.round(aw0 + d); if (!FLEX.has(B)) to[B] = Math.round(bw0 - d); glideCW(to, () => resized(A));
   }
   // 换列的顺序：格子直接换到新位置；colOff 记着每一列"从看到的位置滑回 0"还剩多少，被拖那一列留下的空位按它摆。
-  // （格子本身不加位移：和改造前一样——原来写进样式表的格子位移用的选择器 #tbl>.sn-tbl 没对上过，格子从来是直接换位的）
-  const colOff = new Map(), lx = new Map(); /* colOff：列 → 从 x0 滑回 0；lx：列现在排版上的左边（相对外框） */
+  const colOff = new Map(), lx = new Map();
   let slotPaint = null, colRaf = 0;
   const COL_DUR = 220, offNow = (c, now) => { const v = colOff.get(c); return v ? v.x0 * (1 - EASE.outStrong(Math.min(1, (now - v.t0) / COL_DUR))) : 0; };
   function colPaint() {
@@ -1021,39 +1424,53 @@ export function mountTable(wrap, o0 = {}, emit) {
     slotPaint?.(now);
     if (more) colRaf = requestAnimationFrame(colPaint);
   }
-  const colPaintNow = () => { cancelAnimationFrame(colRaf); colPaint(); }; /* 状态一变当场写好：同一帧里先画的旧位移不会配上新顺序 */
+  const colPaintNow = () => { cancelAnimationFrame(colRaf); colPaint(); };
   function moveCols(next) {
     if (next.join() === order.join()) return;
-    const now = performance.now(), l0 = new Map(order.map((c) => [c, thOf(c).offsetLeft]));
-    order.splice(0, order.length, ...next); applyOrder(); M = modelOf(o, cur()); for (const c of order) lx.set(c, thOf(c).offsetLeft);
+    const now = performance.now(), l0 = new Map(order.map((c) => [c, thOf(c)?.offsetLeft ?? 0]));
+    order.splice(0, order.length, ...next); applyOrder(); M = modelOf(o, cur()); for (const c of order) lx.set(c, thOf(c)?.offsetLeft ?? 0);
     if (reduced()) colOff.clear(); else for (const c of order) { const d = offNow(c, now) + l0.get(c) - lx.get(c); if (Math.abs(d) < .5) colOff.delete(c); else colOff.set(c, { x0: d, t0: now }); }
     colPaintNow();
+    if (M.hasPin) syncPinned();
   }
-  // 拖列（和拖行一个手感）：这一整列（表头、每一行、合计）浮起来跟着指针走；它原来的地方是空位（浅底，和拖行的空位一样），
-  // 别的列实时换位。拖到表格外 40px 以外 = 拿出去了：各列回原位、浮起的列变淡，松手取消；Esc、窗口失焦也取消。
-  // 松手：浮起的列滑进它最后的位置，落定了浮起的那份淡掉
+  // 拖列（和拖行一个手感）：固定列保持原位不动，普通列在中间自由换位
   function colDrag(th, e) {
-    stopLay(); colLand?.(); /* 行还在过渡：先到位，按到位后的样子克隆 */
-    const k = th.dataset.c, r0 = th.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), bx = wrap.clientLeft, by = wrap.clientTop, home = [...order], before = home.join(), rest = home.filter((c) => c !== k), ck = $(":scope > tr > th:first-child", thead); let px = e.clientX, py = e.clientY, raf = 0, out = false;
-    for (const c of order) lx.set(c, thOf(c).offsetLeft);
-    // 浮起来的整列：克隆整张表，只留这一列（行高按现在的，藏着的行照样藏着），压在表格上面
-    const ghost = document.createElement("div"), gt = table.cloneNode(true); ghost.className = "sn-tbl-colghost"; gt.removeAttribute("tabindex");
+    stopLay(); colLand?.();
+    const k = th.dataset.c, r0 = th.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), bx = wrap.clientLeft, by = wrap.clientTop, home = [...order], before = home.join();
+    const leftPins = home.filter((c) => M.pinL.has(c)), rightPins = home.filter((c) => M.pinR.has(c));
+    const midAll = home.filter((c) => !M.pinL.has(c) && !M.pinR.has(c));
+    const rest = midAll.filter((c) => c !== k);
+    let px = e.clientX, py = e.clientY, raf = 0, out = false;
+    for (const c of order) lx.set(c, thOf(c)?.offsetLeft ?? 0);
+    const ghost = document.createElement("div"), gt = table.cloneNode(true); ghost.className = "sn-tbl-colghost"; ghost.setAttribute("aria-hidden", "true"); ghost.setAttribute("inert", ""); gt.removeAttribute("tabindex"); gt.removeAttribute("role");
     for (const c of [...gt.querySelectorAll("col")]) if (c.dataset.c !== k) c.remove();
-    const src = [...table.rows]; [...gt.rows].forEach((tr, i) => { for (const c of [...tr.children]) if (c.dataset.c !== k) c.remove(); tr.removeAttribute("style"); tr.classList.remove("sn-moving", "adding", "leaving", "sn-lift", "sn-mg-top", "sn-sel"); if (!src[i].hidden) tr.style.height = src[i].getBoundingClientRect().height + "px"; });
+    const src = [...table.rows]; [...gt.rows].forEach((tr, i) => { tr.removeAttribute("data-row-key"); tr.removeAttribute("data-id"); for (const c of [...tr.children]) { if (c.dataset.c !== k) c.remove(); else c.removeAttribute("data-col"); } tr.removeAttribute("style"); tr.classList.remove("sn-moving", "adding", "leaving", "sn-lift", "sn-mg-top", "sn-sel"); if (!src[i].hidden) tr.style.height = src[i].getBoundingClientRect().height + "px"; });
+    for (const n of gt.querySelectorAll("[id]")) n.removeAttribute("id");
     gt.style.width = r0.width + "px"; ghost.append(gt);
     const tTop = table.getBoundingClientRect().top - wr.top - by, L0 = r0.left - wr.left - bx;
     Object.assign(ghost.style, { left: L0 + "px", top: tTop + "px", width: r0.width + "px" }); wrap.append(ghost); liftIn(ghost);
-    // 空位：放在表格后面（格子有底，盖住它），跟着这一列的位置走
     const slot = document.createElement("i"); slot.className = "sn-tbl-gap sn-tbl-colgap"; wrap.prepend(slot);
     Object.assign(slot.style, { top: tTop + "px", height: table.offsetHeight + "px", width: r0.width + "px" });
     slotPaint = (now) => { slot.style.translate = `${(lx.get(k) + offNow(k, now)).toFixed(2)}px 0`; };
     wrap.classList.add("sn-coldrag"); colPaintNow();
-    // 放在哪：其余各列按原来的先后排好，这一列插在第 t 个前面时它左边在哪；浮起的列左边离哪个最近就放哪。只看位置，来回拖不会抖
-    const target = () => { const gl = r0.left + (px - e.clientX); let x = ck ? (ck.dataset.c ? ck.getBoundingClientRect().left : ck.getBoundingClientRect().right) : table.getBoundingClientRect().left, best = 0, bd = Infinity; for (let t = 0; t <= rest.length; t++) { const d = Math.abs(gl - x); if (d < bd) { bd = d; best = t; } if (t < rest.length) x += thOf(rest[t]).getBoundingClientRect().width; } return best; };
+    const firstMidX = () => {
+      if (leftPins.length) { const lp = thOf(leftPins.at(-1)); if (lp) return lp.getBoundingClientRect().right; }
+      const leadEnd = $(":scope > tr > th:not([data-c]):last-of-type", thead);
+      if (leadEnd && !leadEnd.classList.contains("sn-acts")) return leadEnd.getBoundingClientRect().right;
+      return table.getBoundingClientRect().left;
+    };
+    const target = () => {
+      const gl = r0.left + (px - e.clientX);
+      let x = firstMidX(), best = 0, bd = Infinity;
+      for (let t = 0; t <= rest.length; t++) { const d = Math.abs(gl - x); if (d < bd) { bd = d; best = t; } if (t < rest.length) x += thOf(rest[t])?.getBoundingClientRect().width || 0; }
+      return best;
+    };
     const tick = () => {
       const w = wrap.getBoundingClientRect(); out = px < w.left - 40 || px > w.right + 40 || py < w.top - 40 || py > w.bottom + 40;
       ghost.style.translate = `${px - e.clientX}px 0`; ghost.classList.toggle("sn-away", out);
-      const t = target(); moveCols(out ? home : [...rest.slice(0, t), k, ...rest.slice(t)]); raf = requestAnimationFrame(tick);
+      const t = target();
+      const next = out ? home : [...leftPins, ...rest.slice(0, t), k, ...rest.slice(t), ...rightPins];
+      moveCols(next); raf = requestAnimationFrame(tick);
     };
     tick();
     return {
@@ -1065,7 +1482,6 @@ export function mountTable(wrap, o0 = {}, emit) {
         let anim = null;
         const land = () => { colLand = null; anim?.cancel(); slotPaint = null; slot.remove(); colPaintNow(); if (reduced()) { ghost.remove(); return; } ghost.style.translate = `${lx.get(k) - L0}px 0`; ghost.animate([{ opacity: getComputedStyle(ghost).opacity }, { opacity: 0 }], { duration: 120, easing: EASE_CSS.out, fill: "forwards" }).onfinish = () => ghost.remove(); };
         if (reduced()) { land(); return; }
-        // 浮起的列滑进它最后的位置，落定了再淡掉
         anim = ghost.animate([{ translate: ghost.style.translate, opacity: getComputedStyle(ghost).opacity }, { translate: `${lx.get(k) - L0}px 0`, opacity: 1 }], { duration: COL_DUR, easing: EASE_CSS.outStrong, fill: "forwards" });
         anim.onfinish = land; colLand = land;
       },
@@ -1074,19 +1490,40 @@ export function mountTable(wrap, o0 = {}, emit) {
   let eatClick = false;
   const onHeadDown = (e) => {
     if (e.button !== 0) return; const th = e.target.closest("th[data-c]"); if (!th || !thead.contains(th)) return;
-    const rz = e.target.closest(".sn-g-rz"), drag = o.draggableColumns && !colOf(th.dataset.c)?.fixed;
-    if (!rz && !drag) return; // 这一列不能拖：只是点表头（排序走 click）
-    e.preventDefault(); if (editing) editing.blur(); dragNow?.flush(); colLand?.(); hideSel(); stopCW?.(); stopCW = null; /* 不起文字选区；点一下照样排序；宽度还在滑就停在当前宽度；上一列还在落位就先落好 */
+    const rz = e.target.closest(".sn-g-rz");
+    const col = colOf(th.dataset.c);
+    const drag = o.draggableColumns && col && !col.fixed && col.reorderable !== false;
+    if (!rz && !drag) return;
+    // 不拦截表头内嵌的筛选按钮、勾选框、无拖标记控件（显式换列把手与排序按钮上拖过 4px 允许拖列）
+    if (!rz && e.target.closest("[data-no-drag], [data-grid-no-drag], input, label, select")) return;
+    e.preventDefault(); if (editing) editing.blur(); dragNow?.flush(); colLand?.(); hideSel(); stopCW?.(); stopCW = null;
     if (rz) { startColResize(th, e); return; }
-    const sx = e.clientX, sy = e.clientY, el = thead; let d = null; eatClick = false; /* 指针捕获放在表头整行上：拖的时候各列的格子会换位置（移走的元素会丢捕获），表头整行不动；松手那一下 click 落在表头上，照样被吃掉 */
+    const sx = e.clientX, sy = e.clientY, el = thead; let d = null; eatClick = false;
     const mv = (ev) => { if (!d) { if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return; d = colDrag(th, e); eatClick = true; try { el.setPointerCapture(ev.pointerId); } catch {} } d.move(ev.clientX, ev.clientY); };
     const end = (cancel) => { for (const [t, f] of evs) el.removeEventListener(t, f); removeEventListener("pointermove", mv, true); removeEventListener("pointerup", up, true); document.removeEventListener("keydown", onEsc, true); removeEventListener("blur", onBlur); d?.drop(cancel); };
     const up = () => end(false), onEsc = (ev) => { if (ev.key === "Escape" && d) { ev.preventDefault(); ev.stopPropagation(); end(true); } }, onBlur = () => end(true);
     const evs = [["pointercancel", () => end(true)], ["lostpointercapture", () => d && end(true)]];
     for (const [t, f] of evs) el.addEventListener(t, f); addEventListener("pointermove", mv, true); addEventListener("pointerup", up, true); document.addEventListener("keydown", onEsc, true); addEventListener("blur", onBlur);
   };
-  const onHeadCapture = (e) => { if (eatClick) { eatClick = false; e.preventDefault(); e.stopPropagation(); } }; /* 拖完列松手时那一下 click 不算排序 */
+  const onHeadCapture = (e) => { if (eatClick) { eatClick = false; e.preventDefault(); e.stopPropagation(); } };
   const onHeadDbl = (e) => { const rz = e.target.closest(".sn-g-rz"); if (rz) autoFit(rz.closest("th")); };
+  const onHeadKey = (e) => {
+    const rz = e.target.closest(".sn-g-rz"); if (!rz) return;
+    const th = rz.closest("th[data-c]"); if (!th) return;
+    const k = th.dataset.c, col = colOf(k);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const step = e.shiftKey ? 32 : 8;
+      const dirSign = (e.key === "ArrowRight" ? 1 : -1) * (col?.fixed === "right" ? -1 : 1);
+      if (o.resizeByHandled) fire("columnResizeBy", { key: k, delta: step * dirSign });
+      else {
+        const nextW = Math.round(Math.max(MINW[k], Math.min(MAXW[k], (CW[k] || th.getBoundingClientRect().width) + step * dirSign)));
+        CW[k] = nextW; applyW(o.resizeMode === "single"); if (M.hasPin) syncPinned(); resized(k);
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault(); autoFit(th);
+    }
+  };
 
   // ———— 拖行高：任何一行的下边线都能拖（每行左边那一格里放一条和表格一样宽的手柄），一条横线和高度数字跟着；双击恢复 ————
   // 拖的时候行高紧跟指针（关掉格子高度的过渡）；Esc 平滑回到原来的高度；窗口失焦就停在当前高度
@@ -1101,12 +1538,99 @@ export function mountTable(wrap, o0 = {}, emit) {
     for (const [t, f] of evs) el.addEventListener(t, f); document.addEventListener("keydown", onEsc, true); addEventListener("blur", fin);
   }
 
-  // ———— 行点击、出错重试 ————
+  // ———— 行点击、行级键盘漫游与行把手键盘重排、出错重试 ————
+  const syncRowTabIndex = () => {
+    if (!o.rowNavigation) return;
+    const vs = visRows();
+    if (!navKey || !vs.some((r) => r.dataset.id === navKey)) navKey = vs[0]?.dataset.id ?? null;
+    for (const r of vs) r.tabIndex = r.dataset.id === navKey ? 0 : -1;
+  };
+  const focusRowAt = (idx) => {
+    const vs = visRows(); if (!vs.length) return;
+    const target = vs[Math.max(0, Math.min(vs.length - 1, idx))];
+    navKey = target.dataset.id; syncRowTabIndex();
+    target.focus({ preventScroll: true });
+    if (scEl) {
+      const headH = thead?.getBoundingClientRect().height || 0;
+      const top = target.offsetTop, bottom = top + target.offsetHeight;
+      if (top - headH < scEl.scrollTop) scEl.scrollTop = top - headH;
+      else if (bottom > scEl.scrollTop + scEl.clientHeight) scEl.scrollTop = bottom - scEl.clientHeight;
+    }
+  };
+  const onBodyFocusIn = (e) => {
+    if (!o.rowNavigation) return;
+    const tr = e.target?.closest?.("tr[data-id]");
+    if (tr && tr === e.target && TR.has(tr.dataset.id)) { navKey = tr.dataset.id; syncRowTabIndex(); }
+  };
+  const onBodyKeyDown = (e) => {
+    // 行首拖动把手键盘重排（↑/↓/Home/End）
+    const grip = e.target?.closest?.("[data-row-grip]");
+    if (grip && o.draggableRows && !o.rowDragDisabled) {
+      const tr = grip.closest("tr[data-id]");
+      const vs = visRows(), idx = vs.indexOf(tr);
+      if (idx < 0) return;
+      let to = idx;
+      if (e.key === "ArrowUp") to = Math.max(0, idx - 1);
+      else if (e.key === "ArrowDown") to = Math.min(vs.length - 1, idx + 1);
+      else if (e.key === "Home") to = 0;
+      else if (e.key === "End") to = vs.length - 1;
+      else return;
+      e.preventDefault();
+      if (to === idx) return;
+      const key = tr.dataset.id;
+      fire("rowReorder", { key, parentKey: null, from: idx, to, viaKeyboard: true, keys: vs.map((r) => r.dataset.id) });
+      queueMicrotask(() => { TR.get(key)?.querySelector("[data-row-grip]")?.focus?.({ preventScroll: true }); });
+      return;
+    }
+    if (!o.rowNavigation) return;
+    const tr = e.target;
+    if (tr?.tagName !== "TR" || !tr.dataset.id || !TR.has(tr.dataset.id)) return;
+    const vs = visRows(), idx = vs.indexOf(tr); if (idx < 0) return;
+    const key = tr.dataset.id, nd = nodeOf(tr);
+    switch (e.key) {
+      case "ArrowDown": focusRowAt(idx + 1); break;
+      case "ArrowUp": focusRowAt(idx - 1); break;
+      case "Home": focusRowAt(0); break;
+      case "End": focusRowAt(vs.length - 1); break;
+      case " ":
+        if (o.selectable) {
+          const inp = leadCheckOf(tr);
+          if (inp) {
+            const nextOn = !picked.has(key);
+            pick(nd, nextOn); syncSel();
+            fire("select", [...picked]);
+            fire("selectChange", { keys: [...picked], key, range: !!e.shiftKey, checked: nextOn });
+          }
+        } else if (typeof o.onRowClick === "function" && !M.hasDetail) {
+          o.onRowClick(nd.row);
+        } else return;
+        break;
+      case "Enter":
+        if (M.hasDetail && DTR.has(key)) setOpen([tr], !isRowExpanded(nd), true);
+        else if (typeof o.onRowClick === "function") fire("rowClick", nd.row);
+        else return;
+        break;
+      case "Escape":
+        if (M.hasDetail && isRowExpanded(nd)) setOpen([tr], false, true);
+        else if (picked.size > 0) { picked.clear(); syncSel(); fire("select", []); fire("selectChange", { keys: [], clear: true }); }
+        else return;
+        break;
+      case "a":
+      case "A":
+        if (!o.selectable || !(e.metaKey || e.ctrlKey)) return;
+        for (const r of vs) { const n = nodeOf(r); if (n) pick(n, true); }
+        syncSel(); fire("select", [...picked]); fire("selectChange", { keys: [...picked], all: true, checked: true });
+        break;
+      default: return;
+    }
+    e.preventDefault();
+  };
   const onWrapClick = (e) => {
     const rb = e.target.closest("[data-retry]"); if (rb && table.contains(rb)) { fire("retry"); return; }
-    if (e.target.closest(".sn-tbl-pick, .sn-ck, .sn-acts, .sn-tbl-detail, a, button, input, label, select, textarea")) return;
+    if (e.target.closest(".sn-tbl-pick, .sn-ck, .sn-tbl-exp, .sn-acts, .sn-tbl-detail, [data-grid-stop], a, button, input, label, select, textarea, [role='button'], [role='checkbox'], [role='menuitem']")) return;
     const tr = e.target.closest("tr[data-id]"); if (!tr || tr.parentNode !== tbody || !T.nodes.has(tr.dataset.id)) return;
-    if (o.expandOnRowClick && !window.getSelection?.()?.toString()) {
+    if (window.getSelection?.()?.toString()) return;
+    if (o.expandOnRowClick) {
       const nd = nodeOf(tr);
       if (nd && (nd.kids.length || DTR.has(nd.key))) setOpen([tr], !isRowExpanded(nd), true);
     }
@@ -1117,47 +1641,158 @@ export function mountTable(wrap, o0 = {}, emit) {
   const on = [];
   const listen = (el, t, f, opt) => { el.addEventListener(t, f, opt); on.push([el, t, f, opt]); };
   const bind = () => {
-    listen(thead, "click", onHeadClick); listen(wrap, "change", onChange);
+    listen(thead, "click", onHeadClick); listen(wrap, "click", onSelectClick, true); listen(wrap, "change", onChange);
     listen(tbody, "pointerdown", onBodyDown); listen(tbody, "click", onBodyClick); listen(tbody, "dblclick", onBodyDbl);
+    listen(tbody, "focusin", onBodyFocusIn); listen(tbody, "keydown", onBodyKeyDown);
     if (o.cellSelect) { listen(table, "keydown", onKey); listen(table, "focusout", onFocusOut); listen(table, "focusin", onFocusIn); }
-    listen(thead, "pointerdown", onHeadDown); listen(thead, "click", onHeadCapture, true); listen(thead, "dblclick", onHeadDbl);
+    listen(thead, "pointerdown", onHeadDown); listen(thead, "click", onHeadCapture, true); listen(thead, "dblclick", onHeadDbl); listen(thead, "keydown", onHeadKey);
     listen(wrap, "click", onWrapClick);
-    if (scEl && M.hasPin) listen(scEl, "scroll", syncPinScroll, { passive: true });
+    if (scEl) listen(scEl, "scroll", syncPinScroll, { passive: true });
   };
   const unbind = () => { for (const [el, t, f, opt] of on.splice(0)) el.removeEventListener(t, f, opt); };
   bind();
   let ro = null;
-  if (o.resizableRows || M.hasPin) { ro = new ResizeObserver(() => { if (o.resizableRows) wrap.style.setProperty("--sn-tw", table.offsetWidth + "px"); if (M.hasPin) syncPinned(); }); ro.observe(table); if (scEl && M.hasPin) ro.observe(scEl); }
-  if (!o.loading && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
+  if (typeof ResizeObserver !== "undefined") {
+    ro = new ResizeObserver(() => {
+      if (o.resizableRows) wrap.style.setProperty("--sn-tw", table.offsetWidth + "px");
+      syncViewportMetrics();
+      if (M.hasPin) syncPinned();
+    });
+    ro.observe(table);
+    if (scEl) ro.observe(scEl);
+  }
+  const initialSkeleton = !!(o.loading && T.top.length === 0);
+  if (!initialSkeleton && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
+  syncViewportMetrics();
   if (M.hasPin) syncPinned();
+  syncRowTabIndex();
 
-  // ———— 整表重画：列换了、加载中 / 出错切换、数据换了一批。表格元素本身留着（监听、滚动区域、合计行都还在） ————
+  // ———— 整表重画：列结构换了、加载中 / 出错切换。表格元素本身留着（监听、滚动区域、合计行都还在） ————
+  const leaveTimers = new Map();
+  const clearLeaveTimers = () => { for (const tid of leaveTimers.values()) clearTimeout(tid); leaveTimers.clear(); };
   function render() {
-    clearDetTimers();
+    clearDetTimers(); clearLeaveTimers();
     if (lay) stopLay(); dragNow?.flush(); colLand?.(); selTd = null; editing = null;
-    M = modelOf(o, cur()); const tmp = document.createElement("div"); tmp.innerHTML = tableInner(M, CW, MINW); const nt = tmp.firstElementChild;
-    for (const a of ["tabindex", "aria-label", "aria-busy", "style"]) { if (nt.hasAttribute(a)) { if (table.getAttribute(a) !== nt.getAttribute(a)) table.setAttribute(a, nt.getAttribute(a)); } else table.removeAttribute(a); }
+    M = modelOf(o, cur()); const tmp = document.createElement("div"); tmp.innerHTML = tableInner(M, CW, MINW, MAXW); const nt = tmp.firstElementChild;
+    for (const a of ["role", "tabindex", "aria-label", "aria-busy", "aria-multiselectable", "style"]) { if (nt.hasAttribute(a)) { if (table.getAttribute(a) !== nt.getAttribute(a)) table.setAttribute(a, nt.getAttribute(a)); } else table.removeAttribute(a); }
     const tf = $(":scope > tfoot", table); unbind();
     table.replaceChildren(...nt.childNodes, ...(tf ? [tf] : []));
     refs(); fixMixed(); bind(); paintRenders(); remember();
-    if (!o.loading && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
+    const isSk = !!(o.loading && T.top.length === 0);
+    if (!isSk && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
+    syncViewportMetrics();
+    if (M.hasPin) syncPinned();
+    syncRowTabIndex();
+    saInst?.refresh();
+  }
+  // 仅重建 <tbody>（骨架 ↔ 数据 ↔ 错误态切换），完整保留原 <thead> 与 <colgroup>，不销毁表头节点与焦点
+  function renderBody() {
+    clearDetTimers(); clearLeaveTimers();
+    if (lay) stopLay(); dragNow?.flush(); colLand?.(); selTd = null; editing = null;
+    M = modelOf(o, cur());
+    const PINS = M.hasPin ? pinOffsets(M, CW, MINW) : null;
+    const tmp = document.createElement("table");
+    tmp.innerHTML = bodyHTML(M, PINS);
+    const nb = tmp.firstElementChild;
+    if (o.loading || o.refreshing) table.setAttribute("aria-busy", "true"); else table.removeAttribute("aria-busy");
+    unbind();
+    if (tbody && nb) tbody.replaceWith(nb);
+    refs(); fixMixed(); bind();
+    paintStateSlots();
+    const rc = M.dcols.filter((c) => typeof c.render === "function");
+    if (rc.length || typeof M.acts?.render === "function") {
+      let i = 0; walkAll(T.top, (nd) => { const tr = TR.get(nd.key); if (tr) paintRowCells(tr, nd, i); i++; });
+    }
+    remember();
+    const isSk = !!(o.loading && T.top.length === 0);
+    if (!isSk && !o.error) relayout(applyVis, { instant: true }); else syncFooter();
+    syncSel();
+    syncViewportMetrics();
+    if (M.hasPin) syncPinned();
+    syncRowTabIndex();
+    saInst?.refresh();
+  }
+  // 增量行调和：扁平表数据更新时复用既有 <tr> 节点（不销毁不重播入场），新行按需微浮入，离开行在 live 模式下淡出再移除
+  function setData(list) {
+    const T2 = treeOf(list, o.rowKey);
+    const wasEmptyOrSk = T.top.length === 0 || !!tbody.querySelector("tr.sn-tbl-loading");
+    const isSkNow = !!(o.loading && T2.top.length === 0);
+    if (sortKey && o.sortLocal !== false) sortTree(T2.top, nodeCmp(colOf(sortKey), dir));
+    const prevKeys = new Set(T.nodes.keys());
+    const sameTree = T2.tree === T.tree && T2.nodes.size === T.nodes.size && [...T2.nodes].every(([k, nd]) => { const a = T.nodes.get(k); return !!a && (a.parent?.key ?? null) === (nd.parent?.key ?? null); });
+    const flatReconcile = !T.tree && !T2.tree && !wasEmptyOrSk && !isSkNow && !o.error && !!emptyRow;
+    T = T2;
+    for (const k of [...open]) if (!T.nodes.has(k)) open.delete(k);
+    if (o.selected === undefined) { for (const k of [...picked]) if (!T.nodes.has(k)) picked.delete(k); }
+    M = modelOf(o, cur());
+    if (isSkNow || o.error || (!sameTree && !flatReconcile)) { renderBody(); return; }
+    if (sameTree) {
+      refreshAll();
+      relayout(() => { placeTree(); applyVis(); syncEmpty(); });
+      syncSel(); syncRowTabIndex();
+      return;
+    }
+    // 扁平表增量调和
+    const live = o.rowMotion === "live";
+    const PINS = M.hasPin ? pinOffsets(M, CW, MINW) : null;
+    const vis = visOf(M.T.top, open, q, qOpen);
+    const merged = mergedOf(M, M.T.top.filter((nd) => vis.get(nd.key).vis));
+    const nextKeys = new Set(T.nodes.keys());
+    const leavingEls = [];
+    for (const [k, oldTr] of [...TR]) {
+      if (nextKeys.has(k)) continue;
+      TR.delete(k);
+      const oldDtr = DTR.get(k); if (oldDtr) { DTR.delete(k); detPainted.delete(k); oldDtr.remove(); }
+      if (live && !reduced()) {
+        oldTr.dataset.leaving = "true";
+        oldTr.setAttribute("inert", "");
+        leavingEls.push(oldTr);
+        clearTimeout(leaveTimers.get(k));
+        leaveTimers.set(k, setTimeout(() => { leaveTimers.delete(k); oldTr.remove(); saInst?.refresh(); }, 220));
+      } else {
+        oldTr.remove();
+      }
+    }
+    const enteringCount = T.top.filter((nd) => !prevKeys.has(nd.key)).length;
+    const wholeSet = enteringCount === T.top.length && prevKeys.size > 0;
+    let enterIdx = 0;
+    T.top.forEach((nd, i) => {
+      let tr = TR.get(nd.key);
+      if (tr) {
+        if (leaveTimers.has(nd.key)) { clearTimeout(leaveTimers.get(nd.key)); leaveTimers.delete(nd.key); tr.removeAttribute("data-leaving"); tr.removeAttribute("inert"); }
+        tr.removeAttribute("data-entering");
+        refreshRow(tr, nd, i);
+        if (DTR.has(nd.key)) { detPainted.delete(nd.key); if (isDetailOpen(nd)) paintDetail(nd, true); }
+      } else {
+        const tmp = document.createElement("tbody");
+        tmp.innerHTML = rowHTML(M, nd, i, vis, merged, PINS, navKey);
+        const nodes = [...tmp.children];
+        tr = nodes[0];
+        if (!reduced()) {
+          tr.dataset.entering = live ? "live" : "true";
+          tr.style.setProperty("--sn-enter-i", String(wholeSet ? enterIdx : 0));
+          enterIdx++;
+        }
+        TR.set(nd.key, tr);
+        tbody.insertBefore(tr, emptyRow);
+        if (nodes[1] && nodes[1].dataset.detailFor === nd.key) {
+          DTR.set(nd.key, nodes[1]);
+          tbody.insertBefore(nodes[1], emptyRow);
+        }
+        paintRowCells(tr, nd, i);
+      }
+      SIG.set(nd.key, sigOf(nd, i));
+    });
+    const reorderOnly = leavingEls.length === 0;
+    if (reorderOnly) relayout(() => { placeTree(); applyVis(); syncEmpty(); });
+    else { placeTree(); applyVis(); syncEmpty(); }
+    syncSel(); syncRowTabIndex();
     if (M.hasPin) syncPinned();
     saInst?.refresh();
   }
-  // 数据换了：同一批节点（键和上级都一样）就只换数据变了的行的格子、行移到新位置；否则整表重画（展开、勾选按 rowKey 带过去）
-  function setData(list) {
-    const T2 = treeOf(list, o.rowKey);
-    const same = T2.tree === T.tree && T2.nodes.size === T.nodes.size && [...T2.nodes].every(([k, nd]) => { const a = T.nodes.get(k); return !!a && (a.parent?.key ?? null) === (nd.parent?.key ?? null); });
-    if (sortKey && o.sortLocal !== false) sortTree(T2.top, nodeCmp(colOf(sortKey), dir));
-    T = T2; for (const k of [...open]) if (!T.nodes.has(k)) open.delete(k); for (const k of [...picked]) if (!T.nodes.has(k)) picked.delete(k);
-    M = modelOf(o, cur());
-    if (!same || o.loading || o.error) { render(); return; }
-    refreshAll();
-    relayout(() => { placeTree(); applyVis(); syncEmpty(); });
-    syncSel();
-  }
-  // 每一行按签名比一遍：内容变了的格子换掉（只换变了的文字）；render 的列都重画一次（React 的根、Vue 的 render 自己比，没变就不动）
+  // 每一行按签名比一遍：内容变了的格子换掉（只换变了的文字）；render 的列都重画一次
   function refreshAll() {
+    paintHeaders();
     const live = M.dcols.some((c) => typeof c.render === "function") || typeof M.acts?.render === "function";
     let i = 0; walkAll(T.top, (nd) => { const tr = TR.get(nd.key), sg = sigOf(nd, i); if (tr && (live || SIG.get(nd.key) !== sg)) refreshRow(tr, nd, i); if (DTR.has(nd.key)) { detPainted.delete(nd.key); if (isDetailOpen(nd)) paintDetail(nd, true); } SIG.set(nd.key, sg); i++; });
   }
@@ -1167,53 +1802,120 @@ export function mountTable(wrap, o0 = {}, emit) {
     get sort() { return sortKey ? { key: sortKey, dir: dir < 0 ? "desc" : "asc" } : null; },
     get expanded() { return [...open]; },
     get columnOrder() { return [...order]; },
+    get scroller() { return scEl; },
     isExpanded(key) { const nd = T.nodes.get(String(key)); return isRowExpanded(nd); },
     expand(keys, want = true) { setOpen((keyList(keys) ?? []).map((k) => TR.get(k)).filter(Boolean), !!want, false); },
     expandAll(want = true) { setOpen(parents().map((nd) => TR.get(nd.key)), !!want, false); },
     select(keys) { picked = new Set(keyList(keys) ?? []); syncSel(); },
-    // 数据在外面就地改了、筛选函数读的外部变量变了：按现在的样子重新排一遍（从看到的样子过渡过去）
+    moveColumn(key, toIndex) {
+      const idx = order.indexOf(key); if (idx < 0) return;
+      const next = [...order]; next.splice(idx, 1); next.splice(Math.max(0, Math.min(next.length, toIndex)), 0, key);
+      moveCols(next); fire("columnReorder", { keys: [...order] });
+    },
     refresh() { dragNow?.flush(); relayout(() => { applyVis(); syncEmpty(); }); },
     edit(key, colKey) { const tr = TR.get(String(key)), c = colKey ?? M.dcols.find((x) => x.editable)?.key, td = tr && c ? cellOf(tr, c) : null; if (!td) return; if (editing) editing.blur(); if (o.cellSelect) selectTd(td); rename(td); },
-    // next 是合并以后的整份选项，prev 是上一份（createTable 给的）。受控的值（sort、selected、expandedKeys）"传进来的值换了（和上次给的比）"才跟过去：
-    // 非受控时 React 封装不带这些值，表格自己的状态不会被打回初始值
     update(next, prev) {
       prev = prev ?? o; o = { ...o, ...next };
       const colsChanged = colSig(prev.columns) !== colSig(o.columns);
-      const flags = FLAGS.some((k) => !!prev[k] !== !!o[k]) || (!!o.error && prev.error !== o.error);
-      const dataNext = o.data ?? o.rows ?? [], dataChanged = dataNext !== (prev.data ?? prev.rows ?? []);
-      let sortChanged = false, selChanged = false, reopen = false;
+      const widthsChanged = !colsChanged && (widthSig(prev.columns) !== widthSig(o.columns) || prev.tableWidth !== o.tableWidth || prev.selectColWidth !== o.selectColWidth || prev.expandColWidth !== o.expandColWidth || prev.reorderColWidth !== o.reorderColWidth);
+      const dataNext = o.data ?? o.rows ?? [];
+      const prevData = prev.data ?? prev.rows ?? [];
+      const dataChanged = dataNext !== prevData || dataNext.length !== T.top.length || dataNext.some((row, idx) => String(typeof o.rowKey === "function" ? o.rowKey(row, idx) : row?.[o.rowKey] ?? idx) !== T.top[idx]?.key);
+      const skPrev = !!(prev.loading && (prev.data ?? prev.rows ?? []).length === 0);
+      const skNow = !!(o.loading && dataNext.length === 0);
+      const errChanged = !!prev.error !== !!o.error || (!!o.error && prev.error !== o.error);
+      const bodyModeChanged = skPrev !== skNow || errChanged;
+      const flags = FLAGS.some((k) => !!prev[k] !== !!o[k]);
+      let sortChanged = false, selChanged = false, reopen = false, orderChanged = false;
       const curSort = sortKey ? { key: sortKey, dir: dir < 0 ? "desc" : "asc" } : null;
-      if ("sort" in next && !sameSort(next.sort, prev.sort) && !sameSort(next.sort, curSort)) { sortKey = next.sort?.key ?? null; dir = next.sort?.dir === "desc" ? -1 : 1; sortChanged = true; }
-      if (next.selected && !sameList(next.selected, prev.selected)) { picked = new Set(keyList(next.selected)); selChanged = true; }
-      if (next.expandedKeys && !sameList(next.expandedKeys, prev.expandedKeys)) { const want = keyList(next.expandedKeys); if (want.length !== open.size || want.some((k) => !open.has(k))) { open.clear(); for (const k of want) open.add(k); reopen = true; } }
+      if ("sort" in next && !sameSort(next.sort, curSort)) { sortKey = next.sort?.key ?? null; dir = next.sort?.dir === "desc" ? -1 : 1; sortChanged = true; }
+      if ("selected" in next && next.selected !== undefined) {
+        const wantSel = keyList(next.selected) ?? [];
+        if (wantSel.length !== picked.size || wantSel.some((k) => !picked.has(k))) { picked = new Set(wantSel); selChanged = true; }
+      }
+      if ("expandedKeys" in next && next.expandedKeys !== undefined) {
+        const want = keyList(next.expandedKeys) ?? [];
+        if (want.length !== open.size || want.some((k) => !open.has(k))) { open.clear(); for (const k of want) open.add(k); reopen = true; }
+      }
+      if ("columnOrder" in next && Array.isArray(next.columnOrder) && next.columnOrder.length === order.length && next.columnOrder.join() !== order.join()) {
+        const set = new Set(order);
+        if (next.columnOrder.every((k) => set.has(k))) orderChanged = true;
+      }
       const fq = next.filter !== undefined && next.filter !== prev.filter, setQ = () => { q = typeof o.filter === "function" ? o.filter : null; if (!q) qOpen.clear(); };
-      // 列变了（加列、删列、标题、宽度……）、加载中 / 出错切换：整表重画
       if (colsChanged) {
-        const keys = colsOf(o.columns).data.map((c) => c.key); if (keys.slice().sort().join() !== order.slice().sort().join()) order.splice(0, order.length, ...keys);
-        M = modelOf(o, cur()); ({ CW, MINW } = widthsOf(M.dcols0)); FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
+        const keys = colsOf(o.columns).data.map((c) => c.key);
+        if (Array.isArray(o.columnOrder) && o.columnOrder.length === keys.length && o.columnOrder.every((k) => keys.includes(k))) order.splice(0, order.length, ...o.columnOrder);
+        else if (keys.slice().sort().join() !== order.slice().sort().join()) order.splice(0, order.length, ...keys);
+        M = modelOf(o, cur()); ({ CW, MINW, MAXW } = widthsOf(M.dcols0)); FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
         for (const c of M.dcols0) if ("merge" in c) addMK(c.key);
       }
       if (colsChanged || flags) {
         if (fq) setQ();
-        if (dataChanged) { T = treeOf(dataNext, o.rowKey); for (const k of [...open]) if (!T.nodes.has(k)) open.delete(k); for (const k of [...picked]) if (!T.nodes.has(k)) picked.delete(k); }
+        if (dataChanged) { T = treeOf(dataNext, o.rowKey); for (const k of [...open]) if (!T.nodes.has(k)) open.delete(k); if (o.selected === undefined) for (const k of [...picked]) if (!T.nodes.has(k)) picked.delete(k); }
         if ((dataChanged || sortChanged) && sortKey && o.sortLocal !== false) sortTree(T.top, nodeCmp(colOf(sortKey), dir));
-        if (!!prev.compact !== !!o.compact) wrap.classList.toggle("sn-compact", !!o.compact);
-        if ((prev.lines ?? "row") !== (o.lines ?? "row")) wrap.dataset.lines = o.lines || "row";
+        wrap.classList.toggle("sn-compact", !!(o.compact || o.density === "compact"));
+        wrap.classList.toggle("sn-comfortable", o.density === "comfortable");
+        wrap.classList.toggle("sn-refreshing", !!o.refreshing);
+        wrap.classList.toggle("sn-has-foot", !!(pgCfg || o.hasFooter));
+        wrap.classList.toggle("sn-has-bulk", !!o.hasBulk);
+        wrap.dataset.lines = o.lines || "row";
+        wrap.dataset.fill = o.fill ? "true" : "false";
+        if (o.resizeMode === "single") wrap.dataset.resize = "single"; else delete wrap.dataset.resize;
         render(); return;
       }
+      if (bodyModeChanged) {
+        if (fq) setQ();
+        if (dataChanged) { T = treeOf(dataNext, o.rowKey); for (const k of [...open]) if (!T.nodes.has(k)) open.delete(k); if (o.selected === undefined) for (const k of [...picked]) if (!T.nodes.has(k)) picked.delete(k); }
+        if ((dataChanged || sortChanged) && sortKey && o.sortLocal !== false) sortTree(T.top, nodeCmp(colOf(sortKey), dir));
+        if (orderChanged) moveCols(next.columnOrder);
+        M = modelOf(o, cur());
+        if (widthsChanged) {
+          ({ CW, MINW, MAXW } = widthsOf(M.dcols0));
+          FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
+          if (M.useCols) applyW();
+        }
+        wrap.classList.toggle("sn-refreshing", !!o.refreshing);
+        wrap.classList.toggle("sn-has-foot", !!(pgCfg || o.hasFooter));
+        wrap.classList.toggle("sn-has-bulk", !!o.hasBulk);
+        renderBody();
+        if (sortChanged) headSync();
+        return;
+      }
+      if (orderChanged) moveCols(next.columnOrder);
       M = modelOf(o, cur());
-      if (dataChanged) { if (fq) { dragNow?.flush(); setQ(); } setData(dataNext); } // 数据和筛选一起换：一次过渡
-      else if (next.columns !== prev.columns && !o.loading && !o.error) refreshAll(); // 列数组换了、长相没变（React / Vue 每次渲染新建的列，format / html / render 可能读着外面的状态）
+      if (widthsChanged) {
+        ({ CW, MINW, MAXW } = widthsOf(M.dcols0));
+        FLEX = new Set(M.dcols0.filter((c) => !CW[c.key]).map((c) => c.key));
+        if (M.useCols) applyW();
+      }
+      if (dataChanged) { if (fq) { dragNow?.flush(); setQ(); } setData(dataNext); }
+      else if (next.columns !== prev.columns && !skNow && !o.error) refreshAll();
       else if (sortChanged) { headSync(); sortNow(); }
+      if (sortChanged) headSync();
       if (selChanged) syncSel();
+      if (prev.resetScrollKey !== o.resetScrollKey && scEl) scEl.scrollTop = 0;
       // 外观：只切类名、属性，不重画
-      if (!!prev.compact !== !!o.compact) { dragNow?.flush(); wrap.classList.toggle("sn-compact", !!o.compact); }
+      if (!!(prev.compact || prev.density === "compact") !== !!(o.compact || o.density === "compact")) { dragNow?.flush(); wrap.classList.toggle("sn-compact", !!(o.compact || o.density === "compact")); }
+      if ((prev.density === "comfortable") !== (o.density === "comfortable")) wrap.classList.toggle("sn-comfortable", o.density === "comfortable");
       if (!!prev.striped !== !!o.striped) wrap.classList.toggle("sn-striped", !!o.striped);
       if (!!prev.plain !== !!o.plain) wrap.classList.toggle("sn-plain", !!o.plain);
-      if (!!prev.fill !== !!o.fill) wrap.classList.toggle("sn-tbl-fill", !!o.fill);
+      if (!!prev.fill !== !!o.fill) { wrap.classList.toggle("sn-tbl-fill", !!o.fill); wrap.dataset.fill = o.fill ? "true" : "false"; }
+      if (!!prev.refreshing !== !!o.refreshing || !!prev.loading !== !!o.loading) {
+        wrap.classList.toggle("sn-refreshing", !!o.refreshing);
+        if (o.loading || o.refreshing) table.setAttribute("aria-busy", "true"); else table.removeAttribute("aria-busy");
+      }
+      if (!!prev.hasFooter !== !!o.hasFooter) wrap.classList.toggle("sn-has-foot", !!(pgCfg || o.hasFooter));
+      if (!!prev.hasBulk !== !!o.hasBulk) wrap.classList.toggle("sn-has-bulk", !!o.hasBulk);
+      if (!!prev.rowDragDisabled !== !!o.rowDragDisabled) for (const g of $$("[data-row-grip]", tbody)) g.disabled = !!o.rowDragDisabled;
+      if (prev.resizeMode !== o.resizeMode) { if (o.resizeMode === "single") wrap.dataset.resize = "single"; else delete wrap.dataset.resize; }
       if (prev.maxHeight !== o.maxHeight) { if (o.maxHeight != null) wrap.style.setProperty("--sn-tbl-max", px(o.maxHeight)); else wrap.style.removeProperty("--sn-tbl-max"); }
       if (prev.label !== o.label) { if (o.label) table.setAttribute("aria-label", o.label); else table.removeAttribute("aria-label"); }
-      if (prev.empty !== o.empty && emptyRow && !emptyRow.hidden) emptyRow.firstElementChild.innerHTML = emptyInner(o, !!q);
+      if (prev.wrapClassName !== o.wrapClassName) {
+        for (const c of String(prev.wrapClassName || "").split(/\s+/).filter(Boolean)) wrap.classList.remove(c);
+        for (const c of String(o.wrapClassName || "").split(/\s+/).filter(Boolean)) wrap.classList.add(c);
+      }
+      if ((prev.empty !== o.empty || prev.emptyRender !== o.emptyRender) && emptyRow && !emptyRow.hidden) syncEmpty();
+      if (prev.errorRender !== o.errorRender && o.error) paintStateSlots();
       // 分页配置变更
       const pgChanged = "pagination" in next && next.pagination !== prev.pagination;
       if (pgChanged) {
@@ -1222,24 +1924,37 @@ export function mountTable(wrap, o0 = {}, emit) {
           if (next.pagination && typeof next.pagination === "object" && next.pagination.page != null) pgPage = pgCfg.page;
           if (next.pagination && typeof next.pagination === "object" && next.pagination.pageSize != null) pgSize = pgCfg.pageSize;
         }
-        if (!o.loading && !o.error) { relayout(() => { applyVis(); syncEmpty(); }, { instant: true }); syncSel(); }
+        if (!skNow && !o.error) { relayout(() => { applyVis(); syncEmpty(); }, { instant: true }); syncSel(); }
         else syncFooter();
       }
-      // 筛选、网格线、合并规则、展开：都走一次 relayout（从现在看到的样子过渡过去）
+      // 筛选、网格线、合并规则、展开：都走一次 relayout
       const lines = (prev.lines ?? "row") !== (o.lines ?? "row");
       let mg = mergeSig(prev.columns) !== mergeSig(o.columns);
       if (!mg && next.spans !== prev.spans && !dataChanged) mg = JSON.stringify(regionsOf(visRows().map((r) => nodeOf(r).row), M.dcols0, order, o)) !== JSON.stringify(lastRegs);
       if ((fq && !dataChanged) || lines || mg || reopen) {
-        dragNow?.flush(); // 先把还在拖的落好（按原来的筛选、线），再换
+        dragNow?.flush();
         if (fq) { setQ(); if (isLocalPage()) pgPage = 1; }
         if (lines) wrap.dataset.lines = o.lines || "row";
-        relayout(fq || reopen ? () => { applyVis(); if (fq) syncEmpty(); } : undefined);
+        if (reopen && !T.tree && !fq && !lines && !mg) {
+          for (const nd of T.top) {
+            const want = isDetailOpen(nd), tr = TR.get(nd.key);
+            if (!tr) continue;
+            tr.classList.toggle("sn-open", want);
+            tr.setAttribute("aria-expanded", String(want));
+            tr.dataset.expanded = String(want);
+            $(".sn-exp", tr)?.setAttribute("aria-expanded", String(want));
+            syncDetailRow(nd, want, true);
+          }
+        } else {
+          relayout(fq || reopen ? () => { applyVis(); if (fq) syncEmpty(); } : undefined);
+        }
       }
+      syncViewportMetrics();
       if (M.hasPin) syncPinned();
       saInst?.refresh();
     },
     destroy() {
-      clearDetTimers();
+      clearDetTimers(); clearLeaveTimers();
       psInst?.dispose(); psInst = null;
       saInst?.destroy();
       if (lay) { clearLay(lay); lay = null; } dragNow?.flush(); colLand?.(); stopCW?.(); cancelAnimationFrame(colRaf); ro?.disconnect(); unbind();

@@ -10,8 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
  * 固定列贴住视口右缘、阴影贴着固定列外侧、横向滚动条不压在行上。
  */
 
-/** 冻结列边缘阴影的宽度（DataGrid.css 里的 22px）。 */
-const PIN_SHADOW_WIDTH = 22;
+/** Satin 原生固定列边缘采用 1px 细线 + 柔雾投影，不遮挡左邻列文字。 */
+const PIN_EDGE_WIDTH = "1px";
 
 const setAuthed = async (page: Page) => {
   await page.addInitScript(() => {
@@ -90,21 +90,22 @@ type FixedColumnGeometry = {
   rootFontSizePx: number;
   viewportRight: number;
   viewportBottom: number;
-  laneTop: number | null;
+  barBottom: number | null;
   actionsCellLeft: number;
   actionsCellRight: number;
   actionsHeaderLeft: number;
   actionsHeaderRight: number;
-  cellEdge: string | null;
-  headerEdge: string | null;
+  cellEdge: boolean;
+  headerEdge: boolean;
   shadowLeft: string;
   shadowWidth: string;
+  shadowBox: string;
 };
 
 /** 把表格横向滚到给定位置后读一组几何值。 */
 const readGeometryAtScroll = async (page: Page, ratios: number[]) =>
   page.evaluate(async (scrollRatios: number[]) => {
-    const viewport = document.querySelector<HTMLElement>(".cp-grid-viewport");
+    const viewport = document.querySelector<HTMLElement>(".sn-tbl-sc");
     if (!viewport) throw new Error("Missing end-users table viewport");
 
     const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
@@ -112,6 +113,7 @@ const readGeometryAtScroll = async (page: Page, ratios: number[]) =>
 
     for (const ratio of scrollRatios) {
       viewport.scrollLeft = Math.round(maxScrollLeft * ratio);
+      viewport.dispatchEvent(new Event("scroll"));
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
 
@@ -122,8 +124,8 @@ const readGeometryAtScroll = async (page: Page, ratios: number[]) =>
       const actionsCellRect = actionsCell.getBoundingClientRect();
       const actionsHeaderRect = actionsHeader.getBoundingClientRect();
       const viewportRect = viewport.getBoundingClientRect();
-      const lane = document.querySelector<HTMLElement>("[data-grid-x-lane]");
-      const shadow = getComputedStyle(actionsCell, "::after");
+      const barX = document.querySelector<HTMLElement>(".sn-tbl-wrap > .sn-sa > .sn-sa-bar.sn-x:not([hidden])");
+      const shadow = getComputedStyle(actionsCell, "::before");
 
       states.push({
         scrollLeft: viewport.scrollLeft,
@@ -131,15 +133,16 @@ const readGeometryAtScroll = async (page: Page, ratios: number[]) =>
         rootFontSizePx: Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
         viewportRight: viewportRect.left + viewport.clientWidth,
         viewportBottom: viewportRect.bottom,
-        laneTop: lane ? lane.getBoundingClientRect().top : null,
+        barBottom: barX ? barX.getBoundingClientRect().bottom : null,
         actionsCellLeft: actionsCellRect.left,
         actionsCellRight: actionsCellRect.right,
         actionsHeaderLeft: actionsHeaderRect.left,
         actionsHeaderRight: actionsHeaderRect.right,
-        cellEdge: actionsCell.dataset.pinEdge ?? null,
-        headerEdge: actionsHeader.dataset.pinEdge ?? null,
+        cellEdge: actionsCell.classList.contains("sn-pin-r-start"),
+        headerEdge: actionsHeader.classList.contains("sn-pin-r-start"),
         shadowLeft: shadow.left,
         shadowWidth: shadow.width,
+        shadowBox: shadow.boxShadow,
       });
     }
 
@@ -157,15 +160,16 @@ const expectFixedColumnHugsItsEdges = (state: FixedColumnGeometry) => {
   expect(state.actionsHeaderLeft).toBeGreaterThanOrEqual(state.actionsCellLeft - 1);
   expect(state.actionsHeaderLeft).toBeLessThanOrEqual(state.actionsCellLeft + 1);
 
-  // 阴影是固定列自己边上的一条（每个冻结格的伪元素），贴着固定列外侧，中间不留白缝。
-  expect(state.cellEdge).toBe("end");
-  expect(state.headerEdge).toBe("end");
-  expect(state.shadowLeft).toBe(`-${PIN_SHADOW_WIDTH}px`);
-  expect(state.shadowWidth).toBe(`${PIN_SHADOW_WIDTH}px`);
+  // Satin 1px 细线 + 柔雾投影挂在固定列左缘，既不留白缝也不覆盖邻列文字。
+  expect(state.cellEdge).toBe(true);
+  expect(state.headerEdge).toBe(true);
+  expect(state.shadowLeft).toBe("0px");
+  expect(state.shadowWidth).toBe(PIN_EDGE_WIDTH);
+  expect(state.shadowBox).not.toBe("none");
 
-  // 横向滚动条单独占一条通道，在视口下面，不盖到最后一行和固定列上。
-  expect(state.laneTop).not.toBeNull();
-  expect(state.laneTop ?? 0).toBeGreaterThanOrEqual(state.viewportBottom - 1);
+  // Satin 悬浮细横向滚动条贴着视口底缘。
+  expect(state.barBottom).not.toBeNull();
+  expect(Math.abs((state.barBottom ?? 0) - state.viewportBottom)).toBeLessThanOrEqual(6);
 };
 
 const openEndUsers = async (page: Page) => {

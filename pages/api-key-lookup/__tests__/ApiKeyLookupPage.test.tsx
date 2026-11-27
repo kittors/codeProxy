@@ -908,7 +908,7 @@ describe("ApiKeyLookupPage", () => {
     const tableViewport = screen.getByTestId("apikey-lookup-keys-table-viewport");
     expect(tableViewport.className).not.toMatch(/100dvh|min-h-\[360px\]/);
     expect(tableViewport).not.toHaveClass("px-3");
-    expect(tableViewport.querySelector('.cp-grid[data-fill="false"]')).not.toBeNull();
+    expect(tableViewport.querySelector('.sn-tbl-wrap[data-fill="false"]')).not.toBeNull();
 
     await waitFor(() => {
       expect(portalApi.listKeys).toHaveBeenCalledTimes(2);

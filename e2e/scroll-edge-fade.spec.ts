@@ -309,8 +309,8 @@ test.describe("内部滚动区的上下渐隐", () => {
     await mock(page);
     await page.goto("/#/runtime/request-logs");
     await expect(page.locator("tr[data-row-key]").first()).toBeVisible();
-    const grid = page.locator(".cp-grid").first();
-    const viewport = page.locator(".cp-grid-viewport").first();
+    const grid = page.locator(".sn-tbl-wrap").first();
+    const viewport = page.locator(".sn-tbl-sc").first();
     // 整页表格钉满一屏，外壳滚不动：主内容区完全不淡。
     expect(await fadeState(mainScroller(page))).toMatchObject({
       fade: null,
@@ -327,24 +327,24 @@ test.describe("内部滚动区的上下渐隐", () => {
     // 内容滚到表头下面时，表头底边多一道投影（取代旧表格从表头下沿开始的渐隐）。
     await expect(grid).toHaveAttribute("data-y-scrolled", "true");
     const headShadow = await page
-      .locator(".cp-grid thead th")
+      .locator(".sn-tbl-wrap thead th")
       .first()
       .evaluate((el) => getComputedStyle(el).boxShadow);
     expect(headShadow).not.toBe("none");
-    // 自绘滚动条叠在视口外面、不在遮罩里，不会被淡掉。
+    // Satin 原生悬浮滚动条叠在视口外面、不在遮罩里，不会被淡掉。
     const scrollbarOutside = await page
-      .locator('[data-grid-scrollbar="y"]')
+      .locator(".sn-tbl-wrap > .sn-sa > .sn-sa-bar.sn-y")
       .first()
       .evaluate(
-        (el) => el.closest("[data-scroll-fade]") === null && el.closest(".cp-grid-viewport") === null,
+        (el) => el.closest("[data-scroll-fade]") === null && el.closest(".sn-tbl-sc") === null,
       );
     expect(scrollbarOutside).toBe(true);
 
     // 表头上的筛选浮层挂在 body 下（portal），不在表格里，不会被外框的圆角或视口裁掉。
-    await page.locator(".cp-grid thead").getByRole("button", { name: "筛选「状态」" }).click();
+    await page.locator(".sn-tbl-wrap thead").getByRole("button", { name: "筛选「状态」" }).click();
     const popover = page.getByRole("dialog").first();
     await expect(popover).toBeVisible();
-    expect(await popover.evaluate((el) => el.closest(".cp-grid") === null)).toBe(true);
+    expect(await popover.evaluate((el) => el.closest(".sn-tbl-wrap") === null)).toBe(true);
     await page.keyboard.press("Escape");
   });
 
@@ -423,7 +423,7 @@ test.describe("截图走查", () => {
 
         await page.goto("/#/runtime/request-logs");
         await expect(page.locator("tr[data-row-key]").first()).toBeVisible();
-        await scrollTo(page.locator(".cp-grid-viewport").first(), 200);
+        await scrollTo(page.locator(".sn-tbl-sc").first(), 200);
         await shoot("2-request-logs");
 
         await page.goto("/#/access/ai-accounts");

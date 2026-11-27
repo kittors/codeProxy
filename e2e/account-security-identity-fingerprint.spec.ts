@@ -784,7 +784,7 @@ test("AI Accounts shows auth files and account identity fingerprint details", as
   const identityDetailScroller = dialog.getByTestId("auth-file-detail-scroll");
   await expect(identityDetailScroller).toHaveCSS("overflow-x", "hidden");
   await expect(identityDetailScroller).toHaveCSS("overflow-y", "hidden");
-  const identityTableViewport = identityFields.locator(".cp-grid-viewport");
+  const identityTableViewport = identityFields.locator(".sn-tbl-sc");
   await expect(identityTableViewport).toBeVisible();
   const desktopTableScrollState = await identityTableViewport.evaluate(
     (node: HTMLElement) => {
@@ -852,8 +852,8 @@ test("AI Accounts table shows direct quota metrics and keeps actions fixed", asy
 
   await page.goto("/#/access/ai-accounts");
 
-  // DataGrid：带批量选择的列表是 role="grid"，只读的是 table，按结构找更稳。
-  const table = page.locator("table.cp-grid-table").first();
+  // Satin Table：带批量选择的列表是 role="grid"，只读的是 table，按结构找更稳。
+  const table = page.locator("table.sn-tbl").first();
   const codexRow = page.locator("tr[data-row-key]", { hasText: "Codex Terminal OAuth" });
   await expect(codexRow).toBeVisible();
   await expect(page.getByRole("combobox", { name: /Quota|配额/i })).toHaveCount(0);
@@ -1053,8 +1053,8 @@ test("AI Accounts mobile table scroll chains from the middle of the page", async
   await filterToggle.click();
   await expect(filterToggle).toHaveAttribute("aria-expanded", "true");
 
-  // DataGrid 的表体视口。
-  const tableViewport = page.locator(".cp-grid-viewport").first();
+  // Satin 表格视口。
+  const tableViewport = page.locator(".sn-tbl-sc").first();
   await expect(tableViewport).toBeVisible();
   await expect(tableViewport).toHaveCSS("overscroll-behavior-y", "auto");
   const tableScrollMetrics = await tableViewport.evaluate(
@@ -1174,9 +1174,9 @@ test("AI Accounts identity detail stacks cleanly on mobile", async ({
     "auth-file-identity-table-mobile",
   );
   await expect(mobileTable).toBeVisible();
-  // 窄屏：表格按行收高（不铺满），横向在表格自己的视口里滚。
-  await expect(mobileTable.locator('.cp-grid[data-fill="false"]')).toBeVisible();
-  const mobileTableViewport = mobileTable.locator(".cp-grid-viewport");
+  // 窄屏：表格按行收高（不铺满），横向在表格自己的 Satin 视口里滚。
+  await expect(mobileTable.locator('.sn-tbl-wrap[data-fill="false"]')).toBeVisible();
+  const mobileTableViewport = mobileTable.locator(".sn-tbl-sc");
 
   const detailScrollState = await detailScroller.evaluate(
     (node: HTMLElement) => {

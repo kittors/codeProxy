@@ -10,9 +10,9 @@ import { openEmptyAdminPage } from "./fixtures/emptyAdminPage";
 
 const PARTS = {
   filterArea: '[role="search"]',
-  header: ".cp-grid thead",
+  header: ".sn-tbl-wrap thead",
   pagination: 'nav[aria-label="分页"]',
-  frame: ".cp-grid",
+  frame: ".sn-tbl-wrap",
 } as const;
 
 type Rects = Record<keyof typeof PARTS, { x: number; y: number; width: number; height: number }>;
@@ -120,7 +120,7 @@ test.describe("data grid lab", () => {
   test("三种空状态与有数据时同高，并在表体居中", async ({ page }) => {
     await page.setViewportSize({ width: 1470, height: 800 });
     await openLab(page);
-    const frame = page.locator(".cp-grid");
+    const frame = page.locator(".sn-tbl-wrap");
     const withRows = await frame.boundingBox();
 
     const states = page.getByRole("radiogroup", { name: "演示状态" });
