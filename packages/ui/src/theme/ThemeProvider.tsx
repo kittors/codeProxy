@@ -4,7 +4,6 @@ import {
   use,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +12,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon as SatinIcon } from "satin-ui/react";
 import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 import { cn } from "../utils/selectStyles";
 
 const THEME_STORAGE_KEY = "code-proxy-admin-theme";
@@ -218,11 +218,19 @@ export function ThemeToggleButton({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; side: "bottom" | "top"; ready: boolean }>({
-    top: 0,
-    left: 0,
-    side: "bottom",
-    ready: false,
+
+  const floating = useSatinFloatingLayer({
+    open,
+    anchorRef: triggerRef,
+    panelRef: menuRef,
+    placement: "bottom",
+    align: "end",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
   });
 
   const selectedOption = THEME_OPTIONS.find((option) => option.value === preference);
@@ -230,83 +238,39 @@ export function ThemeToggleButton({
   const buttonLabel = label ?? t("theme.switch");
   const tooltip = `${buttonLabel}: ${t(selectedOption?.labelKey ?? "theme.switch")}`;
 
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const width = menuRef.current?.offsetWidth || 200;
-    const height = menuRef.current?.offsetHeight || 116;
-    const margin = 8;
-    const gap = 6;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-
-    const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, vw - width - margin);
-    const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-
-    const openAbove = vh - rect.bottom - gap < height && rect.top - gap > vh - rect.bottom;
-    const rawTop = openAbove ? rect.top - gap - height : rect.bottom + gap;
-    const top = Math.min(Math.max(margin, rawTop), Math.max(margin, vh - height - margin));
-    setPos({ top: Math.round(top), left: Math.round(left), side: openAbove ? "top" : "bottom", ready: true });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
-      return;
-    }
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
-
   useEffect(() => {
     if (!open) return;
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
-      setOpen(false);
-    };
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
+      if (
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp" &&
+        event.key !== "Home" &&
+        event.key !== "End"
+      ) {
         return;
       }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
-        const panel = menuRef.current;
-        if (!panel) return;
-        const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
-        if (items.length === 0) return;
-        event.preventDefault();
-        if (event.key === "Home") {
-          items[0]?.focus();
-          return;
-        }
-        if (event.key === "End") {
-          items[items.length - 1]?.focus();
-          return;
-        }
-        const cur = items.indexOf(document.activeElement as HTMLElement);
-        const nextIdx =
-          event.key === "ArrowDown"
-            ? (cur + 1 + items.length) % items.length
-            : (cur - 1 + items.length) % items.length;
-        items[nextIdx]?.focus();
+      const panel = menuRef.current;
+      if (!panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitemradio"]'));
+      if (items.length === 0) return;
+      event.preventDefault();
+      if (event.key === "Home") {
+        items[0]?.focus();
+        return;
       }
+      if (event.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const cur = items.indexOf(document.activeElement as HTMLElement);
+      const nextIdx =
+        event.key === "ArrowDown"
+          ? (cur + 1 + items.length) % items.length
+          : (cur - 1 + items.length) % items.length;
+      items[nextIdx]?.focus();
     };
-    document.addEventListener("pointerdown", handleClick);
     document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("pointerdown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
+    return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
   const handleModeChange = (next: ThemePreference) => {
@@ -338,25 +302,30 @@ export function ThemeToggleButton({
         aria-expanded={open}
         aria-haspopup="menu"
         data-tip={tooltip}
+        data-tip-side="bottom"
       >
         <SatinIcon name={triggerIconName} size={16} />
       </button>
 
-      {open
+      {floating.mounted
         ? createPortal(
             <div
               ref={menuRef}
               role="menu"
-              data-state="open"
-              data-side={pos.side}
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-state={floating.isOpen ? "open" : "closed"}
+              data-side={floating.side}
               aria-label={buttonLabel}
-              className="sn-menu sn-solid code-proxy-floating-surface w-48 outline-none"
+              className={cn(
+                "sn-menu sn-float sn-solid !w-48 !min-w-48 outline-none",
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
               style={{
-                position: "fixed",
-                top: pos.top,
-                left: pos.left,
-                zIndex: 9999,
-                visibility: pos.ready ? undefined : "hidden",
+                top: floating.top,
+                left: floating.left,
+                transformOrigin: floating.origin,
               }}
             >
               {THEME_OPTIONS.map(({ value, labelKey, icon }) => {

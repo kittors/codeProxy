@@ -188,7 +188,10 @@
     "secret_saved_close": "Я сохранил",
     "copy_all": "Копировать всё",
     "retry": "Повторить",
-    "operation_failed": "Операция не выполнена"
+    "operation_failed": "Операция не выполнена",
+    "github": "GitHub",
+    "github_repo_tooltip": "Открыть проект на GitHub (kittors/CliRelay)",
+    "github_open_source": "Открытый код"
   },
   "ccswitch": {
     "import_to_ccswitch": "Импорт в CC Switch",
@@ -4665,7 +4668,10 @@
     "copy": "Копировать",
     "copied": "Скопировано",
     "api_key_portal": "Портал пользователя",
-    "api_key_usage": "Использование API-ключа"
+    "api_key_usage": "Использование API-ключа",
+    "github_section": "Репозитории с открытым исходным кодом",
+    "github_backend_repo": "Репозиторий основного шлюза",
+    "github_panel_repo": "Репозиторий панели управления"
   },
   "model_plaza": {
     "title": "Витрина моделей",

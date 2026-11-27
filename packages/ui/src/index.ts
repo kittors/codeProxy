@@ -92,6 +92,15 @@ export { useScrollFade } from "./hooks/useScrollFade";
 export { ScrollFade } from "./primitives/ScrollFade";
 export { PlanBadge, ProviderTag, brandVars } from "./brand/BrandBadges";
 export type { PlanBadgeTier } from "./brand/BrandBadges";
+export {
+  GitHubIcon,
+  GitHubRepoLink,
+  GITHUB_PROJECT_URL,
+  GITHUB_PROJECT_SLUG,
+  GITHUB_PANEL_URL,
+  GITHUB_PANEL_SLUG,
+} from "./brand/GitHubRepoLink";
+export type { GitHubRepoLinkProps, GitHubRepoLinkVariant } from "./brand/GitHubRepoLink";
 export type { ModalSize } from "./overlays/Modal";
 export { Drawer } from "./overlays/Drawer";
 export { ImagePreviewOverlay } from "./overlays/ImagePreviewOverlay";
@@ -264,7 +273,6 @@ export {
   popoverEnterTransition,
   popoverExitTransition,
 } from "./utils/motion";
-export { useSatinFluidThumb } from "./utils/satinMotion";
 
 export { FormSection } from "./forms/FormSection";
 export { SettingGroup, SettingRow } from "./forms/SettingRow";

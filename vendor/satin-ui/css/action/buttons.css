@@ -171,7 +171,7 @@
 
 /* Tooltip 的静态展示（只用于设计稿）和两行说明 */
 .sn-tip:not(.sn-md-callout).sn-static { position: relative; z-index: auto; opacity: 1; transform: none; }
-.sn-tip:not(.sn-md-callout).sn-wrap { white-space: normal; max-width: 240px; align-items: flex-start; }
+.sn-tip:not(.sn-md-callout).sn-wrap { white-space: pre-line; max-width: min(calc(100vw - 2rem), 28rem); overflow-wrap: anywhere; align-items: flex-start; }
 
 /* ———— 工具条：一组纯图标按钮装在一个浮起的条里，组内用细竖线分段 ———— */
 .sn-toolbar { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 2px; padding: 4px; border-radius: calc(var(--sn-btn-r) + 4px); background: var(--sn-raised); box-shadow: var(--sn-e1); }

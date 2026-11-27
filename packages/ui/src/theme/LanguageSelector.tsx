@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon as SatinIcon } from "satin-ui/react";
@@ -9,6 +9,7 @@ import {
   type Language,
 } from "@code-proxy/i18n";
 import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 import { cn } from "../utils/selectStyles";
 
 const SUPPORTED_LANGUAGES = LANGUAGE_ORDER;
@@ -53,11 +54,19 @@ export function LanguageSelector({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; side: "bottom" | "top"; ready: boolean }>({
-    top: 0,
-    left: 0,
-    side: "bottom",
-    ready: false,
+
+  const floating = useSatinFloatingLayer({
+    open,
+    anchorRef: triggerRef,
+    panelRef: listRef,
+    placement: "bottom",
+    align: "end",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
+      setOpen(false);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
   });
 
   const currentLanguage = i18n.language as Language;
@@ -86,83 +95,34 @@ export function LanguageSelector({
     [i18n],
   );
 
-  const reposition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const width = listRef.current?.offsetWidth || 176;
-    const height = listRef.current?.offsetHeight || 116;
-    const margin = 8;
-    const gap = 6;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-
-    const nextLeft = rect.right - width;
-    const maxLeft = Math.max(margin, vw - width - margin);
-    const left = Math.min(Math.max(margin, nextLeft), maxLeft);
-
-    const openAbove = vh - rect.bottom - gap < height && rect.top - gap > vh - rect.bottom;
-    const rawTop = openAbove ? rect.top - gap - height : rect.bottom + gap;
-    const top = Math.min(Math.max(margin, rawTop), Math.max(margin, vh - height - margin));
-    setPos({ top: Math.round(top), left: Math.round(left), side: openAbove ? "top" : "bottom", ready: true });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setPos((prev) => (prev.ready ? { ...prev, ready: false } : prev));
-      return;
-    }
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
-
   useEffect(() => {
     if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      if (triggerRef.current?.contains(target) || listRef.current?.contains(target)) return;
-      setOpen(false);
-    };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") {
         return;
       }
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End") {
-        const panel = listRef.current;
-        if (!panel) return;
-        const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="option"]'));
-        if (items.length === 0) return;
-        e.preventDefault();
-        if (e.key === "Home") {
-          items[0]?.focus();
-          return;
-        }
-        if (e.key === "End") {
-          items[items.length - 1]?.focus();
-          return;
-        }
-        const cur = items.indexOf(document.activeElement as HTMLElement);
-        const nextIdx =
-          e.key === "ArrowDown"
-            ? (cur + 1 + items.length) % items.length
-            : (cur - 1 + items.length) % items.length;
-        items[nextIdx]?.focus();
+      const panel = listRef.current;
+      if (!panel) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="option"]'));
+      if (items.length === 0) return;
+      e.preventDefault();
+      if (e.key === "Home") {
+        items[0]?.focus();
+        return;
       }
+      if (e.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const cur = items.indexOf(document.activeElement as HTMLElement);
+      const nextIdx =
+        e.key === "ArrowDown"
+          ? (cur + 1 + items.length) % items.length
+          : (cur - 1 + items.length) % items.length;
+      items[nextIdx]?.focus();
     };
-    document.addEventListener("pointerdown", handleClick);
     document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("pointerdown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
+    return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
   const label = t("language.switch");
@@ -192,26 +152,31 @@ export function LanguageSelector({
         aria-expanded={open}
         aria-haspopup="listbox"
         data-tip={tooltip}
+        data-tip-side="bottom"
       >
         <SatinIcon name="compass" size={15} />
         <span className="text-xs font-semibold leading-none">{shortLabel}</span>
       </button>
 
-      {open
+      {floating.mounted
         ? createPortal(
             <div
               ref={listRef}
               role="listbox"
-              data-state="open"
-              data-side={pos.side}
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-state={floating.isOpen ? "open" : "closed"}
+              data-side={floating.side}
               aria-label={label}
-              className="sn-menu sn-solid code-proxy-floating-surface w-44 outline-none"
+              className={cn(
+                "sn-menu sn-float sn-solid !w-44 !min-w-44 outline-none",
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
               style={{
-                position: "fixed",
-                top: pos.top,
-                left: pos.left,
-                zIndex: 9999,
-                visibility: pos.ready ? undefined : "hidden",
+                top: floating.top,
+                left: floating.left,
+                transformOrigin: floating.origin,
               }}
             >
               {SUPPORTED_LANGUAGES.map((lng) => {

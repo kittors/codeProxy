@@ -6,7 +6,6 @@
 import { installTooltips } from "./core/core.js";
 import { installForms } from "./form/form.js";
 import { installOverlays } from "./overlay/overlay.js";
-import { installLightbox } from "./media/lightbox.js";
 import { installInputs } from "./form/input.js";
 import { installTheme, setMode, getMode } from "./foundation/theme.js";
 import { installViewport } from "./core/viewport.js";
@@ -15,7 +14,7 @@ import { useShared } from "./core/lifecycle.js";
 export function setup() {
   if (typeof document === "undefined") return () => {};
   // 顺序和改造前各模块被导入时的先后一致（监听注册的先后会影响同一事件上几个处理函数谁先跑）
-  return useShared("satin:setup", () => { installTooltips(); installForms(); installOverlays(); installLightbox(); installInputs(); installTheme(); installViewport();
+  return useShared("satin:setup", () => { installTooltips(); installForms(); installOverlays(); installInputs(); installTheme(); installViewport();
     // 页面没引 theme-boot（根元素上没有 data-theme）：照 theme-boot 的规矩补上——存过的选择，没存过就跟着系统的深浅，系统换了也跟着换（不写 localStorage）
     if (!document.documentElement.dataset.theme) setMode(getMode(), { animate: false, persist: false });
   });

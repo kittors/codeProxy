@@ -27,6 +27,7 @@ const hasLatinText = (value: string) => /[A-Za-z]/.test(value.replace(/\{\{[^}]+
  */
 const SAME_AS_ENGLISH = new Set<string>([
   // Product, client and vendor names
+  "common.github",
   "title.abbr",
   "splash.title",
   "ccswitch.client_claude_code",

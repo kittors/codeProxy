@@ -15,14 +15,19 @@
 .sn-im .sn-tag-ratio { position: absolute; left: 8px; bottom: 8px; padding: 0 6px; border-radius: 4px; background: rgba(0, 0, 0, .5); color: #fff; font: 500 calc(11px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); opacity: 0; transition: opacity .15s; }
 @media (hover: hover) {
 .sn-im.sn-loaded:hover .sn-tag-ratio { opacity: 1; } }
-/* ———— 看图（kit-lightbox.js）：遮罩 + 舞台（铺满窗口，接拖动、滚轮、捏合）+ 框（从缩略图长出来）+ 图（缩放、平移、旋转）+ 工具条 ———— */
+/* ———— 看图（kit-lightbox.js）：原生 Top Layer <dialog> + 遮罩 + 舞台（铺满窗口，接拖动、滚轮、捏合）+ 框（从缩略图长出来）+ 图（缩放、平移、旋转）+ 工具条 ———— */
+dialog.sn-lb-dialog { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; overflow: hidden; outline: none; }
+dialog.sn-lb-dialog:not([open]) { display: none; }
+dialog.sn-lb-dialog::backdrop { background: transparent; }
 .sn-lightbox-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .8); opacity: 0; pointer-events: none; transition: opacity .26s var(--sn-ease-out); }
 .sn-lightbox-scrim.sn-on { opacity: 1; }
 .sn-lb-stage { position: fixed; inset: 0; z-index: 61; overflow: hidden; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
 .sn-lightbox { position: absolute; transform-origin: 0 0; }
 .sn-lb-img { position: absolute; inset: 0; border-radius: var(--sn-r-md); background: var(--sn-g0, rgb(255 255 255 / .06)); background-size: cover; background-position: center; background-repeat: no-repeat; box-shadow: 0 30px 80px rgba(0, 0, 0, .4); transform-origin: 50% 50%; cursor: zoom-in; }
-.sn-lb-img::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sn-g); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity .3s var(--sn-ease-out); }
-.sn-lb-img.sn-loading::before, .sn-lb-img.sn-failed::before { opacity: 0; }
+img.sn-lb-img { max-width: none; width: 100%; height: 100%; object-fit: cover; display: block; }
+div.sn-lb-img::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sn-g); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity .3s var(--sn-ease-out); }
+div.sn-lb-img.sn-loading::before, div.sn-lb-img.sn-failed::before { opacity: 0; }
+img.sn-lb-img.sn-failed { opacity: 0; }
 .sn-lightbox .sn-lb-spin { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-width: 2px; border-color: rgba(255, 255, 255, .22); border-top-color: #fff; z-index: 1; opacity: 0; pointer-events: none; transition: opacity .2s; } /* 深色遮罩上：白色的圈 */
 .sn-lightbox:has(.sn-lb-img.sn-slow) .sn-lb-spin { opacity: 1; }
 .sn-lightbox .sn-lb-err { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 1; padding: 6px 12px; border-radius: var(--sn-r-md); background: rgb(20 20 24 / .6); color: rgba(255, 255, 255, .9); font: 500 calc(13px * var(--sn-font-scale, 1))/1.4 var(--sn-sans); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s; }

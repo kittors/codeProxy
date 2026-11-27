@@ -3,8 +3,15 @@ import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 import "@code-proxy/i18n";
 
-afterEach(() => {
+let satinCleanupPromise: Promise<{ hideTip: () => void; dismissAllToasts: (instant?: boolean) => void }> | null = null;
+
+afterEach(async () => {
   cleanup();
+  // 在 CSS.supports 等 jsdom polyfill 就绪后再懒加载 satin-ui，清净全局单例浮层避免跨用例串味。
+  satinCleanupPromise ??= import("satin-ui");
+  const satin = await satinCleanupPromise;
+  satin.hideTip();
+  satin.dismissAllToasts(true);
 });
 
 if (typeof window !== "undefined") {

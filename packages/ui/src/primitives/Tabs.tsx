@@ -3,6 +3,7 @@ import {
   createContext,
   use,
   useCallback,
+  useLayoutEffect,
   useMemo,
   useRef,
   type ButtonHTMLAttributes,
@@ -10,10 +11,10 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from "react";
+import { initSeg } from "satin-ui";
 import { useScrollFade } from "../hooks/useScrollFade";
 import { HUE_BUTTON_ICON, hueForIcon, type Hue } from "../theme/hues";
 import type { ControlSize } from "../utils/controlStyles";
-import { useSatinFluidThumb } from "../utils/satinMotion";
 
 type TabsValue = string;
 
@@ -60,8 +61,9 @@ export function Tabs({
 }
 
 /**
- * Satin 分段标签栏（.sn-seg + .sn-thumb + edgeFrames 流体物理滑块微动效）：
- * 前缘先到、后缘跟上、落定时纵向轻压回弹，窄屏溢出时保持横向滚动与两端渐隐。
+ * Satin 原生分段标签栏（直连 `satin-ui` 的 `initSeg` 流体双曲线物理滑块引擎）：
+ * 前缘先到、后缘延迟 45ms 跟上、落定时纵向轻压回弹，中途点击连续接续不回跳；
+ * 窄屏溢出时保持横向滚动与两端渐隐。
  */
 export function TabsList({
   children,
@@ -70,7 +72,7 @@ export function TabsList({
 }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
   const { size, value, tone } = useTabs();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const thumbRef = useRef<HTMLSpanElement | null>(null);
+  const segRef = useRef<ReturnType<typeof initSeg> | null>(null);
   const fade = useScrollFade<HTMLDivElement>({ size: 20, axis: "x" });
   const setContainerRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -80,8 +82,47 @@ export function TabsList({
     [fade.ref],
   );
 
-  const selector = `[data-tab-value="${CSS.escape(value)}"]`;
-  useSatinFluidThumb(containerRef, thumbRef, selector, value);
+  // 用标签项数量/key 签名监听动态增删标签；标签集合不变时复用同一个 initSeg 实例以播放平滑位移动画。
+  const tabSignature = useMemo(() => {
+    const keys: string[] = [];
+    Children.forEach(children, (child) => {
+      if (child && typeof child === "object" && "props" in child) {
+        const v = (child.props as { value?: unknown }).value;
+        if (v !== undefined) keys.push(String(v));
+      }
+    });
+    return keys.join("\u001f");
+  }, [children]);
+
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button[data-tab-value]"));
+    const initialIdx = buttons.findIndex((btn) => btn.dataset.tabValue === valueRef.current);
+    const api = initSeg(container, undefined, initialIdx, {
+      role: "tab",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    segRef.current = api;
+    return () => {
+      api.destroy();
+      if (segRef.current === api) segRef.current = null;
+    };
+  }, [tabSignature]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const api = segRef.current;
+    if (!container || !api) return;
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button[data-tab-value]"));
+    const nextIdx = buttons.findIndex((btn) => btn.dataset.tabValue === value);
+    api.sync(nextIdx, false);
+  }, [value, tabSignature]);
 
   return (
     <div
@@ -97,7 +138,6 @@ export function TabsList({
         .join(" ")}
     >
       <span
-        ref={thumbRef}
         aria-hidden="true"
         className={[
           "sn-thumb",

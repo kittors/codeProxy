@@ -4,6 +4,9 @@
 export { setup } from "./setup.js";
 export { t, setLocale, addLocale, getLocale, intlLocale, onLocaleChange } from "./foundation/i18n.js";
 export { defineComponent, track, useShared } from "./core/lifecycle.js";
-export { $, $$, reduced, TICK, injectIcons, edgeFrames, fitScroll, fitStack, initSeg, showTip, hideTip, tipTarget, resetTipLayer } from "./core/core.js";
+export { $, $$, reduced, TICK, injectIcons, edgeFrames, fitScroll, fitStack, initSeg, showTip, hideTip, retip, tipTarget, resetTipLayer } from "./core/core.js";
+export { dismissToast, dismissAllToasts } from "./feedback/feedback.js";
+export { computeFloating, getViewportBounds, isAnchorOutOfView } from "./overlay/floating.js";
+export { hitAny, pushDismiss, dropDismiss, findDismiss } from "./overlay/dismiss.js";
 export { icon } from "./foundation/icons.js";
 export * from "./components.js";

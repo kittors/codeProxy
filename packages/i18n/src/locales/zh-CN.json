@@ -193,7 +193,10 @@
     "secret_saved_close": "我已保存",
     "copy_all": "复制全部",
     "retry": "重试",
-    "operation_failed": "操作失败"
+    "operation_failed": "操作失败",
+    "github": "GitHub",
+    "github_repo_tooltip": "在 GitHub 查看开源项目 (kittors/CliRelay)",
+    "github_open_source": "开源项目"
   },
   "title": {
     "main": "CliRelay 管理后台",
@@ -6220,7 +6223,10 @@
     "copy": "复制",
     "copied": "已复制",
     "api_key_portal": "用户门户",
-    "api_key_usage": "API 密钥用量查询"
+    "api_key_usage": "API 密钥用量查询",
+    "github_section": "开源仓库",
+    "github_backend_repo": "核心网关仓库",
+    "github_panel_repo": "管理面板仓库"
   },
   "model_plaza": {
     "title": "模型广场",
