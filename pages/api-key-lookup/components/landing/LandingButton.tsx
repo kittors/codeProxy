@@ -38,8 +38,8 @@ export function LandingButton({
       disabled={disabled}
       aria-label={ariaLabel}
       className={[
-        "sn-btn shrink-0 font-semibold",
-        size === "sm" ? "!h-9 !px-4 !text-sm" : "!h-12 !px-7 !text-sm",
+        "sn-btn shrink-0 font-medium",
+        size === "sm" ? "!h-8 !px-3.5 !text-xs sm:!text-sm" : "!h-10 !px-5 !text-sm",
         TONE_CLASS[tone],
         className,
       ]

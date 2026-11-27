@@ -32,10 +32,10 @@ export function Wordmark({
       */}
       <span
         aria-label={BRAND_NAME}
-        className={["font-display font-normal tracking-tight", textClassName].filter(Boolean).join(" ")}
+        className={["font-sans font-medium tracking-[-0.02em]", textClassName].filter(Boolean).join(" ")}
       >
-        {BRAND_NAME_PREFIX}
-        <span className="font-semibold">{BRAND_NAME_SUFFIX}</span>
+        <span className="font-normal text-sn-label2">{BRAND_NAME_PREFIX}</span>
+        <span className="font-semibold text-sn-label">{BRAND_NAME_SUFFIX}</span>
       </span>
     </span>
   );

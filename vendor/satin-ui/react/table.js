@@ -116,9 +116,11 @@ function useTablePortals(columns, detail, empty, errorContent) {
         if (!hasRender && !hasHeader) return c;
         const next = { ...c };
         if (hasRender) {
+          next._snOrigRender = c.render;
           next.render = (v, row, ctx) => bindPortal(ctx.cell, c.render(v, row, ctx), "sn-tc");
         }
         if (hasHeader) {
+          next._snOrigHeaderRender = c.headerRender;
           next.headerRender = (col, ctx) => bindPortal(ctx.cell, c.headerRender(col, ctx), "sn-th");
         }
         return next;

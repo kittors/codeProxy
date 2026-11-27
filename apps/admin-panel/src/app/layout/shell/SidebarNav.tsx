@@ -43,12 +43,17 @@ function measureHighlight(navEl: HTMLElement, target: HTMLElement): Omit<Highlig
   };
 }
 
-function writeHighlightDom(hlEl: HTMLElement, rect: Omit<HighlightSnapshot, "mode">, mode?: HighlightMode) {
-  if (mode) hlEl.dataset.mode = mode;
-  hlEl.style.left = `${rect.left}px`;
-  hlEl.style.transform = `translate3d(0, ${rect.top}px, 0)`;
-  hlEl.style.width = `${rect.width}px`;
-  hlEl.style.height = `${rect.height}px`;
+function writeHighlightDom(
+  hlEl: HTMLElement,
+  rect: Omit<HighlightSnapshot, "mode">,
+  mode?: HighlightMode,
+  prev?: Omit<HighlightSnapshot, "mode"> | null,
+) {
+  if (mode && hlEl.dataset.mode !== mode) hlEl.dataset.mode = mode;
+  if (!prev || Math.abs(prev.left - rect.left) > 0.25) hlEl.style.left = `${rect.left}px`;
+  if (!prev || Math.abs(prev.top - rect.top) > 0.25) hlEl.style.transform = `translate3d(0, ${rect.top}px, 0)`;
+  if (!prev || Math.abs(prev.width - rect.width) > 0.25) hlEl.style.width = `${rect.width}px`;
+  if (!prev || Math.abs(prev.height - rect.height) > 0.25) hlEl.style.height = `${rect.height}px`;
 }
 
 /**
@@ -119,8 +124,10 @@ export function SidebarNav({
       }
     }
 
+    let lastWritten: Omit<HighlightSnapshot, "mode"> | null = null;
     if (hlRef.current) {
       writeHighlightDom(hlRef.current, rect, mode);
+      lastWritten = rect;
     } else {
       setHl({ ...rect, mode });
     }
@@ -130,17 +137,21 @@ export function SidebarNav({
     const trackDurationMs = collapsedChanged ? 340 : openChanged ? 320 : 0;
     if (trackDurationMs > 0) {
       const startedAt = performance.now();
+      const cachedTarget = target;
       const tick = (now: number) => {
-        const currentTarget = findVisibleActiveTarget(navEl);
+        const currentTarget =
+          cachedTarget && cachedTarget.isConnected ? cachedTarget : findVisibleActiveTarget(navEl);
         const nextRect = currentTarget ? measureHighlight(navEl, currentTarget) : null;
         if (nextRect && hlRef.current) {
-          writeHighlightDom(hlRef.current, nextRect);
+          writeHighlightDom(hlRef.current, nextRect, undefined, lastWritten);
+          lastWritten = nextRect;
         }
         if (now - startedAt < trackDurationMs) {
           rafId = window.requestAnimationFrame(tick);
         } else if (nextRect && hlRef.current) {
           // 动画彻底结束后恢复瞬时对齐，保证最终坐标 0px 误差。
-          writeHighlightDom(hlRef.current, nextRect, "instant");
+          writeHighlightDom(hlRef.current, nextRect, "instant", lastWritten);
+          lastWritten = nextRect;
         }
       };
       rafId = window.requestAnimationFrame(tick);
@@ -149,11 +160,13 @@ export function SidebarNav({
     const ro =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(() => {
+            if (rafId) return;
             const currentTarget = findVisibleActiveTarget(navEl);
             const nextRect = currentTarget ? measureHighlight(navEl, currentTarget) : null;
             if (!nextRect) return;
             if (hlRef.current) {
-              writeHighlightDom(hlRef.current, nextRect, trackDurationMs ? undefined : "instant");
+              writeHighlightDom(hlRef.current, nextRect, "instant", lastWritten);
+              lastWritten = nextRect;
             } else {
               setHl({ ...nextRect, mode: "instant" });
             }

@@ -131,6 +131,7 @@ describe("computeGridLayout", () => {
     expect(layout.totalWidth).toBe(1000);
     expect(layout.widths.cost).toBe(84);
     expect(layout.widths.model).toBe(200 + (1000 - (40 + 104 + 200 + 84 + 112)));
+    expect(layout.fluidColumnId).toBe("model");
   });
 
   test("多列 grow 按权重分剩余宽度，零头给权重最大的列", () => {
@@ -154,12 +155,14 @@ describe("computeGridLayout", () => {
       status: 50,
     });
     expect(layout.totalWidth).toBe(501);
+    expect(layout.fluidColumnId).toBe("model");
   });
 
   test("视口更窄时不压缩任何列，交给横向滚动", () => {
     const layout = computeGridLayout(layoutColumns, 1, 300);
     expect(layout.totalWidth).toBe(540);
     expect(layout.widths.model).toBe(200);
+    expect(layout.fluidColumnId).toBeNull();
   });
 
   // fitColumns：放不下时先把 shrink 列按余量比例往 minWidth 压，压到底才横向滚动。
