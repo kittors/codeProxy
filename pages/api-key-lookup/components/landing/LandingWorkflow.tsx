@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { initSeg } from "satin-ui";
 import { Icon as SatinIcon } from "satin-ui/react";
 import {
   copyTextToClipboard,
   highlightSnippet,
   TOKEN_CLASS,
-  useSatinFluidThumb,
   type SnippetLanguage,
 } from "@code-proxy/ui";
 import { useLandingFade } from "./landingMotion";
@@ -75,9 +75,33 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
   const [activeId, setActiveId] = useState<string>(snippets[0].id);
   const [copied, setCopied] = useState(false);
   const tabListRef = useRef<HTMLDivElement | null>(null);
-  const tabThumbRef = useRef<HTMLSpanElement | null>(null);
+  const segRef = useRef<ReturnType<typeof initSeg> | null>(null);
+  const activeIdx = Math.max(
+    0,
+    snippets.findIndex((snippet) => snippet.id === activeId),
+  );
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
 
-  useSatinFluidThumb(tabListRef, tabThumbRef, 'button[aria-pressed="true"]', activeId);
+  useLayoutEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return undefined;
+    const api = initSeg(el, undefined, activeIdxRef.current, {
+      role: "none",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    segRef.current = api;
+    return () => {
+      api.destroy();
+      if (segRef.current === api) segRef.current = null;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    segRef.current?.sync(activeIdx, false);
+  }, [activeIdx]);
 
   const active = snippets.find((snippet) => snippet.id === activeId) ?? snippets[0];
   const highlighted = useMemo(
@@ -134,9 +158,8 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
             <div className="flex items-center gap-1 px-3 pt-2.5">
               <div ref={tabListRef} className="relative flex items-center gap-1 p-0.5">
                 <span
-                  ref={tabThumbRef}
                   aria-hidden="true"
-                  className="pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 z-0 origin-left rounded-full bg-white/15 opacity-0 will-change-transform"
+                  className="sn-thumb pointer-events-none absolute top-0.5 bottom-0.5 left-0.5 z-0 origin-left rounded-full bg-white/15 opacity-0 will-change-transform"
                 />
                 {snippets.map((snippet) => (
                   <button

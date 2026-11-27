@@ -10,6 +10,7 @@ import {
   Button,
   Callout,
   Checkbox,
+  GitHubRepoLink,
   PageBackground,
   TextInput,
   ThemeToggleButton,
@@ -156,7 +157,8 @@ export function LoginPage() {
 
   return (
     <PageBackground variant="login">
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+        <GitHubRepoLink variant="pill" size="lg" />
         <ThemeToggleButton variant="secondary" size="lg" />
       </div>
       {/* 卡片四周的中继网络：卡片就是网关，线路从两侧接进来。宽屏才出现。 */}
@@ -179,6 +181,9 @@ export function LoginPage() {
             {t("login.hero_prefix")} <RotatingModelName />
           </h1>
           <p className="mt-3 max-w-md text-sm leading-6 text-ink-3">{t("login.hero_description")}</p>
+          <div className="mt-4">
+            <GitHubRepoLink variant="badge" />
+          </div>
         </motion.div>
         <motion.div ref={cardRef} variants={page.item} className="w-full max-w-[420px]">
             {/* 登录卡对齐 Satin .sn-auth 表面：16px 清晰圆角、1px 细描边与干净抬升投影。 */}

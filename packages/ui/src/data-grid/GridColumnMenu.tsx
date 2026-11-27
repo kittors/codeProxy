@@ -1,5 +1,6 @@
 import { Icon } from "satin-ui/react";
-import { useState } from "react";
+import { initSeg } from "satin-ui";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { isGridFilterActive } from "./gridModel";
@@ -36,6 +37,31 @@ export function GridColumnMenu<T>({
   const activeDirection = sort?.columnId === column.id ? sort.direction : null;
   const canSort = Boolean(column.sortable && onSortChange);
   const canFilter = Boolean(filter && draft && onApplyFilter);
+  const sortSegRef = useRef<HTMLDivElement | null>(null);
+  const sortApiRef = useRef<ReturnType<typeof initSeg> | null>(null);
+  const activeSortIndex = activeDirection === "asc" ? 0 : activeDirection === "desc" ? 1 : -1;
+  const activeSortIndexRef = useRef(activeSortIndex);
+  activeSortIndexRef.current = activeSortIndex;
+
+  useLayoutEffect(() => {
+    const el = sortSegRef.current;
+    if (!canSort || !el) return undefined;
+    const api = initSeg(el, undefined, activeSortIndexRef.current, {
+      role: "none",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    sortApiRef.current = api;
+    return () => {
+      api.destroy();
+      if (sortApiRef.current === api) sortApiRef.current = null;
+    };
+  }, [canSort]);
+
+  useLayoutEffect(() => {
+    sortApiRef.current?.sync(activeSortIndex, false);
+  }, [activeSortIndex]);
 
   const chooseSort = (direction: GridSortDirection) => {
     if (!onSortChange) return;
@@ -94,11 +120,12 @@ export function GridColumnMenu<T>({
 
       {canSort ? (
         <div
+          ref={sortSegRef}
           className="sn-seg sn-sm !grid w-full"
-          data-ssr=""
           role="group"
           aria-label={t("data_grid.sort")}
         >
+          <span aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
           {sortButton("asc")}
           {sortButton("desc")}
         </div>

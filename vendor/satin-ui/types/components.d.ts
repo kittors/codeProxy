@@ -270,11 +270,11 @@ export interface CommandItem { name: string; icon?: string; sub?: string; key?: 
 /** 命令面板（整页一个）：empty(q) 是没有结果时显示的 HTML，里面带 data-empty-act 的按钮点了（或直接回车）调 onEmpty；destroy() 撤掉这次加的行和 ⌘K 监听（组件卸载时调） */
 export function createCommandPalette<T extends CommandItem = CommandItem>(groups: { name: string; items: T[] }[], o?: { onRun?(item: T): void; placeholder?: string; empty?(q: string): string; onEmpty?(q: string): void; hotkey?: boolean; enterLabel?: string }): { open(): void; close(): void; toggle(): void; destroy(): void; readonly input: HTMLInputElement; readonly list: HTMLElement };
 /** 看图的一张：src 图片地址，或 bg 直接给 CSS 背景（"url(…) center / cover"、渐变、颜色）；size 原图 [宽, 高]（适应窗口时不放大超过原图），只知道比例时给 ratio（宽 ÷ 高，都不给按 16:9）；alt 读屏读的说明。视频：type: "video"，src 是视频地址、poster 是封面 */
-export interface LightboxItem { src?: string; bg?: string; ratio?: number; size?: [number, number]; alt?: string; type?: "video"; poster?: string }
+export interface LightboxItem { src?: string; bg?: string; ratio?: number; size?: [number, number]; alt?: string; type?: "video"; poster?: string; downloadName?: string }
 /** thumbOf(i) 第 i 张的缩略图：从它那里放大、关上时沿原路缩回去（不给就在中间淡入淡出）；enabled(i) 左右翻页能不能停在这一张（加载失败的跳过）；onClose 关上以后 */
-export interface LightboxOptions { thumbOf?(i: number): HTMLElement | null | undefined; enabled?(i: number): boolean; onClose?(): void }
-/** 打开着的看图层：step(±1) 翻页、zoom(±1) 缩放、rotate(±1) 旋转 90°、reset() 还原、close() 关上 */
-export interface LightboxHandle { close(): void; step(d: number): void; zoom(d: number): void; rotate(d: number): void; reset(): void }
+export interface LightboxOptions { thumbOf?(i: number): HTMLElement | null | undefined; enabled?(i: number): boolean; onClose?(): void; onStep?(index: number): void; title?: string; variant?: string; downloadLabel?: string }
+/** 打开着的看图层：step(±1) 翻页、goTo(i) 切到指定张、zoom(±1) 缩放、rotate(±1) 旋转 90°、reset() 还原、close() 关上 */
+export interface LightboxHandle { close(instant?: boolean, viaKey?: boolean): void; step(d: number): void; goTo?(index: number, dir?: number): void; zoom(d: number): void; rotate(d: number): void; reset(): void }
 export function openLightbox(items: LightboxItem[], index: number, o?: LightboxOptions): LightboxHandle;
 export function closeLightbox(): void;
 

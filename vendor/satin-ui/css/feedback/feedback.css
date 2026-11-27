@@ -1,14 +1,15 @@
 /* Satin：反馈。数值照 09 号 §6（Toast、通知）、§7（加载与等待）。 */
 /* ———— Toast：和 Tooltip 同一种反色材质，一眼能和页面内容、卡片分开；语义色用深色主题那一套，保证在深底上够亮 ———— */
 @layer satin {
-.sn-toasts { position: fixed; z-index: 49; left: 50%; top: calc(68px + var(--sn-safe-top, env(safe-area-inset-top, 0px))); width: 0; height: 0; } /* 刘海屏：让开状态栏 */
-.sn-toasts[data-pos="bottom"] { top: auto; bottom: calc(24px + var(--sn-safe-bottom, env(safe-area-inset-bottom, 0px))); }
+.sn-toasts { position: fixed; z-index: 49; left: 50%; top: calc(20px + var(--sn-safe-top, env(safe-area-inset-top, 0px))); width: 0; height: 0; } /* 刘海屏：让开状态栏 */
+.sn-toasts[popover] { inset: auto; left: 50%; top: calc(20px + var(--sn-safe-top, env(safe-area-inset-top, 0px))); margin: 0; padding: 0; border: 0; background: transparent; color: inherit; overflow: visible; }
+.sn-toasts[data-pos="bottom"], .sn-toasts[popover][data-pos="bottom"] { top: auto; bottom: calc(24px + var(--sn-safe-bottom, env(safe-area-inset-bottom, 0px))); }
 .sn-toast { position: absolute; top: 0; left: 0; translate: -50% 0; transform-origin: 50% 0; transition: transform .36s var(--sn-ease-out-strong), opacity .28s var(--sn-ease-out); }
 .sn-toasts[data-pos="bottom"] .sn-toast { top: auto; bottom: 0; transform-origin: 50% 100%; }
 /* Light 下通透亮白液态毛玻璃胶囊，Dark 下深邃炭黑玻璃胶囊：双主题视觉高度和谐 */
 .sn-toast-in {
   position: relative; display: flex; align-items: center; gap: 9px;
-  width: max-content; max-width: calc(100vw - 32px); height: 42px; padding: 0 16px 0 9px;
+  width: max-content; max-width: min(calc(100vw - 32px), 42rem); height: 42px; padding: 0 16px 0 9px;
   border-radius: 999px; overflow: hidden; touch-action: none;
   background: rgba(255, 255, 255, .90);
   -webkit-backdrop-filter: blur(26px) saturate(185%);
@@ -22,7 +23,7 @@
     0 12px 32px -10px rgba(15, 23, 42, .16),
     0 2px 6px rgba(15, 23, 42, .05);
 }
-[data-theme="dark"] .sn-toast-in {
+[data-theme="dark"] .sn-toast-in, .dark .sn-toast-in {
   background: rgba(28, 29, 36, .88);
   color: #f5f5f7;
   box-shadow:
@@ -30,26 +31,41 @@
     0 0 0 1px rgba(255, 255, 255, .10),
     0 16px 38px -10px rgba(0, 0, 0, .74);
 }
+.sn-toast-in.sn-toast-multiline {
+  height: auto; min-height: 44px; padding: 11px 14px 11px 11px;
+  border-radius: 18px; white-space: normal; align-items: flex-start;
+}
+.sn-toast-in.sn-toast-multiline .sn-ico { margin-top: 1px; }
 .sn-toast-in.sn-has-act { padding-right: 6px; }
 .sn-toast .sn-ico { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--sn-fill-subtle); }
+.sn-toast .sn-ico[hidden] { display: none; }
 .sn-toast .sn-ico[data-tone="ok"] { background: rgba(22, 163, 74, .13); }
 .sn-toast .sn-ico[data-tone="danger"] { background: rgba(239, 68, 68, .13); }
+.sn-toast .sn-ico[data-tone="warn"] { background: rgba(217, 119, 6, .13); }
 .sn-toast .sn-ico[data-tone="info"] { background: rgba(59, 130, 246, .13); }
-[data-theme="dark"] .sn-toast .sn-ico { background: rgba(255, 255, 255, .09); }
-[data-theme="dark"] .sn-toast .sn-ico[data-tone="ok"] { background: rgba(48, 209, 88, .18); }
-[data-theme="dark"] .sn-toast .sn-ico[data-tone="danger"] { background: rgba(255, 105, 97, .18); }
-[data-theme="dark"] .sn-toast .sn-ico[data-tone="info"] { background: rgba(96, 165, 250, .18); }
+[data-theme="dark"] .sn-toast .sn-ico, .dark .sn-toast .sn-ico { background: rgba(255, 255, 255, .09); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="ok"], .dark .sn-toast .sn-ico[data-tone="ok"] { background: rgba(48, 209, 88, .18); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="danger"], .dark .sn-toast .sn-ico[data-tone="danger"] { background: rgba(255, 105, 97, .18); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="warn"], .dark .sn-toast .sn-ico[data-tone="warn"] { background: rgba(255, 214, 10, .18); }
+[data-theme="dark"] .sn-toast .sn-ico[data-tone="info"], .dark .sn-toast .sn-ico[data-tone="info"] { background: rgba(96, 165, 250, .18); }
 .sn-toast .sn-ico > .sn-glyph { grid-area: 1 / 1; display: grid; place-items: center; }
 .sn-toast .sn-ico .sn-ic { width: 14px; height: 14px; }
 .sn-toast .sn-glyph.sn-ok { color: #16a34a; }
 .sn-toast .sn-glyph.sn-danger { color: #dc2626; }
+.sn-toast .sn-glyph.sn-warn { color: #d97706; }
 .sn-toast .sn-glyph.sn-info { color: #2563eb; }
-[data-theme="dark"] .sn-toast .sn-glyph.sn-ok { color: #30d158; }
-[data-theme="dark"] .sn-toast .sn-glyph.sn-danger { color: #ff6961; }
-[data-theme="dark"] .sn-toast .sn-glyph.sn-info { color: #60a5fa; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-ok, .dark .sn-toast .sn-glyph.sn-ok { color: #30d158; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-danger, .dark .sn-toast .sn-glyph.sn-danger { color: #ff6961; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-warn, .dark .sn-toast .sn-glyph.sn-warn { color: #ffd60a; }
+[data-theme="dark"] .sn-toast .sn-glyph.sn-info, .dark .sn-toast .sn-glyph.sn-info { color: #60a5fa; }
+.sn-toast .sn-toast-body { min-width: 0; flex: 0 1 auto; display: flex; flex-direction: column; }
 .sn-toast .sn-txt { position: relative; display: grid; flex: 0 1 auto; }
-.sn-toast .sn-txt > span { overflow: hidden; text-overflow: ellipsis; max-width: calc(100vw - 110px); }
+.sn-toast .sn-txt > span { overflow: hidden; text-overflow: ellipsis; max-width: min(calc(100vw - 110px), 34rem); }
+.sn-toast-in.sn-toast-multiline .sn-txt > span { white-space: normal; overflow-wrap: anywhere; }
 .sn-toast .sn-txt > .sn-old { position: absolute; left: 0; top: 0; }
+.sn-toast .sn-toast-desc { margin-top: 4px; max-height: 10rem; overflow-y: auto; font: 400 calc(12px * var(--sn-font-scale, 1))/calc(18px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label2); white-space: pre-line; overflow-wrap: anywhere; }
+.sn-toast .sn-toast-desc[hidden] { display: none; }
+.sn-toast .sn-toast-x { flex: none; margin-right: -4px; color: var(--sn-label3); }
 .sn-toast-dup { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 19px; min-width: 24px; padding: 0 6px; border-radius: 999px;
   background: var(--sn-fill-subtle); color: var(--sn-label2); font: 600 11px/1 var(--sn-sans); letter-spacing: -.01em; }
 [data-theme="dark"] .sn-toast-dup { background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .86); }

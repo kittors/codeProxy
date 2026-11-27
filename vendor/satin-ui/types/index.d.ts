@@ -20,11 +20,84 @@ export function track<T>(fn: () => T): [T, () => void];
 export function useShared(key: string, install: () => void): () => void;
 export function reduced(): boolean;
 export function injectIcons(scope?: ParentNode): void;
-export function initSeg(seg: HTMLElement, onChange?: (value: string, index: number, anim: Animation | null) => void, start?: number): { go(index: number, focus?: boolean, instant?: boolean): void };
-export function showTip(el: HTMLElement, text: string): void;
+export function initSeg(
+  seg: HTMLElement,
+  onChange?: (value: string, index: number, anim: Animation | null) => void,
+  start?: number,
+  options?: {
+    role?: "tab" | "radio" | "none";
+    controlled?: boolean;
+    fitScroll?: boolean;
+    keyboard?: boolean;
+  },
+): {
+  go(index: number, focus?: boolean, instant?: boolean): void;
+  sync(index: number, instant?: boolean): void;
+  measure(): void;
+  destroy(): void;
+};
+export function showTip(
+  el: HTMLElement,
+  text: string,
+  options?: { side?: "top" | "right" | "bottom" | "left" },
+): void;
 export function hideTip(dismiss?: boolean): void;
+export function retip(el: HTMLElement): void;
 export function tipTarget(): HTMLElement | null;
 export function resetTipLayer(): void;
+export function dismissToast(id?: string | number, options?: { instant?: boolean }): void;
+export function dismissAllToasts(instant?: boolean): void;
+export interface FloatingPosition {
+  left: number;
+  top: number;
+  dx: number;
+  dy: number;
+  up: boolean;
+  end: boolean;
+  side?: "left" | "right";
+  ox: number;
+  oy: number;
+}
+export function getViewportBounds(margin?: number): {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  rawTop: number;
+  rawBottom: number;
+};
+export function computeFloating(
+  panel: HTMLElement,
+  anchor: HTMLElement | DOMRect,
+  options?: {
+    placement?: "top" | "right" | "bottom" | "left";
+    align?: "start" | "center" | "end";
+    gap?: number;
+    margin?: number;
+    preferUp?: boolean;
+    preferEnd?: boolean;
+  },
+): FloatingPosition;
+export function isAnchorOutOfView(anchor: HTMLElement): boolean;
+export interface DismissLayer {
+  panel?: HTMLElement | null;
+  trigger?: HTMLElement | null;
+  modal?: boolean;
+  exclusive?: boolean;
+  focusOut?: boolean;
+  blur?: boolean | (() => boolean);
+  close(refocus?: boolean): void;
+  contains?(target: EventTarget | null, path: EventTarget[] | null): boolean;
+  ignore?(target: EventTarget | null, path: EventTarget[] | null): boolean;
+}
+export function hitAny(
+  target: EventTarget | null,
+  path: EventTarget[] | null,
+  els: readonly (Element | null | undefined)[],
+): boolean;
+export function pushDismiss(entry: DismissLayer): DismissLayer;
+export function dropDismiss(entry: DismissLayer): void;
+export function findDismiss(pred: (entry: DismissLayer) => boolean): DismissLayer | undefined;
 export function fitScroll(el: HTMLElement, o?: { bar?: "none" | "hover" | "always" }): () => void;
 export function fitStack(el: HTMLElement): () => void;
 export function edgeFrames(from: [number, number], to: [number, number], toTransform: (edges: [number, number], squash: number) => string, k?: number): { frames: Keyframe[]; duration: number };

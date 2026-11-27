@@ -1,6 +1,7 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { HUE_GLYPH, HUE_SOFT, HUE_SOLID, HUE_TILE, useSatinFluidThumb, useScrollFade } from "@code-proxy/ui";
+import { initSeg } from "satin-ui";
+import { HUE_GLYPH, HUE_SOFT, HUE_SOLID, HUE_TILE, useScrollFade } from "@code-proxy/ui";
 import type { ConfigGroupDef, ConfigNavGroupId, ConfigSectionDef, ConfigSectionId } from "./configSchema";
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
@@ -37,10 +38,32 @@ export function ConfigGroupTabs({
 }) {
   const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement | null>(null);
-  const thumbRef = useRef<HTMLSpanElement | null>(null);
+  const segRef = useRef<ReturnType<typeof initSeg> | null>(null);
   const buttonsRef = useRef<Partial<Record<ConfigNavGroupId, HTMLButtonElement | null>>>({});
+  const tabSig = useMemo(() => tabs.map((tab) => tab.def.id).join("\u001f"), [tabs]);
+  const activeIdx = value === null ? -1 : tabs.findIndex((tab) => tab.def.id === value);
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
 
-  useSatinFluidThumb(listRef, thumbRef, '[role="tab"][aria-selected="true"]', value ?? "");
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    const api = initSeg(el, undefined, activeIdxRef.current, {
+      role: "tab",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    segRef.current = api;
+    return () => {
+      api.destroy();
+      if (segRef.current === api) segRef.current = null;
+    };
+  }, [tabSig]);
+
+  useLayoutEffect(() => {
+    segRef.current?.sync(activeIdx, false);
+  }, [activeIdx, tabSig]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
@@ -66,9 +89,8 @@ export function ConfigGroupTabs({
       className="scrollbar-hidden relative flex max-w-full gap-1 overflow-x-auto rounded-xl bg-track p-1"
     >
       <span
-        ref={thumbRef}
         aria-hidden="true"
-        className="pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-[var(--sn-btn-r)] bg-elevated opacity-0 shadow-control will-change-transform"
+        className="sn-thumb pointer-events-none absolute top-1 bottom-1 left-1 z-0 origin-left rounded-[var(--sn-btn-r)] bg-elevated opacity-0 shadow-control will-change-transform"
       />
       {tabs.map(({ def, modified, matches }) => {
         const selected = def.id === value;

@@ -94,23 +94,69 @@ export function fitStack(el) {
   document.fonts?.ready.then(fit); fit(); queueMicrotask(fit);
   return fit;
 }
-export function initSeg(seg, onChange, start = 0) {
+export function initSeg(seg, onChange, start = 0, options = {}) {
   const thumb = $(".sn-thumb", seg), btns = $$("button", seg);
-  if (!btns.length) return { go() {} }; // 还没有选项（比如框架先插元素、后设属性）：什么都不接，选项来了重建时再接
-  let idx = start, edges = [idx, idx + 1], anim = null, plan = null;
+  if (!btns.length || !thumb) return { go() {}, sync() {}, measure() {}, destroy() {} }; // 还没有选项：什么都不接，选项来了重建时再接
+  const role = options?.role ?? "tab";
+  const controlled = Boolean(options?.controlled);
+  const useFitScroll = options?.fitScroll !== false;
+  const useKeyboard = options?.keyboard !== false;
+  let idx = start, edges = idx >= 0 ? [idx, idx + 1] : null, anim = null, plan = null;
   // 滑块的位置按每一格实际的左右边算（不假设每格一样宽）：边的位置 e 是"第几格"，小数部分在这一格里按比例插值
-  let X = [0], W0 = 1;
-  const measure = () => { const o = btns[0].offsetLeft, last = btns[btns.length - 1]; X = [...btns.map((b) => b.offsetLeft - o), last.offsetLeft + last.offsetWidth - o]; W0 = btns[0].offsetWidth || 1; };
+  let X = [0], W0 = 1, originLeft = 0;
+  const measure = () => {
+    originLeft = thumb.offsetLeft || 0;
+    const last = btns[btns.length - 1];
+    X = [...btns.map((b) => b.offsetLeft - originLeft), last.offsetLeft + last.offsetWidth - originLeft];
+    W0 = btns[0].offsetWidth || 1;
+  };
   const px = (e) => { const k = Math.max(0, Math.min(btns.length, e)), i = Math.floor(k); return i >= btns.length ? X[btns.length] : X[i] + (X[i + 1] - X[i]) * (k - i); };
-  const tf = ([l, r], sy = 1) => `translateX(${px(l).toFixed(2)}px) scaleX(${((px(r) - px(l)) / W0).toFixed(4)}) scaleY(${sy})`;
-  const set = (e) => (thumb.style.transform = tf(e));
+  const tf = ([l, r], sy = 1) => `translateX(${px(l).toFixed(2)}px) scaleX(${(Math.max(1, px(r) - px(l)) / (W0 || 1)).toFixed(4)}) scaleY(${sy})`;
+  const set = (e) => {
+    if (!e || W0 <= 0 || !btns[0]?.offsetWidth) {
+      thumb.style.opacity = "0";
+      return;
+    }
+    thumb.style.opacity = "1";
+    thumb.style.transform = tf(e);
+  };
   // 尺寸变了（字体换了、字号变了、容器变窄）：重新量，停着的滑块马上对准；正在走的那一段走完以后也对准（onfinish 里再 set 一次）
-  const size = () => { thumb.style.width = btns[0].offsetWidth + "px"; measure(); if (!anim) set(edges); };
-  const mark = () => btns.forEach((b, i) => { b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(i === idx)); b.tabIndex = i === idx ? 0 : -1; });
-  size(); set(edges); mark(); seg.removeAttribute("data-ssr"); { const ro = new ResizeObserver(size); ro.observe(seg); btns.forEach((b) => ro.observe(b)); }
+  const size = () => {
+    const w = btns[0]?.offsetWidth || 0;
+    if (w > 0) thumb.style.width = w + "px";
+    measure();
+    if (!anim) set(edges);
+  };
+  const mark = () => {
+    if (role === "none") return;
+    btns.forEach((b, i) => {
+      if (role === "radio") {
+        b.setAttribute("role", "radio");
+        b.setAttribute("aria-checked", String(i === idx));
+        b.setAttribute("aria-selected", String(i === idx));
+      } else {
+        b.setAttribute("role", "tab");
+        b.setAttribute("aria-selected", String(i === idx));
+      }
+      b.tabIndex = i === idx || (idx < 0 && i === 0) ? 0 : -1;
+    });
+  };
+  size(); set(edges); mark(); seg.removeAttribute("data-ssr");
+  let ro = null;
+  if (typeof ResizeObserver !== "undefined") {
+    ro = new ResizeObserver(size);
+    ro.observe(seg);
+    btns.forEach((b) => ro.observe(b));
+  }
   // 放不下时横着滑；选中的格子滑到看得见的地方
-  fitScroll(seg);
-  const reveal = (n) => { if (!seg.classList.contains("sn-scroll")) return; const b = btns[n], l = b.offsetLeft - 2, r = b.offsetLeft + b.offsetWidth + 2; if (l < seg.scrollLeft) seg.scrollTo({ left: l, behavior: reduced() ? "auto" : "smooth" }); else if (r > seg.scrollLeft + seg.clientWidth) seg.scrollTo({ left: r - seg.clientWidth, behavior: reduced() ? "auto" : "smooth" }); };
+  if (useFitScroll) fitScroll(seg);
+  const reveal = (n) => {
+    if (n < 0 || !btns[n]) return;
+    if (!seg.classList.contains("sn-scroll") && seg.scrollWidth <= seg.clientWidth + 1) return;
+    const b = btns[n], l = b.offsetLeft - 2, r = b.offsetLeft + b.offsetWidth + 2;
+    if (l < seg.scrollLeft) seg.scrollTo?.({ left: l, behavior: reduced() ? "auto" : "smooth" });
+    else if (r > seg.scrollLeft + seg.clientWidth) seg.scrollTo?.({ left: r - seg.clientWidth, behavior: reduced() ? "auto" : "smooth" });
+  };
   const c = (x) => Math.min(1, Math.max(0, x));
   // 时刻 t（毫秒）时两条边的位置和压扁量
   const at = (p, t) => {
@@ -120,13 +166,27 @@ export function initSeg(seg, onChange, start = 0) {
     const q = (t - (p.TRAIL - 70)) / p.SETTLE, squash = q > 0 && q < 1 ? Math.sin(q * Math.PI) * .06 : 0;
     return { e, sy: 1 - squash };
   };
-  function go(n, focus, instant) {
-    if (n === idx || n < 0 || n >= btns.length) return;
-    idx = n; mark(); if (focus) btns[n].focus(); reveal(n);
+  function sync(n, instant = false) {
+    if (n < 0 || n >= btns.length) {
+      idx = -1;
+      anim?.cancel(); anim = null; edges = null;
+      mark();
+      thumb.style.opacity = "0";
+      return;
+    }
+    if (n === idx && edges) {
+      size();
+      return;
+    }
+    const prevEdges = edges;
+    idx = n; mark(); reveal(n);
     // 半路又点了别的：从滑块此刻的位置接着走，不跳回去
-    const now = performance.now(), from = anim && plan && now - plan.t0 < plan.total ? at(plan, now - plan.t0).e : edges.slice(), target = [n, n + 1];
-    anim?.cancel(); anim = null; edges = target; set(target);
-    if (!(reduced() || instant)) {
+    const now = performance.now();
+    const from = anim && plan && now - plan.t0 < plan.total ? at(plan, now - plan.t0).e : prevEdges ? prevEdges.slice() : null;
+    const target = [n, n + 1];
+    anim?.cancel(); anim = null; edges = target;
+    size();
+    if (from && !(reduced() || instant) && typeof thumb.animate === "function" && btns[0]?.offsetWidth > 0) {
       const lead = target[0] > from[0] ? 1 : 0, k = Math.max(0, Math.round(Math.abs(target[0] - from[0])) - 1);
       const TRAIL = 300 + 40 * k;
       plan = { from, target, lead, t0: now, LEAD: 230 + 40 * k, LAG: 45, TRAIL, SETTLE: 150, total: TRAIL - 70 + 150 };
@@ -136,23 +196,63 @@ export function initSeg(seg, onChange, start = 0) {
       anim = thumb.animate(frames, { duration: plan.total, easing: "linear" });
       const a = anim; a.onfinish = () => { if (anim === a) { anim = null; measure(); set(edges); } };
     }
+  }
+  function go(n, focus, instant) {
+    if (n === idx || n < 0 || n >= btns.length) return;
+    if (controlled) {
+      if (focus) btns[n].focus();
+      const v = btns[n].dataset.v ?? n;
+      onChange?.(v, n, null);
+      return;
+    }
+    sync(n, instant);
+    if (focus) btns[n].focus();
     if (instant || !onChange) return;
     const a = anim, v = btns[n].dataset.v ?? n;
     requestAnimationFrame(() => requestAnimationFrame(() => onChange(v, n, a)));
   }
-  btns.forEach((b, i) => b.addEventListener("click", () => go(i)));
-  seg.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") { e.preventDefault(); go(idx + 1, true); } if (e.key === "ArrowLeft") { e.preventDefault(); go(idx - 1, true); } });
-  return { go };
+  const clickHandlers = btns.map((b, i) => {
+    const fn = () => go(i);
+    if (!controlled) b.addEventListener("click", fn);
+    return [b, fn];
+  });
+  const onKeyDown = (e) => { if (e.key === "ArrowRight") { e.preventDefault(); go(idx + 1, true); } if (e.key === "ArrowLeft") { e.preventDefault(); go(idx - 1, true); } };
+  if (useKeyboard && !controlled) seg.addEventListener("keydown", onKeyDown);
+  return {
+    go,
+    sync,
+    measure: size,
+    destroy() {
+      anim?.cancel();
+      anim = null;
+      ro?.disconnect();
+      ro = null;
+      if (!controlled) {
+        for (const [b, fn] of clickHandlers) b.removeEventListener("click", fn);
+        if (useKeyboard) seg.removeEventListener("keydown", onKeyDown);
+      }
+    },
+  };
 }
 // ———— 3. Tooltip：首次悬停 500ms 后出现，刚关掉 300ms 内移到相邻元素立即出现；键盘聚焦也出现（09 号 §5.2） ————
 // 页面里没有提示气泡的容器就自己建一个（官网、库的使用者不用在 HTML 里写）
-let tip = null, tipTimer = 0, lastHide = 0, tipFor = null, described = null, tipWait = null, shown = "", dismissed = null;
-// 仅在宿主原生支持 Popover API 时启用 popover="manual" 顶层展示，避免不支持 Popover 的运行环境/jsdom
-// 给普通元素写入无效的 popover JS 属性并触发 :popover-open 计算异常。
-const supportsPopoverApi = () =>
-  typeof HTMLElement !== "undefined" &&
-  "popover" in HTMLElement.prototype &&
-  typeof HTMLElement.prototype.showPopover === "function";
+let tip = null, tipTimer = 0, lastHide = 0, tipFor = null, described = null, tipWait = null, shown = "", dismissed = null, tipSideOverride = "";
+// 仅在宿主原生支持 Popover API（含 :popover-open）时启用 popover="manual" 顶层展示，
+// 避免 jsdom 等环境写入无效 popover 属性并触发 :popover-open 异常。
+let cachedPopoverApi = null;
+const supportsPopoverApi = () => {
+  if (cachedPopoverApi !== null) return cachedPopoverApi;
+  if (typeof document === "undefined" || typeof HTMLElement === "undefined" || !("popover" in HTMLElement.prototype) || typeof HTMLElement.prototype.showPopover !== "function") {
+    return (cachedPopoverApi = false);
+  }
+  try {
+    document.createElement("div").matches(":popover-open");
+    cachedPopoverApi = true;
+  } catch {
+    cachedPopoverApi = false;
+  }
+  return cachedPopoverApi;
+};
 const tipEl = () => {
   if (tip?.isConnected) return tip;
   tip = document.getElementById("sn-tip");
@@ -160,6 +260,7 @@ const tipEl = () => {
     const el = document.createElement("div");
     el.className = "sn-tip";
     el.id = "sn-tip";
+    el.setAttribute("aria-hidden", "true");
     if (supportsPopoverApi()) el.popover = "manual";
     tip = document.body.appendChild(el);
   }
@@ -167,9 +268,9 @@ const tipEl = () => {
 };
 // 读屏：提示层 role="tooltip"，显示时元素 aria-describedby 指向它（提示和 aria-label 一样时不再重复读）
 const undescribe = () => { described?.removeAttribute("aria-describedby"); described = null; };
-const positionTip = (el) => {
+const positionTip = (el, sideOverride = tipSideOverride) => {
   if (!tip || !el?.isConnected) return;
-  const placement = el.dataset.tipSide || "top";
+  const placement = sideOverride || el.dataset.tipSide || el.dataset.tooltipPlacement || "top";
   const pos = computeFloating(tip, el, { placement, align: "center", gap: 8, margin: 8 });
   tip.style.left = pos.left + "px";
   tip.style.top = pos.top + "px";
@@ -178,44 +279,76 @@ const positionTip = (el) => {
   tip.classList.toggle("sn-right", pos.side === "right");
   tip.classList.toggle("sn-left", pos.side === "left");
 };
-export function showTip(el, text) {
+export function showTip(el, text, options = {}) {
   clearTimeout(tipTimer); tipWait = null;
-  tipEl(); if (supportsPopoverApi() && !tip.matches(":popover-open")) tip.showPopover();
-  tip.setAttribute("role", "tooltip"); if (described !== el || el.getAttribute("aria-label") === text) undescribe();
-  if (!described && !el.hasAttribute("aria-describedby") && el.getAttribute("aria-label") !== text) { el.setAttribute("aria-describedby", tip.id); described = el; }
-  tip.textContent = shown = text; if (el.dataset.kbd && !matchMedia("(hover: none)").matches) { const k = document.createElement("kbd"); k.textContent = el.dataset.kbd; tip.append(k); } // 触屏上不写快捷键
-  tip.classList.toggle("sn-wrap", text.length > 20);
+  const content = String(text ?? "");
+  if (!el || !content) return;
+  tipEl();
+  if (supportsPopoverApi()) {
+    try {
+      if (!tip.matches(":popover-open")) tip.showPopover();
+    } catch {}
+  }
+  tip.removeAttribute("aria-hidden");
+  tip.setAttribute("role", "tooltip");
+  if (described !== el || el.getAttribute("aria-label") === content) undescribe();
+  if (!described && !el.hasAttribute("aria-describedby") && el.getAttribute("aria-label") !== content) {
+    el.setAttribute("aria-describedby", tip.id);
+    described = el;
+  }
+  tip.textContent = shown = content;
+  const noHover = typeof matchMedia === "function" && matchMedia("(hover: none)").matches;
+  if (el.dataset.kbd && !noHover) { const k = document.createElement("kbd"); k.textContent = el.dataset.kbd; tip.append(k); } // 触屏上不写快捷键
+  tip.classList.toggle("sn-wrap", content.length > 20 || content.includes("\n"));
   tipFor = el;
-  positionTip(el);
+  tipSideOverride = options?.side || "";
+  positionTip(el, tipSideOverride);
   tip.classList.add("sn-on");
 }
-export const hideTip = (dismiss = false) => { clearTimeout(tipTimer); tipWait = null; undescribe(); if (tipFor) { if (dismiss) dismissed = tipFor; tip.classList.remove("sn-on"); tipFor = null; lastHide = performance.now(); } };
+export const hideTip = (dismiss = false) => {
+  clearTimeout(tipTimer); tipWait = null; undescribe();
+  if (tipFor) {
+    if (dismiss) dismissed = tipFor;
+    tip?.classList.remove("sn-on");
+    tip?.removeAttribute("role");
+    tip?.setAttribute("aria-hidden", "true");
+    tipFor = null;
+    tipSideOverride = "";
+    lastHide = performance.now();
+  }
+};
 export const tipTarget = () => tipFor;
 // 元素换了状态、改了 data-tip（发送按钮变成停止、又变回来）：正显示着它的提示当场换字，还在等 500ms 的也换成新字；新字为空就收起
 export const retip = (el) => {
   const t = tipText(el);
   if (tipWait?.el === el) { if (t) tipWait.text = t; else hideTip(); }
-  if (tipFor === el && t !== shown) { if (t) showTip(el, t); else hideTip(); }
+  if (tipFor === el && t !== shown) { if (t) showTip(el, t, { side: tipSideOverride }); else hideTip(); }
 };
 // 弹窗进入顶层后，Tooltip 要重新放进顶层才能盖在弹窗上面
-export const resetTipLayer = () => { hideTip(); if (supportsPopoverApi() && tip?.matches(":popover-open")) tip.hidePopover(); };
+export const resetTipLayer = () => {
+  hideTip();
+  if (supportsPopoverApi() && tip?.matches(":popover-open")) {
+    try { tip.hidePopover(); } catch {}
+  }
+};
 const tipText = (el) => el.dataset.tip || (el.hasAttribute("data-tip-full") && el.scrollWidth > el.clientWidth ? el.textContent : "");
 // 页面级：悬停 / 聚焦带 data-tip 的元素出提示。setup() 里装一次（展示页在 main.js 开头按原来的顺序装）
 export function installTooltips() {
 tipEl();
 // 触屏、没有悬停的设备（手机、平板）不出悬停提示：手指点一下也会先来一个 pointerover，提示会盖在手指刚点的地方，上面的快捷键在手机上也没用
-const noHover = matchMedia("(hover: none)");
+const noHover = typeof matchMedia === "function" ? matchMedia("(hover: none)") : { matches: false };
 document.addEventListener("pointerover", (e) => {
   if (e.pointerType === "touch" || e.pointerType === "pen" || noHover.matches) return;
-  const el = e.target.closest("[data-tip],[data-tip-full]"); if (!el || el === tipFor || el === dismissed) return;
+  const el = e.target.closest?.("[data-tip],[data-tip-full]"); if (!el || el === tipFor || el === dismissed) return;
   const text = tipText(el); if (!text) return;
   clearTimeout(tipTimer); const w = tipWait = { el, text }; tipTimer = setTimeout(() => { tipWait = null; showTip(w.el, w.text); }, performance.now() - lastHide < 300 ? 0 : 500);
 });
-document.addEventListener("pointerout", (e) => { const el = e.target.closest("[data-tip],[data-tip-full]") || (tipFor?.contains(e.target) ? tipFor : null); if (el && !el.contains(e.relatedTarget)) { if (el === dismissed) dismissed = null; hideTip(); } });
+document.addEventListener("pointerout", (e) => { const el = e.target.closest?.("[data-tip],[data-tip-full]") || (tipFor?.contains(e.target) ? tipFor : null); if (el && !el.contains(e.relatedTarget)) { if (el === dismissed) dismissed = null; hideTip(); } });
 // 按 Esc 收起提示（WCAG 1.4.13：不挪指针、不挪焦点也能关掉）；不拦这个键——弹窗、菜单照样一起关。收起以后指针还停在这个元素上就不再冒出来，移出去再移进来才出
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && (tipFor || tipWait)) { dismissed = tipFor || tipWait.el; hideTip(); } });
-document.addEventListener("focusin", (e) => { const el = e.target.closest?.("[data-tip]"); if (el?.matches(":focus-visible")) showTip(el, el.dataset.tip); });
+document.addEventListener("focusin", (e) => { const el = e.target.closest?.("[data-tip]"); if (el?.matches?.(":focus-visible")) showTip(el, el.dataset.tip); });
 document.addEventListener("focusout", hideTip);
 addEventListener("scroll", hideTip, { passive: true });
 addEventListener("satin-reposition", () => { if (tipFor) positionTip(tipFor); });
+addEventListener("satin-dialog-open", resetTipLayer);
 }

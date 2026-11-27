@@ -248,7 +248,8 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   await accountTrigger.click();
   const accountMenu = page.locator("[data-sidebar-account-menu='true']");
   await expect(accountMenu).toBeVisible();
-  await expect(accountMenu).toHaveClass(/code-proxy-floating-surface/);
+  await expect(accountMenu).toHaveClass(/\bsn-menu\b/);
+  await expect(accountMenu).toHaveClass(/\bsn-float\b/);
   await expect(page.getByRole("menuitem", { name: /^Config|配置面板$/i })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Logout|退出登录/i })).toBeVisible();
   await page.waitForTimeout(220);
@@ -264,7 +265,7 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   await expect(accountMenu).toBeHidden();
 
   await page.locator("header button[aria-haspopup='listbox']").click();
-  const languageMenu = page.locator("[role='listbox'].code-proxy-floating-surface");
+  const languageMenu = page.locator("[role='listbox'].sn-menu.sn-float");
   await expect(languageMenu).toBeVisible();
   expect(await languageMenu.evaluate(surfaceStyle)).toEqual(accountSurfaceStyle);
   await page.keyboard.press("Escape");

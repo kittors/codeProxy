@@ -7,7 +7,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -19,8 +18,9 @@ import {
   type Ref,
 } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "../utils/selectStyles";
 import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
+import { cn } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 
 type MenuSide = "top" | "right" | "bottom" | "left";
@@ -46,9 +46,10 @@ const RadioGroupContext = createContext<RadioGroupContextValue | null>(null);
 interface SubMenuContextValue {
   open: boolean;
   setOpen: (next: boolean) => void;
-  scheduleClose: () => void;
+  scheduleClose: (pointer?: { x: number; y: number }) => void;
   cancelClose: () => void;
   triggerRef: React.MutableRefObject<HTMLElement | null>;
+  panelRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 const SubMenuContext = createContext<SubMenuContextValue | null>(null);
 
@@ -56,6 +57,21 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
   if (!ref) return;
   if (typeof ref === "function") ref(value);
   else (ref as React.MutableRefObject<T | null>).current = value;
+}
+
+/** Satin `overlay.js` 同款安全三角区命中判定：指针斜向滑往子菜单时不误关子菜单。 */
+function pointInTriangle(
+  p: { x: number; y: number },
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  c: { x: number; y: number },
+): boolean {
+  const sign = (p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number }) =>
+    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  const d1 = sign(p, a, b);
+  const d2 = sign(p, b, c);
+  const d3 = sign(p, c, a);
+  return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
 }
 
 export interface DropdownMenuRootProps extends PropsWithChildren {
@@ -69,9 +85,10 @@ export interface DropdownMenuRootProps extends PropsWithChildren {
 }
 
 /**
- * 纯 Satin 下拉菜单（零 Radix 依赖）：
- * 采用 Satin `.sn-menu` / `.sn-item` / `.sn-sep` / `.sn-danger-item` 与统一浮层材质，
- * 完整支持 top/bottom/left/right 四向定位与视口翻转、键盘上下导航、Esc 关闭、受控/非受控与子菜单。
+ * 纯 Satin 原生驱动的下拉菜单：
+ * - 定位与防溢出直连 Satin `computeFloating`（智能避让顶栏、上下左右自动翻转、变换原点对准锚点）；
+ * - 浮层关闭与平级互斥直连 Satin `dismiss.js` 全局浮层栈（捕获阶段外部点击、Esc 后进先出、窗口失焦收起）；
+ * - 双向弹性开合与子菜单滑出采用 Satin `.sn-menu.sn-float.sn-open` / `.sn-sub` 原生过渡与安全三角区保护。
  */
 function Root({
   size = "default",
@@ -197,9 +214,9 @@ function ItemIndicator({ children, className }: PropsWithChildren<{ className?: 
 }
 
 const CONTENT_SIZE_CLASS: Record<ControlSize, string> = {
-  sm: "min-w-28",
-  default: "min-w-40",
-  lg: "min-w-44",
+  sm: "!min-w-28",
+  default: "!min-w-40",
+  lg: "!min-w-44",
 };
 
 const ITEM_SIZE_CLASS: Record<ControlSize, string> = {
@@ -228,7 +245,7 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
     sideOffset = 6,
     alignOffset = 0,
     collisionPadding = 8,
-    onCloseAutoFocus: _onCloseAutoFocus,
+    onCloseAutoFocus,
     onEscapeKeyDown,
     onPointerDownOutside,
     children,
@@ -240,93 +257,44 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
   if (!ctx) throw new Error("DropdownMenu.Content must be used within DropdownMenu.Root");
 
   const localRef = useRef<HTMLDivElement | null>(null);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
-    resolvedSide: MenuSide;
-    end: boolean;
-    ready: boolean;
-  }>({ top: 0, left: 0, resolvedSide: side, end: align === "end", ready: false });
+  const wasOpenRef = useRef(false);
 
-  const reposition = useCallback(() => {
-    const trigger = ctx.triggerRef.current;
-    const panel = localRef.current;
-    if (!trigger) return;
-    const ar = trigger.getBoundingClientRect();
-    const pw = panel?.offsetWidth || 180;
-    const ph = panel?.offsetHeight || 160;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-    const pad = collisionPadding;
-
-    let resolvedSide: MenuSide = side;
-    let left = 0;
-    let top = 0;
-    let end = align === "end";
-
-    if (side === "right" || side === "left") {
-      if (side === "right" && vw - ar.right - sideOffset < pw && ar.left - sideOffset > vw - ar.right) {
-        resolvedSide = "left";
-      } else if (side === "left" && ar.left - sideOffset < pw && vw - ar.right > ar.left) {
-        resolvedSide = "right";
+  const floating = useSatinFloatingLayer({
+    open: ctx.open,
+    anchorRef: ctx.triggerRef,
+    panelRef: localRef,
+    placement: side,
+    align,
+    gap: sideOffset,
+    margin: collisionPadding,
+    extraInsideNodesRef: ctx.menuNodesRef,
+    onClose: (reason) => {
+      if (reason === "escape") {
+        onEscapeKeyDown?.(new KeyboardEvent("keydown", { key: "Escape" }));
+      } else if (reason === "outside") {
+        onPointerDownOutside?.(new Event("pointerdown"));
       }
-      left = resolvedSide === "right" ? ar.right + sideOffset : ar.left - sideOffset - pw;
-      end = resolvedSide === "left";
+      ctx.setOpen(false);
+    },
+  });
 
-      if (align === "end") {
-        top = ar.bottom - ph + alignOffset;
-      } else if (align === "center") {
-        top = ar.top + (ar.height - ph) / 2 + alignOffset;
-      } else {
-        top = ar.top + alignOffset;
-      }
-    } else {
-      if (side === "bottom" && vh - ar.bottom - sideOffset < ph && ar.top - sideOffset > vh - ar.bottom) {
-        resolvedSide = "top";
-      } else if (side === "top" && ar.top - sideOffset < ph && vh - ar.bottom > ar.top) {
-        resolvedSide = "bottom";
-      }
-      top = resolvedSide === "top" ? ar.top - sideOffset - ph : ar.bottom + sideOffset;
-
-      if (align === "end") {
-        left = ar.right - pw + alignOffset;
-      } else if (align === "center") {
-        left = ar.left + (ar.width - pw) / 2 + alignOffset;
-      } else {
-        left = ar.left + alignOffset;
-      }
-      if (left + pw > vw - pad) {
-        end = true;
-      }
-    }
-
-    if (left + pw > vw - pad) left = Math.max(pad, vw - pw - pad);
-    if (left < pad) left = pad;
-    if (top + ph > vh - pad) top = Math.max(pad, vh - ph - pad);
-    if (top < pad) top = pad;
-
-    setCoords({
-      top: Math.round(top),
-      left: Math.round(left),
-      resolvedSide,
-      end,
-      ready: true,
-    });
-  }, [align, alignOffset, collisionPadding, ctx.triggerRef, side, sideOffset]);
-
-  useLayoutEffect(() => {
-    if (!ctx.open) {
-      setCoords((prev) => (prev.ready ? { ...prev, ready: false } : prev));
+  // 关闭时尊重 onCloseAutoFocus（例如门户账号切换时鼠标点击不闪现焦点环）。
+  useEffect(() => {
+    if (ctx.open) {
+      wasOpenRef.current = true;
       return;
     }
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [ctx.open, reposition]);
+    if (!wasOpenRef.current) return;
+    wasOpenRef.current = false;
+    const focusEvent = new Event("closeAutoFocus", { cancelable: true });
+    onCloseAutoFocus?.(focusEvent);
+    if (!focusEvent.defaultPrevented && ctx.triggerRef.current?.isConnected) {
+      const panel = localRef.current;
+      if (panel?.contains(document.activeElement) || document.activeElement === document.body) {
+        ctx.triggerRef.current.focus({ preventScroll: true });
+      }
+    }
+  }, [ctx.open, ctx.triggerRef, onCloseAutoFocus]);
 
   useEffect(() => {
     const node = localRef.current;
@@ -338,70 +306,54 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
     };
   }, [ctx.menuNodesRef, ctx.open]);
 
+  // 菜单内方向键与 Home / End 键盘导航。
   useEffect(() => {
     if (!ctx.open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (ctx.triggerRef.current?.contains(target) || localRef.current?.contains(target)) return;
-      for (const menuNode of ctx.menuNodesRef.current) {
-        if (menuNode.contains(target)) return;
-      }
-      onPointerDownOutside?.(event);
-      ctx.setOpen(false);
-    };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onEscapeKeyDown?.(event);
-        event.preventDefault();
-        ctx.setOpen(false);
-        ctx.triggerRef.current?.focus();
+      if (
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp" &&
+        event.key !== "Home" &&
+        event.key !== "End"
+      ) {
         return;
       }
-      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
-        const panel = localRef.current;
-        if (!panel) return;
-        const items = Array.from(
-          panel.querySelectorAll<HTMLElement>(
-            '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"])',
-          ),
-        );
-        if (items.length === 0) return;
-        event.preventDefault();
-        if (event.key === "Home") {
-          items[0]?.focus();
-          return;
-        }
-        if (event.key === "End") {
-          items[items.length - 1]?.focus();
-          return;
-        }
-        const cur = items.indexOf(document.activeElement as HTMLElement);
-        const nextIdx =
-          event.key === "ArrowDown"
-            ? (cur + 1 + items.length) % items.length
-            : (cur - 1 + items.length) % items.length;
-        items[nextIdx]?.focus();
+      const panel = localRef.current;
+      if (!panel) return;
+      const items = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          '[role="menuitem"]:not([aria-disabled="true"]), [role="menuitemradio"]:not([aria-disabled="true"])',
+        ),
+      );
+      if (items.length === 0) return;
+      event.preventDefault();
+      if (event.key === "Home") {
+        items[0]?.focus();
+        return;
       }
+      if (event.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const cur = items.indexOf(document.activeElement as HTMLElement);
+      const nextIdx =
+        event.key === "ArrowDown"
+          ? (cur + 1 + items.length) % items.length
+          : (cur - 1 + items.length) % items.length;
+      items[nextIdx]?.focus();
     };
-    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [ctx, onEscapeKeyDown, onPointerDownOutside]);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [ctx.open]);
 
-  if (!ctx.open) return null;
+  if (!floating.mounted) return null;
 
+  const left = floating.left + (side === "top" || side === "bottom" ? alignOffset : 0);
+  const top = floating.top + (side === "left" || side === "right" ? alignOffset : 0);
   const mergedStyle: CSSProperties = {
-    position: "fixed",
-    top: coords.top,
-    left: coords.left,
-    right: "auto",
-    bottom: "auto",
-    zIndex: 9999,
-    minWidth: "max-content",
-    visibility: coords.ready ? undefined : "hidden",
+    top,
+    left,
+    transformOrigin: floating.origin,
     ...style,
   };
 
@@ -413,13 +365,15 @@ const Content = forwardRef<HTMLDivElement, ContentProps>(function DropdownMenuCo
         assignRef(ref, node);
       }}
       role="menu"
-      data-state="open"
-      data-side={coords.resolvedSide}
+      aria-hidden={floating.isOpen ? undefined : true}
+      data-state={floating.isOpen ? "open" : "closed"}
+      data-side={floating.side}
       style={mergedStyle}
       className={cn(
-        "sn-menu sn-solid code-proxy-floating-surface outline-none",
-        coords.resolvedSide === "top" ? "sn-up" : null,
-        coords.end ? "sn-end" : null,
+        "sn-menu sn-float sn-solid outline-none",
+        floating.isOpen ? "sn-open" : null,
+        floating.up ? "sn-up" : null,
+        floating.end ? "sn-end" : null,
         CONTENT_SIZE_CLASS[ctx.size],
         className,
       )}
@@ -508,7 +462,9 @@ function Sub({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
   const triggerRef = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current !== null) {
@@ -526,18 +482,39 @@ function Sub({
     [cancelClose, isControlled, onOpenChange],
   );
 
-  const scheduleClose = useCallback(() => {
-    cancelClose();
-    closeTimerRef.current = window.setTimeout(() => {
-      closeTimerRef.current = null;
-      setOpen(false);
-    }, 120);
-  }, [cancelClose, setOpen]);
+  const scheduleClose = useCallback(
+    (pointer?: { x: number; y: number }) => {
+      cancelClose();
+      let delay = 140;
+      const panel = panelRef.current;
+      const prev = lastPointerRef.current;
+      if (pointer && prev && panel) {
+        const rect = panel.getBoundingClientRect();
+        const edgeX = panel.classList.contains("sn-left") ? rect.right : rect.left;
+        if (
+          pointInTriangle(
+            pointer,
+            prev,
+            { x: edgeX, y: rect.top - 8 },
+            { x: edgeX, y: rect.bottom + 8 },
+          )
+        ) {
+          // 指针在 Satin 安全三角区内朝子菜单移动，给足 400ms 缓冲窗口不误关。
+          delay = 400;
+        }
+      }
+      closeTimerRef.current = window.setTimeout(() => {
+        closeTimerRef.current = null;
+        setOpen(false);
+      }, delay);
+    },
+    [cancelClose, setOpen],
+  );
 
   useEffect(() => cancelClose, [cancelClose]);
 
-  const value = useMemo(
-    () => ({ open, setOpen, scheduleClose, cancelClose, triggerRef }),
+  const value = useMemo<SubMenuContextValue>(
+    () => ({ open, setOpen, scheduleClose, cancelClose, triggerRef, panelRef }),
     [cancelClose, open, scheduleClose, setOpen],
   );
 
@@ -545,8 +522,11 @@ function Sub({
     <SubMenuContext.Provider value={value}>
       <div
         className="relative"
+        onMouseMove={(event) => {
+          lastPointerRef.current = { x: event.clientX, y: event.clientY };
+        }}
         onMouseEnter={() => setOpen(true)}
-        onMouseLeave={scheduleClose}
+        onMouseLeave={(event) => scheduleClose({ x: event.clientX, y: event.clientY })}
       >
         {children}
       </div>
@@ -577,7 +557,6 @@ const SubTrigger = forwardRef<
       onClick={(event) => {
         if (disabled) return;
         onClick?.(event);
-        // 点击子菜单触发器时始终保持展开，避免 mouseenter 刚打开又被 click 取反关闭。
         sub?.setOpen(true);
       }}
       onKeyDown={(event) => {
@@ -593,7 +572,7 @@ const SubTrigger = forwardRef<
       }}
       className={cn(
         "sn-item w-full select-none outline-none hover:bg-[var(--sn-b-ghost-hover)] focus:bg-[var(--sn-b-ghost-hover)]",
-        sub?.open ? "sn-hl" : null,
+        sub?.open ? "sn-sub-open sn-hl" : null,
         ctx ? ITEM_SIZE_CLASS[ctx.size] : ITEM_SIZE_CLASS.default,
         className,
       )}
@@ -614,51 +593,18 @@ const SubContent = forwardRef<
   const ctx = useContext(DropdownMenuContext);
   const sub = useContext(SubMenuContext);
   const localRef = useRef<HTMLDivElement | null>(null);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
-    side: "right" | "left";
-    ready: boolean;
-  }>({ top: 0, left: 0, side: "right", ready: false });
+  const fallbackAnchorRef = useRef<HTMLElement | null>(null);
 
-  const reposition = useCallback(() => {
-    const trigger = sub?.triggerRef.current;
-    if (!trigger) return;
-    const ar = trigger.getBoundingClientRect();
-    const panel = localRef.current;
-    const pw = panel?.offsetWidth || 180;
-    const ph = panel?.offsetHeight || 160;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-
-    let resolvedSide: "right" | "left" = "right";
-    let left = ar.right + sideOffset;
-    if (left + pw > vw - collisionPadding) {
-      resolvedSide = "left";
-      left = Math.max(collisionPadding, ar.left - sideOffset - pw);
-    }
-    let top = ar.top + alignOffset;
-    if (top + ph > vh - collisionPadding) {
-      top = Math.max(collisionPadding, vh - ph - collisionPadding);
-    }
-    if (top < collisionPadding) top = collisionPadding;
-
-    setCoords({ top: Math.round(top), left: Math.round(left), side: resolvedSide, ready: true });
-  }, [alignOffset, collisionPadding, sideOffset, sub]);
-
-  useLayoutEffect(() => {
-    if (!sub?.open) {
-      setCoords((prev) => (prev.ready ? { ...prev, ready: false } : prev));
-      return;
-    }
-    reposition();
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [reposition, sub?.open]);
+  const floating = useSatinFloatingLayer({
+    open: Boolean(sub?.open),
+    anchorRef: sub?.triggerRef ?? fallbackAnchorRef,
+    panelRef: localRef,
+    placement: "right",
+    align: "start",
+    gap: sideOffset,
+    margin: collisionPadding,
+    dismissable: false,
+  });
 
   useEffect(() => {
     const node = localRef.current;
@@ -670,30 +616,33 @@ const SubContent = forwardRef<
     };
   }, [ctx, sub?.open]);
 
-  if (!sub?.open) return null;
+  if (!floating.mounted) return null;
+
+  const isLeft = floating.side === "left";
 
   return (
     <div
       ref={(node) => {
         localRef.current = node;
+        if (sub) sub.panelRef.current = node;
         assignRef(ref, node);
       }}
       role="menu"
-      data-state="open"
-      data-side={coords.side}
-      onMouseEnter={() => sub.cancelClose()}
-      onMouseLeave={() => sub.scheduleClose()}
+      aria-hidden={floating.isOpen ? undefined : true}
+      data-state={floating.isOpen ? "open" : "closed"}
+      data-side={floating.side}
+      onMouseEnter={() => sub?.cancelClose()}
+      onMouseLeave={(event) => sub?.scheduleClose({ x: event.clientX, y: event.clientY })}
       style={{
-        position: "fixed",
-        top: coords.top,
-        left: coords.left,
+        top: floating.top + alignOffset,
+        left: floating.left,
         zIndex: 10000,
-        minWidth: "max-content",
-        visibility: coords.ready ? undefined : "hidden",
         ...style,
       }}
       className={cn(
-        "sn-menu sn-solid code-proxy-floating-surface outline-none",
+        "sn-menu sn-float sn-sub sn-solid outline-none",
+        floating.isOpen ? "sn-open" : null,
+        isLeft ? "sn-left" : null,
         ctx ? CONTENT_SIZE_CLASS[ctx.size] : CONTENT_SIZE_CLASS.default,
         className,
       )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "satin-ui/react";
 import {
+  GitHubRepoLink,
   HUE_GLYPH,
   LanguageSelector,
   SearchableSelect,
@@ -88,6 +89,7 @@ export function ShellTopBar({
           </button>
         ) : null}
         <TenantSwitcher />
+        <GitHubRepoLink variant="topbar" />
         <LanguageSelector size="sm" />
         <ThemeToggleButton size="sm" />
         <AppearanceButton className={TOPBAR_ICON_BUTTON} />

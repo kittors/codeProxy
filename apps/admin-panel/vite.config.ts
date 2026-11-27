@@ -102,6 +102,13 @@ export default defineConfig({
               return "vendor-satin-table";
             }
             if (
+              id.includes("/src/media/lightbox.js") ||
+              id.includes("/src/media/media.js") ||
+              id.includes("/src/media/carousel.js")
+            ) {
+              return "vendor-satin-media";
+            }
+            if (
               id.includes("/src/markdown.js") ||
               id.includes("/src/data/markdown.js") ||
               id.includes("/react/markdown.js") ||

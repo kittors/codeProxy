@@ -11,8 +11,17 @@ import {
 } from "@code-proxy/ui/icons";
 import { Icon as SatinIcon } from "satin-ui/react";
 import { useAuth } from "@app/providers/AuthProvider";
-import { Card, iconHueClass } from "@code-proxy/ui";
-import { useToast } from "@code-proxy/ui";
+import {
+  Card,
+  GitHubIcon,
+  GitHubRepoLink,
+  GITHUB_PANEL_SLUG,
+  GITHUB_PANEL_URL,
+  GITHUB_PROJECT_SLUG,
+  GITHUB_PROJECT_URL,
+  iconHueClass,
+  useToast,
+} from "@code-proxy/ui";
 import { SystemUpdateCard } from "@features/online-update";
 
 /* ═══════════════════════════════════════════════════════════
@@ -140,6 +149,7 @@ export function SystemPage() {
             </p>
           </div>
         </div>
+        <GitHubRepoLink variant="pill" size="sm" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -186,6 +196,53 @@ export function SystemPage() {
           link
         />
       </div>
+
+      <section aria-label={t("system_page.github_section")} className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 text-xs font-medium text-ink-3">
+          <GitHubIcon size={14} className="text-ink-2" />
+          <span>{t("system_page.github_section")}</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              key: "backend",
+              title: t("system_page.github_backend_repo"),
+              slug: GITHUB_PROJECT_SLUG,
+              url: GITHUB_PROJECT_URL,
+            },
+            {
+              key: "panel",
+              title: t("system_page.github_panel_repo"),
+              slug: GITHUB_PANEL_SLUG,
+              url: GITHUB_PANEL_URL,
+            },
+          ].map((repo) => (
+            <a
+              key={repo.key}
+              href={repo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cp-edge group flex items-center gap-3.5 rounded-2xl bg-[var(--sn-raised)] px-4 py-3.5 text-left no-underline transition-[box-shadow,background-color,transform] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] hover:shadow-lift active:scale-[0.99]"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--sn-accent)] text-[var(--sn-on-primary)]">
+                <GitHubIcon size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium text-ink-3">{repo.title}</span>
+                <span className="mt-0.5 block truncate font-mono text-sm font-semibold text-ink">
+                  {repo.slug}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-ink-3">{repo.url}</span>
+              </span>
+              <SatinIcon
+                name="arrow-up-right"
+                size={16}
+                className="shrink-0 text-ink-3 transition-transform duration-150 ease-[var(--sn-ease-out)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-ink"
+              />
+            </a>
+          ))}
+        </div>
+      </section>
 
       <SystemUpdateCard className="shrink-0" />
     </div>

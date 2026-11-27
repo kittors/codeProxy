@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../primitives/Button";
 import { Checkbox } from "../primitives/Checkbox";
+import { SegmentedControl } from "../forms/SegmentedControl";
 import { GridPopover } from "./GridPopover";
 import type { DataGridColumn, GridDensity, GridLines } from "./types";
 
@@ -92,61 +93,44 @@ export function GridViewMenu<T>({
           <p className="px-1.5 pb-1.5 pt-0.5 text-xs font-semibold text-[var(--sn-label)]">
             {t("data_grid.density")}
           </p>
-          <div
-            className="sn-seg sn-sm !grid w-full"
-            data-ssr=""
-            role="radiogroup"
-            aria-label={t("data_grid.density")}
-          >
-            {DENSITIES.map((item) => {
-              const active = item === density;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  aria-selected={active}
-                  data-autofocus={active ? "" : undefined}
-                  onClick={() => onDensityChange(item)}
-                  className="!inline-flex items-center justify-center gap-1 !px-2"
-                >
+          <SegmentedControl
+            size="sm"
+            value={density}
+            onChange={onDensityChange}
+            ariaLabel={t("data_grid.density")}
+            className="w-full"
+            options={DENSITIES.map((item) => ({
+              value: item,
+              label: (
+                <>
                   <DensityGlyph density={item} />
                   {t(`data_grid.density_${item}`)}
-                </button>
-              );
-            })}
-          </div>
+                </>
+              ),
+            }))}
+          />
 
           {lines && onLinesChange ? (
             <>
               <p className="mt-3 border-t border-[var(--sn-line)] px-1.5 pb-1.5 pt-3 text-xs font-semibold text-[var(--sn-label)]">
                 {t("data_grid.lines")}
               </p>
-              <div
-                className="sn-seg sn-sm !grid w-full"
-                data-ssr=""
-                role="radiogroup"
-                aria-label={t("data_grid.lines")}
-              >
-                {LINES_OPTIONS.map((item) => {
-                  const active = item === lines;
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      aria-selected={active}
-                      onClick={() => onLinesChange(item)}
-                      className="!inline-flex items-center justify-center gap-1.5 !px-2"
-                    >
+              <SegmentedControl
+                size="sm"
+                value={lines}
+                onChange={onLinesChange}
+                ariaLabel={t("data_grid.lines")}
+                className="w-full"
+                options={LINES_OPTIONS.map((item) => ({
+                  value: item,
+                  label: (
+                    <>
                       <Icon name={item === "grid" ? "layout-grid" : "rows-3"} size={13} />
                       {t(`data_grid.lines_${item}`)}
-                    </button>
-                  );
-                })}
-              </div>
+                    </>
+                  ),
+                }))}
+              />
             </>
           ) : null}
 

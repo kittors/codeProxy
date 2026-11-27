@@ -191,7 +191,10 @@
     "secret_saved_close": "I've saved it",
     "copy_all": "Copy all",
     "retry": "Retry",
-    "operation_failed": "Operation failed"
+    "operation_failed": "Operation failed",
+    "github": "GitHub",
+    "github_repo_tooltip": "View open-source project on GitHub (kittors/CliRelay)",
+    "github_open_source": "Open Source"
   },
   "title": {
     "main": "CliRelay Admin Dashboard",
@@ -6025,7 +6028,10 @@
     "copy": "Copy",
     "copied": "Copied",
     "api_key_portal": "User portal",
-    "api_key_usage": "API key usage"
+    "api_key_usage": "API key usage",
+    "github_section": "Open Source Repositories",
+    "github_backend_repo": "Core Gateway Repository",
+    "github_panel_repo": "Admin Panel Repository"
   },
   "model_plaza": {
     "title": "Model Plaza",

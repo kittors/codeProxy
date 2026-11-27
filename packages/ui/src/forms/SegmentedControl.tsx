@@ -1,6 +1,6 @@
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { initSeg } from "satin-ui";
 import { cn } from "../utils/selectStyles";
-import { useSatinFluidThumb } from "../utils/satinMotion";
 
 export interface SegmentedOption<T extends string = string> {
   value: T;
@@ -9,8 +9,8 @@ export interface SegmentedOption<T extends string = string> {
 }
 
 /**
- * Satin 分段单选（.sn-seg + .sn-thumb + edgeFrames 流体双曲线滑块微动效）：
- * 前缘先到、后缘跟上、落定时纵向轻压回弹，保留 radiogroup 语义与方向键切换。
+ * Satin 原生分段单选（直连 `satin-ui` 的 `initSeg` 流体双曲线物理滑块引擎）：
+ * 前缘先到、后缘延迟 45ms 跟上、落定时纵向轻压回弹，保留 radiogroup 语义与方向键切换。
  * 传入 `w-full` 时自动走 Satin 原生等宽网格 `grid-auto-columns: 1fr`，否则自适应紧凑排列。
  */
 export function SegmentedControl<T extends string>({
@@ -31,13 +31,34 @@ export function SegmentedControl<T extends string>({
   className?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const thumbRef = useRef<HTMLSpanElement | null>(null);
+  const segRef = useRef<ReturnType<typeof initSeg> | null>(null);
   const buttonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const enabled = options.filter((option) => !option.disabled);
   const isBlock = Boolean(className && /\bw-full\b/.test(className));
+  const optionSig = useMemo(() => options.map((opt) => opt.value).join("\u001f"), [options]);
+  const activeIdx = options.findIndex((option) => option.value === value);
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
 
-  const selector = `[data-seg-value="${CSS.escape(value)}"]`;
-  useSatinFluidThumb(containerRef, thumbRef, selector, value);
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+    const api = initSeg(container, undefined, activeIdxRef.current, {
+      role: "radio",
+      controlled: true,
+      fitScroll: false,
+      keyboard: false,
+    });
+    segRef.current = api;
+    return () => {
+      api.destroy();
+      if (segRef.current === api) segRef.current = null;
+    };
+  }, [optionSig]);
+
+  useLayoutEffect(() => {
+    segRef.current?.sync(activeIdx, false);
+  }, [activeIdx, optionSig]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
@@ -65,7 +86,7 @@ export function SegmentedControl<T extends string>({
         className,
       )}
     >
-      <span ref={thumbRef} aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
+      <span aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
       {options.map((option) => {
         const selected = option.value === value;
         return (

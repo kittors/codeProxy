@@ -76,6 +76,19 @@ vi.mock("@code-proxy/ui", () => ({
     </div>
   ),
   ThemeToggleButton: () => <button type="button">theme</button>,
+  GitHubRepoLink: ({
+    href = "https://github.com/kittors/CliRelay",
+    label = "GitHub",
+    variant = "topbar",
+  }: {
+    href?: string;
+    label?: string;
+    variant?: string;
+  }) => (
+    <a href={href} data-github-repo-link={variant}>
+      {label}
+    </a>
+  ),
   Checkbox: ({
     checked,
     onCheckedChange,
