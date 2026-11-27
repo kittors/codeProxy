@@ -203,7 +203,7 @@ export function GridFacetFilter({
             name="chevron-down"
             size={13}
             className={[
-              "text-[var(--sn-label3)] transition-[rotate,opacity,scale] duration-200 ease-pop",
+              "text-[var(--sn-label3)] transition-[rotate,opacity,scale] duration-200 ease-sn-strong",
               open ? "rotate-180" : "",
               active ? "scale-75 opacity-0" : "opacity-100",
             ].join(" ")}
@@ -211,7 +211,7 @@ export function GridFacetFilter({
           <span
             aria-hidden={active ? undefined : true}
             className={[
-              "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-pop",
+              "absolute inset-0 inline-flex items-center justify-center rounded-full text-2xs font-semibold tabular-nums transition-[opacity,scale] duration-200 ease-sn-strong",
               active
                 ? "bg-[var(--sn-accent)] text-[var(--sn-on-primary)] opacity-100"
                 : "scale-75 opacity-0",
@@ -234,7 +234,7 @@ export function GridFacetFilter({
             onChange={setDraft}
             onSubmit={apply}
           />
-          <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-line pt-2">
+          <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-sn-line pt-2">
             <Button size="xs" variant="ghost" onClick={() => setDraft([])}>
               {t("data_grid.reset")}
             </Button>
@@ -287,7 +287,7 @@ export function GridFilterChips<T>({
   return (
     <div className="relative h-7 min-w-0">
       {chips.length === 0 ? (
-        <p className="absolute inset-0 flex items-center px-1 text-xs text-ink-3 transition-opacity duration-150 ease-soft">
+        <p className="absolute inset-0 flex items-center px-1 text-xs text-sn-label3 transition-opacity duration-150 ease-sn-out">
           {placeholder ?? t("data_grid.no_active_filters")}
         </p>
       ) : null}

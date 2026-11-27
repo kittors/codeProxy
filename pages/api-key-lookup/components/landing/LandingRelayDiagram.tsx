@@ -36,7 +36,7 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         {UPSTREAMS.map((id) => (
           <li
             key={id}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-subtle"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-sn-subtle"
           >
             <VendorIcon modelId={id} size={18} />
           </li>
@@ -71,7 +71,7 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
           // 渐变 id 每个实例不同，类名里写不进去，经 CSS 变量交给 colorful: 类引用。
           style={{ "--relay-flow": `url(#${gradientId})` } as CSSProperties}
           className={[
-            "stroke-accent/70 colorful:[stroke:var(--relay-flow)]",
+            "stroke-sn-accent/70 colorful:[stroke:var(--relay-flow)]",
             reduceMotion ? "" : "motion-safe:animate-[landing-flow_1.4s_linear_infinite]",
           ].join(" ")}
         >
@@ -86,10 +86,10 @@ export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
         整列居中会把标记推离连线汇聚点（也就是之前连线看着没对齐的原因）。
       */}
       <div className="relative flex h-full shrink-0 items-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-subtle">
+        <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-sn-subtle">
           <LogoMark size={20} />
         </span>
-        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-ink-3">
+        <span className="absolute left-1/2 top-[calc(50%+2.25rem)] w-max -translate-x-1/2 font-display text-2xs uppercase tracking-[0.06em] text-sn-label3">
           {appLabel}
         </span>
       </div>

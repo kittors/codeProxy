@@ -97,15 +97,15 @@ export function WordAdvancedSettings({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-lg py-1 text-left text-sm font-semibold text-ink transition hover:text-accent-ink"
+        className="flex w-full items-center gap-2 rounded-lg py-1 text-left text-sm font-semibold text-sn-label transition hover:text-sn-accent-ink"
       >
         <ChevronDown
           size={16}
           aria-hidden="true"
-          className={["shrink-0 text-ink-3 transition-transform", open ? "" : "-rotate-90"].join(" ")}
+          className={["shrink-0 text-sn-label3 transition-transform", open ? "" : "-rotate-90"].join(" ")}
         />
         {t("content_moderation.words.advanced_title")}
-        <span className="min-w-0 truncate text-xs font-normal text-ink-3">{summary}</span>
+        <span className="min-w-0 truncate text-xs font-normal text-sn-label3">{summary}</span>
       </button>
 
       {/* 收起时也要看得到：这是会漏过敏感词的情形，不能藏在折叠里。 */}

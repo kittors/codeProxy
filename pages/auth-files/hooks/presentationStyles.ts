@@ -20,7 +20,7 @@ export const KNOWN_QUOTA_TEXT_KEYS = new Set([
  */
 const DANGER_TONE = "bg-rose-500/10 text-rose-800 dark:bg-rose-400/15 dark:text-rose-200";
 const WARNING_TONE = "bg-amber-500/12 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200";
-const NEUTRAL_TONE = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TONE = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 export const SUBSCRIPTION_TONE_CLASSES = {
   active: NEUTRAL_TONE,
@@ -56,9 +56,9 @@ export const identitySourceBadgeClass = (source: IdentityFingerprintFieldSource)
 
 /** 身份档案列表里正在查看的那一项：强调色淡底，多彩风格下是蓝色淡底。 */
 export const VIEWED_PROFILE_CLASS =
-  "bg-accent-soft colorful:bg-blue-50 colorful:dark:bg-blue-500/10";
+  "bg-sn-accent-soft colorful:bg-blue-50 colorful:dark:bg-blue-500/10";
 
 export const STICKY_ACTIONS_HEADER_CLASS =
   "text-center md:sticky md:z-40 md:bg-slate-100 md:dark:bg-neutral-800";
-// 冻结的操作列要不透明且和表格所在的底同色：读 --cp-backdrop（内容区 / 卡片 / 弹窗各一档）。
-export const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-backdrop";
+// 冻结的操作列要不透明且和表格所在的底同色：读 --sn-backdrop（内容区 / 卡片 / 弹窗各一档）。
+export const STICKY_ACTIONS_CELL_CLASS = "md:sticky md:z-30 md:bg-sn-backdrop";

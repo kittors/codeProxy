@@ -24,13 +24,13 @@ export function PageBackground({
   return (
     <div
       className={[
-        "relative min-h-[100dvh] font-sans text-ink antialiased",
+        "relative min-h-[100dvh] font-sans text-sn-label antialiased",
         // 落地页要能整页滚动，不能被 overflow-hidden 截断。
         variant === "landing"
           ? "bg-zinc-50 dark:bg-[#08080A]"
           : variant === "login"
             ? "overflow-hidden bg-[#f4f5f7] dark:bg-[#0e0f12] colorful:bg-[#f3f6f4] colorful:dark:bg-[#0d100f]"
-            : "overflow-hidden bg-canvas",
+            : "overflow-hidden bg-sn-workspace",
       ].join(" ")}
     >
       {variant === "login" ? (

@@ -15,7 +15,7 @@ export function ProviderModelChips({
 }: ProviderModelChipsProps) {
   if (!models.length) {
     return emptyLabel ? (
-      <span className="text-xs text-ink-3">{emptyLabel}</span>
+      <span className="text-xs text-sn-label3">{emptyLabel}</span>
     ) : null;
   }
 
@@ -68,7 +68,7 @@ export function ProviderModelChips({
           placement="top"
           className="shrink-0"
         >
-          <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-md bg-ink/[0.05] px-1.5 text-2xs font-semibold leading-none tabular-nums text-ink-3 dark:bg-white/[0.07]">
+          <span className="inline-flex h-5 shrink-0 cursor-default items-center rounded-md bg-sn-label/[0.05] px-1.5 text-2xs font-semibold leading-none tabular-nums text-sn-label3 dark:bg-white/[0.07]">
             +{remaining}
           </span>
         </HoverTooltip>

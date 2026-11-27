@@ -40,25 +40,25 @@ export function PortalRecentSignIns() {
 
   return (
     <Card className="mt-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-        <ShieldCheck size={16} className="text-ink-3" aria-hidden="true" />
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-sn-label">
+        <ShieldCheck size={16} className="text-sn-label3" aria-hidden="true" />
         {t("ip_access.portal_recent_logins")}
       </h3>
-      <p className="mt-0.5 text-xs text-ink-3">{t("ip_access.portal_recent_logins_hint")}</p>
+      <p className="mt-0.5 text-xs text-sn-label3">{t("ip_access.portal_recent_logins_hint")}</p>
 
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-ink-3">{t("ip_access.portal_no_logins")}</p>
+        <p className="mt-3 text-sm text-sn-label3">{t("ip_access.portal_no_logins")}</p>
       ) : (
-        <ul className="mt-3 divide-y divide-line">
+        <ul className="mt-3 divide-y divide-sn-line">
           {items.map((item, index) => (
             <li
               key={`${item.occurred_at}-${index}`}
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm"
             >
-              <span className="text-ink-2">
+              <span className="text-sn-label2">
                 {new Date(item.occurred_at).toLocaleString(i18n.language)}
               </span>
-              <span className="font-mono text-xs text-ink-2">{item.ip}</span>
+              <span className="font-mono text-xs text-sn-label2">{item.ip}</span>
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                   item.outcome === "success"
@@ -68,7 +68,7 @@ export function PortalRecentSignIns() {
               >
                 {t(`ip_access.outcome_${item.outcome}`, { defaultValue: item.outcome })}
               </span>
-              <span className="max-w-full truncate text-xs text-ink-3">{item.user_agent}</span>
+              <span className="max-w-full truncate text-xs text-sn-label3">{item.user_agent}</span>
             </li>
           ))}
         </ul>

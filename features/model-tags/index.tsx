@@ -199,7 +199,7 @@ const MODEL_VENDOR_KEYS = new Set<string>([
  * 多彩风格叠一层品牌淡底 + 品牌色的字，模型标签与供应商标签放在一起时颜色对得上；认不出的
  * 厂商 brandVars 回落到墨色，于是仍是中性的浅灰底、黑字。
  */
-const NEUTRAL_TAG_CLASS = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG_CLASS = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 const BRAND_TINT_CLASS =
   "colorful:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]";
 /** 厂商图标块的品牌淡底：图标块跟随「图标着色」开关（同 DialogIcon 的色相图标块）。 */
@@ -287,7 +287,7 @@ export function ModelVendorTile({
       style={vars.style}
       className={cn(
         vars.className,
-        "relative flex shrink-0 items-center justify-center text-ink-3",
+        "relative flex shrink-0 items-center justify-center text-sn-label3",
         compact
           ? "h-5 w-5 icon-hue:h-8 icon-hue:w-8 icon-hue:rounded-lg"
           : "h-6 w-6 icon-hue:h-11 icon-hue:w-11 icon-hue:rounded-xl",
@@ -397,7 +397,7 @@ export function CopyableModelTag({
       title={title}
       style={brand.style}
       className={cn(
-        "sn-btn !h-auto max-w-full gap-1.5 !rounded-lg !px-2.5 !py-1.5 font-mono !text-xs font-semibold leading-none !shadow-none hover:!bg-ink/[0.08] dark:hover:!bg-white/[0.1]",
+        "sn-btn !h-auto max-w-full gap-1.5 !rounded-lg !px-2.5 !py-1.5 font-mono !text-xs font-semibold leading-none !shadow-none hover:!bg-sn-label/[0.08] dark:hover:!bg-white/[0.1]",
         brand.className,
         // 多彩风格悬停时保留品牌淡底，只浮起一层投影（中性的悬停底会把品牌色盖掉）。
         "colorful:hover:!bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:hover:!shadow-sm colorful:dark:hover:!bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]",
@@ -436,7 +436,7 @@ export function ModelVendorStatBadge({
     vars.className,
     // 选中：简约风格用唯一的强调色淡底；多彩风格是品牌淡底再套一圈品牌色的选中圈，和淡底同一家族。
     active
-      ? "bg-accent-soft text-accent-ink colorful:ring-2 colorful:ring-[color-mix(in_oklab,var(--brand)_45%,transparent)] colorful:ring-offset-1 colorful:ring-offset-white colorful:dark:ring-offset-neutral-950"
+      ? "bg-sn-accent-soft text-sn-accent-ink colorful:ring-2 colorful:ring-[color-mix(in_oklab,var(--brand)_45%,transparent)] colorful:ring-offset-1 colorful:ring-offset-white colorful:dark:ring-offset-neutral-950"
       : NEUTRAL_TAG_CLASS,
     BRAND_TINT_CLASS,
     onClick ? "cursor-pointer transition-colors" : "",

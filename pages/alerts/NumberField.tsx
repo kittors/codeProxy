@@ -38,7 +38,7 @@ export function NumberField({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        endAdornment={unit ? <span className="pr-1 text-xs text-ink-3">{unit}</span> : undefined}
+        endAdornment={unit ? <span className="pr-1 text-xs text-sn-label3">{unit}</span> : undefined}
       />
     </FormField>
   );

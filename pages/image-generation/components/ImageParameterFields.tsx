@@ -84,7 +84,7 @@ export function ImageParameterFields({
                     <span className="truncate">
                       {t("image_generation.size_create_option", { size: normalized })}
                     </span>
-                    <span className="shrink-0 text-xs font-semibold text-ink-3">
+                    <span className="shrink-0 text-xs font-semibold text-sn-label3">
                       {t("image_generation.size_create_confirm")}
                     </span>
                   </span>

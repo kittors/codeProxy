@@ -27,19 +27,20 @@ export const getSelectTriggerBase = (
  */
 export const selectTriggerState = (open: boolean) => (open ? "open" : "closed");
 
-/** 紧凑型触发器（分页条的每页条数等）：跟随 Satin 控件圆角令牌，白底细描边。 */
+/** 紧凑型触发器（分页条的每页条数等）：对齐 Satin `.sn-select.sn-sm > .sn-trigger`。 */
 export const selectTriggerChip = [
-  "inline-flex h-7 items-center justify-center gap-1.5 rounded-[var(--sn-btn-r)] bg-surface px-3 shadow-control",
-  "text-xs font-medium text-ink-2 outline-none transition-[color,background-color,box-shadow] duration-150 ease-soft",
-  "hover:text-ink hover:shadow-control-hover data-[state=open]:text-ink data-[state=open]:shadow-control-hover",
-  "disabled:cursor-not-allowed disabled:text-ink-4 disabled:hover:shadow-control disabled:hover:text-ink-4",
+  "inline-flex h-7 items-center justify-center gap-1.5 rounded-[var(--sn-btn-r)] border border-sn-line-control bg-sn-field px-3",
+  "text-xs font-medium text-sn-label2 outline-none transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[var(--sn-press)]",
+  "hover:border-sn-line-control-hover hover:text-sn-label data-[state=open]:border-sn-line-control-hover data-[state=open]:bg-sn-hover-solid data-[state=open]:text-sn-label",
+  "focus-visible:border-sn-focus focus-visible:shadow-[0_0_0_3px_var(--sn-ring)]",
+  "disabled:cursor-not-allowed disabled:border-sn-line disabled:bg-sn-subtle disabled:text-sn-label-off disabled:active:scale-100",
 ].join(" ");
 
 /** 幽灵触发器（顶栏里的切换租户）：无边框无底色，跟随 Satin 控件圆角，悬停与展开共用一层浅灰。 */
 export const selectTriggerGhost = [
   "inline-flex h-8 min-w-0 items-center justify-between gap-1.5 rounded-[var(--sn-btn-r)] border-0 bg-transparent px-3",
-  "text-sm font-medium text-ink-2 outline-none transition-colors duration-150 ease-soft",
-  "hover:bg-hover hover:text-ink data-[state=open]:bg-hover data-[state=open]:text-ink",
+  "text-sm font-medium text-sn-label2 outline-none transition-colors duration-150 ease-[var(--sn-ease-out)]",
+  "hover:bg-sn-hover hover:text-sn-label data-[state=open]:bg-sn-hover data-[state=open]:text-sn-label",
   "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
 ].join(" ");
 

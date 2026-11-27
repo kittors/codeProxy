@@ -16,7 +16,7 @@ import { QUOTA_HUE } from "../helpers/quotaSeriesColors";
 import { buildTrendQuotaSummary, formatCurrency, formatPercent } from "../hooks/trendQuotaSummary";
 
 const VALUE_CLASS_NAME =
-  "min-w-0 whitespace-nowrap text-lg font-semibold leading-tight tracking-tight tabular-nums text-ink";
+  "min-w-0 whitespace-nowrap text-lg font-semibold leading-tight tracking-tight tabular-nums text-sn-label";
 
 /**
  * 一格统计：无边淡底 + 图标 + 墨色数值。弹窗本身是一层，统计格只用一层淡底分组。
@@ -42,8 +42,8 @@ function TrendSummaryTile({
   testId?: string;
 }) {
   return (
-    <div className="flex h-full min-w-0 flex-col gap-2.5 rounded-xl bg-subtle p-3" data-testid={testId}>
-      <p className="flex min-w-0 items-center gap-2 text-xs leading-snug font-semibold text-ink-3">
+    <div className="flex h-full min-w-0 flex-col gap-2.5 rounded-xl bg-sn-subtle p-3" data-testid={testId}>
+      <p className="flex min-w-0 items-center gap-2 text-xs leading-snug font-semibold text-sn-label3">
         <span aria-hidden="true" className="shrink-0 icon-hue:hidden [&_svg:is(.lucide,.sn-ic)]:size-[14px]">
           {icon}
         </span>
@@ -55,7 +55,7 @@ function TrendSummaryTile({
       </p>
       <div className="mt-auto min-w-0">
         <p className={valueClassName}>{value}</p>
-        {hint ? <p className="mt-1 text-2xs leading-tight text-ink-3">{hint}</p> : null}
+        {hint ? <p className="mt-1 text-2xs leading-tight text-sn-label3">{hint}</p> : null}
       </div>
     </div>
   );
@@ -207,7 +207,7 @@ export function TrendSummaryGrid({
           hue="cyan"
           label={t("auth_files.trend_cycle_start")}
           value={cycleStart}
-          valueClassName="whitespace-normal break-words text-sm font-semibold leading-tight text-ink"
+          valueClassName="whitespace-normal break-words text-sm font-semibold leading-tight text-sn-label"
         />
       ) : null}
     </div>

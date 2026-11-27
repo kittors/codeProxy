@@ -321,7 +321,7 @@ export function AssignRoleUsersModal({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("identity_admin.search_users_placeholder")}
             aria-label={t("identity_admin.search_users")}
-            startAdornment={<Search size={15} className="text-ink-3" aria-hidden="true" />}
+            startAdornment={<Search size={15} className="text-sn-label3" aria-hidden="true" />}
             autoComplete="off"
           />
         ) : null}
@@ -361,7 +361,7 @@ export function DeleteRoleConfirm({
         role ? (
           <span className="flex min-w-0 items-center justify-between gap-3">
             <span className="truncate font-medium">{name}</span>
-            <span className="shrink-0 text-xs text-ink-3">
+            <span className="shrink-0 text-xs text-sn-label3">
               {t("identity_admin.permission_count", { count: role.permissions.length })}
             </span>
           </span>

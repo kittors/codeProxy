@@ -34,20 +34,20 @@ export function CcSwitchImportPreview({ plan }: { plan: CcSwitchImportPlan }) {
   return (
     <section aria-labelledby={titleId} data-testid="ccswitch-import-preview" className="space-y-3">
       <header>
-        <h3 id={titleId} className="text-sm font-semibold text-ink">
+        <h3 id={titleId} className="text-sm font-semibold text-sn-label">
           {t("ccswitch.preview_title")}
         </h3>
-        <p className="mt-0.5 text-xs leading-5 text-ink-3">
+        <p className="mt-0.5 text-xs leading-5 text-sn-label3">
           {t("ccswitch.preview_description", { client: clientLabel })}
         </p>
       </header>
 
-      <div className="flex items-start gap-2 rounded-xl bg-subtle px-3 py-2">
+      <div className="flex items-start gap-2 rounded-xl bg-sn-subtle px-3 py-2">
         <div className="min-w-0 flex-1">
-          <div className="text-xs text-ink-3">{t("ccswitch.config_full_base_url")}</div>
+          <div className="text-xs text-sn-label3">{t("ccswitch.config_full_base_url")}</div>
           <div
             data-testid="ccswitch-config-endpoint-preview"
-            className="mt-0.5 break-all font-mono text-xs text-ink-2"
+            className="mt-0.5 break-all font-mono text-xs text-sn-label2"
           >
             {plan.endpoint}
           </div>
@@ -66,7 +66,7 @@ export function CcSwitchImportPreview({ plan }: { plan: CcSwitchImportPlan }) {
         />
       ))}
 
-      <ul className="space-y-1 text-xs leading-5 text-ink-3">
+      <ul className="space-y-1 text-xs leading-5 text-sn-label3">
         {tiersFollowMain ? <li>{t("ccswitch.preview_claude_tiers")}</li> : null}
         {plan.client.additive ? (
           <li>{t("ccswitch.preview_additive", { client: clientLabel })}</li>

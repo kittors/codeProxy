@@ -59,7 +59,7 @@ export function AuthFilesScopeTabs({
 const STATUS_CLASS = {
   ok: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   warning: "bg-amber-500/12 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200",
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
 } as const;
 
 /**
@@ -139,9 +139,9 @@ export function SharedAuthFilesPanel({
                 <VendorIcon modelId={typeKey} size={18} />
               </span>
               <div className="min-w-0">
-                <p className="truncate font-medium text-ink">{mask(title)}</p>
+                <p className="truncate font-medium text-sn-label">{mask(title)}</p>
                 {email && email !== title ? (
-                  <p className="truncate text-xs text-ink-3">{mask(email)}</p>
+                  <p className="truncate text-xs text-sn-label3">{mask(email)}</p>
                 ) : null}
               </div>
             </div>
@@ -181,7 +181,7 @@ export function SharedAuthFilesPanel({
         header: t("auth_files.col_subscription"),
         width: GRID_WIDTH.metric,
         cell: (file) =>
-          renderSubscriptionBadge(file) ?? <span className="text-xs text-ink-3">--</span>,
+          renderSubscriptionBadge(file) ?? <span className="text-xs text-sn-label3">--</span>,
       },
       {
         id: "concurrency",
@@ -190,7 +190,7 @@ export function SharedAuthFilesPanel({
         cell: (file) => {
           const limit = Number(file.concurrency_limit);
           return (
-            <span className="text-xs tabular-nums text-ink-2">
+            <span className="text-xs tabular-nums text-sn-label2">
               {Number.isFinite(limit) && limit > 0
                 ? limit
                 : t("auth_files.shared_concurrency_unlimited")}
@@ -204,13 +204,13 @@ export function SharedAuthFilesPanel({
         width: GRID_WIDTH.badgeGroup,
         cell: (file) => {
           const tags = resolveAuthFileDisplayTags(file);
-          if (tags.length === 0) return <span className="text-xs text-ink-3">--</span>;
+          if (tags.length === 0) return <span className="text-xs text-sn-label3">--</span>;
           return (
             <div className="flex min-w-0 flex-wrap gap-1">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex max-w-full items-center truncate rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
+                  className="inline-flex max-w-full items-center truncate rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                 >
                   {tag}
                 </span>

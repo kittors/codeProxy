@@ -90,14 +90,14 @@ export function EntityCard({
       className={[
         // Both `group` and `group/card`: children written against the plain
         // group variant keep working, and tests locate a card by `.group`.
-        // 对齐 Satin 卡片规范：不加悬停投影、不上浮，悬停仅把 1px 细描边微提亮一档。
-        "group group/card flex w-full max-w-[34rem] flex-col transition-[opacity] duration-200 ease-soft hover:[--cp-edge:var(--sn-line-control)] md:max-w-none",
+        // 对齐 Satin `.sn-card` / `.sn-pc` 规范：不加悬停投影、不上浮，悬停仅提亮 1px 细描边。
+        "group group/card flex w-full max-w-[34rem] flex-col transition-[border-color,opacity] duration-150 ease-[var(--sn-ease-out)] hover:border-sn-line-control-hover md:max-w-none",
         fill ? "h-full" : "",
         dense
-          ? "rounded-lg [--cp-inner-radius:var(--radius-sm)]"
-          : "rounded-xl [--cp-inner-radius:var(--radius-lg)]",
-        // 选中：把伪元素细边换成强调色，卡片不会因为选中变厚。
-        selected ? "[--cp-edge:var(--cp-accent)] dark:[--cp-edge:var(--cp-accent-ink)]" : "",
+          ? "rounded-lg [--sn-inner-radius:var(--sn-r-xs)]"
+          : "rounded-xl [--sn-inner-radius:var(--sn-r-md)]",
+        // 选中态对齐 Satin `.sn-card.sn-sel`：主色描边 + 1px 选中环。
+        selected ? "border-sn-accent shadow-[0_0_0_1px_var(--sn-accent)]" : "",
         muted ? "opacity-90" : "",
         dimmed ? "opacity-85" : "",
         className,
@@ -111,7 +111,7 @@ export function EntityCard({
             content={title}
             title={title}
             className={[
-              "min-w-0 truncate leading-5 font-semibold tracking-tight text-ink",
+              "min-w-0 truncate leading-5 font-semibold tracking-tight text-sn-label",
               titleAdornment ? "" : "flex-1",
               dense ? "text-sm" : "text-base",
             ].join(" ")}

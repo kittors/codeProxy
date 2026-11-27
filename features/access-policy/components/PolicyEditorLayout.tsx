@@ -84,12 +84,12 @@ export function PolicyEditorLayout({
 
   return (
     <div className="flex h-full min-h-0 flex-col sm:flex-row">
-      <aside className="flex shrink-0 flex-col sm:w-60 sm:bg-subtle">
+      <aside className="flex shrink-0 flex-col sm:w-60 sm:bg-sn-subtle">
         <div className="flex items-center gap-3 px-5 pb-2 pt-5 pr-14 sm:pr-5">
           <DialogIcon>{icon}</DialogIcon>
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight text-ink">{title}</h2>
-            {subtitle ? <p className="truncate text-xs text-ink-3">{subtitle}</p> : null}
+            <h2 className="truncate text-base font-semibold tracking-tight text-sn-label">{title}</h2>
+            {subtitle ? <p className="truncate text-xs text-sn-label3">{subtitle}</p> : null}
           </div>
         </div>
         <nav ref={navFade.ref} className="min-h-0 sm:flex-1 sm:overflow-y-auto">
@@ -104,7 +104,7 @@ export function PolicyEditorLayout({
           />
         </nav>
         {sidebarNote ? (
-          <div className="hidden px-5 pb-5 pt-2 text-2xs leading-5 text-ink-3 sm:block">{sidebarNote}</div>
+          <div className="hidden px-5 pb-5 pt-2 text-2xs leading-5 text-sn-label3 sm:block">{sidebarNote}</div>
         ) : null}
       </aside>
       {/* overflow-hidden：分区切换的入场位移（y: 6）不能把内容推出盒子，否则会撑大外层弹窗
@@ -139,9 +139,9 @@ function SectionPane({ section }: { section: PolicyEditorSection }) {
     >
       {/* 右上角是弹窗的关闭按钮，标题区让出位置。 */}
       <header className="mb-5 sm:pr-10">
-        <h3 className="text-base font-semibold text-ink">{section.title}</h3>
+        <h3 className="text-base font-semibold text-sn-label">{section.title}</h3>
         {section.description ? (
-          <p className="mt-1 text-xs leading-5 text-ink-3">{section.description}</p>
+          <p className="mt-1 text-xs leading-5 text-sn-label3">{section.description}</p>
         ) : null}
       </header>
       {section.content}
@@ -153,7 +153,7 @@ function SectionPane({ section }: { section: PolicyEditorSection }) {
 export function NavCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ink/[0.06] px-1.5 text-2xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.08]">
+    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sn-label/[0.06] px-1.5 text-2xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.08]">
       {count}
     </span>
   );

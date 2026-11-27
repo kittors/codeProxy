@@ -28,7 +28,7 @@ export interface ChartPalette {
   ink3: string;
   /** 分割线。 */
   grid: string;
-  /** 图表所在卡片的底色：圆点描边、扇区间隙这类要「挖空」的地方用它，与 `--cp-surface` 一致。 */
+  /** 图表所在卡片的底色：圆点描边、扇区间隙这类要「挖空」的地方用它，与 `--sn-raised` 一致。 */
   surface: string;
   /** 坐标轴线。 */
   axis: string;

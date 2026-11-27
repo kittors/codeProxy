@@ -85,14 +85,14 @@ describe("下拉触发器表面", () => {
     expect(trigger.className).not.toMatch(/\bopacity-(?:60|70)\b/);
   });
 
-  test.each(TRIGGERS)("%s 禁用时靠 disabled 变体表达，而不是覆盖静止底色", (name) => {
+  test.each(TRIGGERS)("%s 禁用时靠 Satin disabled 令牌变体表达，而不是覆盖静止底色", (name) => {
     renderTrigger(name, true);
 
     const trigger = screen.getByRole("combobox", { name: "Trigger" });
     expect(trigger).toBeDisabled();
-    // disabled: 变体的特异性高于裸类，覆盖关系不再取决于 Tailwind 的输出顺序。
-    expect(trigger.className).toMatch(/\bdisabled:bg-slate-100\/80\b/);
-    expect(trigger.className).toMatch(/\bdisabled:text-slate-400\b/);
+    // disabled: 变体的特异性高于裸类，使用 Satin --sn-fill-subtle / --sn-label-off 令牌。
+    expect(trigger.className).toMatch(/\bdisabled:bg-sn-subtle\b/);
+    expect(trigger.className).toMatch(/\bdisabled:text-sn-label-off\b/);
   });
 
   test.each(TRIGGERS)("%s 展开后把 data-state 切到 open", async (name) => {
@@ -118,6 +118,6 @@ describe("下拉触发器表面", () => {
     renderTrigger("MultiSelect", true);
     const disabledTrigger = screen.getByRole("combobox");
     expect(disabledTrigger).toBeDisabled();
-    expect(disabledTrigger.className).toMatch(/\bdisabled:bg-slate-100\/80\b/);
+    expect(disabledTrigger.className).toMatch(/\bdisabled:bg-sn-subtle\b/);
   });
 });

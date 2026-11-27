@@ -101,21 +101,21 @@ export function PublicPayPage() {
 
   return (
     <PageBackground variant="app">
-      <div className="min-h-dvh bg-canvas px-4 py-8 sm:px-6 sm:py-12">
+      <div className="min-h-dvh bg-sn-workspace px-4 py-8 sm:px-6 sm:py-12">
         <div className="mx-auto max-w-3xl space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sn-accent-soft text-sn-accent-ink">
                 <Wallet size={20} />
               </span>
               <div>
-                <h1 className="text-lg font-semibold text-ink">{t("billing.public_page_title")}</h1>
-                <p className="text-xs text-ink-3">{t("billing.public_page_subtitle")}</p>
+                <h1 className="text-lg font-semibold text-sn-label">{t("billing.public_page_title")}</h1>
+                <p className="text-xs text-sn-label3">{t("billing.public_page_subtitle")}</p>
               </div>
             </div>
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:bg-hover hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-sn-label2 transition hover:bg-sn-hover hover:text-sn-label"
             >
               <ArrowLeft size={14} />
               {t("billing.back_to_portal")}
@@ -167,7 +167,7 @@ export function PublicPayPage() {
               <div className={`${surface({ tone: "card", radius: "2xl" })} space-y-3 p-4 sm:p-5`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-ink/[0.06] text-ink dark:bg-white/[0.08]">
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sn-label/[0.06] text-sn-label dark:bg-white/[0.08]">
                       {target.target_kind === "api_key" ? (
                         <KeyRound size={18} />
                       ) : (
@@ -175,11 +175,11 @@ export function PublicPayPage() {
                       )}
                     </span>
                     <div>
-                      <div className="text-xs text-ink-3">{t("billing.current_target_label")}</div>
-                      <div className="text-sm font-semibold text-ink">
+                      <div className="text-xs text-sn-label3">{t("billing.current_target_label")}</div>
+                      <div className="text-sm font-semibold text-sn-label">
                         {target.label}
                         {target.key_masked ? (
-                          <span className="ml-2 font-mono text-xs font-normal text-ink-3">
+                          <span className="ml-2 font-mono text-xs font-normal text-sn-label3">
                             {target.key_masked}
                           </span>
                         ) : null}
@@ -189,7 +189,7 @@ export function PublicPayPage() {
 
                   <div className="flex flex-wrap items-center gap-4 text-xs">
                     <div className="space-y-0.5">
-                      <div className="text-ink-3">{t("billing.subscription_expiry_label")}</div>
+                      <div className="text-sn-label3">{t("billing.subscription_expiry_label")}</div>
                       <div
                         className={cn(
                           "inline-flex items-center gap-1 font-medium",
@@ -197,7 +197,7 @@ export function PublicPayPage() {
                             ? "text-rose-600 dark:text-rose-400"
                             : expiry?.soon
                               ? "text-amber-600 dark:text-amber-400"
-                              : "text-ink",
+                              : "text-sn-label",
                         )}
                       >
                         <CalendarClock size={13} />
@@ -205,8 +205,8 @@ export function PublicPayPage() {
                       </div>
                     </div>
                     <div className="space-y-0.5">
-                      <div className="text-ink-3">{t("billing.lifetime_quota_label")}</div>
-                      <div className="font-mono font-semibold tabular-nums text-ink">
+                      <div className="text-sn-label3">{t("billing.lifetime_quota_label")}</div>
+                      <div className="font-mono font-semibold tabular-nums text-sn-label">
                         {target.lifetime_limit_usd > 0
                           ? `$${remainingUsd.toFixed(2)} / $${target.lifetime_limit_usd.toFixed(2)}`
                           : t("billing.unlimited_quota")}
@@ -225,7 +225,7 @@ export function PublicPayPage() {
                 </div>
 
                 {target.note ? (
-                  <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-ink-3">
+                  <div className="flex items-center gap-2 border-t border-sn-line pt-3 text-xs text-sn-label3">
                     <Info size={14} className="shrink-0" />
                     <span>{target.note}</span>
                   </div>

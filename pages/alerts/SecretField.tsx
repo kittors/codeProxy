@@ -69,7 +69,7 @@ export function SecretField({
                     revealed ? t("alerts_page.secret.hide") : t("alerts_page.secret.show")
                   }
                   aria-pressed={revealed}
-                  className="inline-flex size-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="inline-flex size-7 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
                 >
                   {revealed ? (
                     <EyeOff size={14} aria-hidden="true" />
@@ -102,9 +102,9 @@ export function SecretField({
         ) : null}
       </div>
       {stored && !value.clear ? (
-        <p className="break-all text-xs leading-5 text-ink-3">
+        <p className="break-all text-xs leading-5 text-sn-label3">
           {t("alerts_page.secret.current")}
-          <code className="ml-1 rounded-md bg-subtle px-1.5 py-px font-mono text-2xs text-ink-2">
+          <code className="ml-1 rounded-md bg-sn-subtle px-1.5 py-px font-mono text-2xs text-sn-label2">
             {value.masked}
           </code>
         </p>

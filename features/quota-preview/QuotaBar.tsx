@@ -12,7 +12,7 @@ export type QuotaVisualTone = {
   percentClass: string;
   /**
    * The fill colour for places that cannot take a class (inline conic gradients).
-   * A CSS colour, not necessarily hex: the healthy band reads `--cp-bar-healthy`,
+   * A CSS colour, not necessarily hex: the healthy band reads `--sn-bar-healthy`,
    * which follows the appearance setting (styles/index.css).
    */
   fillHex: string;
@@ -34,14 +34,14 @@ export const resolveQuotaVisualTone = (
   if (normalized === null) {
     return {
       normalized,
-      barFillClass: "bg-ink-4",
-      barTrackClass: "bg-track",
-      percentClass: "text-ink-3",
+      barFillClass: "bg-sn-label-off",
+      barTrackClass: "bg-sn-sunken",
+      percentClass: "text-sn-label3",
       fillHex: "#c4c4c4",
-      chipClass: "bg-subtle",
-      chipLabelClass: "text-ink-2",
-      barLabelClass: "text-ink-2",
-      barMetaClass: "text-ink-3",
+      chipClass: "bg-sn-subtle",
+      chipLabelClass: "text-sn-label2",
+      barLabelClass: "text-sn-label2",
+      barMetaClass: "text-sn-label3",
     };
   }
 
@@ -61,14 +61,14 @@ export const resolveQuotaVisualTone = (
     return {
       normalized,
       barFillClass:
-        "bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
-      barTrackClass: "bg-track bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
-      percentClass: "text-ink",
-      fillHex: "var(--cp-bar-healthy)",
-      chipClass: "bg-subtle",
-      chipLabelClass: "text-ink-2",
-      barLabelClass: "text-ink-2",
-      barMetaClass: "text-ink-3",
+        "bg-sn-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
+      barTrackClass: "bg-sn-sunken bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
+      percentClass: "text-sn-label",
+      fillHex: "var(--sn-bar-healthy)",
+      chipClass: "bg-sn-subtle",
+      chipLabelClass: "text-sn-label2",
+      barLabelClass: "text-sn-label2",
+      barMetaClass: "text-sn-label3",
     };
   }
 
@@ -77,13 +77,13 @@ export const resolveQuotaVisualTone = (
       normalized,
       barFillClass:
         "bg-amber-500 dark:bg-amber-400 bar-semantic:bg-gradient-to-r bar-semantic:from-amber-300 bar-semantic:to-amber-500 bar-semantic:dark:from-amber-500 bar-semantic:dark:to-amber-300",
-      barTrackClass: "bg-track bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
+      barTrackClass: "bg-sn-sunken bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
       percentClass: "text-amber-700 dark:text-amber-300",
       fillHex: "#f59e0b",
       chipClass: "bg-amber-50/80 dark:bg-amber-500/[0.1]",
       chipLabelClass: "text-amber-900 dark:text-amber-100/80",
-      barLabelClass: "text-ink-2",
-      barMetaClass: "text-ink-3",
+      barLabelClass: "text-sn-label2",
+      barMetaClass: "text-sn-label3",
     };
   }
 
@@ -91,13 +91,13 @@ export const resolveQuotaVisualTone = (
     normalized,
     barFillClass:
       "bg-rose-500 dark:bg-rose-400 bar-semantic:bg-gradient-to-r bar-semantic:from-rose-400 bar-semantic:to-rose-500 bar-semantic:dark:from-rose-500 bar-semantic:dark:to-rose-400",
-    barTrackClass: "bg-track bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
+    barTrackClass: "bg-sn-sunken bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
     percentClass: "text-rose-600 dark:text-rose-400",
     fillHex: "#f43f5e",
     chipClass: "bg-rose-50/80 dark:bg-rose-500/[0.1]",
     chipLabelClass: "text-rose-900 dark:text-rose-100/80",
-    barLabelClass: "text-ink-2",
-    barMetaClass: "text-ink-3",
+    barLabelClass: "text-sn-label2",
+    barMetaClass: "text-sn-label3",
   };
 };
 
@@ -257,7 +257,7 @@ export function QuotaBar({
           <span
             data-testid="quota-bar-spend"
             title={spendTitle ?? undefined}
-            className="shrink-0 whitespace-nowrap font-medium tabular-nums text-ink-2"
+            className="shrink-0 whitespace-nowrap font-medium tabular-nums text-sn-label2"
           >
             {spendText}
           </span>
@@ -286,7 +286,7 @@ export function QuotaBar({
             className={[
               "absolute inset-y-0 left-0 rounded-full",
               tone.barFillClass,
-              "transition-[width] duration-700 ease-pop",
+              "transition-[width] duration-700 ease-sn-strong",
               "motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]",
               "motion-reduce:transition-none",
             ].join(" ")}

@@ -147,24 +147,24 @@ export function ProxyUrlInput({
 
   const fieldId = (field: PartField) => `${baseId}-${field}`;
   const preview = maskedProxyUrl(parts);
-  const subLabel = "mb-1.5 block text-xs font-medium text-ink-2";
+  const subLabel = "mb-1.5 block text-xs font-medium text-sn-label2";
   const errorText = "mt-1 text-xs text-rose-600 dark:text-rose-400";
 
   const header = (
     <>
       {label ? (
-        <legend className="mb-1 text-sm font-medium text-ink">
+        <legend className="mb-1 text-sm font-medium text-sn-label">
           {label}
           {required ? (
             <span className="ml-0.5 text-rose-500" aria-hidden="true">
               *
             </span>
           ) : (
-            <span className="ml-1.5 text-xs font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 text-xs font-normal text-sn-label3">{t("common.optional")}</span>
           )}
         </legend>
       ) : null}
-      {description ? <p className="-mt-1 text-xs leading-5 text-ink-3">{description}</p> : null}
+      {description ? <p className="-mt-1 text-xs leading-5 text-sn-label3">{description}</p> : null}
     </>
   );
 
@@ -262,7 +262,7 @@ export function ProxyUrlInput({
               }
             }}
           />
-          <p className={pasteError ? errorText : "mt-1 text-xs text-ink-3"} role={pasteError ? "alert" : undefined}>
+          <p className={pasteError ? errorText : "mt-1 text-xs text-sn-label3"} role={pasteError ? "alert" : undefined}>
             {pasteError ? t("proxy_input.paste_invalid") : t("proxy_input.paste_hint")}
           </p>
         </div>
@@ -319,7 +319,7 @@ export function ProxyUrlInput({
         <div className="min-w-0">
           <label htmlFor={fieldId("username")} className={subLabel}>
             {t("proxy_input.username")}
-            <span className="ml-1.5 font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 font-normal text-sn-label3">{t("common.optional")}</span>
           </label>
           <TextInput
             id={fieldId("username")}
@@ -340,7 +340,7 @@ export function ProxyUrlInput({
         <div className="min-w-0">
           <label htmlFor={fieldId("password")} className={subLabel}>
             {t("proxy_input.password")}
-            <span className="ml-1.5 font-normal text-ink-3">{t("common.optional")}</span>
+            <span className="ml-1.5 font-normal text-sn-label3">{t("common.optional")}</span>
           </label>
           <TextInput
             id={fieldId("password")}
@@ -354,14 +354,14 @@ export function ProxyUrlInput({
       </div>
 
       {preview ? (
-        <p className="flex min-w-0 items-center gap-2 text-xs text-ink-3">
+        <p className="flex min-w-0 items-center gap-2 text-xs text-sn-label3">
           <span className="shrink-0">{t("proxy_input.preview")}</span>
-          <code className="min-w-0 truncate rounded-md bg-subtle px-1.5 py-0.5 font-mono text-ink-2">
+          <code className="min-w-0 truncate rounded-md bg-sn-subtle px-1.5 py-0.5 font-mono text-sn-label2">
             {preview}
           </code>
         </p>
       ) : !required ? (
-        <p className="text-xs text-ink-3">{t("proxy_input.empty_means_direct")}</p>
+        <p className="text-xs text-sn-label3">{t("proxy_input.empty_means_direct")}</p>
       ) : null}
     </fieldset>
   );

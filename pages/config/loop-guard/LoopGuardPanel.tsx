@@ -85,7 +85,7 @@ export function LoopGuardPanel({ initial }: { initial: LoopGuardTenantView }) {
       />
 
       {saved.key_overrides > 0 ? (
-        <p className="px-1 text-xs text-ink-3">
+        <p className="px-1 text-xs text-sn-label3">
           {t("loop_guard.key_overrides", { count: saved.key_overrides })}
         </p>
       ) : null}

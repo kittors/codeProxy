@@ -40,10 +40,10 @@ export function AuthFilesAliasTab({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {showHeading ? (
           <div>
-            <h2 className="text-lg font-bold text-ink">
+            <h2 className="text-lg font-bold text-sn-label">
               {t("auth_files_page.alias_title")}
             </h2>
-            <p className="mt-1 text-sm text-ink-3">
+            <p className="mt-1 text-sm text-sn-label3">
               {t("auth_files.model_alias_desc")}
             </p>
           </div>
@@ -64,7 +64,7 @@ export function AuthFilesAliasTab({
       </div>
 
       {aliasLoading ? (
-        <div className="flex h-32 items-center justify-center text-sm text-ink-3">
+        <div className="flex h-32 items-center justify-center text-sm text-sn-label3">
           {t("common.loading_ellipsis")}
         </div>
       ) : (
@@ -119,7 +119,7 @@ export function AuthFilesAliasTab({
                           <ProviderTag vendor={channel} withLogo>
                             {channel}
                           </ProviderTag>
-                          <p className="mt-1 text-xs text-ink-3">
+                          <p className="mt-1 text-xs text-sn-label3">
                             {t("auth_files.valid_mappings", { count: mappingCount })}
                           </p>
                         </div>
@@ -182,7 +182,7 @@ export function AuthFilesAliasTab({
                             </div>
                             <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
                               <label
-                                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl px-1 text-sm text-ink-2 transition-colors hover:text-slate-900 dark:hover:text-white"
+                                className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl px-1 text-sm text-sn-label2 transition-colors hover:text-slate-900 dark:hover:text-white"
                                 title={t("auth_files.fork_hint")}
                               >
                                 <Checkbox

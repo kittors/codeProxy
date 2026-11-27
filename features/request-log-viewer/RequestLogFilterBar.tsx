@@ -6,6 +6,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
+  listGridFilterChips,
   setGridFilter,
   type DataGridColumn,
   type GridFilterOption,
@@ -57,8 +58,20 @@ export function RequestLogFilterBar({
 }) {
   const { t } = useTranslation();
   const status = statusTabOf(filters);
+  const extraChips =
+    guard && guard.value !== "all"
+      ? [
+          {
+            id: "guard",
+            label: `${t("request_logs.guard_filter_label")}：${t(`request_logs.guard_filter_${guard.value}`)}`,
+            onRemove: () => guard.onChange("all"),
+          },
+        ]
+      : [];
+  const hasActiveChips = listGridFilterChips(columns, filters, t).length > 0 || extraChips.length > 0;
+
   return (
-    <div className="rounded-xl border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] p-2">
+    <div className="min-w-0">
       <DataGridToolbar
         end={
           <>
@@ -76,23 +89,15 @@ export function RequestLogFilterBar({
           </>
         }
         chips={
-          <GridFilterChips
-            columns={columns}
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            extra={
-              guard && guard.value !== "all"
-                ? [
-                    {
-                      id: "guard",
-                      label: `${t("request_logs.guard_filter_label")}：${t(`request_logs.guard_filter_${guard.value}`)}`,
-                      onRemove: () => guard.onChange("all"),
-                    },
-                  ]
-                : []
-            }
-            placeholder={t("request_logs.no_active_filters")}
-          />
+          hasActiveChips ? (
+            <GridFilterChips
+              columns={columns}
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              extra={extraChips}
+              placeholder={t("request_logs.no_active_filters")}
+            />
+          ) : undefined
         }
       >
         <Tabs

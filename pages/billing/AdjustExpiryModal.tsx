@@ -143,14 +143,14 @@ export function AdjustExpiryModal({
       {target ? (
         <div className="space-y-4">
           <div className={`${surface({ tone: "inset", radius: "xl" })} space-y-1 px-3.5 py-2.5 text-xs`}>
-            <div className="font-semibold text-ink">
+            <div className="font-semibold text-sn-label">
               {target.target_label}
               {target.key_masked ? (
-                <span className="ml-1.5 font-mono font-normal text-ink-3">{target.key_masked}</span>
+                <span className="ml-1.5 font-mono font-normal text-sn-label3">{target.key_masked}</span>
               ) : null}
             </div>
-            <div className="flex items-center gap-1.5 text-ink-2">
-              <CalendarClock size={13} className="shrink-0 text-ink-3" />
+            <div className="flex items-center gap-1.5 text-sn-label2">
+              <CalendarClock size={13} className="shrink-0 text-sn-label3" />
               <span>
                 {t("billing_admin.current_expiry_line", {
                   value: target.expires_at
@@ -176,7 +176,7 @@ export function AdjustExpiryModal({
           {mode === "add_days" ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <div className="text-2xs font-medium text-ink-3">
+                <div className="text-2xs font-medium text-sn-label3">
                   {t("billing_admin.quick_extend_days")}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -234,8 +234,8 @@ export function AdjustExpiryModal({
           <div
             className={`${surface({ tone: "inset", radius: "xl" })} flex items-center justify-between gap-2 px-3.5 py-2.5 text-xs`}
           >
-            <span className="text-ink-3">{t("billing_admin.preview_new_expiry")}</span>
-            <span className="font-mono font-semibold text-ink">
+            <span className="text-sn-label3">{t("billing_admin.preview_new_expiry")}</span>
+            <span className="font-mono font-semibold text-sn-label">
               {previewDate ? previewDate.toLocaleString() : t("billing.no_expiry_limit")}
             </span>
           </div>

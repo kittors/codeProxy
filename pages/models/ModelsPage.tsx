@@ -765,7 +765,7 @@ export function ModelsPage() {
               {activeFilterLabels.map((label) => (
                 <li
                   key={label}
-                  className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+                  className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]"
                 >
                   {label}
                 </li>
@@ -851,7 +851,7 @@ export function ModelsPage() {
                 onChange={(e) => setOwnerSearchFilter(e.target.value)}
                 placeholder={t("models_page.owner_sidebar_search_placeholder")}
                 size="sm"
-                startAdornment={<Search size={14} className="text-ink-3" />}
+                startAdornment={<Search size={14} className="text-sn-label3" />}
               />
 
               <button
@@ -860,11 +860,11 @@ export function ModelsPage() {
                 className={[
                   "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm transition",
                   // 选中用强调色淡底（和下面的归属行一致），不再是一整块黑底白字。
-                  ownerFilter === "" ? "bg-accent-soft text-accent-ink" : "text-ink-2 hover:bg-hover",
+                  ownerFilter === "" ? "bg-sn-accent-soft text-sn-accent-ink" : "text-sn-label2 hover:bg-sn-hover",
                 ].join(" ")}
               >
                 <span className="min-w-0 truncate font-medium">{t("models_page.all_owners")}</span>
-                <span className="shrink-0 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07]">
+                <span className="shrink-0 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs text-sn-label2 dark:bg-white/[0.07]">
                   {t("models_page.owner_model_count", { count: models.length })}
                 </span>
               </button>
@@ -874,11 +874,11 @@ export function ModelsPage() {
                 className="-mx-1 min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto px-1 py-1"
               >
                 {libraryOwners.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-ink-3">
+                  <div className="px-3 py-6 text-center text-sm text-sn-label3">
                     {t("models_page.no_owner_presets")}
                   </div>
                 ) : filteredLibraryOwners.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-ink-3">
+                  <div className="px-3 py-6 text-center text-sm text-sn-label3">
                     {t("models_page.no_owner_search_results")}
                   </div>
                 ) : (
@@ -911,7 +911,7 @@ export function ModelsPage() {
                     placeholder={t("models_page.search")}
                     className="!w-48"
                     startAdornment={
-                      <Search size={14} className="text-ink-3" />
+                      <Search size={14} className="text-sn-label3" />
                     }
                   />
                   <Button
@@ -946,14 +946,14 @@ export function ModelsPage() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-ink">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-sn-label">
                         <span>{t("models_page.openrouter_sync_title")}</span>
                         <span
                           className={[
                             "rounded-full px-2 py-0.5 text-2xs font-semibold",
                             openRouterSyncState.enabled
                               ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                              : "bg-ink/[0.05] text-ink-3 dark:bg-white/[0.07]",
+                              : "bg-sn-label/[0.05] text-sn-label3 dark:bg-white/[0.07]",
                           ].join(" ")}
                         >
                           {openRouterSyncState.enabled
@@ -961,7 +961,7 @@ export function ModelsPage() {
                             : t("models_page.openrouter_sync_auto_off")}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3">
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-sn-label3">
                         <span>
                           {t("models_page.openrouter_sync_last_sync", {
                             value: formatSyncTimestamp(
@@ -993,7 +993,7 @@ export function ModelsPage() {
                       <div className="w-28">
                         <label
                           htmlFor="openrouter-sync-interval"
-                          className="mb-1 block text-xs font-medium text-ink-2"
+                          className="mb-1 block text-xs font-medium text-sn-label2"
                         >
                           {t("models_page.openrouter_sync_interval")}
                         </label>
@@ -1069,7 +1069,7 @@ export function ModelsPage() {
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder={t("models_page.search")}
                 className="!w-48"
-                startAdornment={<Search size={14} className="text-ink-3" />}
+                startAdornment={<Search size={14} className="text-sn-label3" />}
               />
               <Button
                 variant="primary"

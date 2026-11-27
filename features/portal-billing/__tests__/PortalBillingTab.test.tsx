@@ -155,8 +155,8 @@ describe("PortalBillingTab", () => {
     const alipayBtn = screen.getByRole("button", { name: /Alipay/i });
     expect(wechatBtn).toHaveAttribute("aria-pressed", "true");
     expect(alipayBtn).toHaveAttribute("aria-pressed", "false");
-    expect(wechatBtn.className).not.toContain("bg-accent text-white");
-    expect(wechatBtn.className).toContain("text-ink");
+    expect(wechatBtn.className).not.toContain("bg-sn-accent text-white");
+    expect(wechatBtn.className).toContain("text-sn-label");
     fireEvent.click(alipayBtn);
     expect(alipayBtn).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(wechatBtn);

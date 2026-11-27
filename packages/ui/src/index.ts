@@ -72,7 +72,6 @@ export { DialogIcon, dialogToneClass } from "./overlays/DialogIcon";
 export type { DialogIconSize, DialogSemanticTone, DialogTone } from "./overlays/DialogIcon";
 export {
   HUES,
-  HUE_BUTTON_ICON,
   HUE_DOT,
   HUE_GLYPH,
   HUE_HEX,

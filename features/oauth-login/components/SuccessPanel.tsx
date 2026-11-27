@@ -44,12 +44,12 @@ export function SuccessPanel({
       }
     >
       {account || resolvingAccount ? (
-        <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-subtle px-3 py-1.5 text-sm text-ink">
+        <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-sn-subtle px-3 py-1.5 text-sm text-sn-label">
           {icon ? <VendorIcon modelId={icon} size={16} /> : null}
           {account ? (
             <span className="truncate font-medium">{account}</span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-ink-3">
+            <span className="inline-flex items-center gap-1.5 text-sn-label3">
               <Loader2 size={13} className="animate-spin" aria-hidden="true" />
               {t("add_account.success.resolving")}
             </span>
@@ -57,7 +57,7 @@ export function SuccessPanel({
         </span>
       ) : null}
       {details?.length ? (
-        <ul className="grid gap-0.5 text-xs text-ink-3">
+        <ul className="grid gap-0.5 text-xs text-sn-label3">
           {details.map((line) => (
             <li key={line} className="truncate">
               {line}

@@ -15,12 +15,12 @@ export function normalizeChannelAuthType(authType?: string | null): "oauth" | "a
  */
 export function channelAuthTypeBadgeClass(authType: "oauth" | "api" | ""): string {
   if (authType === "api") {
-    return "bg-selected text-ink-2";
+    return "bg-sn-active text-sn-label2";
   }
   if (authType === "oauth") {
-    return "bg-hover text-ink-2";
+    return "bg-sn-hover text-sn-label2";
   }
-  return "bg-hover text-ink-3";
+  return "bg-sn-hover text-sn-label3";
 }
 
 export interface ChannelIdentityLabelProps {

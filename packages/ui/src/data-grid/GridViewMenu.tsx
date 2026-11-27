@@ -77,7 +77,7 @@ export function GridViewMenu<T>({
         <Icon name="sliders-horizontal" size={13} />
         {t("data_grid.view")}
         {hiddenCount > 0 ? (
-          <span className="rounded-full bg-ink/[0.08] px-1.5 text-2xs tabular-nums text-ink-2 dark:bg-white/[0.1]">
+          <span className="sn-badge sn-soft ml-0.5 tabular-nums">
             {t("data_grid.hidden_count", { count: hiddenCount })}
           </span>
         ) : null}
@@ -151,8 +151,8 @@ export function GridViewMenu<T>({
                   className={[
                     "flex h-8 items-center gap-2.5 rounded-lg px-2 text-sm transition-colors",
                     locked
-                      ? "cursor-default text-ink-3"
-                      : "cursor-pointer text-ink-2 hover:bg-hover hover:text-ink",
+                      ? "cursor-default text-sn-label3"
+                      : "cursor-pointer text-sn-label2 hover:bg-sn-hover hover:text-sn-label",
                   ].join(" ")}
                 >
                   <Checkbox
@@ -163,7 +163,7 @@ export function GridViewMenu<T>({
                   <span className="min-w-0 flex-1 truncate">{column.header}</span>
                   {locked ? (
                     <span
-                      className="inline-flex shrink-0 items-center text-ink-4"
+                      className="inline-flex shrink-0 items-center text-sn-label-off"
                       role="img"
                       aria-label={t("data_grid.column_locked")}
                     >
@@ -175,14 +175,14 @@ export function GridViewMenu<T>({
             })}
           </div>
 
-          <div className="mt-2 border-t border-line pt-2">
+          <div className="mt-2 border-t border-sn-line pt-2">
             <button
               type="button"
               onClick={() => {
                 onReset();
                 setAnchor(null);
               }}
-              className="inline-flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+              className="inline-flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs font-medium text-sn-label2 transition-colors hover:bg-sn-hover hover:text-sn-label"
             >
               <Icon name="rotate-ccw" size={13} />
               {t("data_grid.reset_view")}

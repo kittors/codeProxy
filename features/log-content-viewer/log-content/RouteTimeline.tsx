@@ -285,7 +285,7 @@ function outcomeLabel(t: TFunction, step: RouteTraceStep): string {
 
 // 时间线上的圆点：实色在深浅两种底色上都看得清，不需要 dark: 变体。
 const DOT_TONE: Record<DetailBadgeTone, string> = {
-  neutral: "bg-ink-4",
+  neutral: "bg-sn-label-off",
   info: "bg-sky-500",
   warning: "bg-amber-500",
   success: "bg-emerald-500",
@@ -333,8 +333,8 @@ function AccountName({
       className="min-w-0 break-all"
       title={step.authId && step.authId !== name ? step.authId : undefined}
     >
-      <span className="font-medium text-ink">{name}</span>
-      {step.provider ? <span className="text-ink-3"> · {step.provider}</span> : null}
+      <span className="font-medium text-sn-label">{name}</span>
+      {step.provider ? <span className="text-sn-label3"> · {step.provider}</span> : null}
     </span>
   );
 }
@@ -343,7 +343,7 @@ function StepLines({ lines }: { lines: ReactNode[] }) {
   const shown = lines.filter(Boolean);
   if (shown.length === 0) return null;
   return (
-    <div className="mt-1 space-y-0.5 text-xs leading-5 text-ink-2">
+    <div className="mt-1 space-y-0.5 text-xs leading-5 text-sn-label2">
       {shown.map((line, index) => (
         <div key={index} className="min-w-0 break-words">
           {line}
@@ -354,7 +354,7 @@ function StepLines({ lines }: { lines: ReactNode[] }) {
 }
 
 function ErrorText({ value }: { value: string }) {
-  return <span className="font-mono text-ink-3 [overflow-wrap:anywhere]">{value}</span>;
+  return <span className="font-mono text-sn-label3 [overflow-wrap:anywhere]">{value}</span>;
 }
 
 function AttemptStep({ step, language }: { step: RouteTraceStep; language: string | undefined }) {
@@ -380,7 +380,7 @@ function AttemptStep({ step, language }: { step: RouteTraceStep; language: strin
     step.model ? t("log_content.route_trace.model", { model: step.model }) : "",
     step.group ? t("log_content.route_trace.group", { group: step.group }) : "",
   ].filter(Boolean);
-  if (meta.length > 0) lines.push(<span className="text-ink-3">{meta.join(" · ")}</span>);
+  if (meta.length > 0) lines.push(<span className="text-sn-label3">{meta.join(" · ")}</span>);
   if ((step.outcome === "failed" || step.outcome === "canceled") && step.error) {
     lines.push(<ErrorText value={step.error} />);
   }
@@ -411,11 +411,11 @@ function StepHeading({
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <span className="text-ink-2">{title}</span>
+      <span className="text-sn-label2">{title}</span>
       {children}
       {badge}
       {durationMs && durationMs > 0 ? (
-        <span className="text-xs tabular-nums text-ink-3">{formatStepDuration(durationMs)}</span>
+        <span className="text-xs tabular-nums text-sn-label3">{formatStepDuration(durationMs)}</span>
       ) : null}
     </div>
   );
@@ -426,10 +426,10 @@ function CandidateList({ step, language }: { step: RouteTraceStep; language: str
   if (step.candidates.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="pb-1 text-xs font-medium text-ink-3">
+      <div className="pb-1 text-xs font-medium text-sn-label3">
         {t("log_content.route_trace.candidates_title")}
       </div>
-      <ul className="divide-y divide-line">
+      <ul className="divide-y divide-sn-line">
         {step.candidates.map((candidate) => (
           <li
             key={candidate.authId}
@@ -442,7 +442,7 @@ function CandidateList({ step, language }: { step: RouteTraceStep; language: str
                 provider: candidate.provider,
               }}
             />
-            <span className="min-w-0 break-words text-ink-2">
+            <span className="min-w-0 break-words text-sn-label2">
               {[
                 candidateStateLabel(t, candidate),
                 candidate.until
@@ -459,7 +459,7 @@ function CandidateList({ step, language }: { step: RouteTraceStep; language: str
         ))}
       </ul>
       {step.candidatesOmitted > 0 ? (
-        <div className="pt-1 text-xs text-ink-3">
+        <div className="pt-1 text-xs text-sn-label3">
           {t("log_content.route_trace.candidates_omitted", { count: step.candidatesOmitted })}
         </div>
       ) : null}
@@ -498,7 +498,7 @@ function MemberStep({ step }: { step: RouteTraceStep }) {
           ) : null
         }
       >
-        <span className="min-w-0 font-mono text-xs text-ink [overflow-wrap:anywhere]">
+        <span className="min-w-0 font-mono text-xs text-sn-label [overflow-wrap:anywhere]">
           {routeTraceMemberRoute(step)}
         </span>
       </StepHeading>
@@ -516,7 +516,7 @@ function StepBody({ step, language }: { step: RouteTraceStep; language: string |
       return (
         <StepHeading title={t("log_content.route_trace.step.skip")}>
           <AccountName step={step} />
-          <span className="text-xs text-ink-3">
+          <span className="text-xs text-sn-label3">
             {step.reason === "saturated"
               ? t("log_content.route_trace.skip_reason.saturated")
               : step.reason}
@@ -571,7 +571,7 @@ function StepBody({ step, language }: { step: RouteTraceStep; language: string |
             }
             durationMs={step.durationMs}
           >
-            {kind ? <span className="text-xs text-ink-3">{kind}</span> : null}
+            {kind ? <span className="text-xs text-sn-label3">{kind}</span> : null}
           </StepHeading>
           <StepLines
             lines={[
@@ -634,7 +634,7 @@ function StepTime({
   const offset = step === first ? null : msBetween(first.at, step.at);
   const clock = formatTraceClock(step.at, first.at, language);
   return (
-    <span className="pt-0.5 font-mono text-xs tabular-nums text-ink-3" title={clock}>
+    <span className="pt-0.5 font-mono text-xs tabular-nums text-sn-label3" title={clock}>
       {offset === null ? clock : `+${formatStepDuration(Math.max(0, offset))}`}
     </span>
   );
@@ -686,20 +686,20 @@ export function RouteTimeline({ trace }: { trace: RouteTrace }) {
   return (
     <div className="space-y-3 pt-1">
       {summary ? (
-        <p data-testid="route-trace-summary" className="text-sm leading-6 text-ink">
+        <p data-testid="route-trace-summary" className="text-sm leading-6 text-sn-label">
           {summary}
         </p>
       ) : null}
-      <ol className="divide-y divide-line" aria-label={t("log_content.route_trace.title")}>
+      <ol className="divide-y divide-sn-line" aria-label={t("log_content.route_trace.title")}>
         {trace.steps.map((step, index) => (
           <Fragment key={`${step.kind}-${step.at}-${index}`}>
             {trace.omitted > 0 && index === trace.omittedAfter ? (
               <li className={STEP_ROW}>
-                <span className="font-mono text-xs text-ink-3" aria-hidden="true">
+                <span className="font-mono text-xs text-sn-label3" aria-hidden="true">
                   ⋯
                 </span>
                 <span />
-                <span className="text-xs text-ink-3">
+                <span className="text-xs text-sn-label3">
                   {t("log_content.route_trace.omitted", { count: trace.omitted })}
                 </span>
               </li>

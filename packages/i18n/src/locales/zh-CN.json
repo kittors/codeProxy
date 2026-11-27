@@ -8149,7 +8149,7 @@
     "preset_colorful": "多彩",
     "preset_colorful_description": "彩色图标、语义色进度条、指标身份色与徽章光效，面板一贯的样子。",
     "preset_quiet": "简约",
-    "preset_quiet_description": "单一的蓝色强调色、中性图标，只有状态才用颜色。",
+    "preset_quiet_description": "Satin 克制墨色强调与中性单色图标，颜色仅用于状态与数据。",
     "preset_current": "当前",
     "preset_custom_note": "当前是自定义配色。点上面的风格可以整套切换回去。",
     "colors_title": "配色",

@@ -391,7 +391,7 @@ export function BindingsTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-3">{t("billing_admin.bindings_intro")}</p>
+        <p className="text-xs text-sn-label3">{t("billing_admin.bindings_intro")}</p>
         {canWrite ? (
           <Button size="sm" variant="primary" onClick={openCreate} disabled={plans.length === 0}>
             <Icon name="plus" size={14} />
@@ -486,10 +486,10 @@ export function BindingsTab({
                     key={plan.id}
                     className={`${surface({ tone: "inset", radius: "xl" })} flex flex-wrap items-center justify-between gap-2 px-3 py-2`}
                   >
-                    <label className="flex cursor-pointer items-center gap-2 text-xs text-ink">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-sn-label">
                       <Checkbox checked={checked} onCheckedChange={() => togglePlan(plan.id)} />
                       <span className="font-medium">{plan.name}</span>
-                      <span className="font-mono text-2xs text-ink-3">
+                      <span className="font-mono text-2xs text-sn-label3">
                         {plan.kind === "custom_quota"
                           ? t("billing.custom_price_label")
                           : formatYuan(plan.price_cents)}
@@ -497,7 +497,7 @@ export function BindingsTab({
                     </label>
                     {checked && plan.kind !== "custom_quota" ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-2xs text-ink-3">
+                        <span className="text-2xs text-sn-label3">
                           {t("billing_admin.override_price_label")}
                         </span>
                         <TextInput
@@ -529,10 +529,10 @@ export function BindingsTab({
           <div className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-xs font-medium text-ink">
+                <div className="text-xs font-medium text-sn-label">
                   {t("billing_admin.binding_enabled_label")}
                 </div>
-                <p className="text-2xs text-ink-3">{t("billing_admin.binding_enabled_desc")}</p>
+                <p className="text-2xs text-sn-label3">{t("billing_admin.binding_enabled_desc")}</p>
               </div>
               <ToggleSwitch
                 checked={draft.enabled}
@@ -543,10 +543,10 @@ export function BindingsTab({
 
             <div className="flex items-center justify-between gap-2">
               <div>
-                <div className="text-xs font-medium text-ink">
+                <div className="text-xs font-medium text-sn-label">
                   {t("billing_admin.allow_public_qr_label")}
                 </div>
-                <p className="text-2xs text-ink-3">{t("billing_admin.allow_public_qr_desc")}</p>
+                <p className="text-2xs text-sn-label3">{t("billing_admin.allow_public_qr_desc")}</p>
               </div>
               <ToggleSwitch
                 checked={draft.allowPublicPay}
@@ -566,7 +566,7 @@ export function BindingsTab({
           </FormField>
 
           <div className={`${surface({ tone: "inset", radius: "xl" })} space-y-2 p-3`}>
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink">
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-sn-label">
               <Checkbox
                 checked={draft.setExpiresAt}
                 onCheckedChange={(checked) => setDraft((p) => ({ ...p, setExpiresAt: checked }))}
@@ -602,12 +602,12 @@ export function BindingsTab({
         {qrTarget ? (
           <div className="flex flex-col items-center gap-4 py-1 text-center">
             <div>
-              <div className="text-sm font-semibold text-ink">{qrTarget.target_label}</div>
+              <div className="text-sm font-semibold text-sn-label">{qrTarget.target_label}</div>
               {qrTarget.key_masked ? (
-                <div className="font-mono text-xs text-ink-3">{qrTarget.key_masked}</div>
+                <div className="font-mono text-xs text-sn-label3">{qrTarget.key_masked}</div>
               ) : null}
             </div>
-            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-ink/10">
+            <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-sn-label/10">
               <QrCodeSvg
                 value={resolvePublicUrl(qrTarget)}
                 size={216}
@@ -617,7 +617,7 @@ export function BindingsTab({
             <div
               className={`${surface({ tone: "inset", radius: "xl" })} flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs`}
             >
-              <span className="truncate font-mono text-ink-2">{resolvePublicUrl(qrTarget)}</span>
+              <span className="truncate font-mono text-sn-label2">{resolvePublicUrl(qrTarget)}</span>
               <CopyButton value={resolvePublicUrl(qrTarget)} label={t("common.copy")} />
             </div>
             <div className="flex flex-wrap justify-center gap-2">

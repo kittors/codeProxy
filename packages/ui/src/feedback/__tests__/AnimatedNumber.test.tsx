@@ -20,7 +20,7 @@ describe("AnimatedNumber (Satin NumberFlow React 19 regression)", () => {
     expect(nf()?.querySelector(".sn-nf-sr")?.textContent).toBe("98.8%");
 
     // 同值再次重渲染（如页面切换主题、打开抽屉），仍不能清空数位节点。
-    rerender(<AnimatedNumber value={98.8} format={format} className="text-ink" />);
+    rerender(<AnimatedNumber value={98.8} format={format} className="text-sn-label" />);
     expect(nf()?.querySelectorAll(".sn-nf-d").length).toBeGreaterThanOrEqual(3);
     expect(nf()?.getAttribute("aria-label")).toBe("98.8%");
   });

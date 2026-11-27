@@ -182,7 +182,7 @@ export function ObservabilityMetricsPanel({ initial }: { initial: ObservabilityM
             action={<SnippetCopyButton text={snippet} />}
             className="[&_pre]:text-xs [&_pre]:leading-5"
           />
-          <p className="text-xs leading-5 text-ink-3">
+          <p className="text-xs leading-5 text-sn-label3">
             {t("metrics_export.snippet_hint", { file: CREDENTIALS_FILE })}
           </p>
         </>

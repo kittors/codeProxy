@@ -23,7 +23,7 @@ export interface ModelRulesEditorProps {
 }
 
 /** 卡片底：弹窗本身已是一张卡，规则卡用无边的淡色井，不再叠一层描边。 */
-const RULE_CARD = "rounded-xl bg-subtle p-4";
+const RULE_CARD = "rounded-xl bg-sn-subtle p-4";
 
 /**
  * 按模型规则：一组模型模式配一套自己的额度，叠加在总额度之上——命中的请求两层都要满足。
@@ -53,7 +53,7 @@ export function ModelRulesEditor({
   if (value.length === 0) {
     return (
       <EmptyState
-        icon={<Boxes size={28} className={cn("text-ink-3", HUE_GLYPH.indigo)} />}
+        icon={<Boxes size={28} className={cn("text-sn-label3", HUE_GLYPH.indigo)} />}
         title={t("access_policy.rules_empty_title")}
         description={t(readOnly ? "access_policy.rules_empty_readonly" : "access_policy.rules_empty_desc")}
         action={
@@ -92,7 +92,7 @@ export function ModelRulesEditor({
             <header className="mb-3 flex items-center gap-2">
               <span
                 aria-hidden="true"
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.05] text-xs font-semibold tabular-nums text-ink-2 dark:bg-white/[0.07] icon-hue:bg-indigo-500/10 icon-hue:text-indigo-600 icon-hue:dark:bg-indigo-400/15 icon-hue:dark:text-indigo-300"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.05] text-xs font-semibold tabular-nums text-sn-label2 dark:bg-white/[0.07] icon-hue:bg-indigo-500/10 icon-hue:text-indigo-600 icon-hue:dark:bg-indigo-400/15 icon-hue:dark:text-indigo-300"
               >
                 {index + 1}
               </span>
@@ -111,7 +111,7 @@ export function ModelRulesEditor({
                   ) : null}
                 </div>
               ) : (
-                <h4 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{title}</h4>
+                <h4 className="min-w-0 flex-1 truncate text-sm font-semibold text-sn-label">{title}</h4>
               )}
               {editable ? (
                 <Button
@@ -127,7 +127,7 @@ export function ModelRulesEditor({
 
             <div className="space-y-3">
               <div>
-                <div className="mb-1.5 text-xs font-medium text-ink-2" id={`${ruleId}-models-label`}>
+                <div className="mb-1.5 text-xs font-medium text-sn-label2" id={`${ruleId}-models-label`}>
                   {t("access_policy.rule_models")}
                 </div>
                 {editable ? (
@@ -150,14 +150,14 @@ export function ModelRulesEditor({
                 )}
                 <p
                   id={`${ruleId}-models-hint`}
-                  className={cn("mt-1 text-2xs", modelsIssue ? "text-rose-600 dark:text-rose-400" : "text-ink-3")}
+                  className={cn("mt-1 text-2xs", modelsIssue ? "text-rose-600 dark:text-rose-400" : "text-sn-label3")}
                 >
                   {modelsIssue ? issueText(modelsIssue) : editable ? t("access_policy.rule_models_hint") : null}
                 </p>
               </div>
 
               <div>
-                <div className="mb-1.5 text-xs font-medium text-ink-2">{t("access_policy.rule_limits")}</div>
+                <div className="mb-1.5 text-xs font-medium text-sn-label2">{t("access_policy.rule_limits")}</div>
                 <QuotaMatrixEditor
                   value={rule.limits}
                   onChange={editable ? (limits) => update(rule.key, { limits }) : undefined}
@@ -181,9 +181,9 @@ export function ModelRulesEditor({
                 <div className="grid gap-1.5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start sm:gap-2">
                   <label
                     htmlFor={`${ruleId}-fallback`}
-                    className="flex items-center gap-1.5 pt-1.5 text-xs font-medium text-ink-2"
+                    className="flex items-center gap-1.5 pt-1.5 text-xs font-medium text-sn-label2"
                   >
-                    <CornerDownRight size={13} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.teal)} />
+                    <CornerDownRight size={13} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.teal)} />
                     {t("access_policy.rule_fallback")}
                   </label>
                   <div className="min-w-0">
@@ -205,7 +205,7 @@ export function ModelRulesEditor({
                     )}
                     <p
                       id={`${ruleId}-fallback-hint`}
-                      className={cn("mt-1 text-2xs", fallbackIssue ? "text-rose-600 dark:text-rose-400" : "text-ink-3")}
+                      className={cn("mt-1 text-2xs", fallbackIssue ? "text-rose-600 dark:text-rose-400" : "text-sn-label3")}
                     >
                       {fallbackIssue ? issueText(fallbackIssue) : t("access_policy.rule_fallback_hint")}
                     </p>
@@ -222,7 +222,7 @@ export function ModelRulesEditor({
             <Plus size={14} />
             {t("access_policy.add_rule")}
           </Button>
-          <span className="text-2xs tabular-nums text-ink-3">
+          <span className="text-2xs tabular-nums text-sn-label3">
             {t("access_policy.rules_count", { count: value.length, max: MAX_MODEL_RULES })}
           </span>
         </div>

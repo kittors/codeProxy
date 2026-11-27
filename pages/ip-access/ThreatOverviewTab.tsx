@@ -63,7 +63,7 @@ export function ThreatOverviewTab({
         width: GRID_WIDTH.name,
         overflowTooltip: true,
         cell: (item) => (
-          <span className="font-mono text-sm text-ink">
+          <span className="font-mono text-sm text-sn-label">
             {item.sample_ip || item.ip_prefix}
             {item.trusted ? "" : ` (${t("ip_access.untrusted_short")})`}
           </span>
@@ -97,7 +97,7 @@ export function ThreatOverviewTab({
               {item.successes}
             </span>
           ) : (
-            <span className="tabular-nums text-ink-3">0</span>
+            <span className="tabular-nums text-sn-label3">0</span>
           ),
       },
       {
@@ -179,7 +179,7 @@ export function ThreatOverviewTab({
               aria-label={t("ip_access.filter_window")}
             />
           </div>
-          <span className="text-xs text-ink-3">
+          <span className="text-xs text-sn-label3">
             {t("ip_access.overview_description")}
           </span>
         </div>
@@ -221,7 +221,7 @@ const STATE_TONE = {
   danger: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
   warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
 } as const;
 
 function StateBadge({ tone, label }: { tone: keyof typeof STATE_TONE; label: string }) {

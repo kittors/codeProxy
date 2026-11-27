@@ -135,12 +135,12 @@ export function ConfigFieldRow({
                 onClick={() => setRevealed((previous) => !previous)}
                 aria-label={revealed ? t("common.hide") : t("common.show")}
                 aria-pressed={revealed}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
               >
                 {revealed ? <EyeOff size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
               </button>
             ) : unit ? (
-              <span className="pr-2 text-xs text-ink-3 select-none">{unit}</span>
+              <span className="pr-2 text-xs text-sn-label3 select-none">{unit}</span>
             ) : undefined
           }
         />

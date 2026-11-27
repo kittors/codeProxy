@@ -25,17 +25,17 @@ function MetricCell({
 }) {
   if (view.kind === "none") {
     return (
-      <span className="text-ink-4" title={title}>
+      <span className="text-sn-label-off" title={title}>
         —
       </span>
     );
   }
   return (
     <span className="flex flex-col items-end leading-tight" title={title}>
-      <span className="text-ink-2">
+      <span className="text-sn-label2">
         {format(view.kind === "quantiles" ? view.p50 : view.value)}
       </span>
-      <span className="text-2xs text-ink-3">
+      <span className="text-2xs text-sn-label3">
         {view.kind === "quantiles" ? `P90 ${format(view.p90)}` : averageLabel}
       </span>
     </span>
@@ -137,9 +137,9 @@ export function useModelPerformanceColumns() {
     render: (row) => {
       const value = row.performance?.first_token_ms_per_1k_input ?? null;
       return value === null ? (
-        <span className="text-ink-4">—</span>
+        <span className="text-sn-label-off">—</span>
       ) : (
-        <span className="text-ink-2">{formatMonitorDuration(value)}</span>
+        <span className="text-sn-label2">{formatMonitorDuration(value)}</span>
       );
     },
   };

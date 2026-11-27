@@ -32,10 +32,10 @@ type HeatmapPoint = {
 };
 
 // 热力图按请求数着色，用请求身份色（蓝）的单色深浅阶：越忙越浓，与监控中心的「活跃时段」热力格
-// 同一套。没有请求的格子保持中性的槽色（bg-track）——它表示「没有数据」，不是「量很少」。
+// 同一套。没有请求的格子保持中性的槽色（bg-sn-sunken）——它表示「没有数据」，不是「量很少」。
 // 格子不再各描一圈细边：三百多个小方块每个都带轮廓，整块读起来是一张网格纸。
 const HEATMAP_LEVEL_CLASSES = [
-  "bg-track",
+  "bg-sn-sunken",
   "bg-blue-500/20 dark:bg-blue-400/20",
   "bg-blue-500/40 dark:bg-blue-400/40",
   "bg-blue-500/65 dark:bg-blue-400/65",
@@ -144,7 +144,7 @@ function CalendarHeatmap({
               >
                 <span
                   tabIndex={0}
-                  className={`block h-3 w-3 cursor-pointer rounded-sm transition duration-150 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${HEATMAP_LEVEL_CLASSES[level]}`}
+                  className={`block h-3 w-3 cursor-pointer rounded-sm transition duration-150 hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-sn-accent/60 ${HEATMAP_LEVEL_CLASSES[level]}`}
                   aria-label={`${date}: ${point?.requests ?? 0} ${t("apikey_lookup.requests")}`}
                 />
               </HoverTooltip>
@@ -152,7 +152,7 @@ function CalendarHeatmap({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-center gap-1 text-xs text-ink-3 sm:justify-end">
+      <div className="flex items-center justify-center gap-1 text-xs text-sn-label3 sm:justify-end">
         <span>{t("apikey_lookup.heatmap_less")}</span>
         {HEATMAP_LEVEL_CLASSES.map((className) => (
           <span
@@ -178,12 +178,12 @@ function HeatmapSkeleton() {
           {Array.from({ length: 371 }, (_, index) => (
             <span
               key={index}
-              className="h-3 w-3 rounded-sm bg-track motion-safe:animate-pulse"
+              className="h-3 w-3 rounded-sm bg-sn-sunken motion-safe:animate-pulse"
             />
           ))}
         </div>
       </div>
-      <div className="ml-auto h-3 w-28 rounded bg-track motion-safe:animate-pulse" />
+      <div className="ml-auto h-3 w-28 rounded bg-sn-sunken motion-safe:animate-pulse" />
     </div>
   );
 }
@@ -191,7 +191,7 @@ function HeatmapSkeleton() {
 function ChartSkeleton() {
   return (
     <div
-      className="h-72 rounded-inner bg-track motion-safe:animate-pulse"
+      className="h-72 rounded-inner bg-sn-sunken motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -200,7 +200,7 @@ function ChartSkeleton() {
 function KpiValueSkeleton() {
   return (
     <span
-      className="block h-8 w-24 rounded-md bg-track motion-safe:animate-pulse"
+      className="block h-8 w-24 rounded-md bg-sn-sunken motion-safe:animate-pulse"
       aria-hidden="true"
     />
   );
@@ -318,7 +318,7 @@ export function UsageTabSection({
                 ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
                 : expiryMeta.soon
                   ? "bg-amber-500/10 text-amber-800 dark:text-amber-300"
-                  : "text-ink-2",
+                  : "text-sn-label2",
             )}
           >
             <div className="flex items-center gap-2">
@@ -477,18 +477,18 @@ export function UsageTabSection({
                           className="h-3.5 w-3.5 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
+                        <span className="min-w-0 truncate text-sn-label2">{item.name}</span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-ink">
+                      <span className="text-right font-semibold tabular-nums text-sn-label">
                         {item.valueLabel}
                       </span>
-                      <span className="text-right tabular-nums text-ink-3">{item.percentLabel}</span>
+                      <span className="text-right tabular-nums text-sn-label3">{item.percentLabel}</span>
                     </div>
                   ))}
                 </ScrollFade>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -532,12 +532,12 @@ export function UsageTabSection({
                           className="h-3 w-3 shrink-0 rounded-full sm:h-3.5 sm:w-3.5"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="min-w-0 truncate text-ink-2">{item.name}</span>
+                        <span className="min-w-0 truncate text-sn-label2">{item.name}</span>
                       </div>
-                      <span className="text-right font-semibold tabular-nums text-ink">
+                      <span className="text-right font-semibold tabular-nums text-sn-label">
                         {item.valueLabel}
                       </span>
-                      <span className="hidden text-right tabular-nums text-ink-3 sm:inline">
+                      <span className="hidden text-right tabular-nums text-sn-label3 sm:inline">
                         {item.percentLabel}
                       </span>
                     </div>
@@ -545,7 +545,7 @@ export function UsageTabSection({
                 </ScrollFade>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}
@@ -607,7 +607,7 @@ export function UsageTabSection({
                 />
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-ink-3">
+              <p className="py-8 text-center text-sm text-sn-label3">
                 {t("apikey_lookup.no_data")}
               </p>
             )}

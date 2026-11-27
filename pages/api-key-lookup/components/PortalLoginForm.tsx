@@ -60,16 +60,16 @@ export function PortalLoginForm({
   const showError = Boolean(error) && (locked || !error?.lockedUntil);
 
   const fieldClass = "h-12 rounded-[var(--sn-btn-r)] px-4 text-sm";
-  const adornmentClass = "text-ink-3";
+  const adornmentClass = "text-sn-label3";
 
   return (
     <div>
       <div className="flex flex-col items-center pb-8 text-center">
         <LogoMark size={44} className="mb-5" />
-        <h2 className="font-display text-2xl font-bold tracking-tight text-ink">
+        <h2 className="font-display text-2xl font-bold tracking-tight text-sn-label">
           {t("apikey_lookup.login_title", { defaultValue: "登录" })}
         </h2>
-        <p className="mt-2 text-sm text-ink-3">
+        <p className="mt-2 text-sm text-sn-label3">
           {t("apikey_lookup.login_desc", { defaultValue: "使用你的账号登录。" })}
         </p>
       </div>
@@ -123,7 +123,7 @@ export function PortalLoginForm({
               <button
                 type="button"
                 onClick={onTogglePassword}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:bg-hover hover:text-ink"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-sn-label3 transition-colors duration-150 hover:bg-sn-hover hover:text-sn-label"
                 aria-label={
                   showPassword
                     ? t("login.hide_key", { defaultValue: "隐藏密码" })
@@ -166,7 +166,7 @@ export function PortalLoginForm({
           它是静态说明，不加 live region，免得和上面的错误条重复播报。
           俄文这类长文案在弹窗宽度下会折行，text-balance 让两行等长，不把最后一个词单独挤到第二行。
         */}
-        <p className="text-center text-sm text-balance text-ink-3">
+        <p className="text-center text-sm text-balance text-sn-label3">
           {t("apikey_lookup.forgot_password_hint", {
             defaultValue: "忘记密码？请联系管理员重置。",
           })}

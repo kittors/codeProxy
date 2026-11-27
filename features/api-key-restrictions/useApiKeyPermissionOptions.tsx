@@ -14,7 +14,7 @@ const normalizeChannelKey = (value: string) => value.trim().toLowerCase();
 
 /** 选项前面的来源小标签：渠道的 API / OAuth，模型的「虚拟」。 */
 const SOURCE_TAG =
-  "inline-flex rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]";
+  "inline-flex rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07]";
 
 /**
  * 租户的虚拟模型名：Key 要在允许模型里写上它才能请求，但 /models 只列真实模型，所以另读一次。

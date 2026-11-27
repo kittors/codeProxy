@@ -121,7 +121,7 @@ export function EndUserKeysModal({
                   className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium tabular-nums ${
                     expired
                       ? "bg-rose-500/12 text-rose-700 dark:text-rose-300"
-                      : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+                      : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]"
                   }`}
                   title={new Date(expMs).toLocaleString()}
                 >
@@ -302,7 +302,7 @@ export function EndUserKeysModal({
         <div className="flex h-full min-h-0 flex-col gap-3 px-6 pb-6 pt-1">
           {accountLimits ? (
             <div className={`${surface({ tone: "inset", radius: "2xl" })} flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3`}>
-              <span className="shrink-0 text-xs font-semibold text-ink-2">{t("access_policy.account_ceiling")}</span>
+              <span className="shrink-0 text-xs font-semibold text-sn-label2">{t("access_policy.account_ceiling")}</span>
               <QuotaUsageCell
                 limits={accountLimits}
                 usage={user?.["quota-usage"]?.total}
@@ -313,7 +313,7 @@ export function EndUserKeysModal({
             </div>
           ) : null}
           <div className="flex shrink-0 items-center justify-between gap-2">
-            <p className="min-w-0 text-xs text-ink-3">{t("access_policy.keys_ceiling_hint")}</p>
+            <p className="min-w-0 text-xs text-sn-label3">{t("access_policy.keys_ceiling_hint")}</p>
             <div className="flex shrink-0 gap-2">
               <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
                 <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -438,7 +438,7 @@ export function EndUserKeysModal({
           deleteTarget ? (
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate font-medium">{deleteTarget.name || t("api_keys_page.unnamed")}</span>
-              <code className="shrink-0 font-mono text-xs text-ink-3">{deleteTarget.key_masked}</code>
+              <code className="shrink-0 font-mono text-xs text-sn-label3">{deleteTarget.key_masked}</code>
             </span>
           ) : null
         }

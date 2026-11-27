@@ -138,16 +138,16 @@ export function OpenAIProvidersTab({
                 onDelete={canWrite ? () => confirmDelete(idx) : undefined}
               >
                 {provider.id ? (
-                  <p className="mt-1 truncate font-mono text-xs text-ink-3" title={provider.id}>
+                  <p className="mt-1 truncate font-mono text-xs text-sn-label3" title={provider.id}>
                     ID: {provider.id}
                   </p>
                 ) : null}
                 {provider.prefix ? (
-                  <p className="mt-1 truncate font-mono text-xs text-ink-2">
+                  <p className="mt-1 truncate font-mono text-xs text-sn-label2">
                     prefix: {provider.prefix}
                   </p>
                 ) : null}
-                <p className="mt-1 truncate font-mono text-xs text-ink-2">
+                <p className="mt-1 truncate font-mono text-xs text-sn-label2">
                   baseUrl: {provider.baseUrl || "--"}
                 </p>
 
@@ -156,7 +156,7 @@ export function OpenAIProvidersTab({
                     {headerEntries.map(([key, value]) => (
                       <span
                         key={key}
-                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs text-ink-2 dark:bg-white/[0.07]"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs text-sn-label2 dark:bg-white/[0.07]"
                         title={`${key}: ${String(value)}`}
                       >
                         <span className="shrink-0 font-semibold">{key}:</span>
@@ -209,7 +209,7 @@ export function OpenAIProvidersTab({
                     />
                   ) : null}
                   {provider.testModel ? (
-                    <span className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07]">
+                    <span className="inline-flex items-center rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label2 dark:bg-white/[0.07]">
                       testModel: {provider.testModel}
                     </span>
                   ) : null}

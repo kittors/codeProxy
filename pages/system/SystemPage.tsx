@@ -62,8 +62,8 @@ function InfoCard({
       padding="compact"
       bodyClassName="mt-0"
       className={[
-        // 悬停只把投影换成抬起一档的 shadow-lift，不另写一套阴影。
-        "group transition-shadow hover:shadow-lift",
+        // 悬停只把投影换成抬起一档的 shadow-sn-lift，不另写一套阴影。
+        "group transition-shadow hover:shadow-sn-lift",
         hasCopy || hasExternal ? "pr-11" : "",
       ]
         .filter(Boolean)
@@ -73,7 +73,7 @@ function InfoCard({
         <button
           type="button"
           onClick={handleCopy}
-          className="sn-btn sn-ghost sn-xs sn-ibtn !absolute right-2.5 top-2.5 !text-ink-3 opacity-100 transition hover:!text-ink sm:opacity-0 sm:group-hover:opacity-100"
+          className="sn-btn sn-ghost sn-xs sn-ibtn !absolute right-2.5 top-2.5 !text-sn-label3 opacity-100 transition hover:!text-sn-label sm:opacity-0 sm:group-hover:opacity-100"
           title={t("system_page.copy")}
           aria-label={t("system_page.copy")}
         >
@@ -92,8 +92,8 @@ function InfoCard({
       ) : null}
 
       <div className="flex items-center gap-2 mb-1.5">
-        <Icon size={13} className="hidden text-ink-3 sm:block" />
-        <span className="text-2xs font-medium text-ink-3">
+        <Icon size={13} className="hidden text-sn-label3 sm:block" />
+        <span className="text-2xs font-medium text-sn-label3">
           {label}
         </span>
       </div>
@@ -103,19 +103,19 @@ function InfoCard({
             href={value}
             target="_blank"
             rel="noopener noreferrer"
-            className={`min-w-0 truncate text-sm font-medium text-ink underline decoration-ink-4 underline-offset-2 hover:decoration-ink-2 ${mono ? "font-mono text-xs" : ""}`}
+            className={`min-w-0 truncate text-sm font-medium text-sn-label underline decoration-sn-label-off underline-offset-2 hover:decoration-sn-label2 ${mono ? "font-mono text-xs" : ""}`}
           >
             {value}
           </a>
         ) : (
           <span
-            className={`truncate text-sm font-medium text-ink ${mono ? "font-mono text-xs" : ""}`}
+            className={`truncate text-sm font-medium text-sn-label ${mono ? "font-mono text-xs" : ""}`}
           >
             {value}
           </span>
         )}
         {link ? (
-          <ExternalLink size={11} className="hidden shrink-0 text-ink-4 sm:inline" />
+          <ExternalLink size={11} className="hidden shrink-0 text-sn-label-off sm:inline" />
         ) : null}
       </div>
     </Card>
@@ -136,14 +136,14 @@ export function SystemPage() {
     <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-x-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-selected">
-            <Server size={16} className={`text-ink-3 ${iconHueClass(Server)}`} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sn-active">
+            <Server size={16} className={`text-sn-label3 ${iconHueClass(Server)}`} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-ink">
+            <h2 className="text-lg font-semibold tracking-tight text-sn-label">
               {t("system_page.title")}
             </h2>
-            <p className="hidden text-xs text-ink-3 sm:block">
+            <p className="hidden text-xs text-sn-label3 sm:block">
               {t("system_page.subtitle")}
             </p>
           </div>
@@ -197,8 +197,8 @@ export function SystemPage() {
       </div>
 
       <section aria-label={t("system_page.github_section")} className="flex flex-col gap-2.5">
-        <div className="flex items-center gap-2 text-xs font-medium text-ink-3">
-          <GitHubIcon size={14} className="text-ink-2" />
+        <div className="flex items-center gap-2 text-xs font-medium text-sn-label3">
+          <GitHubIcon size={14} className="text-sn-label2" />
           <span>{t("system_page.github_section")}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -221,22 +221,22 @@ export function SystemPage() {
               href={repo.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="cp-edge group flex items-center gap-3.5 rounded-2xl bg-[var(--sn-raised)] px-4 py-3.5 text-left no-underline transition-[box-shadow,background-color,transform] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] hover:shadow-lift active:scale-[0.99]"
+              className="border border-sn-line group flex items-center gap-3.5 rounded-2xl bg-[var(--sn-raised)] px-4 py-3.5 text-left no-underline transition-[box-shadow,background-color,transform] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] hover:shadow-sn-lift active:scale-[0.99]"
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--sn-accent)] text-[var(--sn-on-primary)]">
                 <GitHubIcon size={20} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-ink-3">{repo.title}</span>
-                <span className="mt-0.5 block truncate font-mono text-sm font-semibold text-ink">
+                <span className="block text-xs font-medium text-sn-label3">{repo.title}</span>
+                <span className="mt-0.5 block truncate font-mono text-sm font-semibold text-sn-label">
                   {repo.slug}
                 </span>
-                <span className="mt-0.5 block truncate text-xs text-ink-3">{repo.url}</span>
+                <span className="mt-0.5 block truncate text-xs text-sn-label3">{repo.url}</span>
               </span>
               <SatinIcon
                 name="arrow-up-right"
                 size={16}
-                className="shrink-0 text-ink-3 transition-transform duration-150 ease-[var(--sn-ease-out)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-ink"
+                className="shrink-0 text-sn-label3 transition-transform duration-150 ease-[var(--sn-ease-out)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-sn-label"
               />
             </a>
           ))}

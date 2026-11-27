@@ -18,16 +18,16 @@ export function ProvidersPageHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="space-y-0.5">
-        <h2 className="text-base font-semibold text-ink">
+        <h2 className="text-base font-semibold text-sn-label">
           {t("providers.page_title")}
         </h2>
-        <p className="text-xs text-ink-3">{t("providers.page_desc")}</p>
+        <p className="text-xs text-sn-label3">{t("providers.page_desc")}</p>
       </div>
       {!loading && totalProviders > 0 ? (
         // 简约风格：启用是常态用中性字，停用才用琥珀提醒；多彩风格：启用绿、停用红。
-        <div className="flex items-center gap-3 text-xs text-ink-3">
+        <div className="flex items-center gap-3 text-xs text-sn-label3">
           <span>{t("providers.total_configs", { count: totalProviders })}</span>
-          <span className="text-ink-2 colorful:text-emerald-600 colorful:dark:text-emerald-400">
+          <span className="text-sn-label2 colorful:text-emerald-600 colorful:dark:text-emerald-400">
             {t("providers.enabled_count", { count: enabledProviders })}
           </span>
           {disabledProviders > 0 ? (

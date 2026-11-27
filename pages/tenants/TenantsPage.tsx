@@ -123,8 +123,8 @@ export function TenantsPage() {
         width: 256,
         cell: (item) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-ink">{tenantName(item)}</div>
-            <div className="truncate text-xs text-ink-3">{item.slug}</div>
+            <div className="truncate font-medium text-sn-label">{tenantName(item)}</div>
+            <div className="truncate text-xs text-sn-label3">{item.slug}</div>
           </div>
         ),
       },
@@ -270,8 +270,8 @@ export function TenantsPage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
           <div>
-            <h2 className="text-base font-semibold text-ink">{t("identity_admin.tenants_title")}</h2>
-            <p className="text-sm text-ink-3">{t("identity_admin.tenants_description")}</p>
+            <h2 className="text-base font-semibold text-sn-label">{t("identity_admin.tenants_title")}</h2>
+            <p className="text-sm text-sn-label3">{t("identity_admin.tenants_description")}</p>
           </div>
           <PermissionGate permission="platform.tenants.create">
             <Button variant="primary" onClick={() => setCreateOpen(true)}>

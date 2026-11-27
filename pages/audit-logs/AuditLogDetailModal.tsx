@@ -82,7 +82,7 @@ export function AuditLogDetailModal({
             {loading ? (
               <SkeletonLines rows={3} />
             ) : callChain.length === 0 ? (
-              <p className="text-sm text-ink-3">{t("identity_admin.no_call_chain")}</p>
+              <p className="text-sm text-sn-label3">{t("identity_admin.no_call_chain")}</p>
             ) : (
               <ol className="space-y-2">
                 {callChain.map((step, index) => (
@@ -91,18 +91,18 @@ export function AuditLogDetailModal({
                     className={`px-3 py-2 text-sm ${surface({ tone: "inset", radius: "xl" })}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-selected px-1.5 text-2xs font-semibold text-ink-2 tabular-nums">
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-sn-active px-1.5 text-2xs font-semibold text-sn-label2 tabular-nums">
                         {step.step ?? index + 1}
                       </span>
                       {step.layer ? (
-                        <span className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-2 dark:bg-white/[0.07]">
+                        <span className="rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label2 dark:bg-white/[0.07]">
                           {step.layer}
                         </span>
                       ) : null}
-                      <span className="font-medium text-ink">{step.name || "—"}</span>
+                      <span className="font-medium text-sn-label">{step.name || "—"}</span>
                     </div>
                     {step.detail || step.package || step.resource ? (
-                      <p className="mt-1 text-xs text-ink-3">
+                      <p className="mt-1 text-xs text-sn-label3">
                         {[
                           step.detail,
                           step.package,
@@ -125,7 +125,7 @@ export function AuditLogDetailModal({
               <SkeletonLines rows={2} />
             ) : projectMethod ? (
               <div
-                className={`px-3 py-2 font-mono text-xs text-ink-2 ${surface({ tone: "inset", radius: "xl" })}`}
+                className={`px-3 py-2 font-mono text-xs text-sn-label2 ${surface({ tone: "inset", radius: "xl" })}`}
               >
                 <div>
                   {[projectMethod.package, projectMethod.handler || projectMethod.method]
@@ -133,13 +133,13 @@ export function AuditLogDetailModal({
                     .join(" · ") || "—"}
                 </div>
                 {projectMethod.route || projectMethod.resource ? (
-                  <div className="mt-1 text-ink-3">
+                  <div className="mt-1 text-sn-label3">
                     {[projectMethod.route, projectMethod.resource].filter(Boolean).join(" · ")}
                   </div>
                 ) : null}
               </div>
             ) : (
-              <p className="text-sm text-ink-3">{t("identity_admin.no_project_method")}</p>
+              <p className="text-sm text-sn-label3">{t("identity_admin.no_project_method")}</p>
             )}
           </FormSection>
         </div>

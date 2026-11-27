@@ -52,7 +52,7 @@ export function MobileSidebar({
         aria-hidden={!open}
         inert={!open}
         className={[
-          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col bg-rail py-2 shadow-[var(--sn-e2)]",
+          "fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col bg-sn-shell py-2 shadow-[var(--sn-e2)]",
           "will-change-transform motion-reduce:transition-none motion-safe:transition-transform",
           // 对齐 Satin .sn-drawer：打开 320ms --sn-ease-open，关闭 220ms --sn-ease-in
           open
@@ -65,10 +65,10 @@ export function MobileSidebar({
             <LogoMark size={22} />
           </span>
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-sm font-semibold tracking-tight text-ink">
+            <span className="block truncate text-sm font-semibold tracking-tight text-sn-label">
               {t("shell.console")}
             </span>
-            <span className="block font-display text-2xs text-ink-3">{BRAND_NAME}</span>
+            <span className="block font-display text-2xs text-sn-label3">{BRAND_NAME}</span>
           </span>
         </div>
         <ScrollArea className="min-h-0 flex-1" scrollbarVisibility="track-hover" edgeFade>

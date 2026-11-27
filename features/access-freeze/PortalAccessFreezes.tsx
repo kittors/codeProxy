@@ -44,8 +44,8 @@ export function PortalAccessFreezes({
   return (
     <section aria-label={t("access_freeze.portal_title")} data-testid="portal-access-freezes">
       <Callout tone="danger" icon={<Lock />} title={t("access_freeze.portal_title")}>
-        <p className="text-ink-2">{t("access_freeze.portal_lead")}</p>
-        <ul className="mt-3 divide-y divide-line">
+        <p className="text-sn-label2">{t("access_freeze.portal_lead")}</p>
+        <ul className="mt-3 divide-y divide-sn-line">
           {items.map((item, index) => (
             <li
               key={`${index}:${item.provider}:${item.frozen_at}`}
@@ -56,20 +56,20 @@ export function PortalAccessFreezes({
                   {freezeProviderName(t, item)}
                 </ProviderTag>
                 {item.frozen_at ? (
-                  <span className="text-xs text-ink-3">
+                  <span className="text-xs text-sn-label3">
                     {t("access_freeze.frozen_at", {
                       time: formatFreezeTime(item.frozen_at, i18n.resolvedLanguage),
                     })}
                   </span>
                 ) : null}
                 {item.model ? (
-                  <span className="text-xs text-ink-3">
+                  <span className="text-xs text-sn-label3">
                     {t("access_freeze.portal_model", { model: item.model })}
                   </span>
                 ) : null}
               </div>
               {item.notice ? (
-                <p className="mt-1.5 whitespace-pre-line leading-6 text-ink-2 [overflow-wrap:anywhere]">
+                <p className="mt-1.5 whitespace-pre-line leading-6 text-sn-label2 [overflow-wrap:anywhere]">
                   {item.notice}
                 </p>
               ) : null}

@@ -31,7 +31,7 @@ export const CARD_ROWS = 5;
 
 /** 告警档对应的文字色；正常档不着色。 */
 export function levelText(level: UsageLevel | undefined): string {
-  if (!level || level === "normal") return "text-ink";
+  if (!level || level === "normal") return "text-sn-label";
   return meterTone(level).text;
 }
 
@@ -56,7 +56,7 @@ export function CardShell({
       data-testid={testId}
       className={[
         surface({ tone: "card", radius: "2xl" }),
-        "row-span-5 grid min-w-0 grid-rows-subgrid gap-y-3 p-4 [--cp-inner-radius:var(--radius-lg)]",
+        "row-span-5 grid min-w-0 grid-rows-subgrid gap-y-3 p-4 [--sn-inner-radius:var(--radius-lg)]",
       ].join(" ")}
     >
       {children}
@@ -86,10 +86,10 @@ export function CardHeader({
         <MetricIcon icon={icon} hue={hue} />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
-            <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>
+            <h3 className="truncate text-sm font-semibold text-sn-label">{title}</h3>
             {tags}
           </div>
-          <p className="truncate text-2xs text-ink-3" title={subtitle}>
+          <p className="truncate text-2xs text-sn-label3" title={subtitle}>
             {subtitle || " "}
           </p>
         </div>
@@ -178,10 +178,10 @@ export function MetricCell({
   return (
     <div data-testid={testId} data-level={level} className="min-w-0 space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-xs font-medium text-ink-3">{label}</span>
+        <span className="truncate text-xs font-medium text-sn-label3">{label}</span>
         {aside !== undefined && aside !== null ? (
           <span
-            className={`shrink-0 text-xs font-semibold tabular-nums ${level === "normal" ? "text-ink-2" : levelText(level)}`}
+            className={`shrink-0 text-xs font-semibold tabular-nums ${level === "normal" ? "text-sn-label2" : levelText(level)}`}
           >
             {aside}
           </span>
@@ -196,7 +196,7 @@ export function MetricCell({
       {bar ?? <div className="h-bar-sm" aria-hidden="true" />}
       <p
         title={footTitle ?? (typeof foot === "string" ? foot : undefined)}
-        className={`truncate text-2xs ${footLevel && footLevel !== "normal" ? levelText(footLevel) : "text-ink-3"}`}
+        className={`truncate text-2xs ${footLevel && footLevel !== "normal" ? levelText(footLevel) : "text-sn-label3"}`}
       >
         {foot ?? " "}
       </p>
@@ -226,7 +226,7 @@ export function Stat({
 }) {
   return (
     <div className="min-w-0" title={title}>
-      <dt className="truncate text-2xs text-ink-3">{label}</dt>
+      <dt className="truncate text-2xs text-sn-label3">{label}</dt>
       <dd className={`truncate text-xs font-semibold tabular-nums ${levelText(level)}`}>{value}</dd>
     </div>
   );
@@ -288,7 +288,7 @@ export function CardFooter({
   return (
     // 固定高度：没有详情按钮的卡片（还没有快照的节点）页脚文字也和别的卡片落在同一条线上。
     <div className="flex h-7 min-w-0 items-center justify-between gap-2 self-end" data-testid="card-footer">
-      <p className="min-w-0 truncate text-2xs text-ink-3">{meta}</p>
+      <p className="min-w-0 truncate text-2xs text-sn-label3">{meta}</p>
       {onOpenDetails ? (
         <button
           type="button"
@@ -327,14 +327,14 @@ export function CpuSplitBar({ cpu }: { cpu: NodeCpuView }) {
       {busy > 0 ? (
         <div
           data-testid="node-cpu-busy"
-          className={`absolute inset-y-0 left-0 ${tone.bar} transition-[width] duration-700 ease-pop motion-reduce:transition-none`}
+          className={`absolute inset-y-0 left-0 ${tone.bar} transition-[width] duration-700 ease-sn-strong motion-reduce:transition-none`}
           style={{ width: `${busy}%` }}
         />
       ) : null}
       {steal > 0 ? (
         <div
           data-testid="node-cpu-steal"
-          className="absolute inset-y-0 bg-amber-500 transition-[left,width] duration-700 ease-pop motion-reduce:transition-none dark:bg-amber-400 colorful:bg-gradient-to-r colorful:from-amber-300 colorful:to-orange-500"
+          className="absolute inset-y-0 bg-amber-500 transition-[left,width] duration-700 ease-sn-strong motion-reduce:transition-none dark:bg-amber-400 colorful:bg-gradient-to-r colorful:from-amber-300 colorful:to-orange-500"
           style={{ left: `${busy}%`, width: `${steal}%` }}
         />
       ) : null}

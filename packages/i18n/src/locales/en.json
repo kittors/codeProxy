@@ -8191,7 +8191,7 @@
     "preset_colorful": "Colourful",
     "preset_colorful_description": "Coloured icons, semantic progress bars, metric identity colours and badge glows — the panel's signature look.",
     "preset_quiet": "Quiet",
-    "preset_quiet_description": "One blue accent and neutral icons; colour is used only for states.",
+    "preset_quiet_description": "Satin monochrome ink accent and neutral icons; colour is reserved for states and data.",
     "preset_current": "Current",
     "preset_custom_note": "You are using a custom colour setup. Pick a style above to switch back as a whole.",
     "colors_title": "Colours",

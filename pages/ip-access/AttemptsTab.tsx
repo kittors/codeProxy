@@ -26,9 +26,9 @@ const SURFACES = ["", "admin_login", "portal_login", "management_key", "refresh"
 const OUTCOME_TONE: Record<string, string> = {
   failure: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
   throttled: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  blocked: "bg-ink text-canvas dark:bg-white/20 dark:text-ink",
-  auto_banned: "bg-ink text-canvas dark:bg-white/20 dark:text-ink",
-  would_ban: "bg-hover text-ink",
+  blocked: "bg-sn-label text-sn-workspace dark:bg-white/20 dark:text-sn-label",
+  auto_banned: "bg-sn-label text-sn-workspace dark:bg-white/20 dark:text-sn-label",
+  would_ban: "bg-sn-hover text-sn-label",
   success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
 };
 
@@ -155,7 +155,7 @@ export function AttemptsTab({
         cell: (item) => (
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              OUTCOME_TONE[item.outcome] ?? "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]"
+              OUTCOME_TONE[item.outcome] ?? "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]"
             }`}
           >
             {t(`ip_access.outcome_${item.outcome}`)}
@@ -181,7 +181,7 @@ export function AttemptsTab({
         width: GRID_WIDTH.composite,
         overflowTooltip: true,
         cell: (item) => (
-          <span className="text-sm text-ink-2">{item.reason || "—"}</span>
+          <span className="text-sm text-sn-label2">{item.reason || "—"}</span>
         ),
       },
       {
@@ -190,7 +190,7 @@ export function AttemptsTab({
         width: GRID_WIDTH.composite,
         overflowTooltip: true,
         cell: (item) => (
-          <span className="text-xs text-ink-3">{item.user_agent || "—"}</span>
+          <span className="text-xs text-sn-label3">{item.user_agent || "—"}</span>
         ),
       },
     ],
@@ -291,7 +291,7 @@ export function AttemptsTab({
                       {filterLabels.map((label) => (
                         <li
                           key={label}
-                          className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-xs text-ink-2 dark:bg-white/[0.07]"
+                          className="rounded-full bg-sn-label/[0.05] px-2.5 py-1 text-xs text-sn-label2 dark:bg-white/[0.07]"
                         >
                           {label}
                         </li>

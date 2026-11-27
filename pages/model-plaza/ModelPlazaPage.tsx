@@ -99,11 +99,11 @@ function PriceChip({
   // 价格不再是一格一格的描边小卡片（卡中卡），只是价格条里的一列：标签 + 数值。
   return (
     <div className="min-w-0">
-      <div className="text-2xs font-medium text-ink-3">{label}</div>
+      <div className="text-2xs font-medium text-sn-label3">{label}</div>
       <div
         className={[
           "mt-0.5 truncate font-mono text-xs font-semibold tabular-nums",
-          muted ? "text-ink-3" : "text-ink",
+          muted ? "text-sn-label3" : "text-sn-label",
         ].join(" ")}
       >
         {value}
@@ -148,7 +148,7 @@ function ModelPlazaCard({
   // 价格条贴着卡片底边，用同心内圆角（rounded-inner = 卡片圆角 − 内边距）的一块淡底。
   const priceGrid =
     model.pricing.mode === "call" ? (
-      <div className="grid grid-cols-1 gap-2 rounded-inner bg-subtle px-2.5 py-2">
+      <div className="grid grid-cols-1 gap-2 rounded-inner bg-sn-subtle px-2.5 py-2">
         <PriceChip
           label={t("model_plaza.price_per_call")}
           value={formatPriceCell(model.pricing.pricePerCall, notPriced)}
@@ -156,7 +156,7 @@ function ModelPlazaCard({
         />
       </div>
     ) : (
-      <div className="grid grid-cols-3 gap-2 rounded-inner bg-subtle px-2.5 py-2">
+      <div className="grid grid-cols-3 gap-2 rounded-inner bg-sn-subtle px-2.5 py-2">
         <PriceChip
           label={t("model_plaza.input_price")}
           value={formatPriceCell(model.pricing.inputPricePerMillion, notPriced)}
@@ -189,7 +189,7 @@ function ModelPlazaCard({
       <Card
         padding="compact"
         bodyClassName="mt-0 flex h-full min-h-[196px] flex-col"
-        className="group h-full transition-shadow hover:shadow-lift"
+        className="group h-full transition-shadow hover:shadow-sn-lift"
       >
         <div className="flex items-start gap-3">
           <ModelVendorTile modelId={model.id} />
@@ -198,7 +198,7 @@ function ModelPlazaCard({
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <h3
-                    className="truncate font-mono text-sm font-semibold text-ink"
+                    className="truncate font-mono text-sm font-semibold text-sn-label"
                     title={model.id}
                   >
                     {model.id}
@@ -207,7 +207,7 @@ function ModelPlazaCard({
                 {model.ownedBy ? (
                   <ModelOwnerTag owner={model.ownedBy} className="mt-1" />
                 ) : (
-                  <p className="mt-0.5 truncate text-2xs text-ink-3">
+                  <p className="mt-0.5 truncate text-2xs text-sn-label3">
                     {t("model_plaza.no_owner")}
                   </p>
                 )}
@@ -215,14 +215,14 @@ function ModelPlazaCard({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-ink-3 opacity-100 transition hover:bg-hover hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+                className="inline-flex shrink-0 items-center justify-center rounded-md p-1.5 text-sn-label3 opacity-100 transition hover:bg-sn-hover hover:text-sn-label sm:opacity-0 sm:group-hover:opacity-100"
                 title={t("model_plaza.copy_id")}
                 aria-label={t("model_plaza.copy_id")}
               >
                 {copied ? (
                   <Check size={14} className="text-emerald-500" />
                 ) : (
-                  <Copy size={14} className={`text-ink-3 ${iconHueClass(Copy)}`} />
+                  <Copy size={14} className={`text-sn-label3 ${iconHueClass(Copy)}`} />
                 )}
               </button>
             </div>
@@ -243,7 +243,7 @@ function ModelPlazaCard({
 
         <div className="mt-3 min-h-10 min-w-0 flex-1" data-testid="model-description-space">
           <p
-            className="line-clamp-2 break-words text-xs leading-5 text-ink-3"
+            className="line-clamp-2 break-words text-xs leading-5 text-sn-label3"
             data-testid="model-description-clamp"
           >
             {model.description?.trim()
@@ -255,7 +255,7 @@ function ModelPlazaCard({
         <div className="mt-2 min-h-4">
           {sourceSummary ? (
             <p
-              className="truncate text-2xs text-ink-3"
+              className="truncate text-2xs text-sn-label3"
               title={sourceSummary}
               data-testid="model-plaza-source"
             >
@@ -270,15 +270,15 @@ function ModelPlazaCard({
 
         <div className="mt-auto pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-2xs font-medium text-ink-3">
+            <span className="text-2xs font-medium text-sn-label3">
               {t("model_plaza.pricing")}
             </span>
             {!priced ? (
-              <span className="text-2xs text-ink-3">
+              <span className="text-2xs text-sn-label3">
                 {t("model_plaza.not_priced")}
               </span>
             ) : model.pricing.mode === "token" ? (
-              <span className="text-2xs text-ink-3">
+              <span className="text-2xs text-sn-label3">
                 {t("model_plaza.per_million")}
               </span>
             ) : null}
@@ -425,18 +425,18 @@ export function ModelPlazaPage() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           {/* 标题前是线性图标，不垫图标块（同请求日志页）；图标着色为多彩时按图标取色。 */}
-          <Store size={18} className={`shrink-0 text-ink-3 ${iconHueClass(Store)}`} aria-hidden="true" />
+          <Store size={18} className={`shrink-0 text-sn-label3 ${iconHueClass(Store)}`} aria-hidden="true" />
           <div>
-            <h2 className="text-lg font-semibold tracking-tight text-ink">{t("model_plaza.title")}</h2>
-            <p className="hidden text-xs text-ink-3 sm:block">
+            <h2 className="text-lg font-semibold tracking-tight text-sn-label">{t("model_plaza.title")}</h2>
+            <p className="hidden text-xs text-sn-label3 sm:block">
               {t("model_plaza.subtitle")}
             </p>
           </div>
-          <span className="rounded-full bg-hover px-2 py-0.5 text-xs font-bold tabular-nums text-ink">
+          <span className="rounded-full bg-sn-hover px-2 py-0.5 text-xs font-bold tabular-nums text-sn-label">
             {filteredModels.length}
           </span>
           {filter || selectedVendor !== "all" ? (
-            <span className="text-2xs text-ink-3">/ {models.length}</span>
+            <span className="text-2xs text-sn-label3">/ {models.length}</span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ export function ModelPlazaPage() {
             onChange={(e) => setFilter(e.target.value)}
             placeholder={t("model_plaza.search")}
             className="!w-40 sm:!w-56"
-            startAdornment={<Search size={14} className="text-ink-3" />}
+            startAdornment={<Search size={14} className="text-sn-label3" />}
           />
           <Button
             variant="secondary"
@@ -473,13 +473,13 @@ export function ModelPlazaPage() {
               <TabsTrigger value="all">
                 <Layers size={12} aria-hidden="true" />
                 {t("common.all", { defaultValue: "All" })}
-                <span className="tabular-nums text-ink-3">{models.length}</span>
+                <span className="tabular-nums text-sn-label3">{models.length}</span>
               </TabsTrigger>
               {vendorStats.map((stat) => (
                 <TabsTrigger key={stat.key} value={stat.key}>
                   <VendorIcon modelId={stat.key} size={12} />
                   {stat.label}
-                  <span className="tabular-nums text-ink-3">{stat.count}</span>
+                  <span className="tabular-nums text-sn-label3">{stat.count}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -495,7 +495,7 @@ export function ModelPlazaPage() {
         ) : null}
 
         {loading && models.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-ink-3">
+          <div className="flex items-center justify-center py-16 text-sm text-sn-label3">
             <RefreshCw size={14} className="mr-2 animate-spin" />
             {t("model_plaza.loading")}
           </div>

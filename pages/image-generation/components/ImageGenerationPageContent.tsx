@@ -49,7 +49,7 @@ export function ImageGenerationPage() {
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden">
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight text-ink">
+        <h2 className="text-xl font-semibold tracking-tight text-sn-label">
           {t("image_generation.title")}
         </h2>
 
@@ -105,7 +105,7 @@ export function ImageGenerationPage() {
                       </TabsContent>
                     ))}
                   </Tabs>
-                  <div className="rounded-inner bg-subtle px-4 py-3 text-xs leading-6 text-ink-2">
+                  <div className="rounded-inner bg-sn-subtle px-4 py-3 text-xs leading-6 text-sn-label2">
                     {t("image_generation.active_endpoint_hint", {
                       method: activeDoc.method,
                       path: activeDoc.path,
@@ -142,29 +142,29 @@ function EndpointCallDoc({ doc }: { doc: EndpointDoc }) {
   return (
     <div className="space-y-4">
       {/* 卡片里的分组只用无边淡底，圆角取卡片的同心内圆角（rounded-inner）。 */}
-      <div className="rounded-inner bg-subtle p-4">
+      <div className="rounded-inner bg-sn-subtle p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t(doc.titleKey)}
             </p>
-            <p className="mt-1 text-xs leading-5 text-ink-2">
+            <p className="mt-1 text-xs leading-5 text-sn-label2">
               {t(doc.descriptionKey)}
             </p>
           </div>
           {/* 淡底上的白色胶囊，不描边；请求方法是中性标签，蓝色只留给操作与选中。 */}
-          <div className="flex max-w-full items-center gap-2 rounded-full bg-surface px-3 py-1.5 font-mono text-xs">
-            <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 font-semibold text-ink dark:bg-white/[0.1]">
+          <div className="flex max-w-full items-center gap-2 rounded-full bg-sn-raised px-3 py-1.5 font-mono text-xs">
+            <span className="rounded-full bg-sn-label/[0.06] px-2 py-0.5 font-semibold text-sn-label dark:bg-white/[0.1]">
               {doc.method}
             </span>
-            <span className="truncate text-ink-2">{doc.path}</span>
+            <span className="truncate text-sn-label2">{doc.path}</span>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink-2">
-          <span className="rounded-full bg-surface px-2.5 py-1">
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-sn-label2">
+          <span className="rounded-full bg-sn-raised px-2.5 py-1">
             Authorization: Bearer YOUR_API_KEY
           </span>
-          <span className="rounded-full bg-surface px-2.5 py-1">
+          <span className="rounded-full bg-sn-raised px-2.5 py-1">
             {doc.contentType}
           </span>
         </div>
@@ -186,21 +186,21 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
         width: GRID_WIDTH.badgeStacked,
         // 参数名可能很长（response_format），按字符折行而不是截断：说明文档要看全。
         cell: (row) => (
-          <span className="min-w-0 break-all font-mono text-xs leading-5 text-ink">{row.name}</span>
+          <span className="min-w-0 break-all font-mono text-xs leading-5 text-sn-label">{row.name}</span>
         ),
       },
       {
         id: "type",
         header: t("image_generation.table_type"),
         width: GRID_WIDTH.badge,
-        cell: (row) => <span className="truncate font-mono text-xs text-ink-2">{row.type}</span>,
+        cell: (row) => <span className="truncate font-mono text-xs text-sn-label2">{row.type}</span>,
       },
       {
         id: "required",
         header: t("image_generation.table_required"),
         width: GRID_WIDTH.badge,
         cell: (row) => (
-          <span className="text-xs text-ink-2">{row.required ? t("common.yes") : t("common.no")}</span>
+          <span className="text-xs text-sn-label2">{row.required ? t("common.yes") : t("common.no")}</span>
         ),
       },
       {
@@ -208,7 +208,7 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
         header: t("image_generation.table_description"),
         width: 240,
         grow: true,
-        cell: (row) => <span className="text-xs leading-5 text-ink-2">{t(row.descriptionKey)}</span>,
+        cell: (row) => <span className="text-xs leading-5 text-sn-label2">{t(row.descriptionKey)}</span>,
       },
     ],
     [t],
@@ -220,7 +220,7 @@ function SpecTable({ tableId, title, rows }: { tableId: string; title: string; r
       data-testid="image-generation-spec-card"
       className={`overflow-hidden p-4 ${surface({ radius: "3xl" })}`}
     >
-      <h4 className="text-sm font-semibold text-ink">{title}</h4>
+      <h4 className="text-sm font-semibold text-sn-label">{title}</h4>
       <div className="mt-4">
         {/* 卡片里的小表：不再套外框，按行收高。 */}
         <DataGrid<SpecRow>

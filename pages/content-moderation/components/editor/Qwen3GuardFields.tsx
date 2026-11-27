@@ -67,7 +67,7 @@ export function Qwen3GuardFields({
                 key={scanner}
                 className={[
                   "flex items-start gap-2.5 rounded-xl px-2 py-1.5 transition-colors",
-                  disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-hover",
+                  disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-sn-hover",
                 ].join(" ")}
               >
                 <Checkbox
@@ -81,8 +81,8 @@ export function Qwen3GuardFields({
                   }
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm text-ink">{label}</span>
-                  <span id={helpId} className="block text-xs leading-5 text-ink-3">
+                  <span className="block text-sm text-sn-label">{label}</span>
+                  <span id={helpId} className="block text-xs leading-5 text-sn-label3">
                     {t(`content_moderation.scanner_help.${scanner}`)}
                   </span>
                 </span>
@@ -131,7 +131,7 @@ export function Qwen3GuardFields({
               <label
                 key={scanner}
                 className={[
-                  "flex items-center gap-1.5 text-xs text-ink-2",
+                  "flex items-center gap-1.5 text-xs text-sn-label2",
                   disabled || !elevatedEnabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
                 ].join(" ")}
               >

@@ -68,8 +68,8 @@ export function ProfilePicker({
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-colors",
               selected
-                ? "bg-accent-soft shadow-control"
-                : "bg-subtle hover:bg-hover",
+                ? "bg-sn-accent-soft border border-sn-line-control"
+                : "bg-sn-subtle hover:bg-sn-hover",
               disabled ? "cursor-not-allowed opacity-60" : null,
             )}
           >
@@ -77,15 +77,15 @@ export function ProfilePicker({
               aria-hidden="true"
               className={cn(
                 "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                selected ? "bg-accent text-accent-fg" : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+                selected ? "bg-sn-accent text-sn-on-primary" : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
                 selected ? HUE_SOLID.violet : HUE_TILE.violet,
               )}
             >
               <ShieldCheck size={16} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-ink">{profile.name}</span>
-              <span className="mt-0.5 block truncate text-xs text-ink-3">
+              <span className="block truncate text-sm font-semibold text-sn-label">{profile.name}</span>
+              <span className="mt-0.5 block truncate text-xs text-sn-label3">
                 {summarizePolicy(t, {
                   limits: profile["quota-limits"],
                   rules: profile["model-rules"],
@@ -94,7 +94,7 @@ export function ProfilePicker({
               </span>
             </span>
             {typeof count === "number" ? (
-              <span className="shrink-0 text-2xs tabular-nums text-ink-3">
+              <span className="shrink-0 text-2xs tabular-nums text-sn-label3">
                 {t("access_policy.bound_accounts", { count })}
               </span>
             ) : null}
@@ -102,7 +102,7 @@ export function ProfilePicker({
               aria-hidden="true"
               className={cn(
                 "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                selected ? "bg-accent text-accent-fg" : "bg-ink/[0.06] text-transparent dark:bg-white/[0.08]",
+                selected ? "bg-sn-accent text-sn-on-primary" : "bg-sn-label/[0.06] text-transparent dark:bg-white/[0.08]",
               )}
             >
               <Check size={12} />

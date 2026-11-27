@@ -31,7 +31,7 @@ export function OwnerSidebarItem({
     <div
       className={[
         "group/owner relative flex items-center gap-2 overflow-hidden rounded-xl px-2 py-1.5 transition-colors duration-200 ease-out",
-        selected ? "bg-accent-soft" : "hover:bg-hover",
+        selected ? "bg-sn-accent-soft" : "hover:bg-sn-hover",
       ].join(" ")}
     >
       <ModelVendorTile modelId={owner.value} compact />
@@ -42,11 +42,11 @@ export function OwnerSidebarItem({
         title={owner.description || owner.value}
       >
         <span
-          className={`block truncate text-sm font-medium ${selected ? "text-accent-ink" : "text-ink"}`}
+          className={`block truncate text-sm font-medium ${selected ? "text-sn-accent-ink" : "text-sn-label"}`}
         >
           {owner.label || owner.value}
         </span>
-        <span className="block truncate text-xs text-ink-3">{owner.value}</span>
+        <span className="block truncate text-xs text-sn-label3">{owner.value}</span>
       </button>
       <span
         style={brand.style}

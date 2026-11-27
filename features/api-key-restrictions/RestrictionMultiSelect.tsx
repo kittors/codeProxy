@@ -150,8 +150,8 @@ export function RestrictionMultiSelect({
     if (selectedValues.length === 0) {
       return (
         // 「不限制」：简约风格是中性淡底；多彩风格是绿色胶囊，勾跟随胶囊的字色。
-        <span className="inline-flex items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink-2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
-          <Check size={12} className="text-ink-3 colorful:text-current" />
+        <span className="inline-flex items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label2 dark:bg-white/[0.07] colorful:bg-emerald-50 colorful:text-emerald-700 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300">
+          <Check size={12} className="text-sn-label3 colorful:text-current" />
           {unrestrictedLabel}
         </span>
       );
@@ -159,10 +159,10 @@ export function RestrictionMultiSelect({
 
     return (
       <div className="flex min-w-0 items-center gap-2">
-        <span className="inline-flex rounded-full bg-ink/[0.05] px-2 py-0.5 text-xs font-medium text-ink dark:bg-white/[0.07]">
+        <span className="inline-flex rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-xs font-medium text-sn-label dark:bg-white/[0.07]">
           {selectedCountLabel(selectedValues.length)}
         </span>
-        <span className="min-w-0 truncate text-xs font-normal text-ink-3">
+        <span className="min-w-0 truncate text-xs font-normal text-sn-label3">
           {selectedValues
             .slice(0, 2)
             .map((item) => labelMap.get(item)?.label || item)

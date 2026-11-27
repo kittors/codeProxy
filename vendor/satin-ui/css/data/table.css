@@ -1,10 +1,12 @@
 /* Satin：数据表格（从 data.css 拆出的独立样式分片）。 */
 @layer satin {
 .sn-tbl-wrap { position: relative; min-width: 0; border-radius: var(--sn-r-lg); border: 1px solid var(--sn-line); overflow: hidden; --sn-rh: 48px; }
+[data-theme="dark"] .sn-tbl-wrap, .dark .sn-tbl-wrap { border-color: rgba(255, 255, 255, .1); }
 .sn-tbl-wrap.sn-compact { --sn-rh: 36px; }
 .sn-tbl-wrap.sn-comfortable { --sn-rh: 56px; }
 .sn-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font: 400 calc(13px * var(--sn-font-scale, 1))/calc(20px * var(--sn-font-scale, 1)) var(--sn-sans); outline: none; } /* 表格本身不画浏览器的焦点框：键盘走格子时由选中框表示焦点 */
-.sn-tbl th { height: 40px; padding: 0 12px; text-align: left; font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); white-space: nowrap; box-shadow: inset 0 -1px 0 var(--sn-line); background: var(--sn-raised); }
+.sn-tbl th { height: 40px; padding: 0 12px; text-align: left; font: 500 calc(12px * var(--sn-font-scale, 1))/calc(16px * var(--sn-font-scale, 1)) var(--sn-sans); color: var(--sn-label3); white-space: nowrap; box-shadow: inset 0 -1px 0 var(--sn-line); background: color-mix(in srgb, var(--sn-label) 3%, var(--sn-raised)); }
+[data-theme="dark"] .sn-tbl th, .dark .sn-tbl th { background: color-mix(in srgb, #fff 4.5%, var(--sn-raised)); }
 .sn-tbl th.sn-r, .sn-tbl td.sn-r { text-align: right; }
 .sn-tbl th.sn-c, .sn-tbl td.sn-c { text-align: center; }
 .sn-tbl th.sn-r .sn-sort { flex-direction: row-reverse; } /* 数字列：标题贴右边，和下面的数字对齐，排序箭头放在标题左边（和数据表格一样） */
@@ -287,7 +289,8 @@
 /* ———— 表格增强：占满底部剩余高度（.sn-tbl-fill）、左右固定列（.sn-pin-l / .sn-pin-r）、贴底分页栏（.sn-tbl-foot） ———— */
 /* 必须用 flex: 1 1 0%（而非无单位 0）：桌面定高容器里 0% 解析为 0px 精准撑满并内部滚动；移动端 height:auto 容器里 0% 按规范退回内容高度，不会压扁成 0px */
 .sn-tbl-wrap.sn-tbl-fill { display: flex; flex-direction: column; flex: 1 1 0%; min-height: 0; height: 100%; background: var(--sn-raised); }
-.sn-tbl-wrap.sn-tbl-fill .sn-tbl th { height: 42px; background: color-mix(in srgb, var(--sn-label) 2.5%, var(--sn-raised)); }
+.sn-tbl-wrap.sn-tbl-fill .sn-tbl th { height: 42px; background: color-mix(in srgb, var(--sn-label) 3.2%, var(--sn-raised)); }
+[data-theme="dark"] .sn-tbl-wrap.sn-tbl-fill .sn-tbl th, .dark .sn-tbl-wrap.sn-tbl-fill .sn-tbl th { background: color-mix(in srgb, #fff 4.8%, var(--sn-raised)); }
 .sn-tbl-wrap.sn-tbl-fill .sn-tbl th.sn-acts,
 .sn-tbl-wrap.sn-tbl-fill .sn-tbl td.sn-acts { padding: 0 16px 0 8px; }
 .sn-tbl-wrap.sn-tbl-fill .sn-tbl td.sn-acts .sn-btn { vertical-align: middle; }
@@ -346,9 +349,9 @@
 .sn-tbl td.sn-pin-l-end, .sn-tbl th.sn-pin-l-end,
 .sn-tbl td.sn-pin-r-start, .sn-tbl th.sn-pin-r-start { overflow: visible; }
 .sn-tbl .sn-pin-l-end::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1px; pointer-events: none; opacity: 0;
-  background: var(--sn-line); box-shadow: 4px 0 12px 1px var(--sn-tbl-pin-shadow); transition: opacity .16s var(--sn-ease-out); }
+  background: var(--sn-line-control); box-shadow: 6px 0 16px 2px var(--sn-tbl-pin-shadow), 2px 0 6px 0 var(--sn-tbl-pin-shadow); transition: opacity .16s var(--sn-ease-out); }
 .sn-tbl .sn-pin-r-start::before { content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 1px; pointer-events: none; opacity: 0;
-  background: var(--sn-line); box-shadow: -4px 0 12px 1px var(--sn-tbl-pin-shadow); transition: opacity .16s var(--sn-ease-out); }
+  background: var(--sn-line-control); box-shadow: -6px 0 16px 2px var(--sn-tbl-pin-shadow), -2px 0 6px 0 var(--sn-tbl-pin-shadow); transition: opacity .16s var(--sn-ease-out); }
 .sn-tbl-wrap.sn-pin-scrolled-l .sn-tbl .sn-pin-l-end::after { opacity: 1; }
 .sn-tbl-wrap.sn-pin-scrolled-r .sn-tbl .sn-pin-r-start::before { opacity: 1; }
 /* 触屏没有悬停：悬停才出现的操作一直显示（09 号 §11） */

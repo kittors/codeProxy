@@ -94,21 +94,21 @@ export function ResourceProfileBanner({
           <DialogIcon tone="emerald" className="hidden icon-hue:grid">
             <Leaf />
           </DialogIcon>
-          <Leaf size={18} className="mt-0.5 shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
+          <Leaf size={18} className="mt-0.5 shrink-0 text-sn-label3 icon-hue:hidden" aria-hidden="true" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-ink">{t("resource_config.title")}</h3>
+              <h3 className="text-base font-semibold text-sn-label">{t("resource_config.title")}</h3>
               <span
                 className={
                   active
                     ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-2xs font-medium text-emerald-700 dark:text-emerald-300"
-                    : "rounded-full bg-selected px-2 py-0.5 text-2xs font-medium text-ink-2"
+                    : "rounded-full bg-sn-active px-2 py-0.5 text-2xs font-medium text-sn-label2"
                 }
               >
                 {active ? t("resource_config.profile_active") : t("resource_config.profile_custom")}
               </span>
             </div>
-            <p className="mt-0.5 text-sm leading-relaxed text-ink-3">
+            <p className="mt-0.5 text-sm leading-relaxed text-sn-label3">
               {t("config_ui.profile.desc")}
             </p>
             {active ? null : (
@@ -117,7 +117,7 @@ export function ResourceProfileBanner({
                 aria-expanded={open}
                 aria-controls={listId}
                 onClick={() => setOpen((previous) => !previous)}
-                className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-ink-2 transition-colors hover:text-ink"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-sn-label2 transition-colors hover:text-sn-label"
               >
                 {t("config_ui.profile.preview", { count: changes.length })}
                 <ChevronDown
@@ -144,12 +144,12 @@ export function ResourceProfileBanner({
           <ul className="grid gap-x-6 gap-y-1.5 px-4 pb-4 text-sm sm:grid-cols-2 sm:px-5 sm:pb-5">
             {changes.map(({ field, from, to }) => (
               <li key={field.id} className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-ink-2">{t(fieldLabelKey(field))}</span>
-                <span className="shrink-0 font-mono text-xs text-ink-3 line-through decoration-ink-4">
+                <span className="min-w-0 flex-1 truncate text-sn-label2">{t(fieldLabelKey(field))}</span>
+                <span className="shrink-0 font-mono text-xs text-sn-label3 line-through decoration-sn-label-off">
                   {formatValue(from)}
                 </span>
-                <ArrowRight size={12} className="shrink-0 text-ink-3 colorful:text-emerald-500" aria-hidden="true" />
-                <span className="shrink-0 font-mono text-xs font-medium text-ink">
+                <ArrowRight size={12} className="shrink-0 text-sn-label3 colorful:text-emerald-500" aria-hidden="true" />
+                <span className="shrink-0 font-mono text-xs font-medium text-sn-label">
                   {formatValue(to)}
                 </span>
               </li>

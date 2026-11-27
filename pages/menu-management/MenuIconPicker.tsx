@@ -213,14 +213,14 @@ export function MenuIconPicker({
             }}
             startAdornment={
               value ? (
-                <SelectedIcon size={16} className={`text-ink-3 ${iconHueClass(SelectedIcon)}`} aria-hidden="true" />
+                <SelectedIcon size={16} className={`text-sn-label3 ${iconHueClass(SelectedIcon)}`} aria-hidden="true" />
               ) : null
             }
             endAdornment={
               value && !disabled ? (
                 <button
                   type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-hover hover:text-ink"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-sn-label3 transition-colors hover:bg-sn-hover hover:text-sn-label"
                   aria-label={t("common.clear", { defaultValue: "Clear" })}
                   onClick={() => onChange("")}
                 >

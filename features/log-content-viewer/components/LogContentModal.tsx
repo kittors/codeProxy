@@ -429,7 +429,7 @@ export function LogContentModal({
   }, [contentPhase, displayPhase]);
 
   const renderCenteredLoading = () => (
-    <div className="flex min-h-0 flex-1 items-center justify-center text-ink-3">
+    <div className="flex min-h-0 flex-1 items-center justify-center text-sn-label3">
       <Loader2 size={22} className="animate-spin" aria-hidden />
       <span className="ml-3 text-sm">{t("common.loading_ellipsis")}</span>
     </div>

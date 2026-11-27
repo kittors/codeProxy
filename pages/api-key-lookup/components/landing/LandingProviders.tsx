@@ -59,7 +59,7 @@ export function LandingProviders({ copy }: { copy: LandingCopy }) {
                   className={`${surface({ radius: "2xl" })} inline-flex items-center gap-3 px-6 py-4`}
                 >
                   <VendorIcon modelId={provider.id} size={22} />
-                  <span className="font-display text-sm font-medium text-ink-2">
+                  <span className="font-display text-sm font-medium text-sn-label2">
                     {provider.label}
                   </span>
                 </li>

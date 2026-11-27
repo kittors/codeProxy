@@ -25,8 +25,8 @@ function Section({ title, description, children }: { title: string; description?
   return (
     <section className="space-y-2">
       <div className="px-1">
-        <h3 className="text-sm font-semibold text-ink">{title}</h3>
-        {description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}
+        <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
+        {description ? <p className="mt-0.5 text-xs text-sn-label3">{description}</p> : null}
       </div>
       {children}
     </section>
@@ -259,7 +259,7 @@ export function MaskingSettingsPanel({
             </div>
           </SettingGroup>
         </Section>
-        <p className="px-1 text-xs leading-relaxed text-ink-3">{t("privacy_masking.explain.where")}</p>
+        <p className="px-1 text-xs leading-relaxed text-sn-label3">{t("privacy_masking.explain.where")}</p>
       </aside>
       </div>
     </div>
@@ -304,7 +304,7 @@ function PersonalKinds({
                 "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed",
                 on
                   ? "bg-sky-500/10 text-sky-700 hover:bg-sky-500/15 dark:bg-sky-400/15 dark:text-sky-200"
-                  : "bg-ink/[0.04] text-ink-3 hover:bg-ink/[0.07] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
+                  : "bg-sn-label/[0.04] text-sn-label3 hover:bg-sn-label/[0.07] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
               ].join(" ")}
             >
               {on ? <Check size={12} aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />}
@@ -313,7 +313,7 @@ function PersonalKinds({
           );
         })}
       </div>
-      <p className="text-xs text-ink-3">{t("privacy_masking.settings.kinds_hint")}</p>
+      <p className="text-xs text-sn-label3">{t("privacy_masking.settings.kinds_hint")}</p>
     </div>
   );
 }

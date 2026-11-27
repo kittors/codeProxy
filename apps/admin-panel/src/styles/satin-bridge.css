@@ -77,11 +77,17 @@
   --sn-side-active-line: rgba(0, 0, 0, 0.06);
   --sn-workspace: #ffffff;
   --sn-workspace-line: rgba(0, 0, 0, 0.06);
-  --sn-accent: var(--cp-pref-accent, #1d1d1f);
-  --sn-on-primary: var(--cp-pref-accent-fg, #ffffff);
-  --sn-font-scale: var(--cp-pref-text-scale, 1);
+  --sn-backdrop: var(--sn-workspace);
+  --sn-tbl-pin-shadow: rgba(0, 0, 0, 0.10);
+  --sn-accent: var(--sn-pref-accent, #1d1d1f);
+  --sn-b-primary-hover: var(--sn-pref-accent-hover, color-mix(in srgb, var(--sn-accent) 86%, #fff));
+  --sn-on-primary: var(--sn-pref-accent-fg, #ffffff);
+  --sn-accent-ink: var(--sn-pref-accent-ink, var(--sn-accent));
+  --sn-accent-soft: var(--sn-pref-accent-soft, var(--sn-fill-subtle));
+  --sn-focus: var(--sn-pref-focus, rgba(0, 0, 0, 0.4));
+  --sn-font-scale: var(--sn-pref-text-scale, 1);
   --sn-success: var(--color-emerald-500, #248a3d);
-  --sn-warning: var(--color-amber-500, #b25000);
+  --sn-warning: var(--color-amber-600, #b25000);
   --sn-danger: var(--color-rose-500, #d92d20);
 }
 
@@ -93,9 +99,15 @@
   --sn-side-active-line: rgba(255, 255, 255, 0.07);
   --sn-workspace: #16161a;
   --sn-workspace-line: rgba(255, 255, 255, 0.06);
-  --sn-accent: var(--cp-pref-accent-dark, #f5f5f7);
-  --sn-on-primary: var(--cp-pref-accent-fg-dark, #000000);
-  --sn-font-scale: var(--cp-pref-text-scale, 1);
+  --sn-backdrop: var(--sn-workspace);
+  --sn-tbl-pin-shadow: rgba(0, 0, 0, 0.72);
+  --sn-accent: var(--sn-pref-accent-dark, #f5f5f7);
+  --sn-b-primary-hover: var(--sn-pref-accent-hover-dark, color-mix(in srgb, var(--sn-accent) 70%, #fff));
+  --sn-on-primary: var(--sn-pref-accent-fg-dark, #000000);
+  --sn-accent-ink: var(--sn-pref-accent-ink-dark, var(--sn-accent));
+  --sn-accent-soft: var(--sn-pref-accent-soft-dark, var(--sn-fill-subtle));
+  --sn-focus: var(--sn-pref-focus-dark, rgba(255, 255, 255, 0.5));
+  --sn-font-scale: var(--sn-pref-text-scale, 1);
   --sn-success: var(--color-emerald-400, #30d158);
   --sn-warning: var(--color-amber-400, #ffd60a);
   --sn-danger: var(--color-rose-400, #ff6961);
@@ -244,7 +256,7 @@
     font-size: calc(0.875rem * var(--sn-font-scale, 1));
   }
   .sn-input.sn-xl {
-    --sn-h: 2.75rem;
+    --sn-h: max(44px, 2.75rem);
     --sn-px: 13px;
     font-size: calc(0.9375rem * var(--sn-font-scale, 1));
   }
@@ -550,6 +562,29 @@
   }
   .sn-tip:not(.sn-md-callout) {
     z-index: 10050;
+  }
+
+  /* 侧栏流体滑动高亮条（对齐 Satin .sn-side-nav .sn-hl-bar，合成线程平滑位移）。 */
+  .cp-side-hl {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    border-radius: var(--sn-r-md);
+    background: var(--sn-side-active);
+    box-shadow: inset 0 0 0 1px var(--sn-side-active-line), var(--sn-card-shadow);
+    pointer-events: none;
+  }
+  .cp-side-hl.cp-side-hl-anim {
+    transition:
+      transform 240ms var(--sn-ease-open),
+      width 220ms var(--sn-ease-open),
+      height 220ms var(--sn-ease-open);
+  }
+  /* 流体滑块启用后由底层滑块绘制激活表面，前景链接透明化避免双层叠加。 */
+  .cp-side-nav[data-side-hl="active"] .cp-side-active {
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
   /* Satin 三层工作台工作板：桌面端仅左上角 10px 柔和圆角 + 顶/左 1px 细线，右缘与底缘贴合视口。 */

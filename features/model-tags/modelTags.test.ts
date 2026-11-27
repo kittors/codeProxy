@@ -4,7 +4,7 @@ import { vendorBrand } from "@code-proxy/assets";
 import { describe, expect, test } from "vitest";
 import { getModelVendorKey, ModelOwnerTag, ModelTag, ModelVendorTile, modelVendorBrand } from "./index";
 
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 const BRAND_TINT =
   "colorful:bg-[color-mix(in_oklab,var(--brand)_10%,transparent)] colorful:text-[var(--brand-text)] colorful:dark:bg-[color-mix(in_oklab,var(--brand)_18%,transparent)]";
 const brandOf = (id: string) => (modelVendorBrand(id).style as Record<string, string>)["--brand-l"];
@@ -73,7 +73,7 @@ describe("model tags", () => {
   test("the rendered tag is an outline-free neutral capsule that carries the brand variables", () => {
     render(createElement(ModelTag, { id: "claude-sonnet-4-5", size: "sm" }));
     const tag = screen.getByText("claude-sonnet-4-5").parentElement as HTMLElement;
-    expect(tag.className).toContain("bg-ink/[0.05]");
+    expect(tag.className).toContain("bg-sn-label/[0.05]");
     expect(tag.className).toContain(BRAND_TINT);
     expect(tag.className).not.toMatch(/(?:^|\s)border(?:\s|$)/);
     expect(tag.style.getPropertyValue("--brand-l")).toBe(vendorBrand("claude")?.color);
@@ -82,7 +82,7 @@ describe("model tags", () => {
 
     render(createElement(ModelOwnerTag, { owner: "anthropic", withLogo: true }));
     const owner = screen.getByText("anthropic").parentElement as HTMLElement;
-    expect(owner.className).toContain("bg-ink/[0.05]");
+    expect(owner.className).toContain("bg-sn-label/[0.05]");
     expect(owner.className).toContain(BRAND_TINT);
     expect(owner.querySelectorAll("img").length).toBeGreaterThan(0);
   });
@@ -104,6 +104,6 @@ describe("model tags", () => {
 
     const { container: fallback } = render(createElement(ModelVendorTile, { modelId: "yi-lightning" }));
     expect(fallback.textContent).toBe("Y");
-    expect((fallback.firstElementChild as HTMLElement).className).toContain("text-ink-3");
+    expect((fallback.firstElementChild as HTMLElement).className).toContain("text-sn-label3");
   });
 });

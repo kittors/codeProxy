@@ -39,10 +39,10 @@ export function AuthFilesExcludedTab({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {showHeading ? (
           <div>
-            <h2 className="text-lg font-bold text-ink">
+            <h2 className="text-lg font-bold text-sn-label">
               {t("auth_files_page.excluded_title")}
             </h2>
-            <p className="mt-1 text-sm text-ink-3">
+            <p className="mt-1 text-sm text-sn-label3">
               {t("auth_files_page.excluded_desc")}
             </p>
           </div>
@@ -63,7 +63,7 @@ export function AuthFilesExcludedTab({
       </div>
 
       {excludedLoading ? (
-        <div className="flex h-32 items-center justify-center text-sm text-ink-3">
+        <div className="flex h-32 items-center justify-center text-sm text-sn-label3">
           {t("common.loading_ellipsis")}
         </div>
       ) : (
@@ -81,7 +81,7 @@ export function AuthFilesExcludedTab({
               value={excludedNewProvider}
               onChange={(e) => setExcludedNewProvider(e.currentTarget.value)}
               placeholder={t("auth_files.add_provider_placeholder")}
-              endAdornment={<FileJson size={16} className={`text-ink-3 ${iconHueClass(FileJson)}`} />}
+              endAdornment={<FileJson size={16} className={`text-sn-label3 ${iconHueClass(FileJson)}`} />}
               disabled={excludedUnsupported}
             />
             <Button
@@ -123,7 +123,7 @@ export function AuthFilesExcludedTab({
                           <ProviderTag vendor={provider} withLogo>
                             {provider}
                           </ProviderTag>
-                          <p className="mt-1 text-xs text-ink-3">
+                          <p className="mt-1 text-xs text-sn-label3">
                             {t("auth_files.count_items", { count })}
                           </p>
                         </div>

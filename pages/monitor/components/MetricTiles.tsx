@@ -304,23 +304,23 @@ function MetricTile({
       aria-label={tile.label}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink-2">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-sn-label2">
           <MetricIcon icon={tile.icon} hue={tile.hue} />
           <span className="truncate">{tile.label}</span>
         </span>
         {tile.unavailable ? null : <DeltaBadge delta={tile.delta} hint={deltaHint} />}
       </div>
       <div
-        className={`mt-3 truncate text-2xl leading-none font-semibold tracking-tight tabular-nums ${tile.valueClassName ?? "text-ink"}`}
+        className={`mt-3 truncate text-2xl leading-none font-semibold tracking-tight tabular-nums ${tile.valueClassName ?? "text-sn-label"}`}
       >
         {tile.unavailable ? (
-          <span className="text-ink-4">—</span>
+          <span className="text-sn-label-off">—</span>
         ) : (
           <AnimatedNumber value={tile.value} format={tile.format} />
         )}
       </div>
       <p
-        className="mt-1.5 truncate text-xs text-ink-3"
+        className="mt-1.5 truncate text-xs text-sn-label3"
         title={typeof tile.hint === "string" ? tile.hint : undefined}
       >
         {tile.unavailable ? unavailableLabel : tile.hint}

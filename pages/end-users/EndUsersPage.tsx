@@ -512,6 +512,7 @@ export function EndUsersPage() {
           />
           <DataGrid
             fill
+            fitColumns
             id="end-users"
             label={t("end_users.title")}
             loading={loading}

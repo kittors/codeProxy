@@ -35,8 +35,8 @@ export function SidebarItemLink({
   const className =
     variant === "tree"
       ? [
-          "flex h-8 w-full min-w-0 items-center rounded-lg px-2 text-sm whitespace-nowrap outline-none",
-          "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.98]",
+          "relative z-[1] flex h-8 w-full min-w-0 items-center rounded-lg px-2.5 text-sm whitespace-nowrap outline-none",
+          "transition-[background-color,color,box-shadow,transform] duration-150 ease-[var(--sn-ease-out)] active:scale-[0.985]",
           active
             ? `${SIDEBAR_ACTIVE_CARD} font-medium`
             : "text-[var(--sn-label2)] hover:bg-[var(--sn-fill-hover)] hover:text-[var(--sn-label)]",

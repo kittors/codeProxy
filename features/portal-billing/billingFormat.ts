@@ -70,7 +70,7 @@ export function orderStatusMeta(
     default:
       return {
         label: t(`billing.order_status.${status}`),
-        className: "bg-ink/[0.06] text-ink-3 dark:bg-white/[0.08]",
+        className: "bg-sn-label/[0.06] text-sn-label3 dark:bg-white/[0.08]",
         tagTone: "",
       };
   }

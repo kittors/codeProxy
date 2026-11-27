@@ -132,6 +132,7 @@ for (const [width, height] of [
   [1470, 800],
   [1440, 900],
   [1366, 768],
+  [1280, 720],
 ]) {
   test(`${width}×${height}：请求日志默认列一屏放下，吞吐、费用、Agent、Token 都直接可见`, async ({ page }) => {
     await page.setViewportSize({ width, height });
@@ -174,8 +175,8 @@ test("旧表格存下的列宽不会把新默认布局撑宽", async ({ page }) 
   expect(stored === null || !JSON.parse(stored).widths).toBe(true);
 });
 
-test("1280 宽允许横向滚动，冻结列朝向滚动内容的一侧有柔和阴影且不遮挡相邻列文字", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
+test("1024 窄屏允许横向滚动，冻结列朝向滚动内容的一侧有柔和阴影且不遮挡相邻列文字", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 720 });
   await openRequestLogs(page);
   const viewport = page.locator(".sn-tbl-sc").first();
   expect(await viewport.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeGreaterThan(1);

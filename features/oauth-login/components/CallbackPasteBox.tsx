@@ -196,7 +196,7 @@ export function CallbackPasteBox({
             ? "shadow-[0_0_0_1px_var(--sn-danger)]"
             : ready
               ? "shadow-[0_0_0_1px_var(--sn-success)]"
-              : "shadow-control hover:shadow-control-hover focus-within:shadow-control-focus",
+              : "border border-sn-line-control hover:border-sn-line-control-hover focus-within:border-sn-focus focus-within:shadow-[0_0_0_3px_var(--sn-ring)]",
         ].join(" ")}
       >
         <textarea
@@ -265,7 +265,7 @@ export function CallbackPasteBox({
                 {nudge ? (
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -inset-1 animate-pulse rounded-full shadow-control-focus"
+                    className="pointer-events-none absolute -inset-1 animate-pulse rounded-full border border-sn-focus shadow-[0_0_0_3px_var(--sn-ring)]"
                   />
                 ) : null}
                 <Button
@@ -279,7 +279,7 @@ export function CallbackPasteBox({
                 </Button>
               </span>
             ) : (
-              <kbd className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-sans text-2xs text-ink-3 dark:bg-white/[0.07]">
+              <kbd className="rounded-md bg-sn-label/[0.05] px-1.5 py-0.5 font-sans text-2xs text-sn-label3 dark:bg-white/[0.07]">
                 {t("add_account.paste.shortcut")}
               </kbd>
             )}
@@ -297,7 +297,7 @@ export function CallbackPasteBox({
                 ? "text-rose-600 dark:text-rose-300"
                 : message.tone === "warn"
                   ? "text-amber-700 dark:text-amber-300"
-                  : "text-ink-2",
+                  : "text-sn-label2",
             ].join(" ")}
           >
             {message.text}
@@ -306,7 +306,7 @@ export function CallbackPasteBox({
           <p
             key="nudge"
             role="status"
-            className="sn-fade-up text-xs text-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300"
+            className="sn-fade-up text-xs text-sn-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300"
           >
             {t("add_account.paste.nudge")}
           </p>

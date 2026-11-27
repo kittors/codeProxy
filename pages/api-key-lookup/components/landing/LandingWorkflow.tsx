@@ -132,15 +132,15 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 key={step.title}
                 delay={0.06 * index}
                 distance={12}
-                className="border-t border-line py-7 first:border-t-0 first:pt-0"
+                className="border-t border-sn-line py-7 first:border-t-0 first:pt-0"
               >
-                <span className="font-display text-2xs uppercase tracking-[0.28em] text-ink-3">
+                <span className="font-display text-2xs uppercase tracking-[0.28em] text-sn-label3">
                   {`STEP ${index + 1}`}
                 </span>
-                <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-ink">
+                <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-sn-label">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-sm leading-7 text-ink-2">
+                <p className="mt-2 text-sm leading-7 text-sn-label2">
                   {step.desc}
                 </p>
               </LandingFadeItem>
@@ -149,7 +149,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
 
           <LandingFade
             delay={0.1}
-            className="cp-edge overflow-hidden rounded-2xl bg-[#0B0D13]"
+            className="border border-sn-line overflow-hidden rounded-2xl bg-[#0B0D13]"
           >
             <div className="flex items-center gap-1 px-3 pt-2.5">
               <div ref={tabListRef} className="relative flex items-center gap-1 p-0.5">

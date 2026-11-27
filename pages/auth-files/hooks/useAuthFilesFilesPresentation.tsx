@@ -413,7 +413,7 @@ export function useAuthFilesFilesPresentation({
         ),
         cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-ink-3">--</span>;
+            return <span className="text-xs text-sn-label3">--</span>;
           }
           return (
             <Checkbox
@@ -449,7 +449,7 @@ export function useAuthFilesFilesPresentation({
                   {supplementalTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-ink/[0.05] px-2 py-0.5 text-2xs font-semibold text-ink-2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
+                      className="inline-flex items-center rounded-full bg-sn-label/[0.05] px-2 py-0.5 text-2xs font-semibold text-sn-label2 dark:bg-white/[0.07] colorful:bg-sky-50 colorful:text-sky-700 colorful:dark:bg-sky-500/15 colorful:dark:text-sky-200"
                     >
                       {tag}
                     </span>
@@ -531,7 +531,7 @@ export function useAuthFilesFilesPresentation({
             <button
               type="button"
               disabled={state?.loading}
-              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-ink/[0.05] px-2 py-1 text-xs tabular-nums text-ink-2 transition-colors hover:bg-accent-soft hover:text-accent-ink disabled:cursor-default disabled:opacity-40 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-950 colorful:dark:hover:text-blue-300"
+              className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-sn-label/[0.05] px-2 py-1 text-xs tabular-nums text-sn-label2 transition-colors hover:bg-sn-accent-soft hover:text-sn-accent-ink disabled:cursor-default disabled:opacity-40 dark:bg-white/[0.07] colorful:hover:bg-blue-50 colorful:hover:text-blue-700 colorful:dark:hover:bg-blue-950 colorful:dark:hover:text-blue-300"
               onClick={() => void checkAuthFileConnectivity(file.name)}
               title={t("auth_files.check_connectivity")}
               aria-label={t("auth_files.check_connectivity")}
@@ -558,7 +558,7 @@ export function useAuthFilesFilesPresentation({
           const authIndex = normalizeAuthIndexValue(file.auth_index ?? file.authIndex);
           const calls = authIndex ? cycleCallsByAuthIndex[authIndex] : undefined;
           return (
-            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-ink-2">
+            <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold tabular-nums text-sn-label2">
               {typeof calls === "number" ? (
                 calls
               ) : !statusUsageReady && statusUsageLoading ? (
@@ -579,7 +579,7 @@ export function useAuthFilesFilesPresentation({
           const stats = resolveAuthFileStats(file, usageIndex);
           const hasUsage = stats.success + stats.failure > 0;
           return (
-            <span className="text-xs font-semibold tabular-nums text-ink-2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
+            <span className="text-xs font-semibold tabular-nums text-sn-label2 colorful:text-emerald-700 colorful:dark:text-emerald-200">
               {statusUsageReady || hasUsage ? stats.success : "--"}
             </span>
           );
@@ -643,7 +643,7 @@ export function useAuthFilesFilesPresentation({
         align: "center",
         cell: (file) => {
           if (isRuntimeOnlyAuthFile(file)) {
-            return <span className="text-xs text-ink-3">--</span>;
+            return <span className="text-xs text-sn-label3">--</span>;
           }
           return (
             <ToggleSwitch

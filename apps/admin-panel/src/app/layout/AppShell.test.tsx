@@ -461,10 +461,10 @@ describe("AppShell navigation layout", () => {
     expect(list).not.toHaveAttribute("inert");
     const requestLogs = within(list).getByRole("link", { name: /Request Logs|请求日志/i });
     expect(requestLogs).toHaveAttribute("aria-current", "page");
-    expect(requestLogs).toHaveClass("bg-surface", "text-sm", "h-8");
+    expect(requestLogs).toHaveClass("bg-sn-raised", "text-sm", "h-8");
     expect(requestLogs.className).not.toContain("from-blue-600");
     // 列表展开时选中外观在页面上，分区标题不再重复一份。
-    expect(runtimeHeader).not.toHaveClass("bg-surface");
+    expect(runtimeHeader).not.toHaveClass("bg-sn-raised");
     expect(within(list).getByRole("link", { name: /Monitor|监控中心/i })).not.toHaveAttribute(
       "aria-current",
     );
@@ -484,7 +484,7 @@ describe("AppShell navigation layout", () => {
     fireEvent.click(runtimeHeader);
     expect(runtimeHeader).toHaveAttribute("aria-expanded", "false");
     expect(sectionList(OBSERVABILITY)).toHaveAttribute("inert");
-    expect(runtimeHeader).toHaveClass("bg-surface");
+    expect(runtimeHeader).toHaveClass("bg-sn-raised");
 
     expect(JSON.parse(localStorage.getItem("cli-proxy-sidebar-open-groups") ?? "[]")).toEqual([
       "group.access",
@@ -544,7 +544,7 @@ describe("AppShell navigation layout", () => {
     expect(last).toHaveTextContent(/System Info|系统信息/i);
     expect(entries[0]).toHaveAttribute("href", "/dashboard");
     expect(entries[0]).toHaveAttribute("aria-current", "page");
-    expect(entries[0]).toHaveClass("bg-surface");
+    expect(entries[0]).toHaveClass("bg-sn-raised");
     expect(entries.slice(1, -1).map((entry) => entry.querySelector("[data-sidebar-section]")?.getAttribute("data-sidebar-section"))).toEqual([
       "group.runtime",
       "group.access",
@@ -612,7 +612,7 @@ describe("AppShell collapsed rail", () => {
     expect(sectionList(/System Settings|系统设置/i)).toHaveAttribute("inert");
     expect(sectionButton(MODELS)).toHaveAttribute("aria-haspopup", "menu");
     // 当前页所在的分区只剩图标，选中外观落在图标上。
-    expect(sectionButton(/System Settings|系统设置/i)).toHaveClass("bg-surface");
+    expect(sectionButton(/System Settings|系统设置/i)).toHaveClass("bg-sn-raised");
     const account = screen.getByRole("button", { name: "Admin" });
     expect(account).toHaveAttribute("data-tooltip", "Admin");
 

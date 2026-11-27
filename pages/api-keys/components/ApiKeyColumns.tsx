@@ -52,7 +52,7 @@ type CreateApiKeyColumnsOptions = {
  * 标签基础是中性淡底、不描边（简约风格）。多彩风格下渠道列叠回青色淡底，
  * 模型 / 渠道分组两列一直是中性的。
  */
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 type PermissionSummaryTone = "neutral" | "cyan";
 
@@ -93,7 +93,7 @@ function ApiKeyPermissionSummary({
         className={`flex min-w-0 max-w-full items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1.5 text-xs ${NEUTRAL_TAG} ${permissionSummaryToneClasses[tone]}`}
       >
         <span
-          className={`inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-ink/[0.07] px-1.5 font-semibold tabular-nums text-ink ${permissionCountToneClasses[tone]}`}
+          className={`inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-sn-label/[0.07] px-1.5 font-semibold tabular-nums text-sn-label ${permissionCountToneClasses[tone]}`}
         >
           {count}
         </span>
@@ -139,7 +139,7 @@ export const createApiKeyColumns = ({
           >
             <span className="block min-w-0 truncate">
               {row.name || (
-                <span className="text-ink-3">{t("common.unnamed")}</span>
+                <span className="text-sn-label3">{t("common.unnamed")}</span>
               )}
             </span>
           </OverflowTooltip>
@@ -183,7 +183,7 @@ export const createApiKeyColumns = ({
       header: t("quota.daily_spending_column"),
       width: GRID_WIDTH.compact,
       align: "end",
-      className: "whitespace-nowrap tabular-nums text-ink-2",
+      className: "whitespace-nowrap tabular-nums text-sn-label2",
       headerHint: t("api_keys_page.daily_spending_fact_help"),
       cell: (row) => formatApiKeySpendingAmount(row["daily-spending-used"]),
     },
@@ -192,7 +192,7 @@ export const createApiKeyColumns = ({
       header: t("quota.lifetime_spending_column"),
       width: GRID_WIDTH.numericWide,
       align: "end",
-      className: "whitespace-nowrap tabular-nums text-ink-2",
+      className: "whitespace-nowrap tabular-nums text-sn-label2",
       headerHint: t("api_keys_page.lifetime_spending_help"),
       cell: (row) => formatApiKeySpendingAmount(row["lifetime-spending-used"]),
     },
@@ -201,18 +201,18 @@ export const createApiKeyColumns = ({
       header: t("quota.total_resets"),
       width: GRID_WIDTH.numericWide,
       align: "end",
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       headerHint: t("api_keys_page.reset_count_help"),
       cell: (row) => {
         const count = row["daily-spending-reset-count"] ?? 0;
         if (count <= 0) {
-          return <span className="tabular-nums text-ink-3">0</span>;
+          return <span className="tabular-nums text-sn-label3">0</span>;
         }
         return (
           <button
             type="button"
             onClick={() => onViewResetHistory(row)}
-            className="tabular-nums font-medium text-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
+            className="tabular-nums font-medium text-sn-accent-ink underline-offset-2 hover:underline colorful:text-orange-600 colorful:dark:text-orange-400"
             aria-label={t("api_keys_page.view_reset_history")}
           >
             {count}
@@ -231,12 +231,12 @@ export const createApiKeyColumns = ({
       id: "dailyLimit",
       header: t("api_keys_page.col_daily_limit"),
       width: GRID_WIDTH.compact,
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       cell: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["daily-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              <InfinityIcon size={14} className="text-sn-label3 colorful:text-green-500" />{" "}
               {t("api_keys_page.unlimited")}
             </>
           ) : (
@@ -249,12 +249,12 @@ export const createApiKeyColumns = ({
       id: "totalQuota",
       header: t("api_keys_page.col_total_quota"),
       width: GRID_WIDTH.compact,
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       cell: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["total-quota"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              <InfinityIcon size={14} className="text-sn-label3 colorful:text-green-500" />{" "}
               {t("api_keys_page.unlimited")}
             </>
           ) : (
@@ -267,13 +267,13 @@ export const createApiKeyColumns = ({
       id: "spendingLimit",
       header: t("api_keys_page.col_spending_limit"),
       width: GRID_WIDTH.numericWide,
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       headerHint: t("api_keys_page.spending_limit_help"),
       cell: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["spending-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              <InfinityIcon size={14} className="text-sn-label3 colorful:text-green-500" />{" "}
               {t("api_keys_page.unlimited")}
             </>
           ) : (
@@ -286,13 +286,13 @@ export const createApiKeyColumns = ({
       id: "rpmLimit",
       header: t("api_keys_page.rpm"),
       width: GRID_WIDTH.toggle,
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       headerHint: t("api_keys.rpm_full"),
       cell: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["rpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              <InfinityIcon size={14} className="text-sn-label3 colorful:text-green-500" />{" "}
               {t("api_keys_page.unlimited")}
             </>
           ) : (
@@ -305,13 +305,13 @@ export const createApiKeyColumns = ({
       id: "tpmLimit",
       header: t("api_keys_page.tpm"),
       width: GRID_WIDTH.toggle,
-      className: "whitespace-nowrap text-ink-2",
+      className: "whitespace-nowrap text-sn-label2",
       headerHint: t("api_keys.tpm_full"),
       cell: (row) => (
         <span className="inline-flex items-center gap-1">
           {!row["tpm-limit"] ? (
             <>
-              <InfinityIcon size={14} className="text-ink-3 colorful:text-green-500" />{" "}
+              <InfinityIcon size={14} className="text-sn-label3 colorful:text-green-500" />{" "}
               {t("api_keys_page.unlimited")}
             </>
           ) : (
@@ -324,7 +324,7 @@ export const createApiKeyColumns = ({
       id: "allowedModels",
       header: t("api_keys_page.col_models"),
       width: GRID_WIDTH.badgeStacked,
-      className: "min-w-0 overflow-hidden text-ink-2",
+      className: "min-w-0 overflow-hidden text-sn-label2",
       cell: (row) =>
         row["allowed-models"]?.length ? (
           <ApiKeyPermissionSummary
@@ -345,7 +345,7 @@ export const createApiKeyColumns = ({
           <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
             <ShieldCheck
               size={14}
-              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+              className="text-sn-label3 colorful:text-green-600 colorful:dark:text-green-400"
             />{" "}
             {t("api_keys_page.all_models")}
           </span>
@@ -355,7 +355,7 @@ export const createApiKeyColumns = ({
       id: "allowedChannelGroups",
       header: t("api_keys_page.col_channel_groups"),
       width: GRID_WIDTH.badgeGroup,
-      className: "min-w-0 overflow-hidden text-ink-2",
+      className: "min-w-0 overflow-hidden text-sn-label2",
       cell: (row) =>
         row["allowed-channel-groups"]?.length ? (
           <ApiKeyPermissionSummary
@@ -375,7 +375,7 @@ export const createApiKeyColumns = ({
           <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
             <ShieldCheck
               size={14}
-              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+              className="text-sn-label3 colorful:text-green-600 colorful:dark:text-green-400"
             />{" "}
             {t("api_keys_page.all_channel_groups")}
           </span>
@@ -385,7 +385,7 @@ export const createApiKeyColumns = ({
       id: "allowedChannels",
       header: t("api_keys_page.col_channels"),
       width: GRID_WIDTH.badgeGroup,
-      className: "min-w-0 overflow-hidden text-ink-2",
+      className: "min-w-0 overflow-hidden text-sn-label2",
       cell: (row) =>
         row["allowed-channels"]?.length ? (
           <ApiKeyPermissionSummary
@@ -406,7 +406,7 @@ export const createApiKeyColumns = ({
           <span className="inline-flex items-center gap-1 whitespace-nowrap colorful:text-green-600 colorful:dark:text-green-400">
             <ShieldCheck
               size={14}
-              className="text-ink-3 colorful:text-green-600 colorful:dark:text-green-400"
+              className="text-sn-label3 colorful:text-green-600 colorful:dark:text-green-400"
             />{" "}
             {t("api_keys_page.all_channels")}
           </span>
@@ -416,7 +416,7 @@ export const createApiKeyColumns = ({
       id: "createdAt",
       header: t("api_keys_page.col_created"),
       width: GRID_WIDTH.timestamp,
-      className: "whitespace-nowrap text-ink-3",
+      className: "whitespace-nowrap text-sn-label3",
       cell: (row) => <>{formatApiKeyDate(row["created-at"])}</>,
     },
     {

@@ -105,9 +105,9 @@ describe("monitor center chart colours", () => {
 
   test("card title icons are neutral: colour belongs to the data and to states", () => {
     const { container: latency } = render(<MonitorCardTitle icon={Timer} label="Latency" />);
-    expect(latency.querySelector("svg")?.getAttribute("class")).toContain("text-ink-3");
+    expect(latency.querySelector("svg")?.getAttribute("class")).toContain("text-sn-label3");
 
     const { container: flows } = render(<MonitorCardTitle icon={Waypoints} label="Flows" />);
-    expect(flows.querySelector("svg")?.getAttribute("class")).toContain("text-ink-3");
+    expect(flows.querySelector("svg")?.getAttribute("class")).toContain("text-sn-label3");
   });
 });

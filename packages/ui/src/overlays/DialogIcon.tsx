@@ -22,7 +22,7 @@ export type DialogTone = DialogSemanticTone | Hue | "auto";
  * 都只比底色亮一档。多彩时在上面叠同色系渐变（HUE_TILE）。
  */
 const SEMANTIC_CLASS: Record<DialogSemanticTone, string> = {
-  neutral: "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+  neutral: "bg-sn-subtle text-sn-label2",
   info: `bg-sky-500/10 text-sky-600 dark:bg-sky-400/15 dark:text-sky-300 ${HUE_TILE.sky}`,
   success: `bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300 ${HUE_TILE.emerald}`,
   warning: `bg-amber-500/12 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300 ${HUE_TILE.amber}`,

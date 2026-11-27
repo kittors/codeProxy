@@ -59,7 +59,7 @@ const platformScale = () =>
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+      <h3 className="text-sm font-semibold text-sn-label">{title}</h3>
       {children}
     </section>
   );
@@ -72,8 +72,8 @@ export function AppearanceSettings() {
     state: { preference },
     actions: { setMode },
   } = useTheme();
-  // 配色项的「撤销」回到当前风格预设的值；自定义状态下没有可回的预设，回到默认（多彩）。
-  const base = STYLE_PRESETS[preset === "custom" ? "colorful" : preset];
+  // 配色项的「撤销」回到当前风格预设的值；自定义状态下回到 Satin 默认（简约）。
+  const base = STYLE_PRESETS[preset === "custom" ? "quiet" : preset];
   const setStatus = (role: StatusRole, hex: string | null) =>
     update({ status: { ...settings.status, [role]: hex } });
   const choice = <K extends keyof AppearanceSettingsValue>(key: K) => ({
@@ -89,7 +89,7 @@ export function AppearanceSettings() {
       <Section title={t("appearance.style_title")}>
         <StylePresetCards current={preset} onSelect={applyPreset} />
         {preset === "custom" ? (
-          <p className="text-xs text-ink-3">{t("appearance.preset_custom_note")}</p>
+          <p className="text-xs text-sn-label3">{t("appearance.preset_custom_note")}</p>
         ) : null}
       </Section>
 

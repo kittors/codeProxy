@@ -78,7 +78,7 @@ export function GridPopover({
       data-grid-popover=""
       data-state={floating.isOpen ? "open" : "closed"}
       className={[
-        "sn-pop !z-[1000] border border-[var(--sn-line)] [--cp-backdrop:var(--sn-overlay)]",
+        "sn-pop !z-[1000] border border-[var(--sn-line)] [--sn-backdrop:var(--sn-overlay)]",
         floating.up ? "sn-up" : "",
         floating.isOpen ? "sn-open" : "",
         className,

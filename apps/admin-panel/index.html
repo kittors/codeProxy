@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-palette="colorful" data-icons="colorful" data-bars="semantic">
+<html lang="zh-CN" data-palette="quiet" data-icons="mono" data-bars="semantic">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -38,7 +38,7 @@
           // 读不到时保留 <html> 上的默认值。
           try {
             var appearance = JSON.parse(localStorage.getItem("code-proxy-admin-appearance") || "null");
-            if (appearance && appearance.version === 1) {
+            if (appearance && appearance.version === 2) {
               var attrs = appearance.attrs || {};
               var names = ["palette", "icons", "bars"];
               for (var i = 0; i < names.length; i++) {
@@ -54,7 +54,7 @@
               for (var name in vars) {
                 if (
                   Object.prototype.hasOwnProperty.call(vars, name) &&
-                  /^--(cp-pref-[a-z0-9-]+|color-(emerald|green|amber|rose|red)-\d{2,3})$/.test(name) &&
+                  /^--(sn-pref-[a-z0-9-]+|color-(emerald|green|amber|rose|red)-\d{2,3})$/.test(name) &&
                   typeof vars[name] === "string" &&
                   /^(#[0-9a-f]{6}|rgb\([0-9 ./]+\)|-?[0-9.]+)$/i.test(vars[name])
                 ) {

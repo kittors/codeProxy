@@ -36,7 +36,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 // 表格直接放在页面上（外壳内容区 canvas），冻结列的底色跟着它走；用 surface 的话深色下是一条亮一档的竖条。
 const CHIP = "inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-xs font-medium";
-const NEUTRAL = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ["year", 365 * 24 * 3600],
@@ -94,13 +94,13 @@ function AccountCell({ row, masked, t }: { row: EndUser; masked: boolean; t: Tra
       </span>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-medium text-ink">{displayName}</span>
+          <span className="truncate font-medium text-sn-label">{displayName}</span>
           <StatusTag size="sm" tone="neutral" dot={false} className="shrink-0 tabular-nums">
             {t("access_policy.key_count", { count: row.api_key_count ?? 0 })}
           </StatusTag>
         </div>
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-xs text-ink-3">{username}</span>
+          <span className="truncate text-xs text-sn-label3">{username}</span>
           <ExpiryTag expiresAt={row.expires_at} t={t} />
         </div>
       </div>
@@ -121,7 +121,7 @@ function SourceCell({
   if (!id) {
     return (
       <span className={cn(CHIP, NEUTRAL)}>
-        <SlidersHorizontal size={12} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.indigo)} />
+        <SlidersHorizontal size={12} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.indigo)} />
         {t("access_policy.source_custom_short")}
       </span>
     );
@@ -139,7 +139,7 @@ function SourceCell({
   }
   return (
     <span className={cn(CHIP, NEUTRAL, HUE_SOFT.violet)} title={profile.name}>
-      <ShieldCheck size={12} aria-hidden="true" className={cn("shrink-0 text-ink-3", HUE_GLYPH.violet)} />
+      <ShieldCheck size={12} aria-hidden="true" className={cn("shrink-0 text-sn-label3", HUE_GLYPH.violet)} />
       <span className="truncate">{profile.name}</span>
     </span>
   );
@@ -153,7 +153,7 @@ function RateCell({ row, t }: { row: EndUser; t: Translate }) {
       ? t("access_policy.rate_short.tpm", { value: formatQuotaAmount("tokens", row["tpm-limit"], { compact: true }) })
       : null,
   ].filter(Boolean);
-  if (parts.length === 0) return <span className="text-xs text-ink-4">{t("access_policy.unlimited_short")}</span>;
+  if (parts.length === 0) return <span className="text-xs text-sn-label-off">{t("access_policy.unlimited_short")}</span>;
   return (
     <div className="flex flex-wrap gap-1">
       {parts.map((part) => (
@@ -246,7 +246,7 @@ export function getEndUserColumns({
               <AccessFreezeChips freezes={upstreamFreezes} onOpen={() => onViewAccessFreezes(row)} />
             ) : null}
             <span
-              className="text-2xs text-ink-3"
+              className="text-2xs text-sn-label3"
               title={row.last_login_at ? new Date(row.last_login_at).toLocaleString() : undefined}
             >
               {row.last_login_at
@@ -260,15 +260,18 @@ export function getEndUserColumns({
     {
       id: "source",
       header: t("access_policy.col_source"),
-      width: 176,
+      width: 144,
+      minWidth: 112,
+      grow: 0.6,
       cell: (row) => <SourceCell row={row} profileById={profileById} t={t} />,
     },
     {
       id: "quota",
       header: t("access_policy.col_quota"),
-      // 额度条带多段文字，放不进语义令牌的刻度：22rem（352 设计像素），最窄 18rem。
-      width: 352,
-      minWidth: 288,
+      // 对齐 Satin 工作台紧凑比例：宽屏自适应舒展，1280px 视口完整放下不压截右侧模型列。
+      width: 280,
+      minWidth: 216,
+      grow: 1.5,
       overflowTooltip: false,
       cell: (row) => (
         <QuotaUsageCell
@@ -281,7 +284,9 @@ export function getEndUserColumns({
     {
       id: "models",
       header: t("access_policy.col_model_policy"),
-      width: 176,
+      width: 148,
+      minWidth: 112,
+      grow: 0.8,
       overflowTooltip: false,
       cell: (row) => (
         <PolicyBadges rules={row["model-rules"]} routes={row["model-routes"]} usage={row["quota-usage"]} />
@@ -291,15 +296,16 @@ export function getEndUserColumns({
       id: "spend",
       header: t("access_policy.col_spend"),
       width: GRID_WIDTH.numericWide,
+      minWidth: 100,
       className: "whitespace-nowrap tabular-nums",
       cell: (row) => (
         <div className="leading-tight">
-          <div className="text-xs text-ink-2">
-            <span className="mr-1 text-ink-3">{t("access_policy.spend_today")}</span>
+          <div className="text-xs text-sn-label2">
+            <span className="mr-1 text-sn-label3">{t("access_policy.spend_today")}</span>
             {formatUsdAmount(row["daily-spending-used"])}
           </div>
-          <div className="mt-0.5 text-xs text-ink-2">
-            <span className="mr-1 text-ink-3">{t("access_policy.spend_lifetime")}</span>
+          <div className="mt-0.5 text-xs text-sn-label2">
+            <span className="mr-1 text-sn-label3">{t("access_policy.spend_lifetime")}</span>
             {formatUsdAmount(row["lifetime-spending-used"])}
           </div>
         </div>
@@ -308,7 +314,9 @@ export function getEndUserColumns({
     {
       id: "rate",
       header: t("access_policy.col_rate"),
-      width: 160,
+      width: 136,
+      minWidth: 104,
+      grow: 0.5,
       cell: (row) => <RateCell row={row} t={t} />,
     },
     {

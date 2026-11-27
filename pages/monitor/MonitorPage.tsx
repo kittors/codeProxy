@@ -87,7 +87,7 @@ export function MonitorPage() {
 
       {legacy ? (
         <div
-          className={`${surface({ tone: "inset", radius: "2xl" })} flex items-start gap-2.5 px-4 py-3 text-sm text-ink-2`}
+          className={`${surface({ tone: "inset", radius: "2xl" })} flex items-start gap-2.5 px-4 py-3 text-sm text-sn-label2`}
         >
           <Info
             size={16}
@@ -179,8 +179,8 @@ export function MonitorPage() {
           <span className="grid size-10 place-items-center rounded-full bg-rose-500/10 text-rose-600 dark:bg-rose-400/15 dark:text-rose-300">
             <CircleAlert size={20} aria-hidden="true" />
           </span>
-          <p className="text-sm font-medium text-ink">{t("monitor_center.load_failed")}</p>
-          <p className="max-w-md text-xs break-all text-ink-3">{data.error}</p>
+          <p className="text-sm font-medium text-sn-label">{t("monitor_center.load_failed")}</p>
+          <p className="max-w-md text-xs break-all text-sn-label3">{data.error}</p>
           <Button size="sm" onClick={data.refresh}>
             <RefreshCw size={14} aria-hidden="true" />
             {t("monitor_center.retry")}

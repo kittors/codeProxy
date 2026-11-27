@@ -51,9 +51,8 @@ export interface ProviderCardProps {
  * （强调色表达「选中 / 开启」），多彩风格是绿色淡底。
  */
 const HEADER_BUTTON =
-  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-[background-color,color,transform] duration-120 ease-[var(--sn-ease-out)] active:scale-[0.94] focus-visible:outline-none focus-visible:shadow-control-focus";
-const HEADER_BUTTON_IDLE =
-  "bg-ink/[0.05] text-ink-3 hover:bg-ink/[0.08] hover:text-ink-2 dark:bg-white/[0.07] dark:hover:bg-white/[0.1]";
+  "sn-btn sn-ghost sn-xs sn-ibtn !h-6 !w-6 rounded-md text-sn-label3 hover:text-sn-label";
+const HEADER_BUTTON_IDLE = "";
 export function ProviderCard({
   title,
   selected = false,
@@ -101,7 +100,7 @@ export function ProviderCard({
                 className={[
                   HEADER_BUTTON,
                   enabled
-                    ? "bg-accent-soft text-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300 colorful:dark:hover:bg-emerald-500/25"
+                    ? "bg-sn-accent-soft text-sn-accent-ink colorful:bg-emerald-50 colorful:text-emerald-600 colorful:hover:bg-emerald-100 colorful:dark:bg-emerald-500/15 colorful:dark:text-emerald-300 colorful:dark:hover:bg-emerald-500/25"
                     : HEADER_BUTTON_IDLE,
                 ].join(" ")}
                 aria-label={

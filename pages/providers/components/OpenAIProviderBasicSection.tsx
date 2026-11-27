@@ -27,18 +27,18 @@ export function OpenAIProviderBasicSection({
     <div className="space-y-6">
       <FieldGroup>
         {openaiDraft.id ? (
-          <div className="mb-4 rounded-xl bg-subtle px-4 py-3">
-            <p className="text-xs font-semibold text-ink-3">
+          <div className="mb-4 rounded-xl bg-sn-subtle px-4 py-3">
+            <p className="text-xs font-semibold text-sn-label3">
               {t("content_moderation.channel_id")}
             </p>
-            <p className="mt-1 break-all font-mono text-xs text-ink-2">
+            <p className="mt-1 break-all font-mono text-xs text-sn-label2">
               {openaiDraft.id}
             </p>
           </div>
         ) : null}
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.name")}
             </p>
             <TextInput
@@ -51,7 +51,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.base_url")}
             </p>
             <TextInput
@@ -62,7 +62,7 @@ export function OpenAIProviderBasicSection({
               }}
               placeholder={t("providers.base_url_placeholder")}
             />
-            <p className="text-xs text-ink-3">
+            <p className="text-xs text-sn-label3">
               {t("providers.models_fetch_url")}
               {openaiDraft.baseUrl.trim() ? buildModelsEndpoint(openaiDraft.baseUrl) : "--"}
             </p>
@@ -71,7 +71,7 @@ export function OpenAIProviderBasicSection({
 
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.prefix_optional")}
             </p>
             <TextInput
@@ -84,7 +84,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.priority_label")}
             </p>
             <TextInput
@@ -98,7 +98,7 @@ export function OpenAIProviderBasicSection({
             />
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-ink">
+            <p className="text-sm font-semibold text-sn-label">
               {t("providers.test_model_label")}
             </p>
             <TextInput

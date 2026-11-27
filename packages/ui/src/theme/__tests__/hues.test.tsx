@@ -17,8 +17,8 @@ describe("icon tiles", () => {
     const tile = () => container.firstElementChild as HTMLElement;
     // 单色图标（基础类）：一层中性淡底；多彩图标（icon-hue: 变体）：按图标取色相的渐变块，
     // 钥匙是琥珀。两套类名都在元素上，由 <html data-icons> 决定哪套生效。
-    expect(tile()).toHaveClass("text-ink-2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
-    // 不描边：盒子的边一律用阴影表达。
+    expect(tile()).toHaveClass("text-sn-label2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
+    // 不描边：图标块为纯粹淡底。
     expect(tile().className).not.toMatch(/(^|\s)border(\s|$)|border-/);
 
     // Satin <Icon name="..." /> 也按语义名解析色相，纯操作图标保持中性。
@@ -30,7 +30,7 @@ describe("icon tiles", () => {
         <Icon name="key-round" />
       </DialogIcon>,
     );
-    expect(tile()).toHaveClass("text-ink-2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
+    expect(tile()).toHaveClass("text-sn-label2", "icon-hue:bg-gradient-to-b", "icon-hue:text-amber-600");
 
     rerender(
       <DialogIcon tone="danger">
@@ -45,7 +45,7 @@ describe("icon tiles", () => {
         <KeyRound />
       </DialogIcon>,
     );
-    expect(tile()).toHaveClass("text-ink-2", "icon-hue:text-violet-600");
+    expect(tile()).toHaveClass("text-sn-label2", "icon-hue:text-violet-600");
 
     // 明确要中性、或内容不是 lucide/Satin 图标（厂商 logo 自带品牌色）时，不叠任何色相。
     for (const node of [
@@ -57,7 +57,7 @@ describe("icon tiles", () => {
       </DialogIcon>,
     ]) {
       rerender(node);
-      expect(tile()).toHaveClass("text-ink-2");
+      expect(tile()).toHaveClass("text-sn-label2");
       expect(tile().className).not.toContain("icon-hue:");
     }
   });
@@ -108,7 +108,7 @@ describe("brand badges", () => {
   test("provider tags are neutral chips that take the brand tint in the colourful palette", () => {
     render(<ProviderTag vendor="claude">claude</ProviderTag>);
     const tag = screen.getByText("claude");
-    expect(tag).toHaveClass("text-ink-2", "colorful:text-[var(--brand-text)]");
+    expect(tag).toHaveClass("text-sn-label2", "colorful:text-[var(--brand-text)]");
     expect(tag.style.getPropertyValue("--brand-l")).toBe("#d97757");
     // logo 默认不画：只放图标的紧凑卡片会把 VendorIcon 当内容传进来，再画一个就成了两个。
     expect(tag.querySelector("img, svg")).toBeNull();

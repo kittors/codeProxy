@@ -42,10 +42,10 @@ export function ReferenceImagesField({
           <ImagePlus size={15} aria-hidden="true" />
           {t("image_generation.upload_label")}
         </Button>
-        <p className="min-w-0 flex-1 text-xs leading-5 text-ink-3">
+        <p className="min-w-0 flex-1 text-xs leading-5 text-sn-label3">
           {t("image_generation.reference_image_hint", { max })}
         </p>
-        <span className="text-xs tabular-nums text-ink-3">
+        <span className="text-xs tabular-nums text-sn-label3">
           {images.length} / {max}
         </span>
       </div>
@@ -63,11 +63,11 @@ export function ReferenceImagesField({
               <button
                 type="button"
                 onClick={() => onPreview(index)}
-                className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left text-xs font-medium text-ink-2 transition-colors hover:text-ink"
+                className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left text-xs font-medium text-sn-label2 transition-colors hover:text-sn-label"
                 aria-label={t("image_generation.preview_upload_label", { name: item.file.name })}
               >
-                {/* 缩略图的轮廓用伪元素细边（cp-edge）画在图片上面，不用 border。 */}
-                <span className="cp-edge h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-surface">
+                {/* 缩略图的轮廓用伪元素细边（border border-sn-line）画在图片上面，不用 border。 */}
+                <span className="border border-sn-line h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-sn-raised">
                   <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
                 </span>
                 <span className="truncate">{item.file.name}</span>
@@ -75,7 +75,7 @@ export function ReferenceImagesField({
               <button
                 type="button"
                 onClick={() => onRemove(item.id)}
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-ink-3 transition hover:bg-rose-500/10 hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:text-rose-400"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sn-label3 transition hover:bg-rose-500/10 hover:text-rose-600 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:text-rose-400"
                 aria-label={t("image_generation.remove_upload_label", { name: item.file.name })}
               >
                 <X size={13} aria-hidden="true" />

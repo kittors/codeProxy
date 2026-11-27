@@ -93,7 +93,7 @@ export const usageTone = (ratio: number): UsageTone => {
  */
 export const USAGE_BAR_FILL: Record<UsageTone, string> = {
   healthy:
-    "bg-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
+    "bg-sn-accent bar-semantic:bg-gradient-to-r bar-semantic:from-emerald-400 bar-semantic:to-emerald-500 bar-semantic:dark:from-emerald-500 bar-semantic:dark:to-emerald-400",
   warning:
     "bg-amber-500 dark:bg-amber-400 bar-semantic:bg-gradient-to-r bar-semantic:from-amber-300 bar-semantic:to-amber-500 bar-semantic:dark:from-amber-500 bar-semantic:dark:to-amber-300",
   danger:
@@ -101,13 +101,13 @@ export const USAGE_BAR_FILL: Record<UsageTone, string> = {
 };
 
 export const USAGE_BAR_TRACK: Record<UsageTone, string> = {
-  healthy: "bg-track bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
-  warning: "bg-track bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
-  danger: "bg-track bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
+  healthy: "bg-sn-sunken bar-semantic:bg-emerald-500/12 bar-semantic:dark:bg-emerald-400/15",
+  warning: "bg-sn-sunken bar-semantic:bg-amber-500/15 bar-semantic:dark:bg-amber-400/15",
+  danger: "bg-sn-sunken bar-semantic:bg-rose-500/12 bar-semantic:dark:bg-rose-400/15",
 };
 
 export const USAGE_TEXT: Record<UsageTone, string> = {
-  healthy: "text-ink-2",
+  healthy: "text-sn-label2",
   warning: "text-amber-700 dark:text-amber-300",
   danger: "text-rose-600 dark:text-rose-400",
 };

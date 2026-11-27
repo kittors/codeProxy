@@ -39,7 +39,7 @@ import {
 } from "@code-proxy/domain/ccswitch/ccswitchClients";
 
 /** 表格里的模型、渠道分组等次要标签：中性淡底，不描边。 */
-const NEUTRAL_TAG = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL_TAG = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 /** New presets start on Codex, like the earlier editor; the app can be switched before saving. */
 const NEW_PRESET_CLIENT: CcSwitchClientType = "codex";
@@ -223,10 +223,10 @@ export function CcSwitchImportSettingsPage() {
           <div className="flex min-w-0 items-center gap-3">
             <CcSwitchClientIcon clientType={row.clientType} className="h-5 w-5" />
             <div className="min-w-0">
-              <div className="truncate font-medium text-ink">
+              <div className="truncate font-medium text-sn-label">
                 {t(getCcSwitchClientConfig(row.clientType).labelKey)}
               </div>
-              <div className="truncate font-mono text-xs text-ink-3">{row.routePath || "/"}</div>
+              <div className="truncate font-mono text-xs text-sn-label3">{row.routePath || "/"}</div>
             </div>
           </div>
         ),
@@ -239,10 +239,10 @@ export function CcSwitchImportSettingsPage() {
           row.note ? `${row.providerName}\n${row.note}` : row.providerName,
         cell: (row) => (
           <div className="min-w-0">
-            <div className="truncate font-medium text-ink">
+            <div className="truncate font-medium text-sn-label">
               {row.providerName}
             </div>
-            <div className="truncate text-xs text-ink-3">
+            <div className="truncate text-xs text-sn-label3">
               {row.note || t("ccswitch.config_no_remark")}
             </div>
           </div>
@@ -279,7 +279,7 @@ export function CcSwitchImportSettingsPage() {
                 {primary}
               </span>
               {others > 0 ? (
-                <span className="shrink-0 text-xs text-ink-3">
+                <span className="shrink-0 text-xs text-sn-label3">
                   {t("ccswitch.config_table_more_models", { count: others })}
                 </span>
               ) : null}
@@ -317,7 +317,7 @@ export function CcSwitchImportSettingsPage() {
               ))}
             </div>
           ) : (
-            <span className="text-xs text-ink-3">
+            <span className="text-xs text-sn-label3">
               {t("ccswitch.import_channel_group_none")}
             </span>
           ),
@@ -365,10 +365,10 @@ export function CcSwitchImportSettingsPage() {
     <div data-page-fill="md" className="space-y-6 md:flex md:min-h-0 md:flex-1 md:flex-col">
       <div className="flex flex-wrap items-start justify-between gap-3 md:shrink-0">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-normal text-ink">
+          <h2 className="text-lg font-semibold tracking-normal text-sn-label">
             {t("ccswitch.settings_title")}
           </h2>
-          <p className="max-w-3xl text-sm text-ink-2">
+          <p className="max-w-3xl text-sm text-sn-label2">
             {t("ccswitch.settings_description")}
           </p>
         </div>

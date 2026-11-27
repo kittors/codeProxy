@@ -57,7 +57,7 @@ export function Segmented<V extends string | number>({
       ref={containerRef}
       role={role}
       aria-label={label}
-      className="sn-seg sn-sm bg-track !inline-flex items-center gap-0.5"
+      className="sn-seg sn-sm bg-sn-sunken !inline-flex items-center gap-0.5"
     >
       <span aria-hidden="true" className="sn-thumb" style={{ opacity: 0 }} />
       {options.map((option) => {
@@ -97,8 +97,8 @@ function Stat({
   return (
     <HoverTooltip content={hint} placement="bottom">
       <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-        <span className="text-ink-3">{label}</span>
-        <span className={`inline-block font-medium tabular-nums text-ink ${width}`}>{value}</span>
+        <span className="text-sn-label3">{label}</span>
+        <span className={`inline-block font-medium tabular-nums text-sn-label ${width}`}>{value}</span>
       </span>
     </HoverTooltip>
   );
@@ -158,7 +158,7 @@ const STATUS_DOT: Record<LabStatus, string> = {
   success: "bg-emerald-500",
   failed: "bg-rose-500",
   retried: "bg-amber-500",
-  cancelled: "bg-ink-4",
+  cancelled: "bg-sn-label-off",
 };
 
 export type StatusTab = "all" | LabStatus;
@@ -183,7 +183,7 @@ export function StatusTabs({
         ) : null}
         {label}
         <span
-          className="inline-block text-left tabular-nums text-ink-3"
+          className="inline-block text-left tabular-nums text-sn-label3"
           style={{ minWidth: `${formatInteger(maxCounts[key]).length}ch` }}
         >
           {formatInteger(counts[key])}

@@ -17,7 +17,7 @@ export const isPinnedLookupTab = (tab: ApiKeyLookupTab) => tab === "logs" || tab
 export function lookupShellClassName(showLanding: boolean, pinned: boolean): string {
   return [
     "relative min-h-dvh pt-14",
-    showLanding ? "" : "bg-canvas",
+    showLanding ? "" : "bg-sn-workspace",
     pinned && !showLanding ? "md:flex md:h-dvh md:flex-col" : "",
   ].join(" ");
 }

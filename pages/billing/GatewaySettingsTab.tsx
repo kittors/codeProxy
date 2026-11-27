@@ -182,8 +182,8 @@ export function GatewaySettingsTab({
             className={`${surface({ tone: "inset", radius: "xl" })} flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 text-xs`}
           >
             <div className="min-w-0 flex-1">
-              <div className="text-2xs text-ink-3">{t("billing_admin.notify_url_label")}</div>
-              <div className="truncate font-mono text-ink-2">{notifyUrl}</div>
+              <div className="text-2xs text-sn-label3">{t("billing_admin.notify_url_label")}</div>
+              <div className="truncate font-mono text-sn-label2">{notifyUrl}</div>
             </div>
             <CopyButton value={notifyUrl} label={t("common.copy")} />
           </div>
@@ -258,10 +258,10 @@ export function GatewaySettingsTab({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-medium text-ink">
+              <div className="text-sm font-medium text-sn-label">
                 {t("billing_admin.enable_billing_label")}
               </div>
-              <p className="text-xs text-ink-3">{t("billing_admin.enable_billing_desc")}</p>
+              <p className="text-xs text-sn-label3">{t("billing_admin.enable_billing_desc")}</p>
             </div>
             <ToggleSwitch
               checked={draft.enabled}

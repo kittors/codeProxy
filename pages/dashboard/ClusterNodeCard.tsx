@@ -242,7 +242,7 @@ export function ClusterNodeCard({
         </MetricGrid>
       ) : (
         // 没有快照（旧版本或刚启动）：这一行写原因，后面两行留空，页脚照样对齐。
-        <p className="self-center text-xs text-ink-3">{t("cluster_nodes.no_snapshot")}</p>
+        <p className="self-center text-xs text-sn-label3">{t("cluster_nodes.no_snapshot")}</p>
       )}
 
       {snapshot ? (

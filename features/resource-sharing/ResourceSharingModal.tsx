@@ -84,11 +84,11 @@ export function ResourceSharingModal({
       return {
         value: tenant.id,
         // label 是节点时，触发器上的已选摘要读 searchText，所以 searchText 只放名称。
-        label: <span className={inactive ? "text-ink-3" : undefined}>{tenant.name}</span>,
+        label: <span className={inactive ? "text-sn-label3" : undefined}>{tenant.name}</span>,
         searchText: tenant.name,
         title: tenant.name,
         trailing: inactive ? (
-          <span className="rounded-full bg-ink/[0.05] px-1.5 py-0.5 text-2xs font-medium text-ink-3 dark:bg-white/[0.07]">
+          <span className="rounded-full bg-sn-label/[0.05] px-1.5 py-0.5 text-2xs font-medium text-sn-label3 dark:bg-white/[0.07]">
             {t(`resource_sharing.tenant_status_${tenant.status}`, {
               defaultValue: t("resource_sharing.tenant_status_inactive"),
             })}
@@ -178,7 +178,7 @@ export function ResourceSharingModal({
       size="md"
       onClose={onClose}
       footerStart={
-        <span className="text-xs text-ink-3">{t("resource_sharing.applies_immediately")}</span>
+        <span className="text-xs text-sn-label3">{t("resource_sharing.applies_immediately")}</span>
       }
       footer={
         <>

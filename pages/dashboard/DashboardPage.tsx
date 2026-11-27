@@ -175,11 +175,11 @@ export function DashboardPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-balance text-ink">
+          <h2 className="text-2xl font-semibold tracking-tight text-balance text-sn-label">
             {t("dashboard.heading")}
           </h2>
-          <p className="mt-1 text-sm text-ink-2">{t("dashboard.hero_subtitle")}</p>
-          <p className="mt-1 text-xs text-ink-3">
+          <p className="mt-1 text-sm text-sn-label2">{t("dashboard.hero_subtitle")}</p>
+          <p className="mt-1 text-xs text-sn-label3">
             {t("dashboard.overview_hint", { time: generatedAt })}
           </p>
         </div>

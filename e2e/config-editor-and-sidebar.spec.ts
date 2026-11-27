@@ -184,7 +184,7 @@ test("Sidebar: single sidebar with folding sections, collapsed flyouts and accou
   const systemList = page.getByRole("group", { name: /^(System Settings|系统设置)$/ });
   const configLink = systemList.getByRole("link", { name: /^Config|配置面板$/i });
   await expect(configLink).toHaveAttribute("aria-current", "page");
-  await expect(configLink).toHaveClass(/bg-surface/);
+  await expect(configLink).toHaveClass(/bg-sn-raised/);
   await expect(configLink).not.toHaveClass(/from-blue-600/);
   expect(await configLink.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("nowrap");
   await expect(page.getByRole("banner")).toContainText(/System Settings|系统设置/);

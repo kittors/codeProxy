@@ -266,7 +266,7 @@ export function RequestLogsDemo({ switcher }: { switcher: ReactNode }) {
         </header>
 
         {/* 独立的筛选区：一块淡底，和表格分开；芯片行说清楚当前到底筛了什么。 */}
-        <div className="rounded-xl bg-subtle p-2">
+        <div className="rounded-xl bg-sn-subtle p-2">
           <DataGridToolbar
             end={
               <>

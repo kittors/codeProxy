@@ -22,7 +22,7 @@ const NEW_PASSWORD_RULES_ID = "change-password-rules";
 const CONFIRM_HINT_ID = "change-password-confirm-hint";
 
 const FIELD_LABEL =
-  "block pl-1 text-xs font-medium text-ink-3 transition-colors duration-200 group-focus-within:text-ink";
+  "block pl-1 text-xs font-medium text-sn-label3 transition-colors duration-200 group-focus-within:text-sn-label";
 
 type ConfirmState = "empty" | "typing" | "match" | "mismatch";
 
@@ -126,7 +126,7 @@ export function ChangePasswordPage() {
         <div className="sn-fade-up w-full max-w-md">
           <section
             ref={sectionRef}
-            className="cp-edge relative rounded-2xl bg-[var(--sn-raised)] p-7 shadow-lift sm:p-9"
+            className="border border-sn-line relative rounded-2xl bg-[var(--sn-raised)] p-7 shadow-sn-lift sm:p-9"
           >
             {forced ? null : (
               <button
@@ -144,7 +144,7 @@ export function ChangePasswordPage() {
                   "mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-200",
                   ready
                     ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300"
-                    : "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]",
+                    : "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]",
                 ].join(" ")}
               >
                 <span className={ready ? "sn-swap sn-on" : "sn-swap"}>
@@ -156,10 +156,10 @@ export function ChangePasswordPage() {
                   </span>
                 </span>
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              <h1 className="text-2xl font-semibold tracking-tight text-sn-label">
                 {t("identity_admin.change_password")}
               </h1>
-              <p className="mt-2 text-sm text-ink-3">
+              <p className="mt-2 text-sm text-sn-label3">
                 {t(
                   forced
                     ? "identity_admin.change_password_forced_hint"
@@ -251,7 +251,7 @@ export function ChangePasswordPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-2">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-sn-label2">
                   <Checkbox checked={showPasswords} onCheckedChange={setShowPasswords} />
                   {t(
                     showPasswords ? "identity_admin.hide_passwords" : "identity_admin.show_passwords",

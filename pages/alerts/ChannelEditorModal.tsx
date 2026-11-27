@@ -80,7 +80,7 @@ export function ChannelEditorModal({
       onClose={onClose}
       onSubmitShortcut={commit}
       footerStart={
-        <span className="text-xs text-ink-3">{t("alerts_page.channel.draft_note")}</span>
+        <span className="text-xs text-sn-label3">{t("alerts_page.channel.draft_note")}</span>
       }
       footer={
         <>

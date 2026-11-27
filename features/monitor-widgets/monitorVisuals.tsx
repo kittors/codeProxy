@@ -95,7 +95,7 @@ export type MeterTone = {
 
 /** 简约风格的三档（基础类）。 */
 const LEVEL_BASE: Record<UsageLevel, { bar: string; ring: string; text: string }> = {
-  normal: { bar: "bg-accent", ring: "stroke-accent", text: "text-ink" },
+  normal: { bar: "bg-sn-accent", ring: "stroke-sn-accent", text: "text-sn-label" },
   warn: {
     bar: "bg-amber-500 dark:bg-amber-400",
     ring: "stroke-amber-500 dark:stroke-amber-400",
@@ -114,7 +114,7 @@ export function meterTone(level: UsageLevel, hue: MonitorHue = "emerald"): Meter
   const colorful = MONITOR_HUES[level === "critical" ? "rose" : level === "warn" ? "amber" : hue];
   return {
     bar: `${base.bar} ${colorful.bar}`,
-    track: `bg-track ${colorful.track}`,
+    track: `bg-sn-sunken ${colorful.track}`,
     ring: base.ring,
     ringStops: colorful.ring,
     text: base.text,
@@ -133,7 +133,7 @@ export const USAGE_LEVEL_LABEL_KEY: Record<UsageLevel, string> = {
 /** 正常态：简约风格是中性底配绿点，多彩风格叠加绿色文字与淡底；对齐 Satin `.sn-tag`。 */
 const LEVEL_PILL: Record<UsageLevel, string> = {
   normal:
-    "text-ink-2 colorful:!bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:!bg-emerald-400/15 colorful:dark:text-emerald-300",
+    "text-sn-label2 colorful:!bg-emerald-500/10 colorful:text-emerald-700 colorful:dark:!bg-emerald-400/15 colorful:dark:text-emerald-300",
   warn: "!bg-amber-500/10 text-amber-700 dark:!bg-amber-400/15 dark:text-amber-300",
   critical: "!bg-rose-500/10 text-rose-700 dark:!bg-rose-400/15 dark:text-rose-300",
 };
@@ -179,11 +179,11 @@ export function LevelDot({ level, label }: { level: UsageLevel; label: string })
  * <html data-icons> 决定显示哪个，切换外观不需要重新渲染。
  */
 export function MetricIcon({ icon: Icon, hue }: { icon: SatinIconComponent; hue?: MonitorHue }) {
-  if (!hue) return <Icon size={16} className="shrink-0 text-ink-3" aria-hidden="true" />;
+  if (!hue) return <Icon size={16} className="shrink-0 text-sn-label3" aria-hidden="true" />;
   const style = MONITOR_HUES[hue];
   return (
     <>
-      <Icon size={16} className="shrink-0 text-ink-3 icon-hue:hidden" aria-hidden="true" />
+      <Icon size={16} className="shrink-0 text-sn-label3 icon-hue:hidden" aria-hidden="true" />
       <span
         aria-hidden="true"
         className={`hidden size-8 shrink-0 place-items-center rounded-inner icon-hue:grid ${style.tile}`}
@@ -208,7 +208,7 @@ export function MeterBar({ pct, tone, className = "h-bar" }: { pct: number; tone
           className={[
             "absolute inset-y-0 left-0 rounded-full",
             tone.bar,
-            "transition-[width] duration-700 ease-pop motion-reduce:transition-none",
+            "transition-[width] duration-700 ease-sn-strong motion-reduce:transition-none",
             "motion-safe:animate-[quota-bar-grow_900ms_cubic-bezier(0.16,1,0.3,1)]",
           ].join(" ")}
           style={{ width: `${width}%` }}
@@ -257,8 +257,8 @@ export function MeterRing({
   }, [target]);
 
   const paint = {
-    "--cp-ring-paint": `url(#${gradientId})`,
-    "--cp-ring-glow": `drop-shadow(0 0 6px ${tone.ringStops[1]}55)`,
+    "--sn-ring-paint": `url(#${gradientId})`,
+    "--sn-ring-glow": `drop-shadow(0 0 6px ${tone.ringStops[1]}55)`,
   } as CSSProperties;
 
   return (
@@ -288,7 +288,7 @@ export function MeterRing({
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - shown / 100)}
           style={paint}
-          className={`${tone.ring} colorful:[stroke:var(--cp-ring-paint)] colorful:[filter:var(--cp-ring-glow)] transition-[stroke-dashoffset] duration-[1100ms] ease-pop motion-reduce:transition-none`}
+          className={`${tone.ring} colorful:[stroke:var(--sn-ring-paint)] colorful:[filter:var(--sn-ring-glow)] transition-[stroke-dashoffset] duration-[1100ms] ease-sn-strong motion-reduce:transition-none`}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>

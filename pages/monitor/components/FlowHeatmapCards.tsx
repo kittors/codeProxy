@@ -44,7 +44,7 @@ export function FlowSankeyCard({ overview, legacy, loading, isDark }: CardProps)
       title={<MonitorCardTitle icon={Waypoints} label={t("monitor_center.flows.title")} />}
       actions={
         legacy ? null : (
-          <span className="flex items-center gap-3 text-xs text-ink-3">
+          <span className="flex items-center gap-3 text-xs text-sn-label3">
             {(["consumer", "model", "channel"] as const).map((layer) => (
               <span key={layer} className="flex items-center gap-1.5">
                 <span
@@ -168,7 +168,7 @@ export function ActivityHeatmapCard({ overview, legacy, loading, isDark }: CardP
         />
       ) : (
         <>
-          <p className="text-xs text-ink-2">
+          <p className="text-xs text-sn-label2">
             {peak
               ? t("monitor_center.heatmap.peak", {
                   span: describe(peak.weekday, peak.hour).span,
@@ -217,7 +217,7 @@ export function ActivityHeatmapCard({ overview, legacy, loading, isDark }: CardP
                   title={`${String(hour).padStart(2, "0")}:00 · ${formatMonitorCompact(value)}`}
                 >
                   <span
-                    className="w-full rounded-sm bg-track transition-[height] duration-500 ease-pop"
+                    className="w-full rounded-sm bg-sn-sunken transition-[height] duration-500 ease-sn-strong"
                     style={{
                       height: `${Math.max(value > 0 ? 6 : 4, (value / maxHour) * 100)}%`,
                       backgroundColor: value > 0 ? withAlpha(base, 0.55) : undefined,
@@ -227,7 +227,7 @@ export function ActivityHeatmapCard({ overview, legacy, loading, isDark }: CardP
               ))}
               <span />
               {Array.from({ length: 24 }, (_, hour) => (
-                <span key={hour} className="pt-1 text-center text-2xs tabular-nums text-ink-3">
+                <span key={hour} className="pt-1 text-center text-2xs tabular-nums text-sn-label3">
                   {HOUR_TICKS.has(hour) ? hour : ""}
                 </span>
               ))}
@@ -235,7 +235,7 @@ export function ActivityHeatmapCard({ overview, legacy, loading, isDark }: CardP
             {hover && hovered ? (
               <div
                 className={[
-                  "pointer-events-none absolute z-20 w-max rounded-xl bg-ink px-3 py-1.5 text-xs leading-snug text-canvas shadow-[0_8px_20px_-6px_rgb(0_0_0/0.28)]",
+                  "pointer-events-none absolute z-20 w-max rounded-xl bg-sn-label px-3 py-1.5 text-xs leading-snug text-sn-workspace shadow-[0_8px_20px_-6px_rgb(0_0_0/0.28)]",
                   hover.align === "center"
                     ? "-translate-x-1/2"
                     : hover.align === "end"
@@ -256,13 +256,13 @@ export function ActivityHeatmapCard({ overview, legacy, loading, isDark }: CardP
               </div>
             ) : null}
           </div>
-          <div className="flex items-center justify-end gap-1.5 text-2xs text-ink-3">
+          <div className="flex items-center justify-end gap-1.5 text-2xs text-sn-label3">
             <span className="mr-auto">{t("monitor_center.heatmap.profile")}</span>
             {t("monitor_center.heatmap.less")}
             {[0, 1, 2, 3, 4].map((level) => (
               <span
                 key={level}
-                className="size-2.5 rounded-sm bg-track"
+                className="size-2.5 rounded-sm bg-sn-sunken"
                 style={level ? { backgroundColor: cellColor(level) } : undefined}
                 aria-hidden="true"
               />
@@ -292,14 +292,14 @@ function HeatmapRow({
 }) {
   return (
     <>
-      <span className="pr-1.5 text-2xs leading-none text-ink-3 self-center">{label}</span>
+      <span className="pr-1.5 text-2xs leading-none text-sn-label3 self-center">{label}</span>
       {cells.map((cell, hour) => (
         <span
           key={`${weekday}-${hour}`}
           onMouseEnter={(event) => onHover(hour, event.currentTarget)}
           className={[
-            "aspect-square rounded-sm bg-track transition-[box-shadow] duration-150",
-            active === hour ? "shadow-[0_0_0_1.5px_var(--cp-ink)]" : "",
+            "aspect-square rounded-sm bg-sn-sunken transition-[box-shadow] duration-150",
+            active === hour ? "shadow-[0_0_0_1.5px_var(--sn-label)]" : "",
           ].join(" ")}
           style={cell.requests > 0 ? { backgroundColor: colorFor(cell.requests) } : undefined}
         />

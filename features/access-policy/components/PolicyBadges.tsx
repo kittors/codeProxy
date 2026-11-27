@@ -12,7 +12,7 @@ import { ruleLabel } from "../model/resettableWindows";
 import { formatQuotaAmount } from "../model/quotaFormat";
 
 const CHIP = "inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-medium";
-const NEUTRAL = "bg-ink/[0.05] text-ink-2 dark:bg-white/[0.07]";
+const NEUTRAL = "bg-sn-label/[0.05] text-sn-label2 dark:bg-white/[0.07]";
 
 /** 规则里已经用满（≥100%）的格子数：列表上用琥珀色提醒「这个账号的某个模型已触顶」。 */
 const exhaustedRules = (rules: readonly ModelRule[], usage?: QuotaUsageView): Set<string> => {
@@ -48,7 +48,7 @@ export function PolicyBadges({
 }) {
   const { t } = useTranslation();
   if (rules.length === 0 && routes.length === 0) {
-    return <span className="text-xs text-ink-4">{t("access_policy.no_model_policy")}</span>;
+    return <span className="text-xs text-sn-label-off">{t("access_policy.no_model_policy")}</span>;
   }
   const exhausted = exhaustedRules(rules, usage);
   return (
@@ -97,7 +97,7 @@ export function PolicyBadges({
             {exhausted.size > 0 ? (
               <AlertTriangle size={12} aria-hidden="true" />
             ) : (
-              <Boxes size={12} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.indigo)} />
+              <Boxes size={12} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.indigo)} />
             )}
             {t("access_policy.rules_badge", { count: rules.length })}
             {exhausted.size > 0 ? (
@@ -121,7 +121,7 @@ export function PolicyBadges({
           }
         >
           <button type="button" className={cn(CHIP, NEUTRAL, HUE_SOFT.teal)}>
-            <Route size={12} aria-hidden="true" className={cn("text-ink-3", HUE_GLYPH.teal)} />
+            <Route size={12} aria-hidden="true" className={cn("text-sn-label3", HUE_GLYPH.teal)} />
             {t("access_policy.routes_badge", { count: routes.length })}
           </button>
         </HoverTooltip>

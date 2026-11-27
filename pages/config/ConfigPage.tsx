@@ -587,8 +587,8 @@ export function ConfigPage() {
                 </div>
                 {loading ? (
                   // 首次加载前表单里是默认值，盖一层淡色遮罩，别让人以为那就是服务器上的配置。
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-canvas/70 backdrop-blur-[2px]">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-elevated px-4 py-2 text-sm font-medium text-ink-2 shadow-pop">
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-xl bg-sn-workspace/70 backdrop-blur-[2px]">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-sn-overlay px-4 py-2 text-sm font-medium text-sn-label2 shadow-sn-e1">
                       <Loader2 size={15} className="animate-spin" aria-hidden="true" />
                       {t("common.loading_ellipsis")}
                     </span>
@@ -649,13 +649,13 @@ export function ConfigPage() {
                                 content={t("config_page.search_hint")}
                                 placement="bottom"
                               >
-                                <span className="inline-flex h-6 w-6 items-center justify-center text-ink-3">
+                                <span className="inline-flex h-6 w-6 items-center justify-center text-sn-label3">
                                   <Search size={16} aria-hidden="true" />
                                 </span>
                               </HoverTooltip>
                             }
                           />
-                          <p className="text-xs text-ink-3">
+                          <p className="text-xs text-sn-label3">
                             Enter: next · Shift+Enter: prev · Results:
                             <span className="ml-1 font-mono tabular-nums">
                               {!lastSearchedQuery.trim()

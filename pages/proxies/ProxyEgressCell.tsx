@@ -35,7 +35,7 @@ export function ProxyEgressCell({
 }) {
   const { t, i18n } = useTranslation();
   if (!known) {
-    return <span className="text-xs text-ink-3">--</span>;
+    return <span className="text-xs text-sn-label3">--</span>;
   }
   if (!status) {
     return (
@@ -74,7 +74,7 @@ export function ProxyEgressCell({
         <StatusTag size="sm" tone="bad" className="max-w-full">
           <span className="truncate">{t("proxies.egress_open", { reason })}</span>
         </StatusTag>
-        <p className="mt-1 truncate text-xs text-ink-3">
+        <p className="mt-1 truncate text-xs text-sn-label3">
           {t("proxies.egress_since", { time: formatTime(status.since, locale) })} · {next}
         </p>
       </div>

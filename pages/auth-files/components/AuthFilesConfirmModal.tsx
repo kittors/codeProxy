@@ -58,7 +58,7 @@ export function AuthFilesConfirmModal({
               </li>
             ))}
             {names.length > listed.length ? (
-              <li className="font-sans text-ink-3">
+              <li className="font-sans text-sn-label3">
                 {t("auth_files.batch_delete_more", { count: names.length - listed.length })}
               </li>
             ) : null}

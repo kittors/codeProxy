@@ -154,18 +154,18 @@ export function MaskingFlow({
           // max-w-full：右列按内容右对齐，不封顶的话长渠道名（常是 OAuth 邮箱）会向左压到线上，truncate 也不生效
           "flex h-9 max-w-full min-w-0 items-center gap-2 rounded-xl px-2 text-left transition-colors",
           side === "channel" ? "flex-row-reverse text-right" : "",
-          node.more ? "cursor-default text-ink-3" : pickable ? "hover:bg-ink/[0.04] dark:hover:bg-white/[0.06]" : "cursor-default",
+          node.more ? "cursor-default text-sn-label3" : pickable ? "hover:bg-sn-label/[0.04] dark:hover:bg-white/[0.06]" : "cursor-default",
           selected ? "bg-violet-500/10 dark:bg-violet-400/15" : "",
         ].join(" ")}
       >
-        <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-subtle text-ink-3">
+        <span className="grid size-6 shrink-0 place-items-center rounded-lg bg-sn-subtle text-sn-label3">
           {node.more ? null : vendor && hasVendorIcon(vendor) ? <VendorIcon modelId={vendor} size={14} /> : <Fallback size={14} aria-hidden="true" />}
         </span>
         <span className="min-w-0 leading-tight">
-          <span className={`block truncate text-sm ${selected ? "font-medium text-violet-700 dark:text-violet-200" : "text-ink"}`}>
+          <span className={`block truncate text-sm ${selected ? "font-medium text-violet-700 dark:text-violet-200" : "text-sn-label"}`}>
             {node.label}
           </span>
-          <span className={`block text-2xs tabular-nums ${side === "channel" ? "text-violet-600/80 dark:text-violet-300/80" : "text-ink-3"}`}>
+          <span className={`block text-2xs tabular-nums ${side === "channel" ? "text-violet-600/80 dark:text-violet-300/80" : "text-sn-label3"}`}>
             {formatCompact(node.places)}
           </span>
         </span>
@@ -183,7 +183,7 @@ export function MaskingFlow({
           {paths ? (
             <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true" className="absolute inset-0 overflow-visible">
               {paths.incoming.map((p, i) => (
-                <path key={`in-${i}`} d={p.d} fill="none" strokeWidth={1} className="stroke-ink" strokeOpacity={p.opacity} pathLength={1}
+                <path key={`in-${i}`} d={p.d} fill="none" strokeWidth={1} className="stroke-sn-label" strokeOpacity={p.opacity} pathLength={1}
                   style={animate ? { strokeDasharray: 1, strokeDashoffset: 1, animation: `pm-draw 1.6s ${0.15 + p.row * 0.08}s cubic-bezier(.3,.6,.1,1) forwards` } : undefined} />
               ))}
               {paths.outgoing.map((p, i) => (
@@ -202,7 +202,7 @@ export function MaskingFlow({
                           <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur={`${dur}s`} begin={begin} repeatCount={2} />
                         </rect>
                       ) : (
-                        <circle key={`dot-${i}`} r={2} className="fill-ink-3" opacity={0}>
+                        <circle key={`dot-${i}`} r={2} className="fill-sn-label3" opacity={0}>
                           <animateMotion path={p.d} dur={`${dur}s`} begin={begin} repeatCount={2} />
                           <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur={`${dur}s`} begin={begin} repeatCount={2} />
                         </circle>
@@ -212,7 +212,7 @@ export function MaskingFlow({
             </svg>
           ) : null}
           <span
-            className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-[var(--sn-raised)] text-violet-600 shadow-control ring-4 ring-violet-500/12 dark:text-violet-300 dark:ring-violet-400/15"
+            className="absolute top-1/2 left-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-xl bg-[var(--sn-raised)] text-violet-600 border border-sn-line-control ring-4 ring-violet-500/12 dark:text-violet-300 dark:ring-violet-400/15"
             title="CliRelay"
           >
             <ShieldCheck size={20} aria-hidden="true" />
@@ -222,7 +222,7 @@ export function MaskingFlow({
           {right.map((node) => nodeButton(node, "channel", !!selectedChannel && selectedChannel === node.id))}
         </div>
       </div>
-      <figcaption className="text-center text-2xs tracking-wide text-ink-3">
+      <figcaption className="text-center text-2xs tracking-wide text-sn-label3">
         {t("privacy_masking.flow.caption")}
       </figcaption>
     </figure>

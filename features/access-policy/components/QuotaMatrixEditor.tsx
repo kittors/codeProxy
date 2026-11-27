@@ -90,7 +90,7 @@ export function QuotaMatrixEditor({
       <div className={cn("hidden items-end gap-2 px-0.5 sm:grid", gridTemplate)} aria-hidden="true">
         <span />
         {QUOTA_WINDOWS.map((window) => (
-          <span key={window} className="text-center text-2xs font-semibold tracking-wide text-ink-3">
+          <span key={window} className="text-center text-2xs font-semibold tracking-wide text-sn-label3">
             {t(`access_policy.window.${window}`)}
           </span>
         ))}
@@ -101,11 +101,11 @@ export function QuotaMatrixEditor({
           <div className="col-span-2 flex min-w-0 items-center gap-2 sm:col-span-1 sm:min-h-8">
             <MetricTile metric={metric} />
             <div className="min-w-0 leading-tight">
-              <div className="truncate text-xs font-semibold text-ink">
+              <div className="truncate text-xs font-semibold text-sn-label">
                 {t(dense ? `access_policy.metric_short.${metric}` : `access_policy.metric.${metric}`)}
               </div>
               {dense ? null : (
-                <div className="truncate text-2xs text-ink-3">{t(`access_policy.metric_unit.${metric}`)}</div>
+                <div className="truncate text-2xs text-sn-label3">{t(`access_policy.metric_unit.${metric}`)}</div>
               )}
             </div>
           </div>
@@ -137,7 +137,7 @@ export function QuotaMatrixEditor({
                 : t("access_policy.cell_used", { used: formatQuotaAmount(metric, used) });
               // 带在途的那句更长，窄格子里会被截断：title 留一份完整的。
               hint = (
-                <span className={limit > 0 ? USAGE_TEXT[tone] : "text-ink-3"} title={withHeld ? text : undefined}>
+                <span className={limit > 0 ? USAGE_TEXT[tone] : "text-sn-label3"} title={withHeld ? text : undefined}>
                   {text}
                 </span>
               );
@@ -146,7 +146,7 @@ export function QuotaMatrixEditor({
             }
             return (
               <div key={window} className="min-w-0">
-                <label htmlFor={inputId} className="mb-1 block text-2xs font-medium text-ink-3 sm:hidden">
+                <label htmlFor={inputId} className="mb-1 block text-2xs font-medium text-sn-label3 sm:hidden">
                   {t(`access_policy.window.${window}`)}
                 </label>
                 {unavailable ? (
@@ -154,7 +154,7 @@ export function QuotaMatrixEditor({
                     <span
                       id={inputId}
                       aria-label={`${cellLabel}: ${unavailable}`}
-                      className="flex h-8 w-full items-center justify-center rounded-full bg-ink/[0.03] text-xs text-ink-4 dark:bg-white/[0.04]"
+                      className="flex h-8 w-full items-center justify-center rounded-full bg-sn-label/[0.03] text-xs text-sn-label-off dark:bg-white/[0.04]"
                     >
                       —
                     </span>
@@ -181,15 +181,15 @@ export function QuotaMatrixEditor({
                     className={cn(
                       "flex h-8 w-full items-center justify-center rounded-full px-2 text-xs tabular-nums",
                       limit > 0
-                        ? "bg-ink/[0.05] font-semibold text-ink dark:bg-white/[0.07]"
-                        : "bg-ink/[0.03] text-ink-4 dark:bg-white/[0.04]",
+                        ? "bg-sn-label/[0.05] font-semibold text-sn-label dark:bg-white/[0.07]"
+                        : "bg-sn-label/[0.03] text-sn-label-off dark:bg-white/[0.04]",
                     )}
                   >
                     {limit > 0 ? formatQuotaAmount(metric, limit) : t("access_policy.unlimited_short")}
                   </span>
                 )}
                 {hint ? (
-                  <div id={hintId} className="mt-1 truncate text-center text-2xs tabular-nums text-ink-3">
+                  <div id={hintId} className="mt-1 truncate text-center text-2xs tabular-nums text-sn-label3">
                     {hint}
                   </div>
                 ) : null}

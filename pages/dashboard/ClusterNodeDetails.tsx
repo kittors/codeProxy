@@ -39,7 +39,7 @@ export function ClusterNodeDetails({ node, now }: { node: ClusterNode; now: numb
     return (
       <div className="space-y-6">
         <IssueList issues={issues} />
-        <p className="text-sm text-ink-2">{t("cluster_nodes.no_snapshot")}</p>
+        <p className="text-sm text-sn-label2">{t("cluster_nodes.no_snapshot")}</p>
         <DetailSection title={t("cluster_nodes.section_process")}>
           <DetailGrid>
             <DetailItem wide label={t("cluster_nodes.version")} value={version || EMPTY} />
@@ -79,7 +79,7 @@ export function ClusterNodeDetails({ node, now }: { node: ClusterNode; now: numb
         title={t("cluster_nodes.section_cpu")}
         aside={cpu ? t("cluster_nodes.window_aside", { seconds: Math.round(cpu.windowSeconds) }) : undefined}
       >
-        {cpu ? <CpuSplitBar cpu={cpu} /> : <p className="text-xs text-ink-3">{t("cluster_nodes.cpu_pending")}</p>}
+        {cpu ? <CpuSplitBar cpu={cpu} /> : <p className="text-xs text-sn-label3">{t("cluster_nodes.cpu_pending")}</p>}
         <DetailGrid>
           <DetailItem label={t("cluster_nodes.cpu_busy")} value={cpu ? cores(cpu.busyCores) : EMPTY} level={cpu?.usageLevel} />
           <DetailItem label={t("cluster_nodes.cpu_steal")} value={cpu ? cores(cpu.stealCores) : EMPTY} level={cpu?.stealLevel} />
@@ -148,7 +148,7 @@ export function ClusterNodeDetails({ node, now }: { node: ClusterNode; now: numb
             <DetailItem label={t("cluster_nodes.goroutines")} value={snapshot.goroutines.toLocaleString()} />
           </DetailGrid>
         ) : (
-          <p className="text-xs text-ink-3">{t("cluster_nodes.slot_unavailable")}</p>
+          <p className="text-xs text-sn-label3">{t("cluster_nodes.slot_unavailable")}</p>
         )}
       </DetailSection>
 
@@ -205,7 +205,7 @@ export function ClusterNodeDetails({ node, now }: { node: ClusterNode; now: numb
             <DetailItem label={t("cluster_nodes.since")} value={formatTime(snapshot.egress.open_since)} />
           </DetailGrid>
         ) : (
-          <p className="text-xs text-ink-3">{EMPTY}</p>
+          <p className="text-xs text-sn-label3">{EMPTY}</p>
         )}
       </DetailSection>
 
