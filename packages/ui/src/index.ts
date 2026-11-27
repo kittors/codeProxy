@@ -118,6 +118,13 @@ export {
   notifyTopLayerDialogOpened,
 } from "./overlays/portalContainer";
 export {
+  useSatinFloatingLayer,
+  type SatinFloatingAlign,
+  type SatinFloatingPlacement,
+  type SatinFloatingState,
+  type UseSatinFloatingLayerOptions,
+} from "./overlays/useSatinFloatingLayer";
+export {
   TooltipBubble,
   HoverTooltip,
   OverflowTooltip,
@@ -141,7 +148,6 @@ export type { EntityCardProps } from "./primitives/EntityCard";
 export { DateTimePicker } from "./primitives/DateTimePicker";
 export { DropdownMenu } from "./primitives/DropdownMenu";
 export type { DropdownMenuRootProps } from "./primitives/DropdownMenu";
-export { Fieldset } from "./primitives/Fieldset";
 export {
   Form,
   FormField,
@@ -224,9 +230,8 @@ export { LanguageSelector } from "./theme/LanguageSelector";
 export { useCapsLock } from "./hooks/useCapsLock";
 export { useInterval } from "./hooks/useInterval";
 export { useLocalStorage } from "./hooks/useLocalStorage";
+export { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 export { useResizeLayoutAnimation } from "./hooks/useResizeLayoutAnimation";
-export { useShake } from "./hooks/useShake";
-export { useStaggerVariants } from "./hooks/useStaggerVariants";
 export {
   useSensitiveDataMasking,
   SENSITIVE_DATA_MASKING_STORAGE_KEY,
@@ -253,7 +258,6 @@ export {
   cn,
   floatingPanelSurface,
   getSelectTriggerBase,
-  selectTriggerBase,
   selectTriggerState,
 } from "./utils/selectStyles";
 export {
@@ -270,8 +274,6 @@ export {
   OVERLAY_NUDGE_MS,
   OVERLAY_PANEL_EXIT_MS,
   OVERLAY_TRANSFORM_ENTER_MS,
-  popoverEnterTransition,
-  popoverExitTransition,
 } from "./utils/motion";
 
 export { FormSection } from "./forms/FormSection";

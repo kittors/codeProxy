@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Copy, Download, ExternalLink, Inbox } from "@code-proxy/ui/icons";
 import { detectApiBaseFromLocation, publicApiClient } from "@code-proxy/api-client";
 import {
@@ -126,20 +125,13 @@ function QuickImportCard({
   onSelect: (config: CcSwitchImportConfigListItem) => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
   const clientType = config.clientType;
 
   return (
-    <motion.div
-      layout
-      initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.98 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
-      exit={reduceMotion ? undefined : { opacity: 0, y: -6, scale: 0.98 }}
-      transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36 }}
-      // 每个导入项就是页面上唯一一层卡片（伪元素细边 + 卡片投影），悬停抬起一档。
+    <div
       className={[
         surface({ radius: "2xl" }),
-        "group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] transition-shadow hover:shadow-lift",
+        "sn-fade-up group/card grid min-h-[116px] w-full grid-cols-[minmax(0,1fr)_auto] transition-shadow hover:shadow-lift",
       ].join(" ")}
     >
       <button
@@ -188,7 +180,7 @@ function QuickImportCard({
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -245,7 +237,6 @@ export function QuickImportTabContent({
 }) {
   const { t, i18n } = useTranslation();
   const { notify } = useToast();
-  const reduceMotion = useReducedMotion();
   const cacheKey = useMemo(() => getQuickImportCacheKey(apiKey), [apiKey]);
   const initialCache = useMemo(() => readStoredQuickImportCache(cacheKey), [cacheKey]);
   const [configs, setConfigs] = useState<CcSwitchImportConfigListItem[]>(
@@ -419,57 +410,39 @@ export function QuickImportTabContent({
         // 分组直接落在页面上：以前外面再包一张大卡，里面的每一项又是一张描边卡片。
         <div>
           <div className="space-y-5">
-            <AnimatePresence initial={false}>
-              {groupedConfigs.map(({ clientType, items }) => {
-                const label = t(getCcSwitchClientConfig(clientType).labelKey);
+            {groupedConfigs.map(({ clientType, items }) => {
+              const label = t(getCcSwitchClientConfig(clientType).labelKey);
 
-                return (
-                  <motion.section
-                    layout
-                    key={clientType}
-                    aria-label={t("apikey_lookup.quick_import_group_aria", { client: label })}
-                    className="space-y-3"
-                    initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                    exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-                    transition={
-                      reduceMotion
-                        ? { duration: 0 }
-                        : { type: "spring", stiffness: 420, damping: 36 }
-                    }
-                  >
-                    <div className="flex items-center gap-2">
-                      <CcSwitchClientIcon clientType={clientType} />
-                      <h3 className="text-sm font-semibold text-ink">{label}</h3>
-                      <AnimatePresence mode="popLayout" initial={false}>
-                        <motion.span
-                          key={`${clientType}-${items.length}`}
-                          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-                          animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                          exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-                          className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${NEUTRAL_TAG}`}
-                        >
-                          {items.length}
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <AnimatePresence initial={false}>
-                        {items.map((config) => (
-                          <QuickImportCard
-                            key={config.id}
-                            config={config}
-                            copied={copiedImportConfigId === config.id}
-                            onCopyLink={(item) => void handleCopyImportLink(item)}
-                            onSelect={handleImport}
-                          />
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  </motion.section>
-                );
-              })}
-            </AnimatePresence>
+              return (
+                <section
+                  key={clientType}
+                  aria-label={t("apikey_lookup.quick_import_group_aria", { client: label })}
+                  className="sn-fade-up space-y-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <CcSwitchClientIcon clientType={clientType} />
+                    <h3 className="text-sm font-semibold text-ink">{label}</h3>
+                    <span
+                      key={`${clientType}-${items.length}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${NEUTRAL_TAG}`}
+                    >
+                      {items.length}
+                    </span>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {items.map((config) => (
+                      <QuickImportCard
+                        key={config.id}
+                        config={config}
+                        copied={copiedImportConfigId === config.id}
+                        onCopyLink={(item) => void handleCopyImportLink(item)}
+                        onSelect={handleImport}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </div>
       ) : null}

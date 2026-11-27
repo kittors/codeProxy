@@ -33,7 +33,6 @@
     "@tanstack/react-virtual": "^3.13.18",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
-    "framer-motion": "^12.34.3",
     "i18next": "^25.7.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",

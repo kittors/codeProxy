@@ -11,7 +11,7 @@ function setScrollMetrics(element: HTMLElement) {
 }
 
 describe("ScrollArea", () => {
-  test("shows track-hover scrollbars for the whole area and hides on pointer leave", () => {
+  test("delegates scrollbar chrome to Satin native scrollArea and reflects bar mode and active scrolling", () => {
     render(
       <ScrollArea scrollbarVisibility="track-hover">
         <div>content</div>
@@ -20,21 +20,21 @@ describe("ScrollArea", () => {
 
     const root = document.querySelector<HTMLElement>("[data-scroll-area-root]");
     const viewport = document.querySelector<HTMLElement>("[data-scroll-area-viewport]");
+    const satinBox = root?.querySelector<HTMLElement>(".sn-sa") ?? null;
+    const satinBarY = satinBox?.querySelector<HTMLElement>(".sn-sa-bar.sn-y") ?? null;
+
     expect(root).not.toBeNull();
     expect(viewport).not.toBeNull();
+    expect(satinBox).not.toBeNull();
+    expect(satinBox!).toHaveAttribute("data-bar", "auto");
+    expect(satinBox!).toHaveAttribute("data-over", "contain");
+    expect(viewport!).toHaveClass("sn-sa-vp");
+    expect(satinBarY).not.toBeNull();
 
     setScrollMetrics(viewport!);
     fireEvent.scroll(viewport!);
 
-    const scrollbar = document.querySelector<HTMLElement>("[data-scroll-area-scrollbar='y']");
-    expect(scrollbar).not.toBeNull();
-    expect(scrollbar!).toHaveClass("opacity-100", "group-hover:opacity-100");
-    expect(scrollbar!).not.toHaveClass("group-focus-within:opacity-100");
-
-    fireEvent.pointerLeave(root!);
-
-    expect(scrollbar!).toHaveClass("opacity-0", "group-hover:opacity-100");
-    expect(scrollbar!).not.toHaveClass("group-focus-within:opacity-100");
+    expect(satinBox!).toHaveClass("sn-active");
   });
 
   test("fades the viewport edges by default and drops the mask when edgeFade is turned off", () => {

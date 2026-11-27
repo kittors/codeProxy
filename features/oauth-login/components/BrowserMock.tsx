@@ -1,8 +1,6 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, Copy, Info, Lock, MonitorX } from "@code-proxy/ui/icons";
+import { usePrefersReducedMotion } from "@code-proxy/ui";
 import { useTranslation } from "react-i18next";
-
-const EASE = [0.2, 0.8, 0.2, 1] as const;
 
 /** How a browser shows an address: no scheme, and the parameters elided. */
 export function displayCallbackAddress(
@@ -40,7 +38,7 @@ export function BrowserMock({
   animate: boolean;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const play = animate && !reduceMotion;
   const secure = variant === "code";
 
@@ -61,22 +59,20 @@ export function BrowserMock({
             ) : (
               <Info size={12} className="shrink-0 text-ink-3" aria-hidden="true" />
             )}
-            <motion.span
+            <span
               key={`${address}-${play}`}
-              className="block min-w-0 truncate font-mono text-xs text-ink"
-              initial={play ? { clipPath: "inset(0 100% 0 0)" } : false}
-              animate={{ clipPath: "inset(0 0% 0 0)" }}
-              transition={{ duration: 1.1, ease: "linear", delay: 0.2 }}
+              className={`block min-w-0 truncate font-mono text-xs text-ink ${play ? "sn-fade-up" : ""}`}
             >
               {address}
-            </motion.span>
+            </span>
             {variant === "redirect" ? (
-              <motion.span
+              <span
                 aria-hidden="true"
-                className="pointer-events-none absolute -inset-0.5 rounded-full shadow-control-focus"
-                initial={false}
-                animate={play ? { opacity: [0, 1, 0.35, 1] } : { opacity: animate ? 1 : 0 }}
-                transition={play ? { duration: 1.6, delay: 1.4, ease: EASE } : { duration: 0 }}
+                className={[
+                  "pointer-events-none absolute -inset-0.5 rounded-full shadow-control-focus transition-opacity duration-500",
+                  animate ? "opacity-100" : "opacity-0",
+                  play ? "animate-pulse" : "",
+                ].join(" ")}
               />
             ) : null}
           </div>
@@ -100,33 +96,32 @@ export function BrowserMock({
               <span className="relative inline-flex shrink-0 items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-2xs font-medium text-accent-fg">
                 <Copy size={11} aria-hidden="true" />
                 {t("add_account.mock.copy")}
-                <motion.span
+                <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute -inset-1 rounded-full shadow-control-focus"
-                  initial={false}
-                  animate={play ? { opacity: [0, 1, 0.35, 1] } : { opacity: animate ? 1 : 0 }}
-                  transition={play ? { duration: 1.6, delay: 0.6, ease: EASE } : { duration: 0 }}
+                  className={[
+                    "pointer-events-none absolute -inset-1 rounded-full shadow-control-focus transition-opacity duration-500",
+                    animate ? "opacity-100" : "opacity-0",
+                    play ? "animate-pulse" : "",
+                  ].join(" ")}
                 />
               </span>
             </div>
           </div>
         )}
       </div>
-      <motion.figcaption
+      <figcaption
         className={[
           "mt-2 flex items-center gap-1.5 text-xs font-medium",
           animate ? "text-accent-ink colorful:text-sky-700 colorful:dark:text-sky-300" : "text-ink-3",
           variant === "redirect" ? "pl-14" : "justify-center",
+          play ? "sn-fade-up" : "",
         ].join(" ")}
-        initial={play ? { opacity: 0, y: -4 } : false}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: play ? 1.7 : 0, ease: EASE }}
       >
         <ArrowUp size={13} aria-hidden="true" />
         {variant === "redirect"
           ? t("add_account.mock.copy_address")
           : t("add_account.mock.copy_code")}
-      </motion.figcaption>
+      </figcaption>
     </figure>
   );
 }

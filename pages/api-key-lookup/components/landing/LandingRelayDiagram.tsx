@@ -1,5 +1,5 @@
 import { useId, type CSSProperties } from "react";
-import { useReducedMotion } from "framer-motion";
+import { usePrefersReducedMotion } from "@code-proxy/ui";
 import { LogoMark, VendorIcon } from "@code-proxy/assets";
 
 const UPSTREAMS = ["claude", "openai", "gemini", "grok"] as const;
@@ -27,7 +27,7 @@ const UPSTREAM_Y = UPSTREAMS.map((_, index) => {
  * 节点是卡片里的淡底块，不描 ring。
  */
 export function LandingRelayDiagram({ appLabel }: { appLabel: string }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const gradientId = `relay-flow-${useId()}`;
 
   return (

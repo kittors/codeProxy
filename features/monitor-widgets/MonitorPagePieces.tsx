@@ -1,5 +1,4 @@
 import type { ComponentType, ReactNode } from "react";
-import { useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { TIME_RANGES, type TimeRange } from "@features/monitor-widgets/monitor-constants";
 import {
@@ -8,6 +7,7 @@ import {
   TabsList,
   TabsTrigger,
   iconHueClass,
+  usePrefersReducedMotion,
   useResizeLayoutAnimation,
   type Hue,
   type TabsTone,
@@ -48,7 +48,7 @@ export const KpiCard = ({
   valueClassName?: string;
   tone?: MonitorSurfaceTone;
 }) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
 
   return (
@@ -124,7 +124,7 @@ export const MonitorCard = ({
   children: ReactNode;
 }) => {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const cardRef = useResizeLayoutAnimation<HTMLElement>(!reduceMotion);
 
   return (

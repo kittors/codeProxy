@@ -441,16 +441,6 @@
       translate: 0 6px;
     }
   }
-  /* 尚未迁移的旧 Select 浮层暂保留兼容（将在里程碑 3 彻底移除）。 */
-  .sn-menu.code-proxy-floating-surface {
-    min-width: max-content;
-    opacity: 1;
-    scale: 1;
-    translate: 0 0;
-    pointer-events: auto;
-    visibility: visible;
-    transition: none;
-  }
 
   /* Satin 原生弹窗（dialog.sn-dlg）业务宽度与移动端贴底适配 */
   dialog.sn-dlg.cp-modal-panel {
@@ -706,36 +696,43 @@
     animation: sn-fade-up 0.32s var(--sn-ease-out-strong) backwards;
   }
 
-  /* 复制/状态切换按钮图标原地交叉缩放微动效（同时支持 .sn-swapped 与 [data-swapped="true"]）。 */
   /* 按钮内纯装饰图标与切换层不截获鼠标事件，确保 mousedown/mouseup 始终落在 <button> 本体。 */
   .sn-btn .sn-ic,
   .sn-btn .sn-swap {
     pointer-events: none;
   }
-  .sn-swap {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-  }
-  .sn-swap > .sn-swap-a,
-  .sn-swap > .sn-swap-b {
-    grid-area: 1 / 1;
-    display: inline-flex;
-    transition: opacity 0.18s var(--sn-ease-out), transform 0.24s var(--sn-ease-out-strong);
-  }
-  .sn-swap > .sn-swap-b {
+
+  /* 通用纯 CSS 展开/折叠容器（0fr → 1fr 丝滑过渡，对齐 Satin --sn-ease-open，零 framer-motion 依赖）。 */
+  .sn-collapsible {
+    display: grid;
+    grid-template-rows: 0fr;
     opacity: 0;
-    transform: scale(0.55);
+    transition:
+      grid-template-rows 0.24s var(--sn-ease-open),
+      opacity 0.18s var(--sn-ease-out);
   }
-  .sn-swap.sn-swapped > .sn-swap-a,
-  .sn-swap[data-swapped="true"] > .sn-swap-a {
-    opacity: 0;
-    transform: scale(0.55);
-  }
-  .sn-swap.sn-swapped > .sn-swap-b,
-  .sn-swap[data-swapped="true"] > .sn-swap-b {
+  .sn-collapsible[data-open="true"] {
+    grid-template-rows: 1fr;
     opacity: 1;
-    transform: scale(1);
+  }
+  .sn-collapsible > .sn-collapsible-inner {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* 文字轮播上浮进场微动效（登录页主标题模型名切换）。 */
+  @keyframes sn-word-in {
+    from {
+      opacity: 0;
+      transform: translateY(55%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .sn-word-in {
+    animation: sn-word-in 0.34s var(--sn-ease-out-strong) both;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -743,8 +740,12 @@
     .sn-pop-in,
     .sn-draw-stroke,
     .sn-result-ring,
-    .sn-fade-up {
+    .sn-fade-up,
+    .sn-word-in {
       animation: none !important;
+    }
+    .sn-collapsible {
+      transition: none !important;
     }
   }
 }

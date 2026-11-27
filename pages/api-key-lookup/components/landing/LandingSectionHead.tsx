@@ -1,12 +1,5 @@
-import { motion } from "framer-motion";
-import { useLandingFade } from "./landingMotion";
+import { LandingFade } from "./landingMotion";
 
-/**
- * 章节头：等宽序号 + 等宽 eyebrow + 大标题。
- *
- * 序号（01 / 02 / 03）是这版设计的节奏锚点——它让长页面读起来像一份有目录的文档，
- * 而不是一串互不相干的卡片区。
- */
 export function LandingSectionHead({
   index,
   eyebrow,
@@ -20,14 +13,10 @@ export function LandingSectionHead({
   subtitle?: string;
   align?: "left" | "center";
 }) {
-  const fade = useLandingFade();
   const centered = align === "center";
 
   return (
-    <motion.div
-      {...fade()}
-      className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}
-    >
+    <LandingFade className={centered ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
       <div
         className={[
           "flex items-center gap-3 font-display text-2xs uppercase tracking-[0.28em]",
@@ -46,6 +35,6 @@ export function LandingSectionHead({
       {subtitle ? (
         <p className="mt-5 text-base leading-8 text-ink-2">{subtitle}</p>
       ) : null}
-    </motion.div>
+    </LandingFade>
   );
 }

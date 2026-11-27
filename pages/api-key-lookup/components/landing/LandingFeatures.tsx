@@ -1,15 +1,10 @@
-import { motion } from "framer-motion";
 import { BarChart3, GaugeCircle, Layers, Repeat, ScrollText, Store } from "@code-proxy/ui/icons";
 import type { SatinIconComponent } from "@code-proxy/ui/icons";
-import { useLandingFade } from "./landingMotion";
+import { LandingFadeItem } from "./landingMotion";
 import { LandingRelayDiagram } from "./LandingRelayDiagram";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy, LandingFeatureCopy } from "./landingCopy";
 
-/**
- * 能力卡与控制台的卡片同一套：伪元素细边（cp-edge）+ 堆叠投影，悬停抬起一档；不描 ring。
- * 卡片底色是卡片色：深色下是近黑的卡片色，不再是一层发灰的白色叠层。
- */
 const CARD_CLASS =
   "cp-edge group relative flex flex-col overflow-hidden rounded-2xl bg-[var(--sn-raised)] p-8 transition-shadow duration-200 hover:shadow-lift";
 
@@ -24,11 +19,9 @@ function FeatureCard({
   delay: number;
   className?: string;
 }) {
-  const fade = useLandingFade();
-
   return (
-    <motion.li
-      {...fade({ delay })}
+    <LandingFadeItem
+      delay={delay}
       className={[CARD_CLASS, className].filter(Boolean).join(" ")}
     >
       <Icon
@@ -39,12 +32,11 @@ function FeatureCard({
       />
       <h3 className="mt-6 font-display text-lg font-bold tracking-tight text-ink">{copy.title}</h3>
       <p className="mt-3 text-sm leading-7 text-ink-2">{copy.desc}</p>
-    </motion.li>
+    </LandingFadeItem>
   );
 }
 
 export function LandingFeatures({ copy }: { copy: LandingCopy }) {
-  const fade = useLandingFade();
   const { features } = copy;
 
   return (
@@ -57,9 +49,8 @@ export function LandingFeatures({ copy }: { copy: LandingCopy }) {
       />
 
       <ul className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* 统一入口是核心卖点，占两列两行，并用示意图替代纯文字描述。 */}
-        <motion.li
-          {...fade({ delay: 0.04 })}
+        <LandingFadeItem
+          delay={0.04}
           className={`${CARD_CLASS} sm:col-span-2 lg:row-span-2`}
         >
           <Layers
@@ -75,7 +66,7 @@ export function LandingFeatures({ copy }: { copy: LandingCopy }) {
             {features.gateway.desc}
           </p>
           <LandingRelayDiagram appLabel={features.gateway.diagramLabel} />
-        </motion.li>
+        </LandingFadeItem>
 
         <FeatureCard copy={features.usage} icon={BarChart3} delay={0.08} />
         <FeatureCard copy={features.logs} icon={ScrollText} delay={0.12} />

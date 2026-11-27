@@ -1,9 +1,15 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, ChevronDown, Copy, ExternalLink, Loader2 } from "@code-proxy/ui/icons";
 import { useRef, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ProxyPoolEntry } from "@code-proxy/api-client";
-import { Button, Step, Steps, type StepState, ScrollFade } from "@code-proxy/ui";
+import {
+  Button,
+  Step,
+  Steps,
+  type StepState,
+  ScrollFade,
+  usePrefersReducedMotion,
+} from "@code-proxy/ui";
 import type { ProxyPoolSelect } from "@features/proxy-pool";
 import { useOAuthLogin } from "../hooks/useOAuthLogin";
 import type { AccountProvider } from "../model/catalog";
@@ -62,7 +68,7 @@ export function OAuthFlowPanel({
   onSucceeded: (login: StartedLogin) => void;
 }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const { phase, start, submitCallback } = useOAuthLogin({ provider: provider.oauth, onSucceeded });
   const pasteRef = useRef<HTMLDivElement | null>(null);
   const [opened, setOpened] = useState(false);
@@ -211,30 +217,25 @@ export function OAuthFlowPanel({
                       className="inline-flex w-fit items-center gap-1 text-xs text-ink-3 transition-colors hover:text-ink"
                     >
                       {t("add_account.steps.manual_paste")}
-                      <motion.span animate={{ rotate: manualPaste ? 180 : 0 }}>
+                      <span
+                        className={`inline-flex transition-transform duration-200 ${manualPaste ? "rotate-180" : ""}`}
+                      >
                         <ChevronDown size={13} aria-hidden="true" />
-                      </motion.span>
+                      </span>
                     </button>
-                    <AnimatePresence initial={false}>
-                      {manualPaste ? (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          // 高度动画要裁切，但粘贴框的阴影描边画在框外：四周各留 4px 再用负边距拉回。
-                          className="-m-1 overflow-hidden p-1"
-                        >
-                          <CallbackPasteBox
-                            flow="redirect"
-                            expectedState={login.state}
-                            redirectUri={login.redirectUri}
-                            busy={busy}
-                            onSubmit={submitCallback}
-                            watchClipboard={false}
-                          />
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
+                    {manualPaste ? (
+                      // 粘贴框的阴影描边画在框外：四周各留 4px 再用负边距拉回。
+                      <div className="sn-fade-up -m-1 overflow-hidden p-1">
+                        <CallbackPasteBox
+                          flow="redirect"
+                          expectedState={login.state}
+                          redirectUri={login.redirectUri}
+                          busy={busy}
+                          onSubmit={submitCallback}
+                          watchClipboard={false}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </Step>

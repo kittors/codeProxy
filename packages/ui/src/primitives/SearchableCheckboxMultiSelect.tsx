@@ -1,11 +1,9 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -27,6 +25,7 @@ import {
 } from "../utils/selectStyles";
 import type { ControlSize } from "../utils/controlStyles";
 import { resolvePortalContainer } from "../overlays/portalContainer";
+import { useSatinFloatingLayer } from "../overlays/useSatinFloatingLayer";
 import { ScrollArea } from "./ScrollArea";
 
 export interface SearchableCheckboxMultiSelectOption {
@@ -125,13 +124,11 @@ export function SearchableCheckboxMultiSelect({
   selectionHint = "",
 }: SearchableCheckboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const isOpen = open && !disabled;
   const [query, setQuery] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
-  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
-  const [listMaxHeight, setListMaxHeight] = useState(224);
 
   const manualApply = applyMode === "manual";
   const committedEmptyMeansAllSelected =
@@ -149,10 +146,14 @@ export function SearchableCheckboxMultiSelect({
   );
 
   useEffect(() => {
-    if (manualApply && open) return;
+    if (manualApply && isOpen) return;
     setDraftExplicitValue(sanitizedExplicitValue);
     setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
-  }, [committedEmptyMeansAllSelected, manualApply, open, sanitizedExplicitValue]);
+  }, [committedEmptyMeansAllSelected, isOpen, manualApply, sanitizedExplicitValue]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   const activeExplicitValue = manualApply ? draftExplicitValue : sanitizedExplicitValue;
   const activeEmptyMeansAllSelected = manualApply
@@ -213,124 +214,25 @@ export function SearchableCheckboxMultiSelect({
     [committedEmptyMeansAllSelected, manualApply, sanitizedExplicitValue],
   );
 
-  const updatePosition = useCallback(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const gap = 6;
-    const maxHeight = 360;
-    const listChromeHeight = (manualApply ? 132 : 84) + (selectionHint ? 14 : 0);
-    const setPanelMaxHeight = (height: number) => {
-      setListMaxHeight(Math.max(96, height - listChromeHeight));
-      return height;
-    };
-
-    const isNarrow = window.innerWidth < mobileBreakpoint;
-    if (isNarrow) {
-      const maxHeightMobile = Math.min(420, window.innerHeight * 0.7);
-      const spaceBelow = window.innerHeight - rect.bottom - gap;
-      const spaceAbove = rect.top - gap;
-      const openAbove = spaceBelow < maxHeightMobile && spaceAbove > spaceBelow;
-
-      if (openAbove) {
-        const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceAbove));
-        setDropdownPlacement("top");
-        setDropdownStyle({
-          position: "fixed",
-          left: 12,
-          right: 12,
-          width: "auto",
-          maxHeight: panelMaxHeight,
-          bottom: window.innerHeight - rect.top + gap,
-          zIndex: 99999,
-        });
-        return;
-      }
-      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeightMobile, spaceBelow));
-      setDropdownPlacement("bottom");
-      setDropdownStyle({
-        position: "fixed",
-        left: 12,
-        right: 12,
-        width: "auto",
-        maxHeight: panelMaxHeight,
-        top: Math.min(rect.bottom + gap, window.innerHeight - maxHeightMobile - 12),
-        zIndex: 99999,
-      });
-      return;
-    }
-
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const openAbove = spaceBelow < maxHeight && spaceAbove > spaceBelow;
-
-    if (openAbove) {
-      const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceAbove));
-      setDropdownPlacement("top");
-      setDropdownStyle({
-        position: "fixed",
-        bottom: window.innerHeight - rect.top + gap,
-        left: rect.left,
-        width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
-        maxHeight: panelMaxHeight,
-        zIndex: 99999,
-      });
-      return;
-    }
-
-    const panelMaxHeight = setPanelMaxHeight(Math.min(maxHeight, spaceBelow));
-    setDropdownPlacement("bottom");
-    setDropdownStyle({
-      position: "fixed",
-      top: rect.bottom + gap,
-      left: rect.left,
-      width: Math.max(rect.width, options.some((option) => option.trailing) ? 300 : 260),
-      maxHeight: panelMaxHeight,
-      zIndex: 99999,
-    });
-  }, [manualApply, mobileBreakpoint, options, selectionHint]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: dropdownRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
       closeDropdown(manualApply);
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [closeDropdown, manualApply, open]);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
   useEffect(() => {
-    if (!open) return;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        // 吃掉这次 Esc：外层弹窗看到 defaultPrevented 就不会跟着关闭（只收起下拉）。
-        event.preventDefault();
-        closeDropdown(manualApply);
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [closeDropdown, manualApply, open]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-    requestAnimationFrame(() => searchRef.current?.focus());
-  }, [open, updatePosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open, updatePosition]);
+    if (isOpen) {
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+  }, [isOpen]);
 
   const normalizeSelection = useCallback(
     (next: string[]) => {
@@ -464,6 +366,15 @@ export function SearchableCheckboxMultiSelect({
     [closeDropdown, emptyValueMeansAllSelected, manualApply, onClear, updateSelection],
   );
 
+  const isNarrow = typeof window !== "undefined" && window.innerWidth < mobileBreakpoint;
+  const maxPanelHeight = Math.min(isNarrow ? 420 : 360, floating.availableHeight);
+  const listChromeHeight = (manualApply ? 132 : 84) + (selectionHint ? 14 : 0);
+  const listMaxHeight = Math.max(96, maxPanelHeight - listChromeHeight);
+  const desktopMinWidth = Math.max(
+    floating.anchorWidth,
+    options.some((option) => option.trailing) ? 300 : 260,
+  );
+
   return (
     <>
       <div className={cn("group/multi-select relative", className)}>
@@ -472,18 +383,17 @@ export function SearchableCheckboxMultiSelect({
           id={id}
           type="button"
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
           disabled={disabled}
-          data-state={selectTriggerState(open)}
+          data-state={selectTriggerState(isOpen)}
           onClick={() => {
-            if (!open) {
-              if (manualApply) setDraftExplicitValue(sanitizedExplicitValue);
-              if (manualApply) setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
-              updatePosition();
+            if (!open && manualApply) {
+              setDraftExplicitValue(sanitizedExplicitValue);
+              setDraftEmptyMeansAllSelected(committedEmptyMeansAllSelected);
             }
             setOpen((current) => !current);
           }}
@@ -493,7 +403,7 @@ export function SearchableCheckboxMultiSelect({
             className={cn(
               "min-w-0 flex-1 truncate text-left",
               (activeExplicitValue.length === 0 || showAllSelectionSummary) &&
-                "text-ink-3",
+                "text-[var(--sn-label3)]",
             )}
           >
             {selectedSummary}
@@ -512,7 +422,7 @@ export function SearchableCheckboxMultiSelect({
                 showSelectionBadge &&
                   showClearButton &&
                   "group-hover/multi-select:opacity-0 group-focus-within/multi-select:opacity-0",
-                open && "rotate-180",
+                isOpen && "rotate-180",
               )}
             />
           </span>
@@ -534,14 +444,38 @@ export function SearchableCheckboxMultiSelect({
         ) : null}
       </div>
 
-      {open
+      {floating.mounted && !disabled
         ? createPortal(
             <div
               ref={dropdownRef}
-              data-side={dropdownPlacement}
-              data-state="open"
-              style={dropdownStyle}
-              className={cn(searchableSelectPanel, "flex flex-col")}
+              aria-hidden={floating.isOpen ? undefined : true}
+              data-side={floating.side}
+              data-state={floating.isOpen ? "open" : "closed"}
+              style={
+                isNarrow
+                  ? {
+                      top: floating.top,
+                      left: 12,
+                      right: 12,
+                      width: "auto",
+                      maxHeight: maxPanelHeight,
+                      transformOrigin: floating.origin,
+                    }
+                  : {
+                      top: floating.top,
+                      left: floating.left,
+                      width: desktopMinWidth,
+                      maxWidth: "min(500px, 90vw)",
+                      maxHeight: maxPanelHeight,
+                      transformOrigin: floating.origin,
+                    }
+              }
+              className={cn(
+                searchableSelectPanel,
+                floating.isOpen ? "sn-open" : null,
+                floating.up ? "sn-up" : null,
+                floating.end ? "sn-end" : null,
+              )}
             >
               <div className={cn(selectSearchRow, "shrink-0")}>
                 <Icon name="search" size={14} className="shrink-0 text-[var(--sn-label3)]" />
@@ -565,7 +499,7 @@ export function SearchableCheckboxMultiSelect({
                         // 「全部」是当前生效的选择：简约风格用强调色，多彩风格沿用绿色。
                         showAllSelectionSummary
                           ? "text-accent-ink colorful:text-emerald-600 colorful:dark:text-emerald-300"
-                          : "text-ink-2",
+                          : "text-[var(--sn-label2)]",
                       )}
                     >
                       {showAllSelectionSummary

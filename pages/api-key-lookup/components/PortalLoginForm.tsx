@@ -1,5 +1,4 @@
 import { useRef } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, KeyRound, Loader2, UserRound } from "@code-proxy/ui/icons";
 import { LogoMark } from "@code-proxy/assets";
 import { Callout, FormField, TextInput, rules, useFormValidation } from "@code-proxy/ui";
@@ -10,8 +9,6 @@ import {
   type LoginFailure,
 } from "@features/login-lock";
 import { LandingButton } from "./landing/LandingButton";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * 门户登录表单。
@@ -49,7 +46,6 @@ export function PortalLoginForm({
   onTogglePassword: () => void;
   onSubmit: () => void;
 }) {
-  const reduceMotion = useReducedMotion();
   const formRef = useRef<HTMLFormElement | null>(null);
   const validation = useFormValidation(
     { username, password },
@@ -141,27 +137,17 @@ export function PortalLoginForm({
           />
         </FormField>
 
-        {/* 错误条用高度动画展开，避免它突然出现把按钮顶下去 */}
-        <AnimatePresence initial={false}>
-          {showError && error ? (
-            <motion.div
-              key="login-error"
-              initial={reduceMotion ? false : { opacity: 0, height: 0, y: -4 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -4 }}
-              transition={{ duration: 0.24, ease: EASE }}
-              className="overflow-hidden"
-            >
-              <Callout tone="danger" role="alert">
-                {locked ? (
-                  <LoginLockMessage t={t} seconds={lockSeconds} announcement={error.message} />
-                ) : (
-                  error.message
-                )}
-              </Callout>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+        {showError && error ? (
+          <div key="login-error" className="sn-fade-up overflow-hidden">
+            <Callout tone="danger" role="alert">
+              {locked ? (
+                <LoginLockMessage t={t} seconds={lockSeconds} announcement={error.message} />
+              ) : (
+                error.message
+              )}
+            </Callout>
+          </div>
+        ) : null}
 
         <LandingButton type="submit" disabled={busy || locked} className="mt-1 h-12 w-full">
           {busy ? (

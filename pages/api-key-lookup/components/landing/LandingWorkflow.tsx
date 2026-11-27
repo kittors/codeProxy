@@ -1,5 +1,4 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { initSeg } from "satin-ui";
 import { Icon as SatinIcon } from "satin-ui/react";
 import {
@@ -8,7 +7,7 @@ import {
   TOKEN_CLASS,
   type SnippetLanguage,
 } from "@code-proxy/ui";
-import { useLandingFade } from "./landingMotion";
+import { LandingFade, LandingFadeItem } from "./landingMotion";
 import { LandingSectionHead } from "./LandingSectionHead";
 import type { LandingCopy } from "./landingCopy";
 
@@ -70,7 +69,6 @@ function buildSnippets(baseUrl: string) {
 }
 
 export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
-  const fade = useLandingFade();
   const snippets = useMemo(() => buildSnippets(copy.apiBaseUrl), [copy.apiBaseUrl]);
   const [activeId, setActiveId] = useState<string>(snippets[0].id);
   const [copied, setCopied] = useState(false);
@@ -113,13 +111,11 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
     void copyTextToClipboard(active.code).then((ok) => {
       if (!ok) return;
       setCopied(true);
-      // 只做视觉反馈，不额外弹 toast——落地页此处没有登录态，toast 容器未必挂载。
       window.setTimeout(() => setCopied(false), COPIED_RESET_MS);
     });
   }, [active.code]);
 
   return (
-    // 和厂商墙一样靠一层底色与相邻段落分开，不画通栏分隔线。
     <section className="bg-white py-28 dark:bg-white/[0.015] lg:py-40">
       <div className="mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
         <LandingSectionHead
@@ -132,9 +128,10 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
         <div className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
           <ol>
             {copy.workflow.steps.map((step, index) => (
-              <motion.li
+              <LandingFadeItem
                 key={step.title}
-                {...fade({ delay: 0.06 * index, distance: 12 })}
+                delay={0.06 * index}
+                distance={12}
                 className="border-t border-line py-7 first:border-t-0 first:pt-0"
               >
                 <span className="font-display text-2xs uppercase tracking-[0.28em] text-ink-3">
@@ -146,13 +143,12 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 <p className="mt-2 text-sm leading-7 text-ink-2">
                   {step.desc}
                 </p>
-              </motion.li>
+              </LandingFadeItem>
             ))}
           </ol>
 
-          <motion.div
-            {...fade({ delay: 0.1 })}
-            // 代码面板两种主题下都是深底；轮廓用伪元素细边，页签条与代码之间靠留白分开。
+          <LandingFade
+            delay={0.1}
             className="cp-edge overflow-hidden rounded-2xl bg-[#0B0D13]"
           >
             <div className="flex items-center gap-1 px-3 pt-2.5">
@@ -184,14 +180,13 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 className="sn-btn sn-ghost !h-auto ml-auto gap-1.5 !rounded-full !px-3 !py-1.5 font-display !text-xs font-medium !text-white/55 hover:!bg-white/10 hover:!text-white/85"
               >
                 <span
-                  className={copied ? "sn-swap sn-swapped" : "sn-swap"}
-                  data-swapped={copied ? "true" : "false"}
+                  className={copied ? "sn-swap sn-on" : "sn-swap"}
                   aria-hidden="true"
                 >
-                  <span className="sn-swap-a">
+                  <span className="sn-a">
                     <SatinIcon name="copy" size={13} />
                   </span>
-                  <span className="sn-swap-b text-emerald-400">
+                  <span className="sn-b text-emerald-400">
                     <SatinIcon name="check" size={13} />
                   </span>
                 </span>
@@ -203,7 +198,6 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
               <code>
                 {highlighted.map((tokens, lineIndex) => (
                   <span key={lineIndex} className="block">
-                    {/* 空行没有 token，补一个零宽字符撑住行高，避免代码块出现塌陷。 */}
                     {tokens.length === 0 ? "\u200b" : null}
                     {tokens.map((token, tokenIndex) => (
                       <span key={tokenIndex} className={TOKEN_CLASS[token.kind]}>
@@ -214,7 +208,7 @@ export function LandingWorkflow({ copy }: { copy: LandingCopy }) {
                 ))}
               </code>
             </pre>
-          </motion.div>
+          </LandingFade>
         </div>
       </div>
     </section>

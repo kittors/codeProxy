@@ -51,11 +51,11 @@ export function CopyButton({
         className,
       )}
     >
-      <span className={cn("sn-swap", copied ? "sn-swapped" : null)}>
-        <span className="sn-swap-a">
+      <span className={cn("sn-swap", copied ? "sn-on" : null)}>
+        <span className="sn-a">
           <Icon name="copy" size={14} />
         </span>
-        <span className="sn-swap-b">
+        <span className="sn-b">
           <Icon name="check" size={14} />
         </span>
       </span>

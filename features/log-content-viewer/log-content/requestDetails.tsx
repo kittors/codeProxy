@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "@code-proxy/ui/icons";
 import type { UsageLogEgressResponse } from "@code-proxy/api-client";
 import { DetailBadge } from "./detailBadge";
@@ -440,34 +439,25 @@ function RequestDetailSection({
           aria-hidden="true"
         />
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            id={contentId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-4 px-3.5 pb-3">
-              {children ? (
-                children
-              ) : visibleAttempts.length > 0 ? (
-                visibleAttempts.map((attempt, index) => (
-                  <RequestDetailAttemptView
-                    key={`${attempt.title ?? "attempt"}-${index}`}
-                    attempt={attempt}
-                    showTitle={showAttemptTitle}
-                  />
-                ))
-              ) : (
-                <span className="block py-1 text-sm text-ink-3">--</span>
-              )}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {open ? (
+        <div id={contentId} className="sn-fade-up overflow-hidden">
+          <div className="space-y-4 px-3.5 pb-3">
+            {children ? (
+              children
+            ) : visibleAttempts.length > 0 ? (
+              visibleAttempts.map((attempt, index) => (
+                <RequestDetailAttemptView
+                  key={`${attempt.title ?? "attempt"}-${index}`}
+                  attempt={attempt}
+                  showTitle={showAttemptTitle}
+                />
+              ))
+            ) : (
+              <span className="block py-1 text-sm text-ink-3">--</span>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -1925,7 +1925,8 @@ describe("AuthFilesPage files table", () => {
       clipboardData: { getData: () => "http://localhost:1455/auth/callback?code=ok&state=state-1" },
     });
 
-    expect(await screen.findByText("codex-authorized.json")).toBeInTheDocument();
+    // 授权成功面板与主列表会同步展示该账号文件名，按列表卡片的 title 精确断言列表已刷新。
+    await waitFor(() => expect(screen.getByTitle("codex-authorized.json")).toBeInTheDocument());
     // New visible scope: snapshot + quiet probe (not the legacy per-file quota fan-out).
     await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
     await waitFor(() => expect(mocks.startStatusRefresh).toHaveBeenCalled());

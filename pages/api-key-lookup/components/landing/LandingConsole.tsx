@@ -1,6 +1,6 @@
-import { motion, useReducedMotion } from "framer-motion";
 import { VendorIcon } from "@code-proxy/assets";
-import { LANDING_EASE } from "./landingMotion";
+import { usePrefersReducedMotion } from "@code-proxy/ui";
+import { LANDING_EASE_CSS, useLandingReveal } from "./landingMotion";
 import type { LandingCopy } from "./landingCopy";
 
 /** 固定的柱高序列。刻意不用随机值：每次渲染形状一致，截图与视觉回归才可比。 */
@@ -15,25 +15,22 @@ const SAMPLE_ROWS = [
 
 /**
  * 首屏下方的产品预览板。
- *
- * 这是按真实面板结构复刻的示意，不是线上截图——落地页面向未登录访客，拿不到真实数据，
- * 所以用固定样例数据呈现界面结构，既能说明产品长什么样，也不会显示编造的经营指标。
  */
 export function LandingConsole({ copy }: { copy: LandingCopy }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
+  const { ref, style, shown } = useLandingReveal<HTMLDivElement>({
+    delay: 0.25,
+    distance: 32,
+    duration: 0.75,
+    immediate: true,
+  });
 
   return (
     <div className="relative mt-20 lg:mt-28">
       <div className="mx-auto w-full max-w-screen-xl px-5 sm:px-8 lg:px-10">
-        <motion.div
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: LANDING_EASE }}
-          /*
-           * 一层面板，不再「外框 + 面板」两层套着。轮廓只画上边和两侧（内嵌阴影，用卡片细边同一个
-           * 颜色），底部不封口：面板与下一段的底色相同，直接融进去，暗示「还有更多」。
-           * 不用 cp-edge——它四边都画，底边会把这条接缝重新描出来。
-           */
+        <div
+          ref={ref}
+          style={style}
           className="overflow-hidden rounded-t-3xl bg-white shadow-[inset_0_1px_0_var(--cp-edge),inset_1px_0_0_var(--cp-edge),inset_-1px_0_0_var(--cp-edge)] dark:bg-[#0C0C10]"
         >
           <div>
@@ -63,18 +60,14 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
 
                 <div className="mt-8 flex h-40 items-end gap-1.5" aria-hidden>
                   {BARS.map((height, index) => (
-                    <motion.span
+                    <span
                       key={index}
-                      initial={reduceMotion ? { height: `${height}%` } : { height: 0 }}
-                      animate={{ height: `${height}%` }}
-                      transition={{
-                        duration: 0.7,
-                        // 逐根起跳形成从左到右的扫过感，比整体一起长出来更有节奏。
-                        delay: 0.5 + index * 0.045,
-                        ease: LANDING_EASE,
+                      style={{
+                        height: reduceMotion || shown ? `${height}%` : "0%",
+                        transition: reduceMotion
+                          ? undefined
+                          : `height 0.7s ${LANDING_EASE_CSS} ${0.4 + index * 0.04}s`,
                       }}
-                      // 请求量柱子用全站图表的「请求蓝」，最新一根更饱和。简约风格是单色（最新一根实色、
-                      // 其余淡一档）；多彩风格叠一层蓝到靛蓝的渐变，淡柱先清掉底色，渐变才不会叠在单色上。
                       className={`flex-1 rounded-t-sm ${index === BARS.length - 1 ? "bg-blue-500 dark:bg-blue-400 colorful:bg-gradient-to-t colorful:from-blue-500 colorful:to-indigo-400" : "bg-blue-500/25 dark:bg-blue-400/25 colorful:bg-transparent colorful:bg-gradient-to-t colorful:from-blue-500/35 colorful:to-blue-400/15 colorful:dark:from-blue-400/40 colorful:dark:to-blue-400/15"}`}
                     />
                   ))}
@@ -117,7 +110,7 @@ export function LandingConsole({ copy }: { copy: LandingCopy }) {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

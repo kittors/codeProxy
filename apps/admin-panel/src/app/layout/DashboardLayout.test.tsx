@@ -1,9 +1,8 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Suspense, useEffect, type ComponentType, type ReactNode } from "react";
-import { MotionGlobalConfig } from "framer-motion";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { pendingPageLoad, preloadablePage } from "@pages/preloadablePage";
 import { DashboardLayout } from "./DashboardLayout";
 
@@ -32,15 +31,6 @@ function RouteFallback() {
 }
 
 describe("DashboardLayout", () => {
-  // 切页动画瞬间完成：旧页面一退场，AnimatePresence 立刻挂载新页面——没有闸门时那一刻新页面
-  // 的代码还没到，正好落在会把外壳换成空回退的那条路上。
-  beforeEach(() => {
-    MotionGlobalConfig.skipAnimations = true;
-  });
-  afterEach(() => {
-    MotionGlobalConfig.skipAnimations = false;
-  });
-
   test("keeps the current page and the shell on screen while the next page's code loads", async () => {
     let finishLoad!: (module: { default: ComponentType }) => void;
     const { Page: SlowPage, preload } = preloadablePage(

@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -10,10 +9,11 @@ import {
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "@code-proxy/ui/icons";
 import {
-  floatingPanelSurface,
+  cn,
   getSelectTriggerBase,
   resolvePortalContainer,
   selectTriggerState,
+  useSatinFloatingLayer,
   type MultiSelectOption,
   ScrollFade,
 } from "@code-proxy/ui";
@@ -68,78 +68,39 @@ export function RestrictionMultiSelect({
   "aria-describedby": ariaDescribedBy,
 }: RestrictionMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const isOpen = open && !disabled;
   const [search, setSearch] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-  const [dropdownPlacement, setDropdownPlacement] = useState<"bottom" | "top">("bottom");
 
   const selectedValues = useMemo(() => normalizeSelection(options, value), [options, value]);
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
 
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const dropdownMaxH = 320;
-    const gap = 4;
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-    const openAbove = spaceBelow < dropdownMaxH && spaceAbove > spaceBelow;
-
-    if (openAbove) {
-      setDropdownPlacement("top");
-      setDropdownStyle({
-        position: "fixed",
-        bottom: window.innerHeight - rect.top + gap,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.min(dropdownMaxH, spaceAbove),
-        zIndex: 99999,
-      });
-      return;
-    }
-
-    setDropdownPlacement("bottom");
-    setDropdownStyle({
-      position: "fixed",
-      top: rect.bottom + gap,
-      left: rect.left,
-      width: rect.width,
-      maxHeight: Math.min(dropdownMaxH, spaceBelow),
-      zIndex: 99999,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
+  const floating = useSatinFloatingLayer({
+    open: isOpen,
+    anchorRef: triggerRef,
+    panelRef: dropdownRef,
+    placement: "bottom",
+    align: "start",
+    gap: 6,
+    margin: 8,
+    onClose: (_reason, refocus) => {
       setOpen(false);
       setSearch("");
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-    searchRef.current?.focus();
-  }, [open, updatePosition]);
+      if (refocus) triggerRef.current?.focus({ preventScroll: true });
+    },
+  });
 
   useEffect(() => {
-    if (!open) return;
-    const onUpdate = () => updatePosition();
-    window.addEventListener("scroll", onUpdate);
-    window.addEventListener("resize", onUpdate);
-    return () => {
-      window.removeEventListener("scroll", onUpdate);
-      window.removeEventListener("resize", onUpdate);
-    };
-  }, [open, updatePosition]);
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+  }, [isOpen]);
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -212,14 +173,26 @@ export function RestrictionMultiSelect({
     );
   }, [labelMap, selectedCountLabel, selectedValues, unrestrictedLabel]);
 
-  const dropdown = open
+  const dropdown = floating.mounted && !disabled
     ? createPortal(
         <div
           ref={dropdownRef}
-          style={dropdownStyle}
-          data-state="open"
-          data-side={dropdownPlacement}
-          className={`flex flex-col overflow-hidden ${floatingPanelSurface}`}
+          aria-hidden={floating.isOpen ? undefined : true}
+          style={{
+            top: floating.top,
+            left: floating.left,
+            width: Math.max(floating.anchorWidth, 240),
+            maxHeight: Math.min(320, floating.availableHeight),
+            transformOrigin: floating.origin,
+          }}
+          data-state={floating.isOpen ? "open" : "closed"}
+          data-side={floating.side}
+          className={cn(
+            "sn-menu sn-float sn-solid !p-0 flex flex-col overflow-hidden outline-none",
+            floating.isOpen ? "sn-open" : null,
+            floating.up ? "sn-up" : null,
+            floating.end ? "sn-end" : null,
+          )}
         >
           <div className="px-2 pt-2">
             <input
@@ -261,7 +234,7 @@ export function RestrictionMultiSelect({
           </div>
           <ScrollFade className="min-h-0 flex-1 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-ink-3">
+              <div className="px-3 py-4 text-center text-xs text-[var(--sn-label3)]">
                 {noResultsLabel}
               </div>
             ) : (
@@ -272,19 +245,20 @@ export function RestrictionMultiSelect({
                     key={option.value}
                     type="button"
                     onClick={() => toggle(option.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-hover ${
-                      checked ? "text-ink" : "text-ink-2"
-                    }`}
+                    className={cn(
+                      "sn-item flex w-full items-center gap-2 border-0 bg-transparent text-left text-sm hover:bg-[var(--sn-b-ghost-hover)]",
+                      checked ? "sn-sel text-[var(--sn-label)]" : "text-[var(--sn-label2)]",
+                    )}
                   >
                     {/* 勾选框的 1px 描边是控件轮廓，与共享 Satin Checkbox 一致，不是盒子描边。 */}
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
                         checked
-                          ? "border-accent bg-accent"
-                          : "border-ink-3"
+                          ? "border-[var(--sn-accent)] bg-[var(--sn-accent)] text-[var(--sn-on-primary)]"
+                          : "border-[var(--sn-line-control-hover)]"
                       }`}
                     >
-                      {checked && <Check size={12} className="text-accent-fg" />}
+                      {checked && <Check size={12} />}
                     </div>
                     {option.icon && <span className="flex-shrink-0">{option.icon}</span>}
                     <span className="truncate font-mono text-xs">{option.label}</span>
@@ -308,27 +282,24 @@ export function RestrictionMultiSelect({
         // 被读出来；若还是普通 button，接上标签后读屏就只剩标签、听不到选了什么。
         role="combobox"
         aria-haspopup="listbox"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
-        data-state={selectTriggerState(open)}
-        onClick={() => {
-          if (!open) updatePosition();
-          setOpen(!open);
-        }}
+        data-state={selectTriggerState(isOpen)}
+        onClick={() => setOpen((prev) => !prev)}
         className={`${getSelectTriggerBase()} w-full text-left`}
       >
         <div className="min-w-0 flex-1">
           {options.length === 0 ? (
-            <span className="font-normal text-ink-3">{placeholder}</span>
+            <span className="font-normal text-[var(--sn-label3)]">{placeholder}</span>
           ) : (
             triggerSummary
           )}
         </div>
         <ChevronDown
           size={16}
-          className={`flex-shrink-0 text-ink-3 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`flex-shrink-0 text-[var(--sn-label3)] transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 

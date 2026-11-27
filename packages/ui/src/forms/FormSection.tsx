@@ -49,11 +49,11 @@ export function FormSection({
           </DialogIcon>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h3 id={titleId} className="text-sm font-semibold text-ink">
+          <h3 id={titleId} className="text-sm font-semibold text-[var(--sn-label)]">
             {title}
           </h3>
           {description ? (
-            <p className="mt-0.5 text-xs leading-5 text-ink-3">{description}</p>
+            <p className="mt-0.5 text-xs leading-5 text-[var(--sn-label3)]">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}

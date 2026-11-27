@@ -1,5 +1,3 @@
-import "./FloatingPanel.css";
-import { popoverEnterTransition, popoverExitTransition } from "./motion";
 import {
   controlHeightBySize,
   controlMultilineSurfaceTrigger,
@@ -24,11 +22,8 @@ export const getSelectTriggerBase = (
     shape === "multiline" ? controlMultilineSurfaceTrigger : controlSurfaceTrigger,
   ].join(" ");
 
-export const selectTriggerBase = getSelectTriggerBase();
-
 /**
- * 触发器的展开/禁用态不再由组件条件拼接类名，改由 `data-state` 与原生 `disabled`
- * 属性驱动（见 controlSurfaceTrigger）。每个下拉触发器只需带上这个属性即可。
+ * 触发器的展开/禁用态由 `data-state` 与原生 `disabled` 属性驱动（见 controlSurfaceTrigger）。
  */
 export const selectTriggerState = (open: boolean) => (open ? "open" : "closed");
 
@@ -52,14 +47,16 @@ export const selectChevron =
   "ml-auto shrink-0 text-[var(--sn-label3)] transition-transform duration-200 ease-[var(--sn-ease-out-strong)]";
 
 /**
- * 所有浮层（下拉、菜单、日期面板）共用的 Satin 表面：--sn-menu-bg / --sn-menu-shadow / --sn-r-lg。
+ * 非下拉菜单型浮层（侧栏收起态飞出、建议列表等）共用的 Satin 表面令牌：
+ * --sn-menu-bg / --sn-menu-shadow / --sn-r-lg，零旧 FloatingPanel.css 依赖。
  */
 export const floatingPanelSurface =
-  "code-proxy-floating-surface rounded-[var(--sn-r-lg)] bg-[var(--sn-menu-bg,var(--sn-overlay))] text-[var(--sn-label)] shadow-[var(--sn-menu-shadow,var(--sn-e1))]";
+  "rounded-[var(--sn-r-lg)] bg-[var(--sn-menu-bg,var(--sn-overlay))] text-[var(--sn-label)] shadow-[var(--sn-menu-shadow,var(--sn-e1))]";
 
-export const selectPanel = `fixed z-[9999] overflow-hidden p-1.5 ${floatingPanelSurface}`;
+/** Satin 原生浮层下拉菜单底座（配合 useSatinFloatingLayer + sn-open/sn-up/sn-end 驱动原生微动效）。 */
+export const selectPanel = "sn-menu sn-float sn-solid !p-0 overflow-hidden outline-none";
 
-export const searchableSelectPanel = `fixed z-[9999] flex flex-col overflow-hidden ${floatingPanelSurface}`;
+export const searchableSelectPanel = "sn-menu sn-float sn-solid !p-0 flex flex-col overflow-hidden outline-none";
 
 export const selectSearchRow = "flex items-center gap-2 border-b border-[var(--sn-line)] px-3.5 py-2.5";
 
@@ -68,9 +65,9 @@ export const selectSearchInput =
 
 /** 选项：对齐 Satin `.sn-item`（圆角行 + --sn-b-ghost-hover 悬停 + 按压反馈）。 */
 export const selectOptionBase =
-  "flex w-full items-center gap-2.5 rounded-[var(--sn-r-md)] px-2.5 py-2 text-left text-sm text-[var(--sn-label)] outline-none transition-colors duration-100 hover:bg-[var(--sn-b-ghost-hover)] focus-visible:bg-[var(--sn-b-ghost-hover)]";
+  "sn-item flex w-full items-center gap-2.5 border-0 bg-transparent text-left text-sm text-[var(--sn-label)] outline-none hover:bg-[var(--sn-b-ghost-hover)] focus-visible:bg-[var(--sn-b-ghost-hover)]";
 
-export const selectOptionSelected = "font-medium text-[var(--sn-label)]";
+export const selectOptionSelected = "sn-sel font-medium text-[var(--sn-label)]";
 
 export const selectOptionIdle = "text-[var(--sn-label)]";
 
@@ -92,27 +89,3 @@ export const selectCheckboxBox = (checked: boolean) =>
 export const selectTextAction = "sn-btn sn-ghost sn-xs text-[var(--sn-label2)]";
 
 export const selectEmptyState = "px-2.5 py-3 text-center text-xs text-[var(--sn-label3)]";
-
-/**
- * 浮层进出：从触发器那条边长出来——透明度 120ms 淡入，同时从 0.96 放大、朝触发器反方向滑出 4px，
- * 位移 / 缩放用 EASE_POP 走 200ms；退出 110ms、位移减半，显得干脆。originY 让放大从贴着触发器的
- * 那条边开始，而不是从面板中心。时长与曲线与 FloatingPanel.css 里 Radix 菜单的关键帧是同一组。
- *
- * 以前进场刻意不从透明开始（#604）：jest-dom 的 toBeVisible 把透明度 0 判成不可见，打开后立刻
- * 断言的单测会赌输「第一个动画帧还没跑」——CI 上真的输过（生图页的分辨率下拉）。代价是真实界面里
- * 面板第一帧就满不透明地「蹦」出来，只有 4% 的缩放在动。现在进场从透明开始，那类断言改用
- * waitFor 等淡入开始；getByRole / findByRole 不看透明度，不受影响。透明期间面板照样能点：
- * pointer 事件也不看透明度。
- */
-export const getSelectDropdownMotion = (placement: "bottom" | "top" = "bottom") => {
-  const offset = placement === "top" ? 4 : -4;
-  const originY = placement === "top" ? 1 : 0;
-
-  return {
-    initial: { opacity: 0, scale: 0.96, y: offset, originY },
-    animate: { opacity: 1, scale: 1, y: 0, originY },
-    exit: { opacity: 0, scale: 0.98, y: offset / 2, originY, transition: popoverExitTransition },
-  } as const;
-};
-
-export const selectDropdownTransition = popoverEnterTransition;
