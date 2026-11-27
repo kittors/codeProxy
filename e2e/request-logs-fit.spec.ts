@@ -171,7 +171,7 @@ test("旧表格存下的列宽不会把新默认布局撑宽", async ({ page }) 
     .locator(".sn-tbl-wrap thead th[data-col]")
     .evaluateAll((cells) => cells.map((cell) => cell.getAttribute("data-col")));
   expect(order.slice(0, 4)).toEqual(["time", "identity", "model", "channel"]);
-  const stored = await page.evaluate(() => localStorage.getItem("cp-grid:request-logs.v2:v1"));
+  const stored = await page.evaluate(() => localStorage.getItem("cp-grid:request-logs.v3:v1"));
   expect(stored === null || !JSON.parse(stored).widths).toBe(true);
 });
 

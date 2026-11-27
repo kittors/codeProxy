@@ -57,6 +57,7 @@
     "last_page": "最后一页",
     "page_n": "第 {{page}} 页",
     "rows_per_page": "每页",
+    "page_size_option": "{{count}} 条 / 页",
     "go_to_page": "跳至",
     "clear_search": "清空搜索",
     "active_filters": "已生效的筛选",

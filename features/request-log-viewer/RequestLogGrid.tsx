@@ -17,14 +17,13 @@ export const REQUEST_LOG_PAGE_SIZES = [20, 50, 100] as const;
 
 /**
  * 请求日志三处表格的偏好 id（列宽、列顺序、显隐、密度都按它存）。
- * 带「.v2」：11-18 把输入 / 缓存 / 输出合成 Token 一列、整体收窄了默认列宽。旧 DataTable 存下的列宽是旧列、
- * 旧根字号下的实际像素，迁移（按 id 找旧键）搬过来只会把新默认布局撑宽、留下错位的宽度；换个 id，旧键
- * 就不再迁移，三处都从新默认开始。以后列模型再大改，就递增这个版本。
+ * 带「.v3」：升级至完整 Satin 原生表格布局与默认一屏零横滚列宽；旧版缓存的列宽若带入，会把
+ * 1440px 表格撑出横向滚动并导致右侧冻结列压切耗时列；递增版本号让三处都干净回到新默认布局。
  */
 export const REQUEST_LOG_GRID_IDS = {
-  page: "request-logs.v2",
-  lookup: "apikey-lookup-request-logs.v2",
-  keyUsage: "api-key-usage-logs.v2",
+  page: "request-logs.v3",
+  lookup: "apikey-lookup-request-logs.v3",
+  keyUsage: "api-key-usage-logs.v3",
 } as const;
 
 /**

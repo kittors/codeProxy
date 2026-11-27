@@ -254,11 +254,13 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
   const rows = [
     {
       icon: ArrowUpRight,
+      iconTone: "text-emerald-600 dark:text-emerald-400",
       rate: formatRate(stats.net_send_rate),
       total: t("system_monitor.up_total", { size: formatBytes(stats.net_bytes_sent) }),
     },
     {
       icon: ArrowDownRight,
+      iconTone: "text-sky-600 dark:text-sky-400",
       rate: formatRate(stats.net_recv_rate),
       total: t("system_monitor.down_total", { size: formatBytes(stats.net_bytes_recv) }),
     },
@@ -271,7 +273,7 @@ function NetworkCard({ stats }: { stats: SystemStats }) {
           <div key={row.total} className="flex min-w-0 items-start gap-2">
             <row.icon
               size={14}
-              className="mt-1 shrink-0 text-sn-label3 icon-hue:text-emerald-600 icon-hue:dark:text-emerald-300"
+              className={`mt-1 shrink-0 ${row.iconTone}`}
               aria-hidden="true"
             />
             <div className="min-w-0">

@@ -57,6 +57,7 @@
     "last_page": "Последняя страница",
     "page_n": "Страница {{page}}",
     "rows_per_page": "Строк на странице",
+    "page_size_option": "{{count}} / стр.",
     "go_to_page": "Перейти к",
     "clear_search": "Очистить поиск",
     "active_filters": "Активные фильтры",

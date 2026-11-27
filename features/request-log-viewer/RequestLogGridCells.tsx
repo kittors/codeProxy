@@ -16,7 +16,6 @@ import {
 } from "@code-proxy/ui";
 import { CircleHelp, Globe, Package, SquareTerminal } from "@code-proxy/ui/icons";
 import { useTranslation } from "react-i18next";
-import { channelAuthTypeBadgeClass } from "./ChannelIdentityLabel";
 import { describeRequestLogClient } from "./requestLogClients";
 import { loopStoppedExplanation } from "./requestLogGuard";
 import { computeOutputTokensPerSecond, describeThroughput } from "./requestLogMetrics";
@@ -33,15 +32,6 @@ const DASH = "—";
 
 function Dash() {
   return <span className="text-sn-label-off">{DASH}</span>;
-}
-
-/** 图标块：两行单元格前面的 28px 圆角方块，遵循 Satin 微细边中性容器，logo 自带品牌色。 */
-function IconTile({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--sn-line)] bg-[var(--sn-fill-subtle)] text-[var(--sn-label3)]">
-      {children}
-    </span>
-  );
 }
 
 export function RequestLogTimeCell({ row, now }: { row: RequestLogsRow; now: number }) {
@@ -115,9 +105,9 @@ export function RequestLogIdentityCell({
         />
       }
     >
-      <span className="flex min-w-0 items-center gap-2.5">
+      <span className="flex min-w-0 items-center gap-2">
         <span aria-hidden="true" className="inline-flex shrink-0">
-          <Avatar name={avatarSeed} size={28} decorative />
+          <Avatar name={avatarSeed} size={24} decorative />
         </span>
         <span className="flex min-w-0 flex-col leading-tight">
           <span className={`truncate text-sm font-medium ${primary === DASH ? "text-sn-label-off" : "text-sn-label"}`}>
@@ -155,25 +145,18 @@ export function RequestLogChannelCell({ row, masked }: { row: RequestLogsRow; ma
         />
       }
     >
-      {/* 渠道名常是 OAuth 邮箱，独占第一行；认证方式和厂商放第二行，不和名字抢宽度。 */}
-      <span className="flex min-w-0 items-center gap-2.5">
-        <IconTile>
-          <VendorIcon modelId={provider} size={14} />
-        </IconTile>
+      {/* 渠道名常是 OAuth 邮箱，独占第一行；认证方式和厂商用轻盈点隔副行展示，摒弃旧式灰框图标盒。 */}
+      <span className="flex min-w-0 items-center gap-2">
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <VendorIcon modelId={provider} size={16} />
+        </span>
         <span className="flex min-w-0 flex-col leading-tight">
           <span className="truncate text-sm text-sn-label">{name}</span>
           {auth || provider ? (
-            // 列被压窄时（1366 宽）厂商名只剩一个字母没有意义：放不下 4 个字宽就整个折到看不见的第二行，
-            // 放得下就照常截断出省略号。完整信息在悬停提示里。
-            <span className="mt-0.5 flex h-[1.4em] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden text-2xs text-sn-label3">
-              {auth ? (
-                <span
-                  className={`shrink-0 rounded px-1 font-medium ${channelAuthTypeBadgeClass(row.channelAuthType === "oauth" ? "oauth" : "api")}`}
-                >
-                  {auth}
-                </span>
-              ) : null}
-              {provider ? <span className="min-w-[4ch] flex-1 basis-0 truncate">{provider}</span> : null}
+            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-sn-label3">
+              {auth ? <span className="shrink-0">{auth}</span> : null}
+              {auth && provider ? <span aria-hidden="true">·</span> : null}
+              {provider ? <span className="min-w-0 truncate">{provider}</span> : null}
             </span>
           ) : null}
         </span>
@@ -194,14 +177,18 @@ export function RequestLogAgentCell({ row }: { row: RequestLogsRow }) {
   const label = client ? (client.labelKey ? t(client.labelKey) : client.label) : t("request_logs.agent_unknown");
   const Glyph = client?.glyph ? CLIENT_GLYPH[client.glyph] : CircleHelp;
   const content = (
-    <span className="flex min-w-0 items-center gap-2.5">
-      <IconTile>
-        {client?.vendor ? (
-          <VendorIcon modelId={client.vendor} size={14} />
-        ) : (
-          <Glyph size={14} aria-hidden="true" className={client ? "" : "text-sn-label-off"} />
-        )}
-      </IconTile>
+    <span className="flex min-w-0 items-center gap-2">
+      {client?.vendor ? (
+        <span aria-hidden="true" className="inline-flex shrink-0">
+          <VendorIcon modelId={client.vendor} size={16} />
+        </span>
+      ) : (
+        <Glyph
+          size={15}
+          aria-hidden="true"
+          className={`shrink-0 ${client ? "text-sn-label3" : "text-sn-label-off"}`}
+        />
+      )}
       <span className="flex min-w-0 flex-col leading-tight">
         <span className={`truncate text-sm ${client ? "text-sn-label" : "text-sn-label-off"}`}>{label}</span>
         {row.clientVersion ? (

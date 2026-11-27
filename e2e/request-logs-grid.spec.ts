@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 // 请求日志的偏好 id 带版本（REQUEST_LOG_GRID_IDS），旧表格的键不再迁移。
-const PREFS_KEY = "cp-grid:request-logs.v2:v1";
+const PREFS_KEY = "cp-grid:request-logs.v3:v1";
 
 type Row = Record<string, unknown>;
 

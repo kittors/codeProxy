@@ -40,14 +40,10 @@ export function Sidebar({
   return (
     <aside
       data-collapsed={collapsed ? "true" : "false"}
-      className={[
-        "relative z-30 flex h-full shrink-0 flex-col overflow-hidden bg-[var(--sn-side-bg)] pb-2.5",
-        "transition-[width] duration-300 ease-[var(--sn-ease-open)] motion-reduce:transition-none",
-        collapsed ? "w-14" : "w-[224px]",
-      ].join(" ")}
+      className="cp-sidebar relative z-30 flex h-full shrink-0 flex-col overflow-hidden bg-[var(--sn-side-bg)] pb-2.5"
     >
-      {/* 顶栏高 42px，与右侧 ShellTopBar 严格同高同中轴（对齐 Satin shell.css）。 */}
-      <div className="flex h-[42px] shrink-0 items-center px-3">
+      {/* 顶栏高 42px，与右侧 ShellTopBar 严格同高同中轴；左右固定 10px 内边距 + 36px 图标槽锁定 28px 垂直中轴。 */}
+      <div className="relative flex h-[42px] shrink-0 items-center px-[10px]">
         {/*
           Logo 与收起按钮叠在同一个位置：平时显示 Logo，悬停或键盘聚焦时换成侧栏图标，
           点击切换收起/展开。两种状态共用一个按钮，所以收起前后它的位置和大小都不会变。
@@ -60,7 +56,7 @@ export function Sidebar({
           data-sidebar-toggle="true"
           data-tooltip={`${toggleLabel}  ${SHORTCUT_HINT}`}
           data-tooltip-placement="right"
-          className="group/logo grid size-8 shrink-0 place-items-center rounded-lg outline-none transition-colors duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] focus-visible:bg-[var(--sn-fill-hover)]"
+          className="group/logo grid h-[32px] w-[36px] shrink-0 place-items-center rounded-lg outline-none transition-colors duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] focus-visible:bg-[var(--sn-fill-hover)]"
         >
           <span
             data-sidebar-logo="true"
@@ -76,7 +72,7 @@ export function Sidebar({
         </button>
         <span
           aria-hidden={collapsed}
-          className={`ml-2 min-w-0 flex-1 overflow-hidden leading-tight whitespace-nowrap ${sidebarFadeClass(collapsed)}`}
+          className={`ml-1.5 min-w-0 flex-1 overflow-hidden pr-9 leading-tight whitespace-nowrap ${sidebarFadeClass(collapsed)}`}
         >
           <span className="block truncate text-sm font-semibold tracking-tight text-[var(--sn-label)]">
             {t("shell.console")}
@@ -85,21 +81,20 @@ export function Sidebar({
             {BRAND_NAME}
           </span>
         </span>
-        {/* 展开态右上角显性收起入口：方便视觉用户一眼发现折叠能力，aria-hidden 避免与主切换钮重复读屏。 */}
+        {/* 展开态右上角显性收起入口：绝对定位脱离 flex 流，收起前 100ms 干脆淡出，绝不挤压标题或撞上 Logo。 */}
         <button
           type="button"
           tabIndex={-1}
           aria-hidden="true"
           onClick={onToggleSidebar}
+          data-sidebar-explicit-toggle="true"
           data-tooltip={collapsed ? undefined : `${toggleLabel}  ${SHORTCUT_HINT}`}
           data-tooltip-placement="bottom"
           className={[
-            "sn-btn sn-ghost sn-sm sn-ibtn ml-1 shrink-0 text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
-            sidebarFadeClass(collapsed),
-            collapsed ? "pointer-events-none" : null,
-          ]
-            .filter(Boolean)
-            .join(" ")}
+            "sn-btn sn-ghost sn-sm sn-ibtn absolute right-[10px] top-1/2 -translate-y-1/2 text-[var(--sn-label3)] hover:text-[var(--sn-label)]",
+            "transition-[opacity,scale] ease-sn-out motion-reduce:transition-none",
+            collapsed ? "pointer-events-none scale-90 opacity-0 duration-100" : "scale-100 opacity-100 delay-140 duration-160",
+          ].join(" ")}
         >
           <Icon name="panel-left" size={15} />
         </button>
@@ -113,7 +108,7 @@ export function Sidebar({
       >
         <SidebarNav sections={sections} activeTo={activeTo} collapsed={collapsed} nav={nav} />
       </ScrollArea>
-      <div className="shrink-0 px-3 pt-1.5">
+      <div className="shrink-0 px-[10px] pt-1.5">
         <AccountMenu onLogout={onLogout} collapsed={collapsed} />
       </div>
     </aside>

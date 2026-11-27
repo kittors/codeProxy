@@ -7,11 +7,48 @@ import { sidebarRowClass, SidebarRowIcon, SidebarRowLabel } from "./sidebarRow";
 import { useOpenGroups } from "./useOpenGroups";
 import type { RouteNavigation } from "./useRouteNavigation";
 
-interface HighlightRect {
-  top: number;
+type HighlightMode = "instant" | "route" | "slide";
+
+interface HighlightSnapshot {
   left: number;
+  top: number;
   width: number;
   height: number;
+  mode: HighlightMode;
+}
+
+/**
+ * 找到当前真正可见的激活导航节点：
+ * 跳过处于折叠分组（`[data-list-visible="false"]` / `[inert]`）内的 `a[aria-current="page"]`，
+ * 否则分组收起或侧栏缩窄时仍会错选中隐藏抽屉里已被压扁的子项链接，导致白卡悬空错位。
+ */
+function findVisibleActiveTarget(navEl: HTMLElement): HTMLElement | null {
+  const links = navEl.querySelectorAll<HTMLElement>('a[aria-current="page"]');
+  for (const link of links) {
+    if (link.closest('[data-list-visible="false"], [inert]')) continue;
+    return link;
+  }
+  return navEl.querySelector<HTMLElement>("button.cp-side-active");
+}
+
+function measureHighlight(navEl: HTMLElement, target: HTMLElement): Omit<HighlightSnapshot, "mode"> | null {
+  const navRect = navEl.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  if (targetRect.width < 1 || targetRect.height < 1) return null;
+  return {
+    left: targetRect.left - navRect.left,
+    top: targetRect.top - navRect.top,
+    width: targetRect.width,
+    height: targetRect.height,
+  };
+}
+
+function writeHighlightDom(hlEl: HTMLElement, rect: Omit<HighlightSnapshot, "mode">, mode?: HighlightMode) {
+  if (mode) hlEl.dataset.mode = mode;
+  hlEl.style.left = `${rect.left}px`;
+  hlEl.style.transform = `translate3d(0, ${rect.top}px, 0)`;
+  hlEl.style.width = `${rect.width}px`;
+  hlEl.style.height = `${rect.height}px`;
 }
 
 /**
@@ -33,8 +70,11 @@ export function SidebarNav({
 }) {
   const { t } = useTranslation();
   const navRef = useRef<HTMLElement | null>(null);
-  const [hl, setHl] = useState<HighlightRect | null>(null);
-  const [hlReady, setHlReady] = useState(false);
+  const hlRef = useRef<HTMLSpanElement | null>(null);
+  const prevCollapsedRef = useRef(collapsed);
+  const prevOpenKeyRef = useRef<string | null>(null);
+  const prevTargetRef = useRef<HTMLElement | null>(null);
+  const [hl, setHl] = useState<HighlightSnapshot | null>(null);
 
   const activeSection = useMemo(
     () => sections.find((section) => section.items.some((item) => item.to === activeTo)) ?? null,
@@ -48,40 +88,81 @@ export function SidebarNav({
   useLayoutEffect(() => {
     const navEl = navRef.current;
     if (!navEl) return;
-    const sync = () => {
-      const target =
-        navEl.querySelector<HTMLElement>('a[aria-current="page"]') ??
-        navEl.querySelector<HTMLElement>("button.cp-side-active");
-      if (!target || target.offsetHeight === 0 || target.offsetWidth === 0) {
-        setHl(null);
-        return;
+
+    const target = findVisibleActiveTarget(navEl);
+    const collapsedChanged = prevCollapsedRef.current !== collapsed;
+    const openChanged = prevOpenKeyRef.current !== null && prevOpenKeyRef.current !== openKey;
+    const targetChanged = prevTargetRef.current !== null && prevTargetRef.current !== target;
+    const isInitial = prevTargetRef.current === null;
+
+    prevCollapsedRef.current = collapsed;
+    prevOpenKeyRef.current = openKey;
+    prevTargetRef.current = target;
+
+    const rect = target ? measureHighlight(navEl, target) : null;
+    if (!rect) {
+      setHl(null);
+      return;
+    }
+
+    let mode: HighlightMode = "instant";
+    if (!isInitial) {
+      if (collapsedChanged) {
+        // 侧栏宽幅收起/展开期间：若目标在子项与父分组间切换，仅对纵移做平滑过渡，left 与 width 0ms 紧贴按钮零溢出；
+        // 若目标未变（如仪表盘单项），宽高与位置全程瞬时紧贴。
+        mode = targetChanged ? "slide" : "instant";
+      } else if (openChanged) {
+        // 展开态折叠/展开分组：目标切换（折起当前分组）走平滑滑移，目标未变（上方其他分组折起）60fps 紧跟不脱节。
+        mode = targetChanged ? "route" : "instant";
+      } else if (targetChanged) {
+        mode = "route";
       }
-      const navRect = navEl.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const next: HighlightRect = {
-        top: targetRect.top - navRect.top,
-        left: targetRect.left - navRect.left,
-        width: targetRect.width,
-        height: targetRect.height,
+    }
+
+    if (hlRef.current) {
+      writeHighlightDom(hlRef.current, rect, mode);
+    } else {
+      setHl({ ...rect, mode });
+    }
+
+    // 宽幅或分组折叠动画持续 ~280ms：用 rAF 在整段动画期内逐帧同步尺寸与坐标，彻底消除落点偏移与右缘裁切。
+    let rafId = 0;
+    const trackDurationMs = collapsedChanged ? 340 : openChanged ? 320 : 0;
+    if (trackDurationMs > 0) {
+      const startedAt = performance.now();
+      const tick = (now: number) => {
+        const currentTarget = findVisibleActiveTarget(navEl);
+        const nextRect = currentTarget ? measureHighlight(navEl, currentTarget) : null;
+        if (nextRect && hlRef.current) {
+          writeHighlightDom(hlRef.current, nextRect);
+        }
+        if (now - startedAt < trackDurationMs) {
+          rafId = window.requestAnimationFrame(tick);
+        } else if (nextRect && hlRef.current) {
+          // 动画彻底结束后恢复瞬时对齐，保证最终坐标 0px 误差。
+          writeHighlightDom(hlRef.current, nextRect, "instant");
+        }
       };
-      setHl((prev) =>
-        prev &&
-        Math.abs(prev.top - next.top) < 0.5 &&
-        Math.abs(prev.left - next.left) < 0.5 &&
-        Math.abs(prev.width - next.width) < 0.5 &&
-        Math.abs(prev.height - next.height) < 0.5
-          ? prev
-          : next,
-      );
-      setHlReady(true);
-    };
-    sync();
-    // 分组折叠动画结束后再校准一次落点，避免高度展开期间偏移。
-    const timer = window.setTimeout(sync, 220);
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+      rafId = window.requestAnimationFrame(tick);
+    }
+
+    const ro =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            const currentTarget = findVisibleActiveTarget(navEl);
+            const nextRect = currentTarget ? measureHighlight(navEl, currentTarget) : null;
+            if (!nextRect) return;
+            if (hlRef.current) {
+              writeHighlightDom(hlRef.current, nextRect, trackDurationMs ? undefined : "instant");
+            } else {
+              setHl({ ...nextRect, mode: "instant" });
+            }
+          })
+        : null;
     ro?.observe(navEl);
+
     return () => {
-      window.clearTimeout(timer);
+      if (rafId) window.cancelAnimationFrame(rafId);
       ro?.disconnect();
     };
   }, [activeTo, collapsed, openKey, sections]);
@@ -91,14 +172,17 @@ export function SidebarNav({
       ref={navRef}
       aria-label={t("shell.nav_sections", { defaultValue: "Sections" })}
       data-side-hl={hl ? "active" : undefined}
-      className="cp-side-nav relative flex flex-col gap-0.5 px-2.5 pt-1 pb-3"
+      className="cp-side-nav relative flex flex-col gap-0.5 px-[10px] pt-1 pb-3"
     >
       {hl ? (
         <span
+          ref={hlRef}
           aria-hidden="true"
-          className={`cp-side-hl ${hlReady ? "cp-side-hl-anim" : ""}`}
+          data-mode={hl.mode}
+          className="cp-side-hl"
           style={{
-            transform: `translate3d(${hl.left}px, ${hl.top}px, 0)`,
+            left: `${hl.left}px`,
+            transform: `translate3d(0, ${hl.top}px, 0)`,
             width: `${hl.width}px`,
             height: `${hl.height}px`,
           }}

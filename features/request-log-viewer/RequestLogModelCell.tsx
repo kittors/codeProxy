@@ -110,9 +110,9 @@ export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
     ? row.visionFallbackModel
     : "";
   return (
-    <span className="flex min-w-0 items-center gap-2.5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sn-label/[0.04] dark:bg-white/[0.06]">
-        <VendorIcon modelId={row.model} size={15} />
+    <span className="flex min-w-0 items-center gap-2">
+      <span aria-hidden="true" className="inline-flex shrink-0">
+        <VendorIcon modelId={row.model} size={16} />
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="flex min-w-0 items-center gap-1.5">
@@ -120,7 +120,7 @@ export function RequestLogModelCell({ row }: { row: RequestLogsRow }) {
             {row.model}
           </OverflowTooltip>
           {row.thinkingLevel ? (
-            <span className="shrink-0 rounded-md bg-sn-label/[0.05] px-1.5 text-2xs leading-4 text-sn-label2 dark:bg-white/[0.07]">
+            <span className="shrink-0 rounded-full bg-[var(--sn-fill-subtle)] px-1.5 text-2xs leading-4 text-sn-label2">
               {row.thinkingLevel}
             </span>
           ) : null}

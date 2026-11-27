@@ -62,12 +62,12 @@ export function AccountMenu({
           aria-label={account.name}
           data-tooltip={collapsed ? account.name : undefined}
           data-tooltip-placement="right"
-          className="flex h-10 w-full min-w-0 items-center rounded-lg text-left outline-none transition-[background-color,scale] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] active:scale-[0.98] data-[state=open]:bg-[var(--sn-fill-hover)]"
+          className="relative flex h-[40px] w-full min-w-0 items-center rounded-lg text-left outline-none transition-[background-color,scale] duration-150 ease-[var(--sn-ease-out)] hover:bg-[var(--sn-fill-hover)] active:scale-[0.98] data-[state=open]:bg-[var(--sn-fill-hover)]"
         >
-          <span className="grid size-8 shrink-0 place-items-center">
+          <span className="grid h-[36px] w-[36px] shrink-0 place-items-center">
             <AccountAvatar initials={account.initials} name={account.name} />
           </span>
-          <SidebarRowLabel collapsed={collapsed}>
+          <SidebarRowLabel collapsed={collapsed} trailingSpace>
             <span className="block truncate text-sm font-medium text-[var(--sn-label)]">
               {account.name}
             </span>
@@ -78,7 +78,7 @@ export function AccountMenu({
           <Icon
             name="chevrons-up-down"
             size={14}
-            className={`mr-2.5 shrink-0 text-[var(--sn-label3)] ${sidebarFadeClass(collapsed)}`}
+            className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--sn-label3)] ${sidebarFadeClass(collapsed)}`}
           />
         </button>
       </DropdownMenu.Trigger>

@@ -564,7 +564,36 @@
     z-index: 10050;
   }
 
-  /* 侧栏流体滑动高亮条（对齐 Satin .sn-side-nav .sn-hl-bar，合成线程平滑位移）。 */
+  /* 桌面端侧边栏固定像素宽幅与平滑收起展开过渡（展开 224px ↔ 收起 56px，三段统一 10px 内边距 + 36px 图标槽，中轴锁定 28px 零漂移）。 */
+  .cp-sidebar {
+    width: 224px;
+    transition: width 280ms var(--sn-ease-open);
+  }
+  .cp-sidebar[data-collapsed="true"] {
+    width: 56px;
+  }
+
+  /* 侧栏分组子项折叠容器：收起时文字 100ms 干脆淡出防窄栏腰斩，展开时先撑开再柔和淡入。 */
+  .cp-side-group-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 240ms var(--sn-ease-open),
+      opacity 100ms var(--sn-ease-out);
+  }
+  .cp-side-group-body[data-list-visible="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition:
+      grid-template-rows 260ms var(--sn-ease-open),
+      opacity 180ms var(--sn-ease-out) 60ms;
+  }
+
+  /* 侧栏流体滑动高亮条（对齐 Satin .sn-side-nav .sn-hl-bar）：
+     - data-mode="route"：路由切换或分组切换目标时平滑滑移与缩放；
+     - data-mode="slide"：侧栏收起/展开宽度变化期间仅平滑纵横移，宽高由 rAF 逐帧贴合零溢出；
+     - data-mode="instant"：跟随上方分组折叠位移或首帧定位，无拖尾滞后。 */
   .cp-side-hl {
     position: absolute;
     top: 0;
@@ -575,11 +604,15 @@
     box-shadow: inset 0 0 0 1px var(--sn-side-active-line), var(--sn-card-shadow);
     pointer-events: none;
   }
-  .cp-side-hl.cp-side-hl-anim {
+  .cp-side-hl[data-mode="route"] {
     transition:
-      transform 240ms var(--sn-ease-open),
-      width 220ms var(--sn-ease-open),
-      height 220ms var(--sn-ease-open);
+      transform 220ms var(--sn-ease-open),
+      left 200ms var(--sn-ease-open),
+      width 200ms var(--sn-ease-open),
+      height 200ms var(--sn-ease-open);
+  }
+  .cp-side-hl[data-mode="slide"] {
+    transition: transform 220ms var(--sn-ease-open);
   }
   /* 流体滑块启用后由底层滑块绘制激活表面，前景链接透明化避免双层叠加。 */
   .cp-side-nav[data-side-hl="active"] .cp-side-active {
@@ -779,7 +812,10 @@
     .sn-word-in {
       animation: none !important;
     }
-    .sn-collapsible {
+    .sn-collapsible,
+    .cp-sidebar,
+    .cp-side-group-body,
+    .cp-side-hl {
       transition: none !important;
     }
   }

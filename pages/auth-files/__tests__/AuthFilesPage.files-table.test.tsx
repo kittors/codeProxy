@@ -499,7 +499,7 @@ describe("AuthFilesPage files table", () => {
     expect(rowsPerPage).toHaveTextContent("9");
 
     await user.click(rowsPerPage);
-    await user.click(screen.getByRole("option", { name: "12" }));
+    await user.click(screen.getByRole("option", { name: "12 / page" }));
     expect(window.localStorage.getItem(AUTH_FILES_PAGE_SIZE_KEY)).toBe("12");
 
     await user.click(screen.getByRole("combobox", { name: "Cards per row" }));

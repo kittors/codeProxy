@@ -423,30 +423,32 @@ html.theme-transition-lock *::after {
   height: 0;
 }
 
-/* 滚动条跟随 Satin 滚动条滑块令牌。 */
-:root {
-  scrollbar-color: var(--sn-sa-thumb) transparent;
-}
+/* 全局默认滚动条放入 @layer base，确保优先级低于 @layer satin（避免覆盖 .sn-tbl-sc 等 Satin 隐藏原生粗滚动条规则）。 */
+@layer base {
+  :root {
+    scrollbar-color: var(--sn-sa-thumb) transparent;
+  }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 
-::-webkit-scrollbar-track,
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 
-::-webkit-scrollbar-thumb {
-  background-color: var(--sn-sa-thumb);
-  border-radius: var(--sn-r-full);
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--sn-sa-thumb);
+    border-radius: var(--sn-r-full);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: var(--sn-sa-thumb-hover);
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--sn-sa-thumb-hover);
+  }
 }
 
 @keyframes fadeInUp {
